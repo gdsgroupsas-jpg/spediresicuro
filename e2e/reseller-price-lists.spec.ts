@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Test E2E: Listini Fornitore per Reseller
  *
  * Verifica funzionalità COMPLETE:
@@ -14,7 +14,7 @@
  * NOTA: Questi test richiedono un account REALE nel database.
  * In CI, questi test vengono saltati perché l'account test non esiste.
  * Per eseguirli localmente, configurare l'account con:
- *   npx tsx scripts/setup-test-reseller.ts
+ *   npx tsx tests/scripts/setup-test-reseller.ts
  */
 
 import { test, expect, Page } from '@playwright/test';
@@ -49,14 +49,14 @@ async function loginAsReseller(page: Page): Promise<boolean> {
   }
 }
 
-// Helper per navigare alla pagina listini fornitore
+// Helper per navigare alla pagina listini fornitore (unified reseller page)
 async function goToListiniFornitore(page: Page) {
   // Attendi che la sessione sia completamente caricata
   await page.waitForTimeout(2000);
 
-  // Naviga direttamente alla pagina
-  console.log('📍 Navigazione a /dashboard/reseller/listini-fornitore...');
-  await page.goto('/dashboard/reseller/listini-fornitore');
+  // Naviga alla pagina unificata reseller listini (tab fornitore è default)
+  console.log('📍 Navigazione a /dashboard/reseller/listini...');
+  await page.goto('/dashboard/reseller/listini');
 
   // Attendi che la pagina carichi e le API rispondano
   await page.waitForLoadState('networkidle');
@@ -75,20 +75,20 @@ async function goToListiniFornitore(page: Page) {
     console.log('📊 API /user/info:', JSON.stringify(apiData, null, 2));
 
     throw new Error(
-      'Account non è configurato come Reseller. Eseguire script: npx tsx scripts/setup-test-reseller.ts'
+      'Account non è configurato come Reseller. Eseguire script: npx tsx tests/scripts/setup-test-reseller.ts'
     );
   }
 
-  // Se siamo sulla dashboard principale senza listini-fornitore
-  if (!url.includes('listini-fornitore') && !url.includes('dati-cliente')) {
+  // Se siamo sulla dashboard principale senza /reseller/listini
+  if (!url.includes('/reseller/listini') && !url.includes('dati-cliente')) {
     console.log('🔄 Redirect non previsto - provo navigazione manuale via link...');
 
     // Cerca link diretto nel DOM
-    const directLink = page.locator('a[href*="listini-fornitore"]').first();
+    const directLink = page.locator('a[href*="/reseller/listini"]').first();
     if ((await directLink.count()) > 0) {
-      console.log('✅ Link listini-fornitore trovato, cliccando...');
+      console.log('✅ Link reseller/listini trovato, cliccando...');
       await directLink.click();
-      await page.waitForURL(/listini-fornitore/, { timeout: 15000 });
+      await page.waitForURL(/\/reseller\/listini/, { timeout: 15000 });
       await page.waitForLoadState('networkidle');
       console.log('📍 URL dopo click link:', page.url());
     } else {
@@ -100,10 +100,10 @@ async function goToListiniFornitore(page: Page) {
         await resellerButton.click();
         await page.waitForTimeout(1000);
 
-        const listiniLink = page.locator('a[href*="listini-fornitore"]').first();
+        const listiniLink = page.locator('a[href*="/reseller/listini"]').first();
         if ((await listiniLink.count()) > 0) {
           await listiniLink.click();
-          await page.waitForURL(/listini-fornitore/, { timeout: 15000 });
+          await page.waitForURL(/\/reseller\/listini/, { timeout: 15000 });
           console.log('📍 URL dopo click menu:', page.url());
         }
       }
@@ -113,7 +113,7 @@ async function goToListiniFornitore(page: Page) {
   // Se siamo su dati-cliente, l'onboarding non è completato
   if (url.includes('dati-cliente')) {
     throw new Error(
-      'Onboarding non completato. Eseguire script: npx tsx scripts/setup-test-reseller.ts'
+      'Onboarding non completato. Eseguire script: npx tsx tests/scripts/setup-test-reseller.ts'
     );
   }
 
@@ -577,7 +577,7 @@ test.describe.serial('Listini Fornitore - Reseller (Test Completi)', () => {
 test.describe('Gestione Errori', () => {
   test('Redirect a login se non autenticato', async ({ page }) => {
     // Tenta di accedere senza login
-    await page.goto('/dashboard/reseller/listini-fornitore');
+    await page.goto('/dashboard/reseller/listini');
 
     // Dovrebbe essere reindirizzato al login
     await page.waitForURL(/\/login|\/dashboard/, { timeout: 10000 });
