@@ -229,6 +229,39 @@ export async function clonePriceListAction(input: ClonePriceListInput): Promise<
 }
 ```
 
+#### Flusso a Cascata: Superadmin → Reseller → Client
+
+Il sistema supporta l'assegnazione a cascata dei listini personalizzati:
+
+```
+Superadmin
+  ├─ Possiede listini SUPPLIER (costi reali corrieri, MAI visibili ai reseller)
+  ├─ Crea listini CUSTOM con margine (prezzi di vendita)
+  └─ Assegna listini CUSTOM ai reseller
+       (via price_list_assignments o users.assigned_price_list_id)
+
+Reseller
+  ├─ Vede listini custom assegnati in "Listini Personalizzati"
+  ├─ Clona listino assegnato con ulteriore margine → crea il suo listino per i clienti
+  └─ Assegna il listino clonato ai propri sub-user (clienti finali)
+
+Client (sub-user del reseller)
+  └─ Vede solo il listino assegnato dal reseller → spedisce a quei prezzi
+```
+
+**Sicurezza e isolamento:**
+- I listini supplier del superadmin non sono mai esposti ai reseller
+- Ogni reseller vede solo: listini creati da lui + listini esplicitamente assegnati a lui
+- La funzione SQL `reseller_clone_supplier_price_list` verifica ownership o assegnazione prima di clonare
+- Isolamento multi-tenant: reseller A non vede listini di reseller B
+
+**Server Actions coinvolte:**
+- `listPriceListsAction()` - include listini assegnati via `price_list_assignments` per reseller
+- `resellerCloneSupplierPriceListAction()` - clona listini supplier o custom (propri o assegnati)
+- `resellerAssignPriceListAction()` - assegna listino clonato ai sub-user
+
+**Test:** `tests/unit/reseller-assigned-price-lists.test.ts`
+
 ---
 
 ### Assegnazioni Multi-Tenant
