@@ -79,8 +79,8 @@ import { vi } from 'vitest';
 vi.mock('next/server', async () => {
   class NextRequest extends Request {}
 
-  const NextResponse = {
-    json: (body: unknown, init?: ResponseInit) => {
+  class NextResponse extends Response {
+    static json(body: unknown, init?: ResponseInit) {
       const headers = new Headers(init?.headers);
       if (!headers.has('Content-Type')) {
         headers.set('Content-Type', 'application/json; charset=utf-8');
@@ -90,15 +90,14 @@ vi.mock('next/server', async () => {
         status: init?.status ?? 200,
         headers,
       });
-    },
-    next: () => new Response(null, { status: 200 }),
-    redirect: (url: string | URL) => {
-      return new Response(null, {
-        status: 307,
-        headers: { Location: String(url) },
-      });
-    },
-  };
+    }
+    static next() {
+      return new Response(null, { status: 200 });
+    }
+    static redirect(url: string | URL) {
+      return new Response(null, { status: 307, headers: { Location: String(url) } });
+    }
+  }
 
   return { NextRequest, NextResponse };
 });
@@ -109,8 +108,8 @@ vi.mock('next/server', async () => {
 vi.mock('next/server.js', async () => {
   class NextRequest extends Request {}
 
-  const NextResponse = {
-    json: (body: unknown, init?: ResponseInit) => {
+  class NextResponse extends Response {
+    static json(body: unknown, init?: ResponseInit) {
       const headers = new Headers(init?.headers);
       if (!headers.has('Content-Type')) {
         headers.set('Content-Type', 'application/json; charset=utf-8');
@@ -120,15 +119,14 @@ vi.mock('next/server.js', async () => {
         status: init?.status ?? 200,
         headers,
       });
-    },
-    next: () => new Response(null, { status: 200 }),
-    redirect: (url: string | URL) => {
-      return new Response(null, {
-        status: 307,
-        headers: { Location: String(url) },
-      });
-    },
-  };
+    }
+    static next() {
+      return new Response(null, { status: 200 });
+    }
+    static redirect(url: string | URL) {
+      return new Response(null, { status: 307, headers: { Location: String(url) } });
+    }
+  }
 
   return { NextRequest, NextResponse };
 });
