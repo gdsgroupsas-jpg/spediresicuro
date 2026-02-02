@@ -275,6 +275,54 @@ Applica con:
 npx supabase migration up
 ```
 
+## Hardening Sprint 2 (2026-02-02)
+
+### Operazione Bulk Atomica
+
+**RPC:** `bulk_update_user_listini(p_caller_id, p_user_id, p_selected_ids[])`
+
+Sostituisce le N chiamate sequenziali assign/revoke con una singola transazione:
+
+1. Verifica caller + parentela
+2. Verifica accesso a tutti i listini (`can_user_access_price_list`)
+3. REVOKE atomico: soft-delete listini non più selezionati
+4. ASSIGN atomico: inserisce nuovi (skip duplicati)
+5. Backward compat: aggiorna `users.assigned_price_list_id`
+
+**Server Action:** `bulkUpdateUserListiniAction(userId, selectedListinoIds[])`
+
+### Audit Log
+
+Ogni operazione assign/revoke logga in `audit_logs`:
+
+- `action`: `price_list_assigned` | `price_list_revoked`
+- `resource_type`: `price_list_assignment`
+- `metadata`: `{ targetUserId, priceListId }` o `{ selectedListinoIds, added, removed }`
+
+### Rate Limiting
+
+30 req/min per utente sulle operazioni assign/revoke (Redis + fallback in-memory).
+
+### Validazione Margine Negativo
+
+Solo reseller: blocco assegnazione listini con `default_margin_percent < 0` (impedisce vendita sottocosto). Superadmin può forzare per promozioni/test.
+
+### UUID Validation
+
+Tutti gli input `userId` e `priceListId` validati come UUID prima di qualsiasi operazione DB.
+
+### Indici Parziali
+
+```sql
+CREATE INDEX idx_pla_user_active ON price_list_assignments(user_id) WHERE revoked_at IS NULL;
+CREATE INDEX idx_pla_pricelist_active ON price_list_assignments(price_list_id) WHERE revoked_at IS NULL;
+CREATE INDEX idx_pla_user_pricelist_active ON price_list_assignments(user_id, price_list_id) WHERE revoked_at IS NULL;
+```
+
+### Migrazione
+
+`supabase/migrations/20260202220000_bulk_update_user_listini.sql`
+
 ## Note Tecniche
 
 - Tutte le funzioni usano `SECURITY DEFINER` per bypassare RLS
