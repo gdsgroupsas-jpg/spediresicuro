@@ -258,7 +258,7 @@ function notificationEmailHtml(message: string, type: string): string {
         <h1 style="color: white; margin: 0; font-size: 24px;">🔔 ${notificationSubject(type)}</h1>
       </div>
       <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
-        <p style="color: #334155; font-size: 16px; line-height: 1.5;">${message}</p>
+        <p style="color: #334155; font-size: 16px; line-height: 1.5;">${escapeHtml(message)}</p>
         <p style="color: #64748b; font-size: 13px; margin-bottom: 0;">
           <a href="https://spediresicuro.it/dashboard" style="color: #3b82f6;">Vai alla dashboard</a>
         </p>
