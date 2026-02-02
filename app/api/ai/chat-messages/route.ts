@@ -79,7 +79,7 @@ export async function POST(request: NextRequest) {
   const safeMetadata: Record<string, unknown> = {};
   if (metadata && typeof metadata === 'object') {
     // Only allow whitelisted metadata keys (prevent agentState leak into DB)
-    const allowed = ['cardType', 'source'];
+    const allowed = ['cardType', 'cardData', 'source'];
     for (const key of allowed) {
       if (key in metadata) safeMetadata[key] = metadata[key];
     }
