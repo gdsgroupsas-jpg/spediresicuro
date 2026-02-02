@@ -237,15 +237,38 @@ const transactions = await getMyWalletTransactions();
 
 **URL:** `/dashboard/reseller/listini-fornitore`
 
+**Flusso a cascata Superadmin → Reseller → Client:**
+
+```
+Superadmin possiede listini SUPPLIER (costi reali corrieri)
+    │
+    ├─ Crea listino CUSTOM con margine (i suoi prezzi di vendita)
+    │
+    └─ Assegna listino CUSTOM al Reseller
+         (via price_list_assignments o assigned_price_list_id)
+         │
+         ├─ Reseller vede il listino in "Listini Personalizzati"
+         │
+         ├─ Reseller clona il listino con ulteriore margine
+         │   → Crea il proprio listino custom per i suoi clienti
+         │
+         └─ Reseller assegna il listino clonato ai suoi sub-user
+              → I clienti finali vedono solo i prezzi del reseller
+```
+
+> **Nota sicurezza:** I listini SUPPLIER del superadmin non sono mai visibili ai reseller.
+> Ogni reseller vede solo: listini creati da lui + listini esplicitamente assegnati.
+> Isolamento multi-tenant garantito per account.
+
 **Steps:**
 
 1. **Visualizzazione Listini Master**
-   - Tabella con tutti i listini fornitori
+   - Tabella con tutti i listini fornitori propri + listini custom assegnati dal superadmin
    - Colonne: Nome, Fornitore, Aggiornato al, Voci, Azioni
    - Filtri: Fornitore, Data aggiornamento
 
 2. **Clona Listino**
-   - Click su "Clona" su listino master
+   - Click su "Clona" su listino master o listino custom assegnato
    - **Dialog:**
      - Nome listino personalizzato (obbligatorio)
      - Margine (%) da applicare (default: 0%)
