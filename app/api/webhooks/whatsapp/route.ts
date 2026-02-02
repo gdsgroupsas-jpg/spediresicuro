@@ -16,7 +16,7 @@
  *
  * Security:
  * - GET: verify_token check (Meta webhook verification)
- * - POST: X-Hub-Signature-256 HMAC validation (optional, requires app secret)
+ * - POST: X-Hub-Signature-256 HMAC validation (fail-closed: rejects if app secret not configured)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
@@ -53,6 +53,13 @@ const DEDUP_TTL_MS = 5 * 60 * 1000; // 5 minutes
 const phoneCooldowns = new Map<string, { count: number; windowStart: number }>();
 const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
 const RATE_LIMIT_MAX = 10; // max 10 messages per minute per phone
+
+/** Mask phone number for GDPR-safe logging: 39340****67 */
+function maskPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, '');
+  if (digits.length <= 4) return '****';
+  return digits.slice(0, 5) + '****' + digits.slice(-2);
+}
 
 function isDuplicate(messageId: string): boolean {
   const now = Date.now();
@@ -183,7 +190,7 @@ export async function POST(request: NextRequest) {
 
     // Rate limit per phone number
     if (isRateLimited(msg.from)) {
-      console.warn('[WHATSAPP_WEBHOOK] Rate limited:', msg.from);
+      console.warn('[WHATSAPP_WEBHOOK] Rate limited:', maskPhone(msg.from));
       continue;
     }
 
@@ -291,7 +298,7 @@ async function processIncomingMessage(
     }
   } catch (error) {
     console.error('[WHATSAPP_WEBHOOK] Error processing message:', {
-      phone,
+      phone: maskPhone(phone),
       traceId,
       error: error instanceof Error ? error.message : 'Unknown',
     });
@@ -313,6 +320,12 @@ async function lookupUserByPhone(
 ): Promise<{ id: string; email: string; role: string; name?: string } | null> {
   // Normalize phone: remove + prefix, ensure starts with country code
   const normalizedPhone = phone.replace(/^\+/, '');
+
+  // Validate phone is digits only (prevent PostgREST filter injection)
+  if (!/^\d{7,15}$/.test(normalizedPhone)) {
+    console.warn('[WHATSAPP_WEBHOOK] Invalid phone format rejected');
+    return null;
+  }
 
   // Search in anne_user_memory preferences
   const { data: memory } = await supabaseAdmin
