@@ -55,11 +55,21 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'role non valido' }, { status: 400 });
   }
 
+  // Sanitize metadata: strip agentState internals, keep only safe fields
+  const safeMetadata: Record<string, unknown> = {};
+  if (metadata && typeof metadata === 'object') {
+    // Only allow whitelisted metadata keys (prevent agentState leak into DB)
+    const allowed = ['cardType', 'source'];
+    for (const key of allowed) {
+      if (key in metadata) safeMetadata[key] = metadata[key];
+    }
+  }
+
   const message = await saveChatMessage({
     userId,
     role,
     content: content.slice(0, 10000), // Limit content length
-    metadata,
+    metadata: safeMetadata,
   });
 
   if (!message) {

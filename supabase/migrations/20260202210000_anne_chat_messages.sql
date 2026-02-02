@@ -36,6 +36,9 @@ CREATE POLICY anne_chat_messages_select ON anne_chat_messages
 CREATE POLICY anne_chat_messages_insert ON anne_chat_messages
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+CREATE POLICY anne_chat_messages_delete ON anne_chat_messages
+  FOR DELETE USING (auth.uid() = user_id);
+
 -- Service role puo' fare tutto (per API server-side)
 CREATE POLICY anne_chat_messages_service ON anne_chat_messages
   FOR ALL USING (
