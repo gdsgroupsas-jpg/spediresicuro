@@ -39,6 +39,7 @@ import { ActionConfirmCard } from './ActionConfirmCard';
 import { SupportQuickActions } from './SupportQuickActions';
 import type { AgentState } from '@/lib/agent/orchestrator/state';
 import { autoProceedConfig } from '@/lib/config';
+import { useAnneChatSync, type SyncedMessage } from '@/hooks/useAnneChatSync';
 
 interface Message {
   role: 'user' | 'assistant' | 'suggestion';
@@ -69,8 +70,22 @@ export function AnneAssistant({
   // State
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMinimized, setIsMinimized] = useState(true);
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
+
+  // Multi-device chat sync (Phase 4)
+  const {
+    messages: syncedMessages,
+    persistMessage,
+    clearHistory,
+    isLoadingHistory,
+  } = useAnneChatSync({ userId, enabled: !isTestMode });
+
+  // Bridge synced messages to local Message format
+  const messages: Message[] = syncedMessages.map((m) => ({
+    role: m.role,
+    content: m.content,
+    timestamp: m.timestamp,
+  }));
   const [isLoading, setIsLoading] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   // P2: Telemetria per debug panel (solo admin)
@@ -177,29 +192,19 @@ export function AnneAssistant({
 
   // Aggiungi messaggio di suggerimento
   const addSuggestionMessage = (content: string) => {
-    setMessages((prev) => [
-      ...prev,
-      {
-        role: 'suggestion',
-        content,
-        timestamp: new Date(),
-      },
-    ]);
+    persistMessage('suggestion', content);
   };
 
   // Invia messaggio all'API
   const sendMessage = async () => {
     if (!input.trim()) return;
 
-    const userMessage: Message = {
-      role: 'user',
-      content: input,
-      timestamp: new Date(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
+    const userInput = input;
     setInput('');
     setIsLoading(true);
+
+    // Persist user message (multi-device sync)
+    persistMessage('user', userInput);
 
     // Timeout controller per gestire richieste lente su mobile
     const controller = new AbortController();
@@ -210,7 +215,7 @@ export function AnneAssistant({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          message: input,
+          message: userInput,
           userId,
           userRole,
           currentPage,
@@ -268,14 +273,10 @@ export function AnneAssistant({
         }
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: data.message || 'Nessuna risposta ricevuta.',
-          timestamp: new Date(),
-        },
-      ]);
+      // Persist assistant response (multi-device sync)
+      persistMessage('assistant', data.message || 'Nessuna risposta ricevuta.', {
+        agentState: data.metadata?.agentState,
+      });
     } catch (error: any) {
       console.error('Errore Anne:', error);
 
@@ -290,18 +291,10 @@ export function AnneAssistant({
       ) {
         errorMessage = '📡 Errore di connessione. Verifica la connessione internet e riprova.';
       } else if (error.message) {
-        // Usa il messaggio di errore originale se disponibile
         errorMessage = error.message;
       }
 
-      setMessages((prev) => [
-        ...prev,
-        {
-          role: 'assistant',
-          content: errorMessage,
-          timestamp: new Date(),
-        },
-      ]);
+      persistMessage('assistant', errorMessage);
     } finally {
       clearTimeout(timeoutId);
       setIsLoading(false);
