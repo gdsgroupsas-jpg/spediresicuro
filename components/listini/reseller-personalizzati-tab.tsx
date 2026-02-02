@@ -41,7 +41,11 @@ import { toast } from 'sonner';
 import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
 import type { PriceList } from '@/types/listini';
 
-export function ResellerPersonalizzatiTab() {
+interface ResellerPersonalizzatiTabProps {
+  userId?: string;
+}
+
+export function ResellerPersonalizzatiTab({ userId }: ResellerPersonalizzatiTabProps) {
   const router = useRouter();
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -89,7 +93,9 @@ export function ResellerPersonalizzatiTab() {
       const result = await listPriceListsAction();
 
       if (result.success && result.priceLists) {
-        const customLists = result.priceLists.filter((pl) => pl.list_type === 'custom');
+        const customLists = result.priceLists.filter(
+          (pl) => pl.list_type === 'custom' && (!userId || pl.created_by === userId)
+        );
         setPriceLists(customLists);
       } else {
         toast.error(result.error || 'Errore caricamento listini');

@@ -25,6 +25,7 @@ export default function UnifiedResellerListiniPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [accountType, setAccountType] = useState<string>('');
   const [resellerRole, setResellerRole] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
   const [activeTab, setActiveTab] = useState(
     searchParams.get('tab') === 'personalizzati' ? 'personalizzati' : 'fornitore'
   );
@@ -58,6 +59,7 @@ export default function UnifiedResellerListiniPage() {
 
           setAccountType(userData.account_type || '');
           setResellerRole(userData.reseller_role || '');
+          setUserId(userData.id || '');
           setIsAuthorized(true);
         }
       } catch (error) {
@@ -108,10 +110,14 @@ export default function UnifiedResellerListiniPage() {
             <TabsTrigger value="personalizzati">Listini Personalizzati</TabsTrigger>
           </TabsList>
           <TabsContent value="fornitore" className="mt-6">
-            <ResellerFornitoreTab accountType={accountType} resellerRole={resellerRole} />
+            <ResellerFornitoreTab
+              accountType={accountType}
+              resellerRole={resellerRole}
+              userId={userId}
+            />
           </TabsContent>
           <TabsContent value="personalizzati" className="mt-6">
-            <ResellerPersonalizzatiTab />
+            <ResellerPersonalizzatiTab userId={userId} />
           </TabsContent>
         </Tabs>
       </div>
