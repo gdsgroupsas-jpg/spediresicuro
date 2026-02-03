@@ -236,3 +236,198 @@ export async function sendTrackingUpdate(params: ShipmentTrackingUpdateParams) {
     html,
   });
 }
+
+// ─── WELCOME EMAIL (Nuovo Account) ───
+
+interface WelcomeEmailParams {
+  to: string;
+  userName: string;
+  password: string;
+  loginUrl?: string;
+  createdBy?: string; // Nome del reseller/admin che ha creato l'account
+  companyName?: string; // Nome azienda del reseller (per branding)
+}
+
+export async function sendWelcomeEmail(params: WelcomeEmailParams) {
+  const {
+    to,
+    userName,
+    password,
+    loginUrl = 'https://spediresicuro.it/login',
+    createdBy,
+    companyName,
+  } = params;
+
+  const brandName = companyName || 'SpedireSicuro';
+  const createdByText = createdBy
+    ? `<p style="color: #64748b; font-size: 14px;">Il tuo account è stato creato da <strong>${createdBy}</strong>.</p>`
+    : '';
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #1e40af, #3b82f6); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">🎉 Benvenuto su ${brandName}!</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #334155; font-size: 16px; margin-top: 0;">Ciao <strong>${userName}</strong>,</p>
+        <p style="color: #334155; font-size: 16px;">Il tuo account è stato creato con successo. Ecco le tue credenziali di accesso:</p>
+
+        ${createdByText}
+
+        <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 12px 0; color: #64748b; font-size: 14px; width: 100px;">Email</td>
+              <td style="padding: 12px 0; color: #1e293b; font-weight: 600; font-size: 14px;">${to}</td>
+            </tr>
+            <tr>
+              <td style="padding: 12px 0; color: #64748b; font-size: 14px; border-top: 1px solid #e2e8f0;">Password</td>
+              <td style="padding: 12px 0; color: #1e293b; font-weight: 600; font-size: 14px; font-family: monospace; background: #f1f5f9; padding-left: 8px; border-radius: 4px; border-top: 1px solid #e2e8f0;">${password}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin: 16px 0;">
+          <p style="color: #92400e; font-size: 13px; margin: 0;">
+            <strong>⚠️ Importante:</strong> Ti consigliamo di cambiare la password al primo accesso per maggiore sicurezza.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 24px;">
+          <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #f59e0b, #f97316); color: white; font-weight: 600; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px;">
+            Accedi al tuo account →
+          </a>
+        </div>
+
+        <p style="color: #64748b; font-size: 13px; margin-top: 24px; margin-bottom: 0;">
+          Se hai problemi ad accedere, contatta il supporto rispondendo a questa email.
+        </p>
+      </div>
+      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
+        ${brandName} — Spedizioni semplici e sicure
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `🎉 Benvenuto su ${brandName} — Le tue credenziali di accesso`,
+    html,
+  });
+}
+
+// ─── PASSWORD RESET EMAIL ───
+
+interface PasswordResetEmailParams {
+  to: string;
+  userName: string;
+  resetUrl: string;
+  expiresIn?: string; // es. "1 ora"
+}
+
+export async function sendPasswordResetEmail(params: PasswordResetEmailParams) {
+  const { to, userName, resetUrl, expiresIn = '1 ora' } = params;
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #7c3aed, #a855f7); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">🔐 Reset Password</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #334155; font-size: 16px; margin-top: 0;">Ciao <strong>${userName}</strong>,</p>
+        <p style="color: #334155; font-size: 16px;">Abbiamo ricevuto una richiesta per reimpostare la password del tuo account.</p>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${resetUrl}" style="display: inline-block; background: linear-gradient(135deg, #7c3aed, #a855f7); color: white; font-weight: 600; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px;">
+            Reimposta Password →
+          </a>
+        </div>
+
+        <div style="background: #f1f5f9; border-radius: 8px; padding: 12px; margin: 16px 0;">
+          <p style="color: #64748b; font-size: 13px; margin: 0;">
+            ⏱️ Questo link scadrà tra <strong>${expiresIn}</strong>.
+          </p>
+        </div>
+
+        <p style="color: #64748b; font-size: 13px;">
+          Se non hai richiesto tu il reset della password, puoi ignorare questa email. La tua password rimarrà invariata.
+        </p>
+
+        <div style="background: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px; margin: 16px 0;">
+          <p style="color: #991b1b; font-size: 13px; margin: 0;">
+            <strong>🔒 Sicurezza:</strong> Non condividere mai questo link con nessuno. SpedireSicuro non ti chiederà mai la password via email.
+          </p>
+        </div>
+      </div>
+      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
+        SpedireSicuro — Spedizioni semplici e sicure
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: '🔐 Reimposta la tua password — SpedireSicuro',
+    html,
+  });
+}
+
+// ─── PASSWORD CHANGED CONFIRMATION ───
+
+interface PasswordChangedEmailParams {
+  to: string;
+  userName: string;
+  changedAt?: Date;
+}
+
+export async function sendPasswordChangedEmail(params: PasswordChangedEmailParams) {
+  const { to, userName, changedAt = new Date() } = params;
+
+  const formattedDate = changedAt.toLocaleDateString('it-IT', {
+    day: '2-digit',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #059669, #10b981); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">✅ Password Modificata</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #334155; font-size: 16px; margin-top: 0;">Ciao <strong>${userName}</strong>,</p>
+        <p style="color: #334155; font-size: 16px;">La password del tuo account SpedireSicuro è stata modificata con successo.</p>
+
+        <div style="background: white; border-radius: 8px; padding: 16px; margin: 20px 0; border: 1px solid #e2e8f0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Data modifica</td>
+              <td style="padding: 8px 0; color: #1e293b; font-weight: 500; text-align: right; font-size: 14px;">${formattedDate}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Account</td>
+              <td style="padding: 8px 0; color: #1e293b; text-align: right; font-size: 14px;">${to}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin: 16px 0;">
+          <p style="color: #92400e; font-size: 13px; margin: 0;">
+            <strong>⚠️ Non sei stato tu?</strong> Se non hai modificato tu la password, contattaci immediatamente rispondendo a questa email.
+          </p>
+        </div>
+      </div>
+      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
+        SpedireSicuro — Spedizioni semplici e sicure
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: '✅ Password modificata — SpedireSicuro',
+    html,
+  });
+}

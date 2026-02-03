@@ -40,6 +40,7 @@ import {
   type LucideIcon,
   Trash2,
   Headphones,
+  Key,
 } from 'lucide-react';
 
 /**
@@ -491,6 +492,13 @@ const accountSection: NavSection = {
       href: '/dashboard/dati-cliente',
       icon: UserCircle,
       description: 'Informazioni personali',
+    },
+    {
+      id: 'security',
+      label: 'Sicurezza',
+      href: '/dashboard/profile/security',
+      icon: Key,
+      description: 'Cambio password e sicurezza account',
     },
     {
       id: 'settings',

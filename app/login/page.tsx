@@ -306,7 +306,7 @@ export default function LoginPage() {
       // ⚠️ P0 FIX: Rimuove delay, esegue controllo immediato (no flash di dashboard)
       checkAndRedirect();
     }
-  }, [status, session]);
+  }, [status, session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -549,7 +549,17 @@ export default function LoginPage() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-semibold text-gray-700 mb-2">Password</label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-semibold text-gray-700">Password</label>
+                {mode === 'login' && (
+                  <Link
+                    href="/forgot-password"
+                    className="text-sm text-blue-600 hover:text-blue-700 hover:underline"
+                  >
+                    Password dimenticata?
+                  </Link>
+                )}
+              </div>
               <div className="relative">
                 <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
                   <Lock className="w-5 h-5" />
