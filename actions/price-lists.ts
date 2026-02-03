@@ -24,6 +24,10 @@ import type {
   UpdatePriceListInput,
 } from '@/types/listini';
 import type { CourierServiceType } from '@/types/shipments';
+import { writeAuditLog } from '@/lib/security/audit-log';
+import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-actions';
+import { rateLimit } from '@/lib/security/rate-limit';
+import { validateUUID } from '@/lib/validators';
 
 /**
  * Helper: Logga evento listino nel financial_audit_log
@@ -441,6 +445,11 @@ export async function assignPriceListToUserAction(
   error?: string;
 }> {
   try {
+    // Validazione UUID input
+    if (!validateUUID(userId) || !validateUUID(priceListId)) {
+      return { success: false, error: 'ID non valido' };
+    }
+
     const context = await getSafeAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
@@ -471,9 +480,35 @@ export async function assignPriceListToUserAction(
       };
     }
 
-    // ✨ USA RPC SICURA con ownership check
+    // Rate limiting: 30 req/min per utente
+    const rl = await rateLimit('assign-listino', currentUser.id, { limit: 30, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return { success: false, error: 'Troppe richieste. Riprova tra qualche secondo.' };
+    }
+
+    // Reseller: verifica margine non negativo (no vendita sottocosto)
+    if (isReseller) {
+      const { data: plCheck } = await supabaseAdmin
+        .from('price_lists')
+        .select('default_margin_percent')
+        .eq('id', priceListId)
+        .single();
+
+      if (
+        plCheck &&
+        plCheck.default_margin_percent !== null &&
+        plCheck.default_margin_percent < 0
+      ) {
+        return {
+          success: false,
+          error: 'Non puoi assegnare un listino con margine negativo (vendita sottocosto)',
+        };
+      }
+    }
+
+    // ✨ USA RPC SICURA multi-listino con ownership check
     const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
-      'assign_listino_to_user_secure',
+      'assign_listino_to_user_multi',
       {
         p_caller_id: currentUser.id,
         p_user_id: userId,
@@ -508,16 +543,235 @@ export async function assignPriceListToUserAction(
       return { success: false, error: rpcError.message };
     }
 
-    console.log('✅ [ASSIGN LISTINO] Assegnato con ownership check:', {
-      callerId: currentUser.id,
-      userId,
-      priceListId,
+    // Audit log (fail-open)
+    await writeAuditLog({
+      context,
+      action: AUDIT_ACTIONS.PRICE_LIST_ASSIGNED,
+      resourceType: AUDIT_RESOURCE_TYPES.PRICE_LIST_ASSIGNMENT,
+      resourceId: priceListId,
+      metadata: { targetUserId: userId, priceListId },
     });
 
     return { success: true };
   } catch (error: any) {
     console.error('Errore assegnazione listino:', error);
     return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+/**
+ * Revoca listino da utente (soft delete in price_list_assignments)
+ */
+export async function revokePriceListFromUserAction(
+  userId: string,
+  priceListId: string
+): Promise<{
+  success: boolean;
+  error?: string;
+}> {
+  try {
+    // Validazione UUID input
+    if (!validateUUID(userId) || !validateUUID(priceListId)) {
+      return { success: false, error: 'ID non valido' };
+    }
+
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    const { data: currentUser } = await supabaseAdmin
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
+      .single();
+
+    if (!currentUser) {
+      return { success: false, error: 'Utente non trovato' };
+    }
+
+    const isAdmin =
+      currentUser.account_type === 'admin' || currentUser.account_type === 'superadmin';
+    const isReseller =
+      currentUser.is_reseller === true ||
+      currentUser.account_type === 'reseller' ||
+      currentUser.account_type === 'reseller_admin';
+
+    if (!isAdmin && !isReseller) {
+      return { success: false, error: 'Solo admin e reseller possono gestire listini' };
+    }
+
+    // Rate limiting: 30 req/min per utente (stessa route di assign)
+    const rl = await rateLimit('assign-listino', currentUser.id, { limit: 30, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return { success: false, error: 'Troppe richieste. Riprova tra qualche secondo.' };
+    }
+
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+      'revoke_listino_from_user',
+      {
+        p_caller_id: currentUser.id,
+        p_user_id: userId,
+        p_price_list_id: priceListId,
+      }
+    );
+
+    if (rpcError) {
+      console.error('Errore RPC revoca listino:', rpcError);
+      const errorMessage = rpcError.message || '';
+      if (errorMessage.includes('FORBIDDEN')) {
+        return { success: false, error: 'Puoi gestire listini solo dei tuoi clienti' };
+      }
+      return { success: false, error: rpcError.message };
+    }
+
+    // Audit log (fail-open)
+    await writeAuditLog({
+      context,
+      action: AUDIT_ACTIONS.PRICE_LIST_REVOKED,
+      resourceType: AUDIT_RESOURCE_TYPES.PRICE_LIST_ASSIGNMENT,
+      resourceId: priceListId,
+      metadata: { targetUserId: userId, priceListId },
+    });
+
+    return { success: true };
+  } catch (error: any) {
+    console.error('Errore revoca listino:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+/**
+ * Aggiorna listini assegnati a un utente in modo atomico (singola transazione DB).
+ * Calcola differenziale: aggiunge i nuovi, revoca i rimossi.
+ */
+export async function bulkUpdateUserListiniAction(
+  userId: string,
+  selectedListinoIds: string[]
+): Promise<{
+  success: boolean;
+  added: number;
+  removed: number;
+  error?: string;
+}> {
+  try {
+    // Validazione UUID input
+    if (!validateUUID(userId)) {
+      return { success: false, added: 0, removed: 0, error: 'ID utente non valido' };
+    }
+    for (const id of selectedListinoIds) {
+      if (!validateUUID(id)) {
+        return { success: false, added: 0, removed: 0, error: 'ID listino non valido' };
+      }
+    }
+
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, added: 0, removed: 0, error: 'Non autenticato' };
+    }
+
+    const { data: currentUser } = await supabaseAdmin
+      .from('users')
+      .select('id, account_type, is_reseller')
+      .eq('email', context.actor.email)
+      .single();
+
+    if (!currentUser) {
+      return { success: false, added: 0, removed: 0, error: 'Utente non trovato' };
+    }
+
+    const isAdmin =
+      currentUser.account_type === 'admin' || currentUser.account_type === 'superadmin';
+    const isReseller =
+      currentUser.is_reseller === true ||
+      currentUser.account_type === 'reseller' ||
+      currentUser.account_type === 'reseller_admin';
+
+    if (!isAdmin && !isReseller) {
+      return { success: false, added: 0, removed: 0, error: 'Permessi insufficienti' };
+    }
+
+    // Rate limiting
+    const rl = await rateLimit('assign-listino', currentUser.id, { limit: 30, windowSeconds: 60 });
+    if (!rl.allowed) {
+      return {
+        success: false,
+        added: 0,
+        removed: 0,
+        error: 'Troppe richieste. Riprova tra qualche secondo.',
+      };
+    }
+
+    // Reseller: verifica margine non negativo su tutti i listini selezionati
+    if (isReseller && selectedListinoIds.length > 0) {
+      const { data: plsCheck } = await supabaseAdmin
+        .from('price_lists')
+        .select('id, default_margin_percent')
+        .in('id', selectedListinoIds);
+
+      const negativeMargin = plsCheck?.find(
+        (pl) => pl.default_margin_percent !== null && pl.default_margin_percent < 0
+      );
+      if (negativeMargin) {
+        return {
+          success: false,
+          added: 0,
+          removed: 0,
+          error: 'Non puoi assegnare un listino con margine negativo (vendita sottocosto)',
+        };
+      }
+    }
+
+    // RPC atomica: singola transazione DB
+    const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+      'bulk_update_user_listini',
+      {
+        p_caller_id: currentUser.id,
+        p_user_id: userId,
+        p_selected_ids: selectedListinoIds,
+      }
+    );
+
+    if (rpcError) {
+      console.error('Errore RPC bulk_update_user_listini:', rpcError);
+      const msg = rpcError.message || '';
+      if (msg.includes('FORBIDDEN')) {
+        return {
+          success: false,
+          added: 0,
+          removed: 0,
+          error: 'Puoi gestire listini solo dei tuoi clienti',
+        };
+      }
+      if (msg.includes('UNAUTHORIZED')) {
+        return {
+          success: false,
+          added: 0,
+          removed: 0,
+          error: 'Non hai accesso a uno o più listini selezionati',
+        };
+      }
+      return { success: false, added: 0, removed: 0, error: rpcError.message };
+    }
+
+    const added = rpcResult?.added ?? 0;
+    const removed = rpcResult?.removed ?? 0;
+
+    // Audit log
+    if (added > 0 || removed > 0) {
+      await writeAuditLog({
+        context,
+        action: added > 0 ? AUDIT_ACTIONS.PRICE_LIST_ASSIGNED : AUDIT_ACTIONS.PRICE_LIST_REVOKED,
+        resourceType: AUDIT_RESOURCE_TYPES.PRICE_LIST_ASSIGNMENT,
+        resourceId: userId,
+        metadata: { targetUserId: userId, selectedListinoIds, added, removed },
+      });
+    }
+
+    return { success: true, added, removed };
+  } catch (error: any) {
+    console.error('Errore bulk_update_user_listini:', error);
+    return { success: false, added: 0, removed: 0, error: error.message || 'Errore sconosciuto' };
   }
 }
 

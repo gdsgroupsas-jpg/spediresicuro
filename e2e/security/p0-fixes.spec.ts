@@ -34,11 +34,11 @@ test.describe('P0 Security Fixes Verification', () => {
         });
       });
 
-      // Naviga a pagina che filtra price lists
-      await page.goto('/dashboard/reseller/listini-fornitore');
+      // Naviga a pagina che filtra price lists (unified reseller page)
+      await page.goto('/dashboard/reseller/listini');
 
       // Tenta SQL injection via query param (es: ?courierId=' OR '1'='1)
-      await page.goto("/dashboard/reseller/listini-fornitore?courierId=' OR '1'='1");
+      await page.goto("/dashboard/reseller/listini?courierId=' OR '1'='1");
 
       // Verifica che l'API sia stata chiamata
       await page.waitForTimeout(1000); // Wait for API call
@@ -75,7 +75,7 @@ test.describe('P0 Security Fixes Verification', () => {
       // Aspetta esplicitamente la request
       const requestPromise = page.waitForRequest((req) => req.url().includes('/api/price-lists'));
 
-      await page.goto('/dashboard/reseller/listini-fornitore');
+      await page.goto('/dashboard/reseller/listini');
 
       // TRIGGER MANUALE
       await page.evaluate(async () => {
@@ -133,7 +133,8 @@ test.describe('P0 Security Fixes Verification', () => {
       const currentUrl = page.url();
       const redirectedToLogin = currentUrl.includes('/login');
       const redirectedToListPage =
-        currentUrl.includes('/listini-fornitore') && !currentUrl.includes(userBPriceListId);
+        (currentUrl.includes('/listini-fornitore') || currentUrl.includes('/reseller/listini')) &&
+        !currentUrl.includes(userBPriceListId);
 
       expect(hasUnauthorizedError || redirectedToLogin || redirectedToListPage).toBe(true);
 
@@ -280,7 +281,7 @@ test.describe('P0 Security Fixes Verification', () => {
         }
       });
 
-      await page.goto('/dashboard/reseller/listini-fornitore');
+      await page.goto('/dashboard/reseller/listini');
 
       // Simula upload (se esiste bottone upload nella UI)
       const uploadButton = page.locator('button:has-text("Carica")').first();
@@ -365,7 +366,7 @@ test.describe('P0 Security Fixes Verification', () => {
         usesRandomId = true;
       });
 
-      await page.goto('/dashboard/reseller/listini-fornitore');
+      await page.goto('/dashboard/reseller/listini');
 
       // Setup promise per aspettare la request
       const uploadPromise = page.waitForRequest((req) =>
@@ -453,7 +454,7 @@ Grace,'=HYPERLINK("http://evil.com"),Existing sanitized`;
         });
       });
 
-      await page.goto('/dashboard/reseller/listini-fornitore');
+      await page.goto('/dashboard/reseller/listini');
 
       // Simula upload se UI disponibile
       const fileInput = page.locator('input[type="file"]').first();
@@ -544,7 +545,7 @@ Charlie,300,Naples`;
         });
       });
 
-      await page.goto('/dashboard/reseller/listini-fornitore');
+      await page.goto('/dashboard/reseller/listini');
       await page.waitForTimeout(500);
 
       // ASSERTION: Dati normali non devono essere modificati
@@ -601,7 +602,7 @@ Charlie,300,Naples`;
         });
       });
 
-      await page.goto('/dashboard/reseller/listini-fornitore');
+      await page.goto('/dashboard/reseller/listini');
 
       // TRIGGER MANUALE DELLE CHIAMATE per assicurarci che vengano effettuate
       // Invece di sperare che la pagina le faccia al load

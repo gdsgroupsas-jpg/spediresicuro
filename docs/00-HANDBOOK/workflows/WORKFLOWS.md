@@ -235,7 +235,7 @@ const transactions = await getMyWalletTransactions();
 
 **Obiettivo:** Clonare listino fornitore, assegnarlo a clienti, modificare prezzi.
 
-**URL:** `/dashboard/reseller/listini-fornitore`
+**URL:** `/dashboard/reseller/listini` (tab "Fornitore" + tab "Personalizzati")
 
 **Flusso a cascata Superadmin → Reseller → Client:**
 
@@ -596,13 +596,14 @@ GET  /api/cod/distinte/export  // Export Excel
 
 ## Changelog
 
-| Date       | Version | Changes                      | Author   |
-| ---------- | ------- | ---------------------------- | -------- |
-| 2026-01-12 | 1.0.0   | Initial version              | AI Agent |
-| 2026-02-01 | 1.1.0   | Added Flow 5: COD Management | AI Agent |
+| Date       | Version | Changes                                                         | Author   |
+| ---------- | ------- | --------------------------------------------------------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version                                                 | AI Agent |
+| 2026-02-01 | 1.1.0   | Added Flow 5: COD Management                                    | AI Agent |
+| 2026-02-02 | 1.2.0   | Unified Listini UI: 4→1 sidebar entry per role, tab-based pages | AI Agent |
 
 ---
 
-_Last Updated: 2026-01-19_
+_Last Updated: 2026-02-02_
 _Status: 🟢 Active_
 _Maintainer: Dev Team_

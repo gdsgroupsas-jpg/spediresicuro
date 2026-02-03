@@ -5,7 +5,7 @@ audience: all
 owner: engineering
 status: active
 source_of_truth: true
-updated: 2026-01-29
+updated: 2026-02-02
 ---
 
 # Decision Log
@@ -101,3 +101,19 @@ Record structural and process decisions for fast AI retrieval.
 - Security: Auth via `getSafeAuth()`, verified `is_reseller || superadmin`, data scoped to `parent_id` sub-users + reseller's own shipments
 - Impact: reseller-fiscal-report.ts, report-fiscale/page.tsx, reseller-provider-chart.tsx, reseller-fiscal.ts
 - Tests: TypeScript build clean, 9 unit tests (reseller-provider-analytics.test.ts)
+
+## 2026-02-02 - Unified Listini UI (4→1 sidebar entry per role)
+
+- Decision: Consolidate 4 separate Listini sidebar entries into 1 per role with tab-based UX
+- Before: Superadmin had "Listini Prezzi" + "Listini Master" (2 entries), Reseller had "Listini Fornitore" + "Listini Personalizzati" (2 entries)
+- After:
+  - Superadmin/Admin: Single "Listini" → `/dashboard/listini` with tabs (Prezzi + Master for superadmin, Prezzi only for admin)
+  - Reseller: Single "Listini" → `/dashboard/reseller/listini` with tabs (Fornitore + Personalizzati)
+  - BYOC: Unchanged
+- Architecture:
+  - Extracted 4 tab components: `price-lists-tab.tsx`, `master-price-lists-tab.tsx`, `reseller-fornitore-tab.tsx`, `reseller-personalizzati-tab.tsx`
+  - Unified pages use controlled `<Tabs>` with URL sync via `window.history.replaceState`
+  - Old URLs (`/super-admin/listini-master`, `/reseller/listini-fornitore`, `/reseller/listini-personalizzati`) redirect to new unified pages
+  - Detail page route `/reseller/listini-fornitore/[id]` unchanged
+- Impact: navigationConfig.ts, 2 new pages, 4 new tab components, 3 redirect pages, 4 e2e test files, 6 doc files
+- Tests: 41 unit tests pass (4 new nav tests, 3 redirect tests), build clean

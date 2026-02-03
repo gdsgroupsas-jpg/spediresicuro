@@ -1,9 +1,6 @@
 'use client';
 
-import {
-  assignPriceListToUserAction as assignPriceListAction,
-  listPriceListsAction,
-} from '@/actions/price-lists';
+import { bulkUpdateUserListiniAction, listPriceListsAction } from '@/actions/price-lists';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -23,7 +20,7 @@ interface AssignListinoDialogProps {
   onOpenChange: (open: boolean) => void;
   clientId: string;
   clientName: string;
-  currentListinoId?: string;
+  currentListinoIds: string[];
   onSuccess: () => void;
   onCreateNew: () => void;
 }
@@ -33,18 +30,21 @@ export function AssignListinoDialog({
   onOpenChange,
   clientId,
   clientName,
-  currentListinoId,
+  currentListinoIds,
   onSuccess,
   onCreateNew,
 }: AssignListinoDialogProps) {
   const [priceLists, setPriceLists] = useState<PriceList[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [isAssigning, setIsAssigning] = useState(false);
-  const [selectedListinoId, setSelectedListinoId] = useState<string | null>(
-    currentListinoId || null
-  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set(currentListinoIds));
 
-  // Carica listini disponibili
+  useEffect(() => {
+    if (open) {
+      setSelectedIds(new Set(currentListinoIds));
+    }
+  }, [open, currentListinoIds]);
+
   useEffect(() => {
     async function loadPriceLists() {
       if (!open) return;
@@ -53,7 +53,6 @@ export function AssignListinoDialog({
       try {
         const result = await listPriceListsAction();
         if (result.success && result.priceLists) {
-          // Filtra solo listini attivi che possono essere assegnati
           const assignableLists = result.priceLists.filter(
             (pl) =>
               pl.status === 'active' && (pl.list_type === 'custom' || pl.list_type === 'supplier')
@@ -71,27 +70,45 @@ export function AssignListinoDialog({
     loadPriceLists();
   }, [open]);
 
-  const handleAssign = async () => {
-    if (!selectedListinoId || !clientId) return;
-
-    setIsAssigning(true);
-    try {
-      const result = await assignPriceListAction(clientId, selectedListinoId);
-
-      if (result.success) {
-        toast.success('Listino assegnato con successo');
-        onSuccess();
-        onOpenChange(false);
+  const toggleListino = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
       } else {
-        toast.error(result.error || "Errore nell'assegnazione del listino");
+        next.add(id);
       }
+      return next;
+    });
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      const result = await bulkUpdateUserListiniAction(clientId, [...selectedIds]);
+
+      if (!result.success) {
+        toast.error(result.error || 'Errore nel salvataggio');
+        return;
+      }
+
+      const changes = result.added + result.removed;
+      if (changes > 0) {
+        toast.success(`Listini aggiornati (${result.added} aggiunti, ${result.removed} rimossi)`);
+      }
+      onSuccess();
+      onOpenChange(false);
     } catch (error) {
-      console.error('Errore assegnazione listino:', error);
-      toast.error("Errore nell'assegnazione del listino");
+      console.error('Errore salvataggio listini:', error);
+      toast.error('Errore nel salvataggio');
     } finally {
-      setIsAssigning(false);
+      setIsSaving(false);
     }
   };
+
+  const hasChanges =
+    selectedIds.size !== currentListinoIds.length ||
+    [...selectedIds].some((id) => !currentListinoIds.includes(id));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,11 +116,10 @@ export function AssignListinoDialog({
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="w-5 h-5 text-orange-600" />
-            Assegna Listino a {clientName}
+            Gestisci Listini di {clientName}
           </DialogTitle>
           <DialogDescription>
-            Seleziona un listino esistente da assegnare al cliente o creane uno nuovo
-            personalizzato.
+            Seleziona i listini da assegnare al cliente. Puoi assegnarne quanti ne vuoi.
           </DialogDescription>
         </DialogHeader>
 
@@ -123,59 +139,60 @@ export function AssignListinoDialog({
               </Button>
             </div>
           ) : (
-            <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
-              {priceLists.map((listino) => (
-                <div
-                  key={listino.id}
-                  onClick={() => setSelectedListinoId(listino.id)}
-                  className={`p-3 rounded-lg border cursor-pointer transition-all ${
-                    selectedListinoId === listino.id
-                      ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500'
-                      : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
-                  } ${currentListinoId === listino.id ? 'bg-green-50 border-green-200' : ''}`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                          selectedListinoId === listino.id ? 'bg-orange-500' : 'bg-gray-100'
-                        }`}
-                      >
-                        {selectedListinoId === listino.id ? (
-                          <Check className="w-4 h-4 text-white" />
-                        ) : (
-                          <FileText
-                            className={`w-4 h-4 ${
-                              currentListinoId === listino.id ? 'text-green-600' : 'text-gray-400'
-                            }`}
-                          />
+            <div className="space-y-2 max-h-[350px] overflow-y-auto pr-2">
+              {priceLists.map((listino) => {
+                const isSelected = selectedIds.has(listino.id);
+                const isCurrentlyAssigned = currentListinoIds.includes(listino.id);
+
+                return (
+                  <div
+                    key={listino.id}
+                    onClick={() => toggleListino(listino.id)}
+                    className={`p-3 rounded-lg border cursor-pointer transition-all ${
+                      isSelected
+                        ? 'border-orange-500 bg-orange-50 ring-1 ring-orange-500'
+                        : 'border-gray-200 hover:border-orange-300 hover:bg-gray-50'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className={`w-8 h-8 rounded-lg flex items-center justify-center ${
+                            isSelected ? 'bg-orange-500' : 'bg-gray-100'
+                          }`}
+                        >
+                          {isSelected ? (
+                            <Check className="w-4 h-4 text-white" />
+                          ) : (
+                            <FileText className="w-4 h-4 text-gray-400" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">{listino.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {listino.list_type === 'custom' ? 'Personalizzato' : 'Fornitore'}
+                            {listino.default_margin_percent !== undefined &&
+                              ` • +${listino.default_margin_percent}% margine`}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {isCurrentlyAssigned && (
+                          <Badge variant="success" className="text-xs">
+                            Assegnato
+                          </Badge>
                         )}
-                      </div>
-                      <div>
-                        <p className="font-medium text-gray-900">{listino.name}</p>
-                        <p className="text-xs text-gray-500">
-                          {listino.list_type === 'custom' ? 'Personalizzato' : 'Fornitore'}
-                          {listino.default_margin_percent !== undefined &&
-                            ` • +${listino.default_margin_percent}% margine`}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      {currentListinoId === listino.id && (
-                        <Badge variant="success" className="text-xs">
-                          Attuale
+                        <Badge
+                          variant={listino.status === 'active' ? 'secondary' : 'outline'}
+                          className="text-xs"
+                        >
+                          v{listino.version}
                         </Badge>
-                      )}
-                      <Badge
-                        variant={listino.status === 'active' ? 'secondary' : 'outline'}
-                        className="text-xs"
-                      >
-                        v{listino.version}
-                      </Badge>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -190,24 +207,25 @@ export function AssignListinoDialog({
               <Plus className="w-4 h-4 mr-2" />
               Crea Nuovo
             </Button>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
+              {selectedIds.size > 0 && (
+                <span className="text-xs text-gray-500">{selectedIds.size} selezionati</span>
+              )}
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Annulla
               </Button>
               <Button
-                onClick={handleAssign}
-                disabled={
-                  !selectedListinoId || selectedListinoId === currentListinoId || isAssigning
-                }
+                onClick={handleSave}
+                disabled={!hasChanges || isSaving}
                 className="bg-orange-600 hover:bg-orange-700"
               >
-                {isAssigning ? (
+                {isSaving ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Assegnazione...
+                    Salvataggio...
                   </>
                 ) : (
-                  'Assegna Listino'
+                  'Salva Listini'
                 )}
               </Button>
             </div>
