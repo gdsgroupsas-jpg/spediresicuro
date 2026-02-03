@@ -14,7 +14,7 @@ import { requireAuth } from '@/lib/api-middleware';
 import { ApiErrors, handleApiError } from '@/lib/api-responses';
 import type { DatiCliente } from '@/lib/database';
 import { supabaseAdmin } from '@/lib/db/client';
-import bcrypt from 'bcryptjs';
+import { sendWelcomeEmail } from '@/lib/email/resend';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -159,8 +159,40 @@ export async function POST(request: NextRequest) {
       generatedPassword = finalPassword;
     }
 
-    // Hash password
-    const hashedPassword = await bcrypt.hash(finalPassword, 10);
+    // ========================================
+    // ✨ STEP 1: Crea utente in Supabase Auth PRIMA
+    // ========================================
+    // Questo è necessario per permettere il login con credentials
+    const emailLower = email.toLowerCase().trim();
+    const clientName = `${nome} ${cognome}`;
+
+    console.log('🔐 [RESELLER CLIENTS] Creazione utente in Supabase Auth...');
+
+    const { data: authUserData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+      email: emailLower,
+      password: finalPassword, // Supabase hasha automaticamente
+      email_confirm: true, // Conferma email automaticamente (clienti creati da reseller sono verificati)
+      user_metadata: {
+        name: clientName,
+      },
+      app_metadata: {
+        role: 'user',
+        account_type: 'user',
+        provider: 'credentials',
+        parent_id: resellerId,
+      },
+    });
+
+    if (authError || !authUserData?.user) {
+      console.error('❌ [RESELLER CLIENTS] Errore creazione utente in auth.users:', authError);
+      return NextResponse.json(
+        { error: authError?.message || "Errore durante la creazione dell'account" },
+        { status: 400 }
+      );
+    }
+
+    const authUserId = authUserData.user.id;
+    console.log('✅ [RESELLER CLIENTS] Utente creato in auth.users:', authUserId);
 
     // Costruisci oggetto DatiCliente
     const datiCliente: DatiCliente = {
@@ -215,32 +247,42 @@ export async function POST(request: NextRequest) {
     }
 
     // ========================================
-    // ✨ CREAZIONE ATOMICA VIA RPC
+    // ✨ STEP 2: CREAZIONE RECORD IN PUBLIC.USERS VIA RPC
     // ========================================
     // Usa la funzione PostgreSQL per garantire:
     // 1. Atomicità: client + listino creati insieme o nessuno dei due
     // 2. Privacy: verifica ownership listino prima di assegnare
     // 3. Sicurezza: SECURITY DEFINER con permessi controllati
+    // NOTA: L'utente è già stato creato in auth.users, ora creiamo il record in public.users
 
-    const clientName = `${nome} ${cognome}`;
     const companyName = tipoCliente === 'azienda' ? ragioneSociale : null;
 
     const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
       'create_client_with_listino',
       {
         p_reseller_id: resellerId,
-        p_email: email.toLowerCase().trim(),
-        p_password_hash: hashedPassword,
+        p_email: emailLower,
+        p_password_hash: null, // Password gestita da Supabase Auth
         p_name: clientName,
         p_dati_cliente: datiCliente,
         p_price_list_id: priceListId || null,
         p_company_name: companyName,
         p_phone: telefono,
+        p_auth_user_id: authUserId, // ⚠️ NUOVO: Usa ID da auth.users
       }
     );
 
     if (rpcError) {
       console.error('❌ [RESELLER CLIENTS] Errore RPC creazione cliente:', rpcError);
+
+      // ⚠️ ROLLBACK: Elimina utente da auth.users se la creazione in public.users fallisce
+      console.log('🔄 [RESELLER CLIENTS] Rollback: eliminazione utente da auth.users...');
+      try {
+        await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        console.log('✅ [RESELLER CLIENTS] Rollback completato');
+      } catch (rollbackError) {
+        console.error('❌ [RESELLER CLIENTS] Errore rollback:', rollbackError);
+      }
 
       // Gestione errori specifici dalla RPC
       const errorMessage = rpcError.message || '';
@@ -290,6 +332,34 @@ export async function POST(request: NextRequest) {
       tipoCliente,
       priceListId: priceListId || 'none',
     });
+
+    // ========================================
+    // ✨ STEP 3: Invia email di benvenuto
+    // ========================================
+    // Recupera info reseller per personalizzare email
+    const { data: resellerInfo } = await supabaseAdmin
+      .from('users')
+      .select('name, dati_cliente')
+      .eq('id', resellerId)
+      .single();
+
+    const resellerName = resellerInfo?.name || resellerInfo?.dati_cliente?.ragioneSociale;
+    const resellerCompanyName = resellerInfo?.dati_cliente?.ragioneSociale;
+
+    // Invia email (non blocca se fallisce)
+    try {
+      await sendWelcomeEmail({
+        to: emailLower,
+        userName: clientName,
+        password: finalPassword,
+        createdBy: resellerName,
+        companyName: resellerCompanyName,
+      });
+      console.log('✅ [RESELLER CLIENTS] Email di benvenuto inviata a:', emailLower);
+    } catch (emailError) {
+      console.error('⚠️ [RESELLER CLIENTS] Errore invio email benvenuto:', emailError);
+      // Non blocchiamo, il cliente è stato creato
+    }
 
     return NextResponse.json({
       success: true,
