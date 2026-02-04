@@ -2,9 +2,10 @@
 
 Documentazione completa delle API di SpedireSicuro con schema OpenAPI auto-generated.
 
-> **📅 Last Validated:** 2026-01-20
+> **📅 Last Validated:** 2026-02-04
 > **✅ Status:** Endpoints validated against production implementation
 > **⚠️ Note:** Some documented endpoints are marked as NOT IMPLEMENTED
+> **🆕 New:** Workspace APIs added in Architecture V2 (Feb 2026)
 
 ---
 
@@ -12,6 +13,7 @@ Documentazione completa delle API di SpedireSicuro con schema OpenAPI auto-gener
 
 SpedireSicuro espone API REST per:
 
+- **Workspace Management** (NEW v2.0) - Multi-tenant workspace switching
 - Gestione spedizioni
 - Pricing engine
 - Wallet operations
@@ -283,6 +285,108 @@ Content-Type: application/json
 ---
 
 ## 📚 **API Endpoints**
+
+### **Workspace APIs** (NEW v2.0)
+
+> These APIs manage multi-tenant workspace functionality. See [ARCHITECTURE_V2_PLAN.md](00-HANDBOOK/ARCHITECTURE_V2_PLAN.md) for architecture details.
+
+#### **Get My Workspaces**
+
+Returns all workspaces the authenticated user has access to.
+
+```http
+GET /api/workspaces/my
+Authorization: Cookie or Bearer token
+```
+
+**Response:**
+
+```json
+{
+  "workspaces": [
+    {
+      "workspace_id": "uuid-here",
+      "workspace_name": "Logistica Milano",
+      "workspace_slug": "logistica-milano",
+      "workspace_type": "reseller",
+      "workspace_depth": 1,
+      "organization_id": "org-uuid",
+      "organization_name": "SpedireSicuro",
+      "organization_slug": "spediresicuro",
+      "role": "owner",
+      "permissions": ["shipments:create", "wallet:view"],
+      "wallet_balance": 1500.0,
+      "branding": {
+        "logo_url": "https://...",
+        "primary_color": "#FF6B00"
+      },
+      "member_status": "active"
+    }
+  ],
+  "count": 1
+}
+```
+
+**Error Responses:**
+
+- `401 Unauthorized` - Not authenticated
+- `500 Internal Server Error` - Database error
+
+---
+
+#### **Switch Workspace**
+
+Sets the current workspace for the user. Updates both database and httpOnly cookie.
+
+```http
+POST /api/workspaces/switch
+Authorization: Cookie or Bearer token
+Content-Type: application/json
+
+{
+  "workspaceId": "uuid-here"
+}
+```
+
+**Success Response:**
+
+```json
+{
+  "success": true,
+  "workspace": {
+    "workspace_id": "uuid-here",
+    "workspace_name": "Logistica Milano",
+    "workspace_slug": "logistica-milano",
+    "workspace_type": "reseller",
+    "workspace_depth": 1,
+    "organization_id": "org-uuid",
+    "organization_name": "SpedireSicuro",
+    "organization_slug": "spediresicuro",
+    "role": "owner",
+    "permissions": [],
+    "wallet_balance": 1500.0,
+    "branding": {},
+    "member_status": "active"
+  }
+}
+```
+
+**Error Responses:**
+
+- `400 Bad Request` - Missing or invalid workspaceId
+- `401 Unauthorized` - Not authenticated
+- `403 Forbidden` - Not a member of the workspace
+- `404 Not Found` - Workspace doesn't exist
+- `500 Internal Server Error` - Database update failed
+
+**Security Notes:**
+
+- Workspace ID is validated with strict UUID v4 regex
+- httpOnly cookie prevents XSS attacks
+- Database is updated BEFORE cookie (atomic operation)
+- Audit log entry created for each switch
+
+---
 
 ### **Health Check**
 

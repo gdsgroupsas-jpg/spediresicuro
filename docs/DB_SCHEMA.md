@@ -5,11 +5,12 @@
 SpedireSicuro uses **PostgreSQL** via Supabase with the following core modules:
 
 1. **User Management** - Users, roles, authentication
-2. **Shipments** - Spedizioni, tracking, corrieri
-3. **Financial** - Wallet, transactions, top-ups
-4. **Security** - Audit logs, impersonation tracking
-5. **CRM** - Leads, conversions
-6. **Automation** - Courier configs, diagnostics
+2. **Multi-Tenant** - Organizations, Workspaces, Members (NEW v2.0)
+3. **Shipments** - Spedizioni, tracking, corrieri
+4. **Financial** - Wallet, transactions, top-ups
+5. **Security** - Audit logs, impersonation tracking
+6. **CRM** - Leads, conversions
+7. **Automation** - Courier configs, diagnostics
 
 ---
 
@@ -80,6 +81,190 @@ CREATE POLICY "users_update" ON users FOR UPDATE USING (
 - `email` must be unique
 - If `is_reseller = true`, user can have children via `parent_user_id`
 - SuperAdmin should NOT have `parent_user_id` set
+- `primary_workspace_id` references the user's current workspace
+
+---
+
+## Multi-Tenant Tables (Architecture V2)
+
+> Added in Architecture V2 (Feb 2026). See [ARCHITECTURE_V2_PLAN.md](00-HANDBOOK/ARCHITECTURE_V2_PLAN.md) for full details.
+
+### organizations
+
+**Purpose:** Top-level tenant container for workspaces, billing, and branding
+
+```sql
+CREATE TABLE organizations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Identity
+  name TEXT NOT NULL,
+  slug TEXT UNIQUE NOT NULL,  -- URL-friendly identifier
+
+  -- Fiscal/Billing
+  vat_number TEXT,
+  fiscal_code TEXT,
+  billing_email TEXT NOT NULL,
+  billing_address JSONB,
+
+  -- Branding (White-label)
+  branding JSONB DEFAULT '{}',  -- {logo_url, primary_color, secondary_color}
+  white_label_level INTEGER DEFAULT 1,  -- 1=base, 2=subdomain, 3=custom domain
+  custom_domain TEXT,
+
+  -- Settings & Status
+  settings JSONB DEFAULT '{}',
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'deleted')),
+
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id)
+);
+```
+
+**RLS Policies:**
+
+- Superadmin: Full access
+- Members: Can view organizations they belong to (via workspace membership)
+
+---
+
+### workspaces
+
+**Purpose:** Hierarchical tenant unit with wallet, pricing, and team management
+
+```sql
+CREATE TABLE workspaces (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- Ownership
+  organization_id UUID NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+
+  -- Identity
+  name TEXT NOT NULL,
+  slug TEXT NOT NULL,  -- Unique within organization
+
+  -- Hierarchy (max 3 levels: 0=platform, 1=reseller, 2=client)
+  type TEXT NOT NULL CHECK (type IN ('platform', 'reseller', 'client')),
+  depth INTEGER NOT NULL DEFAULT 0 CHECK (depth >= 0 AND depth <= 2),
+  parent_workspace_id UUID REFERENCES workspaces(id),
+
+  -- Wallet
+  wallet_balance DECIMAL(12,2) DEFAULT 0.00 CHECK (wallet_balance >= 0),
+
+  -- Pricing
+  assigned_price_list_id UUID,   -- Listino che PAGO
+  selling_price_list_id UUID,    -- Listino che VENDO (if reseller)
+  assigned_courier_config_id UUID,
+
+  -- Fee (ALWAYS NULL by default - Superadmin configures manually)
+  platform_fee_override DECIMAL(5,2) DEFAULT NULL,
+  parent_imposed_fee DECIMAL(5,2) DEFAULT NULL,
+
+  -- Settings & Status
+  settings JSONB DEFAULT '{}',
+  status TEXT DEFAULT 'active' CHECK (status IN ('active', 'suspended', 'deleted')),
+
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_by UUID REFERENCES auth.users(id),
+
+  UNIQUE(organization_id, slug)
+);
+```
+
+**Invariants:**
+
+- `depth = 0` → Platform level (no parent)
+- `depth = 1` → Reseller level (parent = platform)
+- `depth = 2` → Client level (parent = reseller)
+- `platform_fee_override` and `parent_imposed_fee` MUST be NULL until Superadmin configures
+- `wallet_balance >= 0`
+
+**RLS Policies:**
+
+- Superadmin: Full access
+- Members: Can view workspaces they're members of
+- Resellers: Can view their client sub-workspaces
+
+---
+
+### workspace_members
+
+**Purpose:** User-to-workspace membership with roles and permissions
+
+```sql
+CREATE TABLE workspace_members (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- References
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+
+  -- Role & Permissions
+  role TEXT NOT NULL CHECK (role IN ('owner', 'admin', 'member', 'viewer')),
+  permissions JSONB DEFAULT '{}',  -- Granular permissions
+
+  -- Invitation tracking
+  invited_by UUID REFERENCES auth.users(id),
+  accepted_at TIMESTAMPTZ,
+
+  -- Status
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'active', 'suspended', 'removed')),
+
+  -- Timestamps
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  UNIQUE(workspace_id, user_id)
+);
+```
+
+**Invariants:**
+
+- One user can be member of multiple workspaces
+- Each workspace must have at least one owner
+- Status `active` required for access
+
+---
+
+### workspace_invitations
+
+**Purpose:** Pending invitations to join a workspace
+
+```sql
+CREATE TABLE workspace_invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+
+  -- References
+  workspace_id UUID NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+
+  -- Invitation details
+  email TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('admin', 'member', 'viewer')),
+  permissions JSONB DEFAULT '{}',
+
+  -- Token
+  token TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(32), 'hex'),
+
+  -- Status
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired', 'cancelled')),
+
+  -- Timestamps
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '7 days'),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  invited_by UUID REFERENCES auth.users(id),
+  accepted_at TIMESTAMPTZ,
+  accepted_by UUID REFERENCES auth.users(id)
+);
+```
+
+**Invariants:**
+
+- Invitations expire after 7 days by default
+- Auto-expire trigger marks status = 'expired' when past expires_at
 
 ---
 
@@ -91,6 +276,7 @@ CREATE POLICY "users_update" ON users FOR UPDATE USING (
 CREATE TABLE shipments (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(id),
+  workspace_id UUID REFERENCES workspaces(id),  -- Added in V2
 
   -- Status
   status TEXT DEFAULT 'draft',  -- draft, confirmed, cancelled, delivered
@@ -193,6 +379,7 @@ CREATE POLICY "prevent_orphan_shipments" ON shipments FOR INSERT WITH CHECK (
 CREATE TABLE wallet_transactions (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   user_id UUID NOT NULL REFERENCES users(id),
+  workspace_id UUID REFERENCES workspaces(id),  -- Added in V2
 
   -- Transaction details
   amount DECIMAL(10,2) NOT NULL,  -- Positive = credit, Negative = debit
@@ -727,6 +914,78 @@ ORDER BY rls_enabled, tablename;
 
 ---
 
-**Document Owner:** Database Team  
-**Last Updated:** December 29, 2025  
+---
+
+## Workspace-Aware Functions (V2)
+
+### get_user_workspaces()
+
+**Purpose:** Get all workspaces accessible by a user
+
+```sql
+CREATE OR REPLACE FUNCTION get_user_workspaces(
+  p_user_id UUID,
+  p_limit INTEGER DEFAULT 50,
+  p_offset INTEGER DEFAULT 0
+)
+RETURNS TABLE (
+  workspace_id UUID,
+  workspace_name TEXT,
+  workspace_slug TEXT,
+  workspace_type TEXT,
+  workspace_depth INTEGER,
+  organization_id UUID,
+  organization_name TEXT,
+  organization_slug TEXT,
+  role TEXT,
+  permissions JSONB,
+  wallet_balance NUMERIC,
+  branding JSONB,
+  member_status TEXT
+);
+```
+
+### create_workspace_with_owner()
+
+**Purpose:** Atomically create workspace and add owner as member
+
+```sql
+CREATE OR REPLACE FUNCTION create_workspace_with_owner(
+  p_organization_id UUID,
+  p_name TEXT,
+  p_slug TEXT DEFAULT NULL,
+  p_parent_workspace_id UUID DEFAULT NULL,
+  p_owner_user_id UUID DEFAULT NULL,
+  p_assigned_price_list_id UUID DEFAULT NULL,
+  p_selling_price_list_id UUID DEFAULT NULL,
+  p_assigned_courier_config_id UUID DEFAULT NULL
+)
+RETURNS UUID;
+```
+
+**⚠️ CRITICAL:** This function sets `platform_fee_override` and `parent_imposed_fee` to NULL. Superadmin MUST configure these manually after creation.
+
+### soft_delete_workspace()
+
+**Purpose:** Soft-delete workspace with validation
+
+```sql
+CREATE OR REPLACE FUNCTION soft_delete_workspace(
+  p_workspace_id UUID,
+  p_deleted_by UUID DEFAULT NULL
+)
+RETURNS BOOLEAN;
+```
+
+**Validates:**
+
+- No active shipments
+- Logs audit trail
+- Marks members as removed
+- Cancels pending invitations
+
+---
+
+**Document Owner:** Database Team
+**Last Updated:** February 4, 2026
 **Review Cycle:** After each migration
