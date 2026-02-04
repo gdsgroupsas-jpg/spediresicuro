@@ -473,6 +473,13 @@ const accountSection: NavSection = {
   defaultExpanded: true,
   items: [
     {
+      id: 'workspace-team',
+      label: 'Team Workspace',
+      href: '/dashboard/workspace/team',
+      icon: Users,
+      description: 'Gestione membri del workspace',
+    },
+    {
       id: 'wallet',
       label: 'Wallet',
       href: '/dashboard/wallet',
