@@ -33,6 +33,7 @@ import {
   type WorkspaceMemberRole,
   type WorkspacePermission,
 } from '@/types/workspace';
+import { sendWorkspaceInvitationEmail } from '@/lib/email/resend';
 import crypto from 'crypto';
 
 export const dynamic = 'force-dynamic';
@@ -202,12 +203,53 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       },
     });
 
-    // 12. Fetch workspace name per risposta
+    // 12. Fetch workspace + organization info per email
     const { data: workspace } = await supabaseAdmin
       .from('workspaces')
-      .select('name')
+      .select(
+        `
+        name,
+        organizations!inner (
+          name
+        )
+      `
+      )
       .eq('id', workspaceId)
       .single();
+
+    const workspaceName = workspace?.name || 'Workspace';
+    const organizationName = (workspace?.organizations as any)?.name || 'Organizzazione';
+
+    // 13. Fetch inviter name
+    const { data: inviter } = await supabaseAdmin
+      .from('users')
+      .select('name, email')
+      .eq('id', context.target.id)
+      .single();
+
+    const inviterName = inviter?.name || inviter?.email?.split('@')[0] || 'Un membro';
+
+    // 14. Invia email di invito
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://spediresicuro.it'}/invite/${token}`;
+
+    const emailResult = await sendWorkspaceInvitationEmail({
+      to: normalizedEmail,
+      inviterName,
+      workspaceName,
+      organizationName,
+      role: memberRole,
+      inviteUrl,
+      expiresAt,
+      message: message || undefined,
+    });
+
+    if (!emailResult.success) {
+      console.warn(
+        `⚠️ [INVITE] Email send failed for invitation ${invitation.id}:`,
+        emailResult.error
+      );
+      // Non blocchiamo - l'invito è stato creato, l'email può essere reinviata
+    }
 
     return NextResponse.json({
       success: true,
@@ -215,12 +257,15 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         id: invitation.id,
         role: invitation.role,
         expires_at: invitation.expires_at,
-        // Token mostrato SOLO una volta per inviare email
+        // Token mostrato SOLO una volta per condividere manualmente se email fallisce
         token: token,
-        invite_url: `${process.env.NEXT_PUBLIC_APP_URL}/invite/${token}`,
-        workspace_name: workspace?.name || 'Workspace',
+        invite_url: inviteUrl,
+        workspace_name: workspaceName,
       },
-      message: `Invito creato! L'utente potrà unirsi al workspace usando il link fornito.`,
+      email_sent: emailResult.success,
+      message: emailResult.success
+        ? `Invito inviato a ${normalizedEmail}! L'utente riceverà un'email con il link.`
+        : `Invito creato! L'email non è stata inviata - condividi il link manualmente.`,
     });
   } catch (error: any) {
     console.error('POST /api/workspaces/[id]/invite error:', error);

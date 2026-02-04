@@ -431,3 +431,116 @@ export async function sendPasswordChangedEmail(params: PasswordChangedEmailParam
     html,
   });
 }
+
+// ─── WORKSPACE INVITATION EMAIL ───
+
+interface WorkspaceInvitationEmailParams {
+  to: string;
+  inviterName: string;
+  workspaceName: string;
+  organizationName: string;
+  role: 'admin' | 'operator' | 'viewer';
+  inviteUrl: string;
+  expiresAt: Date;
+  message?: string;
+}
+
+export async function sendWorkspaceInvitationEmail(params: WorkspaceInvitationEmailParams) {
+  const { to, inviterName, workspaceName, organizationName, role, inviteUrl, expiresAt, message } =
+    params;
+
+  const roleLabels: Record<string, string> = {
+    admin: 'Amministratore',
+    operator: 'Operatore',
+    viewer: 'Visualizzatore',
+  };
+
+  const roleDescriptions: Record<string, string> = {
+    admin: 'Gestione completa del workspace, membri e impostazioni',
+    operator: 'Creazione spedizioni e gestione contatti',
+    viewer: 'Solo visualizzazione dati',
+  };
+
+  const formattedExpiry = expiresAt.toLocaleDateString('it-IT', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const messageSection = message
+    ? `
+      <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 12px; margin: 16px 0;">
+        <p style="color: #166534; font-size: 13px; margin: 0; font-style: italic;">
+          "${message}"
+        </p>
+        <p style="color: #15803d; font-size: 12px; margin: 8px 0 0 0; font-weight: 500;">
+          — ${inviterName}
+        </p>
+      </div>
+    `
+    : '';
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #FF9500, #FF6B35); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">👋 Sei stato invitato!</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #334155; font-size: 16px; margin-top: 0;">
+          <strong>${inviterName}</strong> ti ha invitato a unirti al workspace <strong>${workspaceName}</strong> di <strong>${organizationName}</strong>.
+        </p>
+
+        ${messageSection}
+
+        <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Organizzazione</td>
+              <td style="padding: 10px 0; color: #1e293b; font-weight: 600; text-align: right; font-size: 14px;">${organizationName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9;">Workspace</td>
+              <td style="padding: 10px 0; color: #1e293b; font-weight: 600; text-align: right; font-size: 14px;">${workspaceName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9;">Ruolo assegnato</td>
+              <td style="padding: 10px 0; text-align: right;">
+                <span style="background: linear-gradient(135deg, #FF9500, #FF6B35); color: white; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px;">
+                  ${roleLabels[role] || role}
+                </span>
+              </td>
+            </tr>
+          </table>
+          <p style="color: #64748b; font-size: 12px; margin: 12px 0 0 0; padding-top: 12px; border-top: 1px solid #f1f5f9;">
+            ${roleDescriptions[role] || ''}
+          </p>
+        </div>
+
+        <div style="text-align: center; margin: 28px 0;">
+          <a href="${inviteUrl}" style="display: inline-block; background: linear-gradient(135deg, #FF9500, #FF6B35); color: white; font-weight: 600; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);">
+            Accetta Invito →
+          </a>
+        </div>
+
+        <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin: 16px 0;">
+          <p style="color: #92400e; font-size: 13px; margin: 0;">
+            ⏱️ Questo invito scade il <strong>${formattedExpiry}</strong>
+          </p>
+        </div>
+
+        <p style="color: #64748b; font-size: 13px; margin-bottom: 0;">
+          Se non conosci ${inviterName} o non ti aspettavi questo invito, puoi ignorare questa email.
+        </p>
+      </div>
+      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
+        SpedireSicuro — Spedizioni semplici e sicure
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `👋 ${inviterName} ti ha invitato su ${workspaceName} — SpedireSicuro`,
+    html,
+  });
+}
