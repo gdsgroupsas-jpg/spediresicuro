@@ -129,9 +129,16 @@ async function handleCheckoutSessionCompleted(session: any) {
     return;
   }
 
-  // 4. Accredita wallet usando RPC (con retry per lock contention)
+  // 4. Accredita wallet usando RPC con supporto VAT (con retry per lock contention)
   const userId = session.metadata?.user_id || tx.user_id;
   const amountCredit = parseFloat(session.metadata?.amount_credit || tx.amount_credit.toString());
+  const grossAmount = parseFloat(
+    session.metadata?.gross_amount || tx.amount_total?.toString() || amountCredit.toString()
+  );
+  const vatMode = (session.metadata?.vat_mode || tx.vat_mode || 'excluded') as
+    | 'included'
+    | 'excluded';
+  const vatRate = parseFloat(session.metadata?.vat_rate || tx.vat_rate?.toString() || '22');
 
   // Log strutturato con userId hashato (GDPR compliance)
   const userIdHash = userId ? userId.substring(0, 8) + '***' : 'unknown';
@@ -139,19 +146,26 @@ async function handleCheckoutSessionCompleted(session: any) {
     JSON.stringify({
       event: 'stripe_wallet_credit',
       user_id_hash: userIdHash,
-      amount: amountCredit,
+      gross_amount: grossAmount,
+      credit_amount: amountCredit,
+      vat_mode: vatMode,
+      vat_rate: vatRate,
       transaction_id: transactionId,
       timestamp: new Date().toISOString(),
     })
   );
 
+  // Use VAT-aware RPC function
   const { data: txId, error: creditError } = await withConcurrencyRetry(
     async () =>
-      await supabaseAdmin.rpc('add_wallet_credit', {
+      await supabaseAdmin.rpc('add_wallet_credit_with_vat', {
         p_user_id: userId,
-        p_amount: amountCredit,
-        p_description: `Ricarica Stripe #${transactionId}`,
+        p_gross_amount: grossAmount,
+        p_vat_mode: vatMode,
+        p_vat_rate: vatRate,
+        p_description: `Ricarica Stripe #${transactionId} (${vatMode === 'included' ? 'IVA inclusa' : 'IVA esclusa'})`,
         p_created_by: null, // System operation
+        p_idempotency_key: `stripe_${transactionId}`,
       }),
     { operationName: 'stripe_webhook_credit' }
   );
@@ -229,7 +243,7 @@ async function handleCheckoutSessionCompleted(session: any) {
     console.warn('⚠️ [STRIPE WEBHOOK] Email setup failed (non-blocking):', emailError);
   }
 
-  // 8. Audit log (non bloccante)
+  // 8. Audit log (non bloccante) - Include VAT info
   try {
     await supabaseAdmin.from('audit_logs').insert({
       action: 'stripe_payment_completed',
@@ -239,8 +253,11 @@ async function handleCheckoutSessionCompleted(session: any) {
       user_id: userId,
       metadata: {
         amount_credit: amountCredit,
+        gross_amount: grossAmount,
         amount_fee: tx.amount_fee,
         amount_total: tx.amount_total,
+        vat_mode: vatMode,
+        vat_rate: vatRate,
         stripe_session_id: session.id,
         stripe_payment_intent: session.payment_intent,
         wallet_transaction_id: txId,
@@ -282,7 +299,7 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
     return;
   }
 
-  // Se ancora pending, processa (backup)
+  // Se ancora pending, processa (backup) - Include VAT metadata
   if (tx.status === 'pending') {
     await handleCheckoutSessionCompleted({
       client_reference_id: transactionId,
@@ -291,6 +308,9 @@ async function handlePaymentIntentSucceeded(paymentIntent: any) {
       metadata: {
         user_id: paymentIntent.metadata?.user_id || tx.user_id,
         amount_credit: paymentIntent.metadata?.amount_credit || tx.amount_credit.toString(),
+        gross_amount: tx.amount_total?.toString(),
+        vat_mode: paymentIntent.metadata?.vat_mode || tx.vat_mode || 'excluded',
+        vat_rate: tx.vat_rate?.toString() || '22',
       },
       customer_email: paymentIntent.receipt_email,
       id: paymentIntent.id,

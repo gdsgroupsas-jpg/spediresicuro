@@ -1685,6 +1685,7 @@ export type Database = {
           amount_credit: number;
           amount_fee: number;
           amount_total: number;
+          amount_net: number | null;
           created_at: string | null;
           id: string;
           metadata: Json | null;
@@ -1693,11 +1694,15 @@ export type Database = {
           status: string | null;
           updated_at: string | null;
           user_id: string;
+          vat_mode: string | null;
+          vat_rate: number | null;
+          vat_amount: number | null;
         };
         Insert: {
           amount_credit: number;
           amount_fee: number;
           amount_total: number;
+          amount_net?: number | null;
           created_at?: string | null;
           id?: string;
           metadata?: Json | null;
@@ -1706,11 +1711,15 @@ export type Database = {
           status?: string | null;
           updated_at?: string | null;
           user_id: string;
+          vat_mode?: string | null;
+          vat_rate?: number | null;
+          vat_amount?: number | null;
         };
         Update: {
           amount_credit?: number;
           amount_fee?: number;
           amount_total?: number;
+          amount_net?: number | null;
           created_at?: string | null;
           id?: string;
           metadata?: Json | null;
@@ -1719,6 +1728,9 @@ export type Database = {
           status?: string | null;
           updated_at?: string | null;
           user_id?: string;
+          vat_mode?: string | null;
+          vat_rate?: number | null;
+          vat_amount?: number | null;
         };
         Relationships: [];
       };
@@ -3383,6 +3395,7 @@ export type Database = {
           admin_level: number | null;
           assigned_config_id: string | null;
           assigned_price_list_id: string | null;
+          billing_mode: string | null;
           created_at: string | null;
           dati_cliente: Json | null;
           default_sender: Json | null;
@@ -3423,6 +3436,7 @@ export type Database = {
           admin_level?: number | null;
           assigned_config_id?: string | null;
           assigned_price_list_id?: string | null;
+          billing_mode?: string | null;
           created_at?: string | null;
           dati_cliente?: Json | null;
           default_sender?: Json | null;
@@ -3463,6 +3477,7 @@ export type Database = {
           admin_level?: number | null;
           assigned_config_id?: string | null;
           assigned_price_list_id?: string | null;
+          billing_mode?: string | null;
           created_at?: string | null;
           dati_cliente?: Json | null;
           default_sender?: Json | null;
@@ -3611,6 +3626,10 @@ export type Database = {
           reference_type: string | null;
           type: string;
           user_id: string;
+          vat_mode: string | null;
+          vat_rate: number | null;
+          vat_amount: number | null;
+          gross_amount: number | null;
         };
         Insert: {
           amount: number;
@@ -3623,6 +3642,10 @@ export type Database = {
           reference_type?: string | null;
           type: string;
           user_id: string;
+          vat_mode?: string | null;
+          vat_rate?: number | null;
+          vat_amount?: number | null;
+          gross_amount?: number | null;
         };
         Update: {
           amount?: number;
@@ -3635,6 +3658,10 @@ export type Database = {
           reference_type?: string | null;
           type?: string;
           user_id?: string;
+          vat_mode?: string | null;
+          vat_rate?: number | null;
+          vat_amount?: number | null;
+          gross_amount?: number | null;
         };
         Relationships: [
           {
