@@ -14,6 +14,7 @@
 import fs from 'fs';
 import path from 'path';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { getCurrentWorkspaceId, injectWorkspaceIdSync } from '@/lib/workspace-injection';
 
 // --- CONFIGURAZIONE AMBIENTE ---
 const IS_PRODUCTION = process.env.NODE_ENV === 'production';
@@ -1219,10 +1220,21 @@ export async function addSpedizione(
       },
     });
 
+    // ⚠️ WORKSPACE INJECTION: Aggiungi workspace_id se disponibile
+    // Architecture V2: Ogni spedizione appartiene a un workspace
+    const workspaceId = await getCurrentWorkspaceId();
+    const payloadWithWorkspace = injectWorkspaceIdSync(finalPayload, workspaceId);
+
+    if (workspaceId) {
+      console.log('🏢 [SUPABASE] Workspace ID iniettato:', workspaceId.substring(0, 8) + '...');
+    } else {
+      console.log('⚠️ [SUPABASE] Nessun workspace_id disponibile (backward-compatible mode)');
+    }
+
     console.log('🔄 [SUPABASE] Esecuzione INSERT...');
     const { data: supabaseData, error: supabaseError } = await supabaseAdmin
       .from('shipments')
-      .insert([finalPayload])
+      .insert([payloadWithWorkspace])
       .select()
       .single();
 
@@ -1317,11 +1329,15 @@ export async function getSpedizioni(
   }
 
   try {
-    // ⚠️ SICUREZZA: Filtra per user_id per utenti normali
+    // ⚠️ SICUREZZA: Filtra per user_id e/o workspace_id per utenti normali
     let query = supabaseAdmin
       .from('shipments')
       .select('*')
       .order('created_at', { ascending: false });
+
+    // ⚠️ WORKSPACE FILTER: Architecture V2
+    // Aggiungi filtro workspace_id se disponibile
+    const workspaceId = await getCurrentWorkspaceId();
 
     if (authContext.type === 'user') {
       // Utente normale: filtra SOLO per user_id (NON include user_id IS NULL)
@@ -1330,17 +1346,28 @@ export async function getSpedizioni(
         throw new Error('Contesto utente invalido: userId mancante');
       }
 
-      // ⚠️ CRITICO: Filtra SOLO per user_id (NON permettere user_id IS NULL)
+      // ⚠️ CRITICO: Filtra per user_id (backward-compatible)
       query = query.eq('user_id', authContext.userId);
-      console.log(
-        `✅ [SUPABASE] Filtro per user_id: ${authContext.userId.substring(0, 8)}... (user: ${authContext.userEmail || 'N/A'})`
-      );
+
+      // ⚠️ WORKSPACE FILTER: Se workspace_id disponibile, filtra anche per workspace
+      // Questo restringe ulteriormente i risultati al workspace corrente
+      if (workspaceId) {
+        query = query.eq('workspace_id', workspaceId);
+        console.log(
+          `✅ [SUPABASE] Filtro per user_id + workspace_id: ${authContext.userId.substring(0, 8)}... / ${workspaceId.substring(0, 8)}...`
+        );
+      } else {
+        console.log(
+          `✅ [SUPABASE] Filtro per user_id: ${authContext.userId.substring(0, 8)}... (user: ${authContext.userEmail || 'N/A'}) [no workspace filter - backward-compatible]`
+        );
+      }
     } else if (authContext.type === 'service_role') {
       // Service role: bypass RLS e recupera tutto (con audit log)
       const { logServiceRoleOperation } = await import('./auth-context');
       logServiceRoleOperation(authContext, 'getSpedizioni', {
         scope: 'all_shipments',
         bypass_rls: true,
+        workspace_id: workspaceId || 'none',
       });
       console.log('🔐 [SUPABASE] Service role: recupero tutte le spedizioni (bypass RLS)');
       // Nessun filtro: service_role vede tutto

@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/db/client';
 import { requireAuth } from '@/lib/api-middleware';
 import { getUserByEmail } from '@/lib/db/user-helpers';
 import { ApiErrors, handleApiError } from '@/lib/api-responses';
+import { getCurrentWorkspaceId } from '@/lib/workspace-injection';
 
 // Forza rendering dinamico (usa headers())
 export const dynamic = 'force-dynamic';
@@ -25,8 +26,11 @@ export async function GET() {
       return ApiErrors.NOT_FOUND('Utente');
     }
 
+    // ⚠️ WORKSPACE FILTER: Architecture V2
+    const workspaceId = await getCurrentWorkspaceId();
+
     // Carica transazioni
-    const { data: transactions, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('wallet_transactions')
       .select(
         `
@@ -36,12 +40,21 @@ export async function GET() {
         description,
         created_at,
         created_by,
+        workspace_id,
         users!wallet_transactions_created_by_fkey(name, email)
       `
       )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(100);
+
+    // Filtra per workspace se disponibile
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+      console.log(`🏢 [WALLET] Filtro workspace_id: ${workspaceId.substring(0, 8)}...`);
+    }
+
+    const { data: transactions, error } = await query;
 
     if (error) {
       return handleApiError(error, 'GET /api/wallet/transactions - load transactions');

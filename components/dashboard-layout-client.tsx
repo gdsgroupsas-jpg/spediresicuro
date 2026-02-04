@@ -16,6 +16,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { PilotModal } from '@/components/ai/pilot/pilot-modal';
 import { AnneProvider, AnneAssistant } from '@/components/anne';
 import AnneDoctorBridge from '@/components/anne/AnneDoctorBridge';
+import { WorkspaceProvider } from '@/contexts/WorkspaceContext';
 
 interface DashboardLayoutClientProps {
   children: React.ReactNode;
@@ -155,37 +156,39 @@ export default function DashboardLayoutClient({ children }: DashboardLayoutClien
     effectiveUserRole === 'superadmin' ? 'admin' : effectiveUserRole === 'admin' ? 'admin' : 'user';
 
   return (
-    <AnneProvider>
-      {children}
+    <WorkspaceProvider>
+      <AnneProvider>
+        {children}
 
-      {/* Pilot Modal - AI Assistant avanzato */}
-      {session?.user && (
-        <PilotModal
-          isOpen={showAiAssistant}
-          onClose={() => setShowAiAssistant(false)}
-          userId={session.user.id || ''}
-          userRole={pilotUserRole}
-          userName={session.user.name || session.user.email || 'Utente'}
-        />
-      )}
+        {/* Pilot Modal - AI Assistant avanzato */}
+        {session?.user && (
+          <PilotModal
+            isOpen={showAiAssistant}
+            onClose={() => setShowAiAssistant(false)}
+            userId={session.user.id || ''}
+            userRole={pilotUserRole}
+            userName={session.user.name || session.user.email || 'Utente'}
+          />
+        )}
 
-      {/* Anne Assistant - Fantasmino floating */}
-      {session?.user && (
-        <AnneAssistant
-          userId={session.user.id || ''}
-          userRole={effectiveUserRole}
-          userName={session.user.name || session.user.email || 'Utente'}
-          currentPage={pathname || '/dashboard'}
-        />
-      )}
+        {/* Anne Assistant - Fantasmino floating */}
+        {session?.user && (
+          <AnneAssistant
+            userId={session.user.id || ''}
+            userRole={effectiveUserRole}
+            userName={session.user.name || session.user.email || 'Utente'}
+            currentPage={pathname || '/dashboard'}
+          />
+        )}
 
-      {/* Doctor Bridge - Integrazione Self-Healing (Premium) */}
-      {session?.user && (
-        <AnneDoctorBridge
-          userRole={effectiveUserRole}
-          hasDoctorSubscription={true} // TODO: Leggere dal DB in produzione
-        />
-      )}
-    </AnneProvider>
+        {/* Doctor Bridge - Integrazione Self-Healing (Premium) */}
+        {session?.user && (
+          <AnneDoctorBridge
+            userRole={effectiveUserRole}
+            hasDoctorSubscription={true} // TODO: Leggere dal DB in produzione
+          />
+        )}
+      </AnneProvider>
+    </WorkspaceProvider>
   );
 }

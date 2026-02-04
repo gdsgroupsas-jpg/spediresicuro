@@ -17,11 +17,29 @@
  * - Legal: /privacy-policy, /terms-conditions, /cookie-policy
  * - Tracking: /track/** (tracking endpoints)
  * - Static assets (_next, favicon, images)
+ *
+ * WORKSPACE CONTEXT (Architecture V2):
+ * - Reads workspace_id from cookie 'sec-workspace-id'
+ * - Injects x-sec-workspace-id header for downstream use
+ * - Does NOT validate membership here (done in API routes)
+ * - Fail-open for workspace: missing workspace doesn't block, just no header
  */
 
 import { auth } from '@/lib/auth-config';
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
+
+/**
+ * Workspace cookie name (must match WorkspaceContext)
+ * @security HttpOnly cookie set by /api/workspaces/switch
+ */
+const WORKSPACE_COOKIE_NAME = 'sec-workspace-id';
+
+/**
+ * Header name for workspace ID propagation
+ * @security Only set by middleware, not trusted from client
+ */
+const WORKSPACE_HEADER_NAME = 'x-sec-workspace-id';
 
 /**
  * Public routes that DON'T require authentication
@@ -79,8 +97,61 @@ function isStaticAsset(pathname: string): boolean {
 }
 
 /**
+ * Validate workspace ID format (UUID v4)
+ * @security Prevents injection attacks via malformed workspace IDs
+ */
+function isValidWorkspaceId(workspaceId: string | undefined): workspaceId is string {
+  if (!workspaceId) return false;
+  // UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  return uuidRegex.test(workspaceId);
+}
+
+/**
+ * Get workspace ID from request (cookie)
+ * @security Only reads from HttpOnly cookie, never from headers/query
+ */
+function getWorkspaceIdFromRequest(request: NextRequest): string | null {
+  const cookieValue = request.cookies.get(WORKSPACE_COOKIE_NAME)?.value;
+
+  if (!isValidWorkspaceId(cookieValue)) {
+    return null;
+  }
+
+  return cookieValue;
+}
+
+/**
+ * Inject workspace ID header into request
+ * @security Header is set by middleware only, never trusted from client
+ * @security Membership validation happens in API routes, not here
+ */
+function injectWorkspaceHeader(request: NextRequest): NextResponse {
+  const workspaceId = getWorkspaceIdFromRequest(request);
+
+  // Clone headers and add workspace ID if present
+  const requestHeaders = new Headers(request.headers);
+
+  // SECURITY: Always remove any client-supplied workspace header
+  // This prevents header injection attacks
+  requestHeaders.delete(WORKSPACE_HEADER_NAME);
+
+  if (workspaceId) {
+    requestHeaders.set(WORKSPACE_HEADER_NAME, workspaceId);
+  }
+
+  // Return response with modified headers
+  return NextResponse.next({
+    request: {
+      headers: requestHeaders,
+    },
+  });
+}
+
+/**
  * Main middleware function
  * Enterprise-grade: reads onboarding status from JWT session (zero DB queries)
+ * Workspace context: reads from cookie, injects header for downstream use
  */
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -106,7 +177,8 @@ export default async function middleware(request: NextRequest) {
 
       // Skip check for test user
       if (userEmail === 'test@spediresicuro.it') {
-        return NextResponse.next();
+        // Still inject workspace header for test user
+        return injectWorkspaceHeader(request);
       }
 
       // Redirect to onboarding if not completed
@@ -118,6 +190,9 @@ export default async function middleware(request: NextRequest) {
         console.log('🔒 [MIDDLEWARE] Redirect to onboarding:', userEmail);
         return NextResponse.redirect(new URL('/dashboard/dati-cliente', request.url));
       }
+
+      // Inject workspace header for authenticated users
+      return injectWorkspaceHeader(request);
     }
 
     return NextResponse.next();

@@ -26,6 +26,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { useGiacenzeCount } from '@/hooks/useGiacenzeCount';
+import WorkspaceSwitcher from '@/components/workspace-switcher';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
@@ -513,38 +514,46 @@ export default function DashboardSidebar() {
         })}
       </div>
 
-      {/* Footer - User Profile */}
+      {/* Footer - Workspace Switcher + User Profile */}
       {session && (
-        <div className="border-t border-gray-200 bg-gray-50 p-3 space-y-1">
-          <Link
-            href="/dashboard/dati-cliente"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white transition-colors group"
-          >
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white text-xs font-semibold">
-              {session.user?.name?.[0]?.toUpperCase() ||
-                session.user?.email?.[0]?.toUpperCase() ||
-                'U'}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 truncate">
-                {session.user?.name || session.user?.email?.split('@')[0]}
-              </p>
-              <div className="flex items-center gap-1.5">
-                <p className="text-xs text-gray-500 truncate">{session.user?.email}</p>
-                {isSuperAdmin && <span className="text-[10px]">👑</span>}
-                {isAdmin && !isSuperAdmin && <span className="text-[10px]">⭐</span>}
-                {isReseller && <span className="text-[10px]">💼</span>}
-              </div>
-            </div>
-          </Link>
+        <div className="border-t border-gray-200 bg-gray-50">
+          {/* Workspace Switcher */}
+          <div className="px-3 pt-3 pb-2 border-b border-gray-200">
+            <WorkspaceSwitcher />
+          </div>
 
-          <button
-            onClick={() => signOut({ callbackUrl: '/' })}
-            className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-white hover:text-red-600 transition-colors"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Esci</span>
-          </button>
+          {/* User Profile */}
+          <div className="p-3 space-y-1">
+            <Link
+              href="/dashboard/dati-cliente"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-white transition-colors group"
+            >
+              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white text-xs font-semibold">
+                {session.user?.name?.[0]?.toUpperCase() ||
+                  session.user?.email?.[0]?.toUpperCase() ||
+                  'U'}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 truncate">
+                  {session.user?.name || session.user?.email?.split('@')[0]}
+                </p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-xs text-gray-500 truncate">{session.user?.email}</p>
+                  {isSuperAdmin && <span className="text-[10px]">👑</span>}
+                  {isAdmin && !isSuperAdmin && <span className="text-[10px]">⭐</span>}
+                  {isReseller && <span className="text-[10px]">💼</span>}
+                </div>
+              </div>
+            </Link>
+
+            <button
+              onClick={() => signOut({ callbackUrl: '/' })}
+              className="w-full flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-white hover:text-red-600 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              <span>Esci</span>
+            </button>
+          </div>
         </div>
       )}
     </div>
