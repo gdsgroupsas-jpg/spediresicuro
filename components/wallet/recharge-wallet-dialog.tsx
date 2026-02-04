@@ -23,7 +23,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { initiateCardRecharge, uploadBankTransferReceipt } from '@/app/actions/wallet';
+import {
+  initiateCardRecharge,
+  uploadBankTransferReceipt,
+  getWalletRechargePreview,
+} from '@/app/actions/wallet';
 import { formatCurrency, cn } from '@/lib/utils';
 
 interface RechargeWalletDialogProps {
@@ -46,19 +50,49 @@ export function RechargeWalletDialog({
 
   // Card Payment State
   const [cardAmount, setCardAmount] = useState<number>(0);
-  const [feePreview, setFeePreview] = useState<{ fee: number; total: number } | null>(null);
+  const [feePreview, setFeePreview] = useState<{
+    fee: number;
+    total: number;
+    creditAmount?: number;
+    vatAmount?: number;
+    vatMode?: 'included' | 'excluded';
+    vatRate?: number;
+  } | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
 
   // Transfer State
   const [transferAmount, setTransferAmount] = useState<number>(0);
   const [file, setFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Calculate fees locally for immediate preview (Stripe: 1.4% + €0.25)
-  const updateCardAmount = (val: number) => {
+  // Fetch VAT-aware preview from server (debounced)
+  const updateCardAmount = async (val: number) => {
     setCardAmount(val);
     if (val > 0) {
+      // Immediate local preview for responsiveness
       const fee = Number((val * 0.014 + 0.25).toFixed(2)); // Stripe: 1.4% + €0.25
       setFeePreview({ fee, total: val + fee });
+
+      // Fetch VAT-aware preview from server
+      setIsLoadingPreview(true);
+      try {
+        const result = await getWalletRechargePreview(val);
+        if (result.success && result.preview) {
+          setFeePreview({
+            fee: result.preview.stripeFee,
+            total: result.preview.totalToPay,
+            creditAmount: result.preview.creditAmount,
+            vatAmount: result.preview.vatAmount,
+            vatMode: result.preview.vatMode,
+            vatRate: result.preview.vatRate,
+          });
+        }
+      } catch (error) {
+        // Keep local preview on error
+        console.warn('Preview fetch failed, using local calculation');
+      } finally {
+        setIsLoadingPreview(false);
+      }
     } else {
       setFeePreview(null);
     }
@@ -178,14 +212,40 @@ export function RechargeWalletDialog({
 
                 {feePreview && (
                   <div className="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 space-y-2">
+                    {/* Credito che riceverai */}
                     <div className="flex justify-between text-sm text-slate-600">
-                      <span>Credito Ricaricato</span>
-                      <span className="font-semibold">{formatCurrency(cardAmount)}</span>
+                      <span>Credito Wallet</span>
+                      <span className="font-semibold">
+                        {isLoadingPreview ? (
+                          <Loader2 className="w-4 h-4 animate-spin inline" />
+                        ) : (
+                          formatCurrency(feePreview.creditAmount ?? cardAmount)
+                        )}
+                      </span>
                     </div>
+
+                    {/* VAT breakdown (solo se IVA esclusa) */}
+                    {feePreview.vatMode === 'excluded' && feePreview.vatAmount && (
+                      <div className="flex justify-between text-sm text-amber-600 bg-amber-50/50 -mx-4 px-4 py-1.5">
+                        <span>IVA {feePreview.vatRate || 22}% (esclusa dal credito)</span>
+                        <span>{formatCurrency(feePreview.vatAmount)}</span>
+                      </div>
+                    )}
+
+                    {/* Info IVA inclusa */}
+                    {feePreview.vatMode === 'included' && (
+                      <div className="text-xs text-emerald-600 bg-emerald-50/50 -mx-4 px-4 py-1.5">
+                        IVA inclusa - ricevi l&apos;intero importo come credito
+                      </div>
+                    )}
+
+                    {/* Commissioni Stripe */}
                     <div className="flex justify-between text-sm text-slate-500">
                       <span>Commissioni Stripe (1.4% + 0.25€)</span>
                       <span>+ {formatCurrency(feePreview.fee)}</span>
                     </div>
+
+                    {/* Totale */}
                     <div className="border-t border-indigo-100 mt-2 pt-2 flex justify-between items-center">
                       <span className="font-bold text-indigo-900">Totale Addebito</span>
                       <span className="text-xl font-bold text-indigo-600">

@@ -1,7 +1,11 @@
 'use server';
 
 import { createServerActionClient } from '@/lib/supabase-server';
-import { createStripeCheckoutSession, calculateStripeFee } from '@/lib/payments/stripe';
+import {
+  createStripeCheckoutSession,
+  calculateStripeFee,
+  previewWalletCredit,
+} from '@/lib/payments/stripe';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getSafeAuth } from '@/lib/safe-auth';
@@ -13,24 +17,28 @@ import { requireSafeAuth } from '@/lib/safe-auth';
  * Inizia una ricarica con Carta (Stripe)
  *
  * Sostituisce XPay con Stripe per pagamenti più universali e migliore UX.
+ *
+ * VAT-AWARE (ADR-002):
+ * - L'importo inserito dall'utente è il LORDO (grossAmount)
+ * - Il credito wallet dipende dal vat_mode del listino utente:
+ *   - IVA INCLUSA: €100 → €100 credito
+ *   - IVA ESCLUSA: €100 → €81.97 credito (100/1.22)
  */
-export async function initiateCardRecharge(amountCredit: number) {
+export async function initiateCardRecharge(grossAmount: number) {
   // Usa requireSafeAuth per supportare impersonation
   const context = await requireSafeAuth();
   const targetId = context.target.id;
   const targetEmail = context.target.email || '';
 
   // Validazione importo
-  if (amountCredit <= 0 || amountCredit > 10000) {
+  if (grossAmount <= 0 || grossAmount > 10000) {
     throw new Error('Importo non valido. Deve essere tra €0.01 e €10.000');
   }
 
-  // 1. Calcola Totale con Commissioni Stripe
-  const { fee, total } = calculateStripeFee(amountCredit);
-
-  // 2. Crea Stripe Checkout Session
-  const { sessionId, url, transactionId } = await createStripeCheckoutSession({
-    amountCredit,
+  // 1. Crea Stripe Checkout Session (VAT-aware)
+  // createStripeCheckoutSession ora calcola automaticamente il credito in base al vat_mode
+  const { sessionId, url, transactionId, creditCalculation } = await createStripeCheckoutSession({
+    grossAmount,
     userId: targetId,
     userEmail: targetEmail,
   });
@@ -39,13 +47,76 @@ export async function initiateCardRecharge(amountCredit: number) {
     throw new Error('Errore creazione sessione Stripe');
   }
 
+  // 2. Calcola fee per info al client
+  const { fee, total } = calculateStripeFee(grossAmount);
+
   return {
     success: true,
     checkoutUrl: url, // URL Stripe Checkout (redirect diretto)
     sessionId,
     transactionId,
-    feeInfo: { credit: amountCredit, fee, total },
+    // Info VAT per UI
+    vatInfo: creditCalculation
+      ? {
+          grossAmount: creditCalculation.grossAmount,
+          creditAmount: creditCalculation.creditAmount,
+          vatAmount: creditCalculation.vatAmount,
+          vatMode: creditCalculation.vatMode,
+          vatRate: creditCalculation.vatRate,
+        }
+      : null,
+    feeInfo: {
+      credit: creditCalculation?.creditAmount || grossAmount,
+      fee,
+      total,
+    },
   };
+}
+
+/**
+ * Preview VAT calculation for wallet recharge
+ *
+ * Mostra all'utente quanto credito riceverà prima del pagamento.
+ * Utile per UI che vuole mostrare breakdown IVA.
+ *
+ * @param grossAmount - Importo che l'utente vuole pagare
+ * @returns Preview con creditAmount, vatAmount, fees
+ */
+export async function getWalletRechargePreview(grossAmount: number) {
+  // Validazione
+  if (grossAmount <= 0 || grossAmount > 10000) {
+    return {
+      success: false,
+      error: 'Importo non valido. Deve essere tra €0.01 e €10.000',
+    };
+  }
+
+  try {
+    const context = await requireSafeAuth();
+    const targetId = context.target.id;
+
+    const preview = await previewWalletCredit(targetId, grossAmount);
+
+    return {
+      success: true,
+      preview: {
+        grossAmount: preview.grossAmount,
+        creditAmount: preview.creditAmount,
+        vatAmount: preview.vatAmount,
+        netAmount: preview.netAmount,
+        vatMode: preview.vatMode,
+        vatRate: preview.vatRate,
+        stripeFee: preview.stripeFee,
+        totalToPay: preview.totalToPay,
+      },
+    };
+  } catch (error: any) {
+    console.error('Errore preview wallet:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore durante il calcolo preview',
+    };
+  }
 }
 
 /**
