@@ -1335,30 +1335,44 @@ export async function getSpedizioni(
       .select('*')
       .order('created_at', { ascending: false });
 
-    // ⚠️ WORKSPACE FILTER: Architecture V2
-    // Aggiungi filtro workspace_id se disponibile
+    // ⚠️ WORKSPACE FILTER: Architecture V2 con visibilita gerarchica
+    // Pattern: Parent vede dati di tutti i discendenti (Stripe Connect style)
     const workspaceId = await getCurrentWorkspaceId();
 
     if (authContext.type === 'user') {
-      // Utente normale: filtra SOLO per user_id (NON include user_id IS NULL)
       if (!authContext.userId) {
         console.error('❌ [SECURITY] getSpedizioni chiamato con user context senza userId');
         throw new Error('Contesto utente invalido: userId mancante');
       }
 
-      // ⚠️ CRITICO: Filtra per user_id (backward-compatible)
-      query = query.eq('user_id', authContext.userId);
-
-      // ⚠️ WORKSPACE FILTER: Se workspace_id disponibile, filtra anche per workspace
-      // Questo restringe ulteriormente i risultati al workspace corrente
       if (workspaceId) {
-        query = query.eq('workspace_id', workspaceId);
-        console.log(
-          `✅ [SUPABASE] Filtro per user_id + workspace_id: ${authContext.userId.substring(0, 8)}... / ${workspaceId.substring(0, 8)}...`
+        // ⚠️ WORKSPACE HIERARCHY FILTER: Usa RPC per visibilita gerarchica
+        // Platform vede tutto sotto di se, Reseller vede suoi + client, Client vede solo suoi
+        const { data: visibleIds, error: rpcError } = await supabaseAdmin.rpc(
+          'get_visible_workspace_ids',
+          { p_workspace_id: workspaceId }
         );
+
+        if (rpcError) {
+          console.error('❌ [SUPABASE] Errore RPC get_visible_workspace_ids:', rpcError.message);
+          // Fallback: filtra solo per workspace_id diretto
+          query = query.eq('workspace_id', workspaceId);
+        } else if (visibleIds && visibleIds.length > 0) {
+          // Filtra per tutti i workspace visibili (self + discendenti)
+          // Include anche workspace_id IS NULL per backward-compatibility
+          query = query.or(`workspace_id.in.(${visibleIds.join(',')}),workspace_id.is.null`);
+          console.log(
+            `✅ [SUPABASE] Filtro gerarchico: ${visibleIds.length} workspace visibili da ${workspaceId.substring(0, 8)}...`
+          );
+        } else {
+          // Nessun workspace visibile - filtra per workspace diretto
+          query = query.eq('workspace_id', workspaceId);
+        }
       } else {
+        // No workspace context - backward-compatible: filtra per user_id
+        query = query.eq('user_id', authContext.userId);
         console.log(
-          `✅ [SUPABASE] Filtro per user_id: ${authContext.userId.substring(0, 8)}... (user: ${authContext.userEmail || 'N/A'}) [no workspace filter - backward-compatible]`
+          `✅ [SUPABASE] Filtro per user_id: ${authContext.userId.substring(0, 8)}... (no workspace context)`
         );
       }
     } else if (authContext.type === 'service_role') {
