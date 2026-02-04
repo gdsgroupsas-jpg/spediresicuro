@@ -473,13 +473,6 @@ const accountSection: NavSection = {
   defaultExpanded: true,
   items: [
     {
-      id: 'workspace-team',
-      label: 'Team Workspace',
-      href: '/dashboard/workspace/team',
-      icon: Users,
-      description: 'Gestione membri del workspace',
-    },
-    {
       id: 'wallet',
       label: 'Wallet',
       href: '/dashboard/wallet',
@@ -637,7 +630,30 @@ export function getNavigationForUser(
   }
 
   // 6. SEZIONI PERSONALI (tutti gli utenti)
-  sections.push(accountSection);
+  // Aggiungi Team Workspace SOLO per chi può avere un team:
+  // - admin/superadmin: gestiscono la piattaforma
+  // - reseller: hanno clienti e team
+  // - byoc: aziende con team interno
+  const showTeamWorkspace =
+    role === 'admin' || role === 'superadmin' || isReseller || accountType === 'byoc';
+
+  const accountItems = showTeamWorkspace
+    ? [
+        {
+          id: 'workspace-team',
+          label: 'Team Workspace',
+          href: '/dashboard/workspace/team',
+          icon: Users,
+          description: 'Gestione membri del workspace',
+        },
+        ...accountSection.items,
+      ]
+    : accountSection.items;
+
+  sections.push({
+    ...accountSection,
+    items: accountItems,
+  });
 
   // 7. COMUNICAZIONI (solo superadmin — email inbox)
   if (role === 'superadmin') {

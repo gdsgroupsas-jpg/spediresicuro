@@ -387,6 +387,32 @@ export default function WorkspaceTeamPage() {
     );
   }
 
+  // No workspace selected - show helpful message
+  if (!workspace) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <DashboardNav title="Team Workspace" subtitle="Gestione membri" showBackButton />
+          <div className="bg-white rounded-2xl border border-amber-200 shadow-sm p-8 text-center">
+            <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Users className="w-8 h-8 text-amber-600" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-2">Nessun Workspace Selezionato</h2>
+            <p className="text-gray-600 mb-6">
+              Seleziona un workspace per gestire i membri del team.
+            </p>
+            <Button
+              onClick={() => router.push('/dashboard/workspace-selector')}
+              className="bg-gradient-to-r from-[#FF9500] to-[#FF6B35] hover:from-[#E88500] hover:to-[#E55A2B]"
+            >
+              Seleziona Workspace
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (error && !canViewMembers) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
