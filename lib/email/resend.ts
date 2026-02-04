@@ -544,3 +544,85 @@ export async function sendWorkspaceInvitationEmail(params: WorkspaceInvitationEm
     html,
   });
 }
+
+// ─── INVITATION ACCEPTED NOTIFICATION EMAIL ───
+
+interface InvitationAcceptedEmailParams {
+  to: string; // Email dell'invitante
+  inviterName: string;
+  acceptedByName: string;
+  acceptedByEmail: string;
+  workspaceName: string;
+  role: 'admin' | 'operator' | 'viewer';
+}
+
+export async function sendInvitationAcceptedEmail(params: InvitationAcceptedEmailParams) {
+  const { to, inviterName, acceptedByName, acceptedByEmail, workspaceName, role } = params;
+
+  const roleLabels: Record<string, string> = {
+    admin: 'Amministratore',
+    operator: 'Operatore',
+    viewer: 'Visualizzatore',
+  };
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">✅ Invito Accettato!</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #334155; font-size: 16px; margin-top: 0;">
+          Ciao <strong>${inviterName}</strong>,
+        </p>
+        <p style="color: #334155; font-size: 16px;">
+          Buone notizie! Il tuo invito è stato accettato.
+        </p>
+
+        <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
+          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
+            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #FF9500, #FF6B35); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 18px;">
+              ${acceptedByName.charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <p style="margin: 0; color: #1e293b; font-weight: 600; font-size: 16px;">${acceptedByName}</p>
+              <p style="margin: 0; color: #64748b; font-size: 14px;">${acceptedByEmail}</p>
+            </div>
+          </div>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9;">Workspace</td>
+              <td style="padding: 10px 0; color: #1e293b; font-weight: 600; text-align: right; font-size: 14px;">${workspaceName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9;">Ruolo</td>
+              <td style="padding: 10px 0; text-align: right;">
+                <span style="background: linear-gradient(135deg, #FF9500, #FF6B35); color: white; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px;">
+                  ${roleLabels[role] || role}
+                </span>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="https://spediresicuro.it/dashboard/workspace/team" style="display: inline-block; background: linear-gradient(135deg, #FF9500, #FF6B35); color: white; font-weight: 600; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px;">
+            Vedi Team →
+          </a>
+        </div>
+
+        <p style="color: #64748b; font-size: 13px; margin-bottom: 0;">
+          Il nuovo membro può ora accedere al workspace con i permessi assegnati.
+        </p>
+      </div>
+      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
+        SpedireSicuro — Spedizioni semplici e sicure
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `✅ ${acceptedByName} ha accettato l'invito su ${workspaceName}`,
+    html,
+  });
+}

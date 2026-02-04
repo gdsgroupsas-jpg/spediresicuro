@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { sendInvitationAcceptedEmail } from '@/lib/email/resend';
 
 export const dynamic = 'force-dynamic';
 
@@ -288,6 +289,37 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .select('name, slug')
       .eq('id', invitation.workspace_id)
       .single();
+
+    // 11. Notifica l'invitante che l'invito è stato accettato
+    if (invitation.invited_by) {
+      // Fetch inviter info
+      const { data: inviter } = await supabaseAdmin
+        .from('users')
+        .select('name, email')
+        .eq('id', invitation.invited_by)
+        .single();
+
+      // Fetch accepter info
+      const { data: accepter } = await supabaseAdmin
+        .from('users')
+        .select('name, email')
+        .eq('id', context.target.id)
+        .single();
+
+      if (inviter?.email && accepter) {
+        // Invia email di notifica (non bloccare se fallisce)
+        sendInvitationAcceptedEmail({
+          to: inviter.email,
+          inviterName: inviter.name || inviter.email.split('@')[0],
+          acceptedByName: accepter.name || accepter.email?.split('@')[0] || 'Nuovo membro',
+          acceptedByEmail: accepter.email || '',
+          workspaceName: workspace?.name || 'Workspace',
+          role: invitation.role as 'admin' | 'operator' | 'viewer',
+        }).catch((err) => {
+          console.warn('Failed to send acceptance notification email:', err);
+        });
+      }
+    }
 
     return NextResponse.json({
       success: true,

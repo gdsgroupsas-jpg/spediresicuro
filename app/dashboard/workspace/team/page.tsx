@@ -319,6 +319,28 @@ export default function WorkspaceTeamPage() {
     toast.success('Link copiato negli appunti!');
   };
 
+  const handleResendInvitation = async (invitationId: string) => {
+    if (!workspace?.workspace_id) return;
+
+    try {
+      const response = await fetch(`/api/workspaces/${workspace.workspace_id}/invite`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ invitationId }),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to resend invitation');
+      }
+
+      toast.success('Email re-inviata con successo!');
+    } catch (err: any) {
+      console.error('Error resending invitation:', err);
+      toast.error(err.message);
+    }
+  };
+
   // ============================================
   // HELPERS
   // ============================================
@@ -661,15 +683,26 @@ export default function WorkspaceTeamPage() {
                       </td>
                       {canManageMembers && (
                         <td className="px-6 py-4 whitespace-nowrap text-right">
-                          {!inv.is_expired && (
-                            <button
-                              onClick={() => handleRevokeInvitation(inv.id)}
-                              className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                              title="Revoca Invito"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          )}
+                          <div className="flex items-center justify-end gap-1">
+                            {!inv.is_expired && (
+                              <>
+                                <button
+                                  onClick={() => handleResendInvitation(inv.id)}
+                                  className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                  title="Re-invia Email"
+                                >
+                                  <Mail className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={() => handleRevokeInvitation(inv.id)}
+                                  className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Revoca Invito"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </>
+                            )}
+                          </div>
                         </td>
                       )}
                     </tr>

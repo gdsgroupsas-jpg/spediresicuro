@@ -443,6 +443,151 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
   }
 }
 
+/**
+ * PATCH: Re-invia email invito
+ */
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { workspaceId } = await params;
+    const body = await request.json();
+    const { invitationId } = body as { invitationId?: string };
+
+    // 1. Validazioni
+    if (!isValidUUID(workspaceId)) {
+      return NextResponse.json({ error: 'Invalid workspace ID format' }, { status: 400 });
+    }
+
+    if (!invitationId || !isValidUUID(invitationId)) {
+      return NextResponse.json({ error: 'Invalid or missing invitationId' }, { status: 400 });
+    }
+
+    // 2. Autenticazione
+    const context = await getSafeAuth();
+    if (!context) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // 3. Verifica accesso
+    const hasAccess = await verifyWorkspaceAccess(
+      context.target.id,
+      workspaceId,
+      'members:invite',
+      isSuperAdmin(context)
+    );
+
+    if (!hasAccess.allowed) {
+      return NextResponse.json({ error: hasAccess.reason || 'Access denied' }, { status: 403 });
+    }
+
+    // 4. Fetch invito con tutti i dati necessari
+    const { data: invitation, error: fetchError } = await supabaseAdmin
+      .from('workspace_invitations')
+      .select(
+        `
+        id,
+        email,
+        role,
+        token,
+        status,
+        expires_at,
+        workspace_id,
+        invited_by
+      `
+      )
+      .eq('id', invitationId)
+      .eq('workspace_id', workspaceId)
+      .single();
+
+    if (fetchError || !invitation) {
+      return NextResponse.json({ error: 'Invito non trovato' }, { status: 404 });
+    }
+
+    // 5. Verifica che l'invito sia ancora pending e non scaduto
+    if (invitation.status !== 'pending') {
+      return NextResponse.json(
+        { error: 'Solo gli inviti pending possono essere re-inviati' },
+        { status: 400 }
+      );
+    }
+
+    const isExpired = new Date(invitation.expires_at) < new Date();
+    if (isExpired) {
+      return NextResponse.json(
+        { error: 'Questo invito è scaduto. Crea un nuovo invito.' },
+        { status: 400 }
+      );
+    }
+
+    // 6. Fetch workspace + organization info
+    const { data: workspace } = await supabaseAdmin
+      .from('workspaces')
+      .select(
+        `
+        name,
+        organizations!inner (
+          name
+        )
+      `
+      )
+      .eq('id', workspaceId)
+      .single();
+
+    const workspaceName = workspace?.name || 'Workspace';
+    const organizationName = (workspace?.organizations as any)?.name || 'Organizzazione';
+
+    // 7. Fetch inviter name
+    const { data: inviter } = await supabaseAdmin
+      .from('users')
+      .select('name, email')
+      .eq('id', context.target.id)
+      .single();
+
+    const inviterName = inviter?.name || inviter?.email?.split('@')[0] || 'Un membro';
+
+    // 8. Re-invia email
+    const inviteUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'https://spediresicuro.it'}/invite/${invitation.token}`;
+
+    const emailResult = await sendWorkspaceInvitationEmail({
+      to: invitation.email,
+      inviterName,
+      workspaceName,
+      organizationName,
+      role: invitation.role as 'admin' | 'operator' | 'viewer',
+      inviteUrl,
+      expiresAt: new Date(invitation.expires_at),
+    });
+
+    if (!emailResult.success) {
+      console.error(`Failed to resend invitation email for ${invitationId}:`, emailResult.error);
+      return NextResponse.json(
+        { error: 'Impossibile inviare email. Riprova più tardi.' },
+        { status: 500 }
+      );
+    }
+
+    // 9. Audit log
+    await supabaseAdmin.from('audit_logs').insert({
+      action: 'WORKSPACE_INVITATION_RESENT',
+      resource_type: 'workspace_invitation',
+      resource_id: invitationId,
+      user_id: context.target.id,
+      workspace_id: workspaceId,
+      audit_metadata: {
+        resent_by: context.actor.id,
+        is_impersonating: context.isImpersonating,
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Email re-inviata con successo',
+    });
+  } catch (error: any) {
+    console.error('PATCH /api/workspaces/[id]/invite error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
