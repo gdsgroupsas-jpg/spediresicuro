@@ -189,7 +189,7 @@ export function createPriceLogger(context: LogContext = {}): PriceLogger {
 
     result: (result) => {
       log('info', 'Calcolo completato', {
-        finalPrice: result.finalPrice.toFixed(2),
+        finalPrice: (result.finalPrice ?? 0).toFixed(2),
         supplierPrice: result.supplierPrice?.toFixed(2),
         margin: result.margin?.toFixed(2),
         vatMode: result.vatMode,

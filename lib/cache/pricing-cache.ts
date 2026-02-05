@@ -78,6 +78,8 @@ export class PricingCache {
   private cache = new Map<string, CacheEntry<unknown>>();
   private config: Required<PricingCacheConfig>;
   private stats = { hits: 0, misses: 0 };
+  private lastCleanup = Date.now();
+  private readonly CLEANUP_INTERVAL = 60_000; // 1 minuto
 
   constructor(config: PricingCacheConfig = {}) {
     this.config = {
@@ -171,9 +173,23 @@ export class PricingCache {
   // ==================== PUBLIC API ====================
 
   /**
+   * Cleanup periodico per evitare memory leak (chiamato anche in get)
+   */
+  private maybeCleanup(): void {
+    const now = Date.now();
+    if (now - this.lastCleanup > this.CLEANUP_INTERVAL) {
+      this.cleanupExpired();
+      this.lastCleanup = now;
+    }
+  }
+
+  /**
    * Recupera valore dalla cache
    */
   get<T>(key: string, options: CacheOptions = {}): T | null {
+    // Cleanup periodico per evitare memory leak su read-heavy workload
+    this.maybeCleanup();
+
     const fullKey = this.buildKey(key, options.workspaceId);
     const entry = this.cache.get(fullKey) as CacheEntry<T> | undefined;
 

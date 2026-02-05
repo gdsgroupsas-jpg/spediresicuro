@@ -33,8 +33,10 @@ import { supabaseAdmin } from './client';
 // ✨ PERFORMANCE: In-memory cache for master price lists to avoid repeated queries
 // within the same request lifecycle. Entries expire after 30 seconds.
 // ✨ M3: Cache scoped per workspace per evitare cross-contamination
+// ✨ M5-FIX: Limite max entries per evitare memory leak
 const masterListCache = new Map<string, { data: any; timestamp: number }>();
 const MASTER_CACHE_TTL = 30_000; // 30s
+const MASTER_CACHE_MAX_ENTRIES = 500; // Limite max per evitare memory leak
 
 /**
  * Recupera master list dalla cache (scoped per workspace)
@@ -74,6 +76,13 @@ async function getCachedMasterList(
     }
     return null;
   }
+
+  // ✨ M5-FIX: Evict entries più vecchie se cache è piena (LRU-like)
+  if (masterListCache.size >= MASTER_CACHE_MAX_ENTRIES) {
+    const oldestKey = masterListCache.keys().next().value;
+    if (oldestKey) masterListCache.delete(oldestKey);
+  }
+
   masterListCache.set(cacheKey, { data, timestamp: Date.now() });
   return data;
 }

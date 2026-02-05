@@ -10,8 +10,19 @@
 import { createPriceLogger, type PriceLogger } from '@/lib/logging/price-logger';
 import { calculatePriceFromList } from '@/lib/pricing/calculator';
 import { getVATModeWithFallback } from '@/lib/pricing/vat-utils';
-import type { PriceList } from '@/types/listini';
+import type { PriceList, PriceListEntry } from '@/types/listini';
 import type { CourierServiceType } from '@/types/shipments';
+
+/**
+ * Tipo per master list con entries (per type safety invece di any)
+ */
+export interface MasterListWithEntries {
+  id: string;
+  name: string;
+  vat_mode?: 'included' | 'excluded' | null;
+  vat_rate?: number;
+  entries?: PriceListEntry[];
+}
 
 /**
  * Parametri per calcolo prezzo
@@ -69,7 +80,7 @@ export interface MatrixPriceResult {
 export async function recoverMasterListPrice(
   masterListId: string,
   params: PricingParams,
-  getCachedMasterList: (id: string) => Promise<any | null>,
+  getCachedMasterList: (id: string) => Promise<MasterListWithEntries | null>,
   logger?: PriceLogger
 ): Promise<MasterListPriceResult> {
   const log = logger || createPriceLogger({ operation: 'recoverMasterListPrice', masterListId });
