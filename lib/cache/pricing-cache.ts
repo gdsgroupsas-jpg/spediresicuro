@@ -271,7 +271,12 @@ export class PricingCache {
         shouldInvalidate = true;
       }
 
-      if (options.keyPattern && key.startsWith(options.keyPattern)) {
+      // ✨ CRITICAL FIX: Previene invalidazione totale con pattern vuoto
+      if (
+        options.keyPattern &&
+        options.keyPattern.length > 0 &&
+        key.startsWith(options.keyPattern)
+      ) {
         shouldInvalidate = true;
       }
 
@@ -361,17 +366,27 @@ export function createPricingCache(config?: PricingCacheConfig): PricingCache {
 }
 
 /**
+ * ✨ HIGH FIX: Parser sicuro per env variables numeriche
+ * Ritorna defaultValue se il parsing fallisce o produce NaN
+ */
+function parseEnvInt(envValue: string | undefined, defaultValue: number): number {
+  if (!envValue) return defaultValue;
+  const parsed = parseInt(envValue, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : defaultValue;
+}
+
+/**
  * Restituisce istanza singleton (per uso globale)
  */
 export function getPricingCache(): PricingCache {
   if (!defaultInstance) {
-    // Configura da environment variables
+    // ✨ HIGH FIX: Configura da environment variables con validazione
     defaultInstance = new PricingCache({
-      defaultTTL: parseInt(process.env.PRICING_CACHE_DEFAULT_TTL || '30000', 10),
-      masterListTTL: parseInt(process.env.PRICING_CACHE_MASTER_TTL || '30000', 10),
-      quoteTTL: parseInt(process.env.PRICING_CACHE_QUOTE_TTL || '300000', 10),
-      priceListTTL: parseInt(process.env.PRICING_CACHE_PRICELIST_TTL || '60000', 10),
-      maxEntries: parseInt(process.env.PRICING_CACHE_MAX_ENTRIES || '1000', 10),
+      defaultTTL: parseEnvInt(process.env.PRICING_CACHE_DEFAULT_TTL, 30000),
+      masterListTTL: parseEnvInt(process.env.PRICING_CACHE_MASTER_TTL, 30000),
+      quoteTTL: parseEnvInt(process.env.PRICING_CACHE_QUOTE_TTL, 300000),
+      priceListTTL: parseEnvInt(process.env.PRICING_CACHE_PRICELIST_TTL, 60000),
+      maxEntries: parseEnvInt(process.env.PRICING_CACHE_MAX_ENTRIES, 1000),
       debug: process.env.PRICING_CACHE_DEBUG === 'true',
     });
   }
@@ -421,6 +436,14 @@ export async function withMasterListCache<T>(
 }
 
 /**
+ * ✨ MEDIUM FIX: Escape carattere separatore per prevenire collisioni chiavi
+ */
+function escapeCacheKeyPart(part: string): string {
+  // Escape ':' con '::' per evitare collisioni
+  return part.replace(/:/g, '::');
+}
+
+/**
  * Helper per caching quote calculations
  */
 export function buildQuoteCacheKey(params: {
@@ -433,13 +456,14 @@ export function buildQuoteCacheKey(params: {
   serviceType?: string;
   priceListId?: string;
 }): string {
+  // ✨ MEDIUM FIX: Escape parti per prevenire collisioni
   return [
-    params.userId,
+    escapeCacheKeyPart(params.userId),
     params.weight.toFixed(2),
-    params.zip || '',
-    params.province || '',
-    params.courierId || '',
-    params.serviceType || '',
-    params.priceListId || '',
+    escapeCacheKeyPart(params.zip || ''),
+    escapeCacheKeyPart(params.province || ''),
+    escapeCacheKeyPart(params.courierId || ''),
+    escapeCacheKeyPart(params.serviceType || ''),
+    escapeCacheKeyPart(params.priceListId || ''),
   ].join(':');
 }

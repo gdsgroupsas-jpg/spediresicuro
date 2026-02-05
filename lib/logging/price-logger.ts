@@ -73,9 +73,43 @@ function isJsonMode(): boolean {
   return process.env.PRICE_LOG_JSON === 'true' || process.env.NODE_ENV === 'production';
 }
 
+// ✨ CRITICAL FIX: Scrub dati sensibili in produzione
+function shouldScrubSensitiveData(): boolean {
+  return process.env.NODE_ENV === 'production' && process.env.PRICE_LOG_SENSITIVE !== 'true';
+}
+
+// Campi sensibili da mascherare
+const SENSITIVE_FIELDS = [
+  'supplierPrice',
+  'margin',
+  'finalPrice',
+  'basePrice',
+  'surcharges',
+  'totalCost',
+];
+
+function scrubSensitiveData(
+  data: Record<string, unknown> | undefined
+): Record<string, unknown> | undefined {
+  if (!data || !shouldScrubSensitiveData()) return data;
+
+  const scrubbed = { ...data };
+  for (const field of SENSITIVE_FIELDS) {
+    if (field in scrubbed) {
+      scrubbed[field] = '[REDACTED]';
+    }
+  }
+  return scrubbed;
+}
+
 function formatLogEntry(entry: LogEntry): string {
+  // ✨ CRITICAL FIX: Scrub dati sensibili prima di loggare
+  const safeEntry = shouldScrubSensitiveData()
+    ? { ...entry, data: scrubSensitiveData(entry.data) }
+    : entry;
+
   if (isJsonMode()) {
-    return JSON.stringify(entry);
+    return JSON.stringify(safeEntry);
   }
 
   // Human-readable format per development
@@ -87,9 +121,11 @@ function formatLogEntry(entry: LogEntry): string {
         .join(' ')
     : '';
 
-  const dataStr = entry.data ? ` | ${JSON.stringify(entry.data)}` : '';
+  // ✨ CRITICAL FIX: Usa safeEntry anche per human-readable
+  const safeData = safeEntry.data;
+  const dataStr = safeData ? ` | ${JSON.stringify(safeData)}` : '';
 
-  return `${prefix} ${entry.message}${contextStr ? ` [${contextStr}]` : ''}${dataStr}`;
+  return `${prefix} ${safeEntry.message}${contextStr ? ` [${contextStr}]` : ''}${dataStr}`;
 }
 
 function getLogPrefix(level: LogLevel, operation?: string): string {

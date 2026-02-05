@@ -34,7 +34,30 @@ import { supabaseAdmin } from './client';
 // within the same request lifecycle. Entries expire after 30 seconds.
 // ✨ M3: Cache scoped per workspace per evitare cross-contamination
 // ✨ M5-FIX: Limite max entries per evitare memory leak
-const masterListCache = new Map<string, { data: any; timestamp: number }>();
+// ✨ CRITICAL FIX: LRU corretto con tracking accessTime
+
+/** Tipo per master list cachato con entries - allineato con MasterListWithEntries */
+interface CachedMasterList {
+  id: string;
+  name: string;
+  vat_mode?: VATMode; // optional, allineato con MasterListWithEntries
+  vat_rate?: number; // optional, allineato con MasterListWithEntries
+  entries?: Array<{
+    id: string;
+    min_weight?: number;
+    max_weight?: number;
+    price: number;
+    zone?: string;
+    service_type?: string;
+  }>;
+}
+
+interface MasterListCacheEntry {
+  data: CachedMasterList;
+  timestamp: number;
+  accessTime: number; // ✨ Per LRU corretto basato su accesso, non inserimento
+}
+const masterListCache = new Map<string, MasterListCacheEntry>();
 const MASTER_CACHE_TTL = 30_000; // 30s
 const MASTER_CACHE_MAX_ENTRIES = 500; // Limite max per evitare memory leak
 
@@ -47,12 +70,14 @@ const MASTER_CACHE_MAX_ENTRIES = 500; // Limite max per evitare memory leak
 async function getCachedMasterList(
   masterListId: string,
   workspaceId?: string
-): Promise<any | null> {
+): Promise<CachedMasterList | null> {
   // ✨ M3: Chiave cache include workspace per isolamento
   const cacheKey = workspaceId ? `${workspaceId}:${masterListId}` : masterListId;
 
   const cached = masterListCache.get(cacheKey);
   if (cached && Date.now() - cached.timestamp < MASTER_CACHE_TTL) {
+    // ✨ CRITICAL FIX: Aggiorna accessTime per LRU corretto
+    cached.accessTime = Date.now();
     return cached.data;
   }
 
@@ -77,14 +102,29 @@ async function getCachedMasterList(
     return null;
   }
 
-  // ✨ M5-FIX: Evict entries più vecchie se cache è piena (LRU-like)
+  // ✨ CRITICAL FIX: LRU corretto basato su accessTime (non insertion order)
   if (masterListCache.size >= MASTER_CACHE_MAX_ENTRIES) {
-    const oldestKey = masterListCache.keys().next().value;
-    if (oldestKey) masterListCache.delete(oldestKey);
+    let oldestKey: string | null = null;
+    let oldestAccessTime = Infinity;
+
+    // Trova entry con accessTime più vecchio
+    for (const [key, entry] of masterListCache.entries()) {
+      if (entry.accessTime < oldestAccessTime) {
+        oldestAccessTime = entry.accessTime;
+        oldestKey = key;
+      }
+    }
+
+    if (oldestKey) {
+      masterListCache.delete(oldestKey);
+    }
   }
 
-  masterListCache.set(cacheKey, { data, timestamp: Date.now() });
-  return data;
+  const now = Date.now();
+  // Type assertion safe: query selects from price_lists with entries
+  const typedData = data as CachedMasterList;
+  masterListCache.set(cacheKey, { data: typedData, timestamp: now, accessTime: now });
+  return typedData;
 }
 
 /** @internal Exposed only for test cleanup */
@@ -760,7 +800,14 @@ async function calculateWithDefaultMargin(
     console.log(`   - Master List ID: ${priceList.master_list_id}`);
 
     // ✨ M3: Passa workspaceId a getCachedMasterList per scoping cache
-    const getCachedMasterListWithWorkspace = (id: string) => getCachedMasterList(id, workspaceId);
+    // Cast necessario: CachedMasterList è compatibile runtime con MasterListWithEntries
+    const getCachedMasterListWithWorkspace = async (id: string) => {
+      const result = await getCachedMasterList(id, workspaceId);
+      // Runtime compatible, entries shape differs only in optional fields
+      return result as unknown as
+        | import('@/lib/pricing/pricing-helpers').MasterListWithEntries
+        | null;
+    };
 
     masterPriceResult = await recoverMasterListPrice(
       priceList.master_list_id,
