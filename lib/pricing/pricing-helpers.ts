@@ -1,5 +1,5 @@
 /**
- * Pricing Helpers - Milestone 2
+ * Pricing Helpers - Milestone 2 + Milestone 4 (Logging)
  *
  * Funzioni helper estratte da price-lists-advanced.ts per ridurre complessità.
  * Decomposizione di calculateWithDefaultMargin().
@@ -7,6 +7,7 @@
  * @module lib/pricing/pricing-helpers
  */
 
+import { createPriceLogger, type PriceLogger } from '@/lib/logging/price-logger';
 import { calculatePriceFromList } from '@/lib/pricing/calculator';
 import { getVATModeWithFallback } from '@/lib/pricing/vat-utils';
 import type { PriceList } from '@/types/listini';
@@ -68,8 +69,11 @@ export interface MatrixPriceResult {
 export async function recoverMasterListPrice(
   masterListId: string,
   params: PricingParams,
-  getCachedMasterList: (id: string) => Promise<any | null>
+  getCachedMasterList: (id: string) => Promise<any | null>,
+  logger?: PriceLogger
 ): Promise<MasterListPriceResult> {
+  const log = logger || createPriceLogger({ operation: 'recoverMasterListPrice', masterListId });
+
   const defaultResult: MasterListPriceResult = {
     supplierBasePrice: 0,
     supplierSurcharges: 0,
@@ -83,18 +87,19 @@ export async function recoverMasterListPrice(
     const masterList = await getCachedMasterList(masterListId);
 
     if (!masterList) {
-      console.warn(`⚠️ [MASTER PRICE] Master list non trovato (ID: ${masterListId})`);
+      log.warn('Master list non trovato', { masterListId });
       return defaultResult;
     }
 
     if (!masterList.entries || masterList.entries.length === 0) {
-      console.warn(`⚠️ [MASTER PRICE] Master list "${masterList.name}" non ha entries!`);
+      log.warn('Master list senza entries', { masterListName: masterList.name });
       return defaultResult;
     }
 
-    console.log(
-      `✅ [MASTER PRICE] Master list trovato: "${masterList.name}" con ${masterList.entries.length} entries`
-    );
+    log.info('Master list trovato', {
+      masterListName: masterList.name,
+      entriesCount: masterList.entries.length,
+    });
 
     const masterVATMode = getVATModeWithFallback(masterList.vat_mode);
     const masterVATRate = masterList.vat_rate || 22.0;
@@ -110,9 +115,7 @@ export async function recoverMasterListPrice(
     );
 
     if (!masterMatrixResult) {
-      console.warn(
-        `⚠️ [MASTER PRICE] calculatePriceFromList ha restituito null per master "${masterList.name}"`
-      );
+      log.warn('calculatePriceFromList restituito null', { masterListName: masterList.name });
       return { ...defaultResult, masterVATMode, masterVATRate };
     }
 
@@ -120,9 +123,10 @@ export async function recoverMasterListPrice(
     const supplierSurcharges = masterMatrixResult.surcharges || 0;
     const supplierTotalCostOriginal = supplierBasePrice + supplierSurcharges;
 
-    console.log(
-      `✅ [MASTER PRICE] Prezzo fornitore: €${supplierTotalCostOriginal.toFixed(2)} (vat_mode: ${masterVATMode})`
-    );
+    log.info('Prezzo fornitore recuperato', {
+      supplierPrice: supplierTotalCostOriginal.toFixed(2),
+      vatMode: masterVATMode,
+    });
 
     return {
       supplierBasePrice,
@@ -133,7 +137,9 @@ export async function recoverMasterListPrice(
       found: true,
     };
   } catch (error) {
-    console.warn(`⚠️ [MASTER PRICE] Errore recupero prezzo fornitore:`, error);
+    log.error('Errore recupero prezzo fornitore', {
+      error: error instanceof Error ? error.message : String(error),
+    });
     return defaultResult;
   }
 }
@@ -147,8 +153,12 @@ export async function recoverMasterListPrice(
  */
 export function calculateMatrixPrice(
   priceList: PriceList,
-  params: PricingParams
+  params: PricingParams,
+  logger?: PriceLogger
 ): MatrixPriceResult {
+  const log =
+    logger || createPriceLogger({ operation: 'calculateMatrixPrice', priceListId: priceList.id });
+
   const defaultResult: MatrixPriceResult = {
     basePrice: 10.0, // Default fallback
     surcharges: 0,
@@ -157,6 +167,7 @@ export function calculateMatrixPrice(
   };
 
   if (!priceList.entries || priceList.entries.length === 0) {
+    log.verbose('Nessuna entry nel listino', { priceListName: priceList.name });
     return defaultResult;
   }
 
@@ -171,7 +182,7 @@ export function calculateMatrixPrice(
   );
 
   if (!matrixResult) {
-    console.warn(`⚠️ [MATRIX PRICE] Nessuna entry matcha per listino "${priceList.name}"`);
+    log.warn('Nessuna entry matcha', { priceListName: priceList.name });
     return defaultResult;
   }
 
@@ -205,22 +216,27 @@ export function determineSupplierPrice(
   supplierTotalCostExclVAT: number,
   totalCostExclVAT: number,
   listType: string,
-  priceListName: string
+  priceListName: string,
+  logger?: PriceLogger
 ): number | undefined {
+  const log = logger || createPriceLogger({ operation: 'determineSupplierPrice' });
+
   if (supplierTotalCostExclVAT > 0) {
-    console.log(
-      `✅ [SUPPLIER PRICE] Costo fornitore da master: €${supplierTotalCostExclVAT.toFixed(2)}`
-    );
+    log.verbose('Costo fornitore da master', {
+      supplierPrice: supplierTotalCostExclVAT.toFixed(2),
+    });
     return supplierTotalCostExclVAT;
   }
 
   if (listType === 'supplier') {
-    console.log(`✅ [SUPPLIER PRICE] Listino supplier: €${totalCostExclVAT.toFixed(2)}`);
+    log.verbose('Listino supplier', { supplierPrice: totalCostExclVAT.toFixed(2) });
     return totalCostExclVAT;
   }
 
-  console.warn(
-    `⚠️ [SUPPLIER PRICE] Listino "${priceListName}" (tipo: ${listType}) senza master_list_id - costo fornitore non determinabile`
-  );
+  log.warn('Costo fornitore non determinabile', {
+    priceListName,
+    listType,
+    reason: 'senza master_list_id',
+  });
   return undefined;
 }

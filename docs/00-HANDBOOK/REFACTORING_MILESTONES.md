@@ -60,51 +60,72 @@ Ridurre complessità e debito tecnico nei moduli critici identificati dall'audit
 
 ---
 
-## Milestone 3: Workspace Integration in Pricing
+## Milestone 3: Workspace Integration in Pricing ✅
 
 **Target:** Multi-tenant safety nel calcolo prezzi
+**Completato:** 2026-02-05
 
 ### Deliverables
 
-- [ ] Aggiungere `workspace_id` filter in `getApplicablePriceList()`
-- [ ] Aggiungere `workspace_id` filter in `calculatePriceWithRules()`
-- [ ] Scope cache master list per workspace
-- [ ] Test multi-tenant isolation
-- [ ] Test verdi su tutta la suite
+- [x] Aggiungere `workspace_id` filter in `getApplicablePriceList()`
+- [x] Aggiungere `workspace_id` filter in `calculatePriceWithRules()`
+- [x] Scope cache master list per workspace
+- [x] Test multi-tenant isolation (12 test)
+- [x] Test security price-lists isolation (12 test)
+- [x] RLS migration per nascondere listini supplier globali
+- [x] Test verdi su tutta la suite (1199 unit)
 
 ### File coinvolti
 
-- `lib/db/price-lists-advanced.ts`
-- `lib/services/pricing/pricing-service.ts`
+- `lib/db/price-lists-advanced.ts` (refactored)
+- `lib/services/pricing/pricing-service.ts` (refactored)
+- `lib/services/pricing/calculate-from-pricelist.ts` (refactored)
+- `lib/engine/fulfillment-orchestrator.ts` (refactored)
+- `lib/ai/tools.ts` (refactored)
+- `actions/price-lists.ts` (refactored)
+- `app/api/quotes/*.ts` (refactored)
+- `app/api/spedizioni/route.ts` (refactored)
+- `tests/unit/pricing-workspace-isolation.test.ts` (nuovo)
+- `tests/security/price-lists-isolation.test.ts` (nuovo)
+- `supabase/migrations/20260205120000_fix_price_lists_rls_hide_supplier.sql` (nuovo)
 
-### Impatto atteso
+### Impatto ottenuto
 
-- Nessun cross-contamination tra workspace
-- Cache invalidation per workspace
+- Cache `masterListCache` scoped per workspace (chiave: `{workspaceId}:{masterListId}`)
+- Filtro workspace in tutte le query pricing
+- Listini globali (workspace_id=NULL) accessibili ma supplier globali nascosti ai reseller
+- 24 nuovi test (12 isolation + 12 security)
 
 ---
 
-## Milestone 4: Unified Logging
+## Milestone 4: Unified Logging ✅
 
 **Target:** Logging strutturato e parsabile
+**Completato:** 2026-02-05
 
 ### Deliverables
 
-- [ ] Creare `lib/logging/price-logger.ts`
-- [ ] Sostituire console.log/warn/error sparsi
-- [ ] Context automatico (user_id, workspace_id, operation)
-- [ ] Test verdi su tutta la suite
+- [x] Creare `lib/logging/price-logger.ts` con logger strutturato
+- [x] Livelli configurabili (PRICE_LOG_LEVEL=debug|info|warn|error)
+- [x] Verbose mode disabilitabile (PRICE_LOG_VERBOSE=false)
+- [x] JSON output per parsing in produzione (PRICE_LOG_JSON=true)
+- [x] Context automatico (operation, priceListId, workspaceId, userId)
+- [x] Helper functions (logPricingDetails, logPricingError)
+- [x] Integrazione in pricing-helpers.ts
+- [x] Test verdi su tutta la suite (1219 unit, +20 nuovi test logger)
 
 ### File coinvolti
 
-- `lib/db/price-lists-advanced.ts`
-- `lib/services/pricing/pricing-service.ts`
-- `app/actions/wallet.ts`
+- `lib/logging/price-logger.ts` (nuovo)
+- `lib/pricing/pricing-helpers.ts` (refactored)
+- `tests/unit/price-logger.test.ts` (nuovo)
 
-### Impatto atteso
+### Impatto ottenuto
 
-- Debugging più facile
-- Log parsabili per monitoring
+- Logger strutturato con livelli e contesto
+- Log parsabili JSON per monitoring in produzione
+- Verbose mode per debug dettagliato disabilitabile
+- 20 nuovi test per il modulo logger
 
 ---
 
@@ -138,8 +159,8 @@ Ridurre complessità e debito tecnico nei moduli critici identificati dall'audit
 | ------------------------ | ------------- | ---------- |
 | 1. VAT Consolidation     | ✅ Completato | 2026-02-05 |
 | 2. Pricing Decomposition | ✅ Completato | 2026-02-05 |
-| 3. Workspace Integration | ⏳ Pending    | -          |
-| 4. Unified Logging       | ⏳ Pending    | -          |
+| 3. Workspace Integration | ✅ Completato | 2026-02-05 |
+| 4. Unified Logging       | ✅ Completato | 2026-02-05 |
 | 5. Cache Unification     | ⏳ Pending    | -          |
 
 ---
