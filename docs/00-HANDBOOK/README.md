@@ -26,6 +26,7 @@ Start here:
 - docs/00-HANDBOOK/testing/TASK_DOC_TEST_MAP.md
 - docs/00-HANDBOOK/testing/ENV_REQUIREMENTS.md
 - docs/00-HANDBOOK/DECISION_LOG.md
+- docs/00-HANDBOOK/features/WORKSPACE_ADAPTIVE_UI.md
 - docs/00-HANDBOOK/index.json
 
 Notes:
