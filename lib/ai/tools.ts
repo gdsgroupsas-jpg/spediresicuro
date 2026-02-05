@@ -344,11 +344,14 @@ export const ANNE_TOOLS: ToolDefinition[] = [
 
 /**
  * Esegue un tool call
+ *
+ * ✨ M3: Aggiunto workspaceId per isolamento multi-tenant nel pricing
  */
 export async function executeTool(
   toolCall: ToolCall,
   userId: string,
-  userRole: 'admin' | 'user'
+  userRole: 'admin' | 'user',
+  workspaceId?: string
 ): Promise<{ success: boolean; result: any; error?: string }> {
   try {
     switch (toolCall.name) {
@@ -1000,7 +1003,8 @@ export async function executeTool(
 
         for (const customList of customLists) {
           // Calcola prezzo con regole (include margine)
-          const sellingPrice = await calculatePriceWithRules(userId, {
+          // ✨ M3: Passa workspaceId (usa fallback empty string se non disponibile)
+          const sellingPrice = await calculatePriceWithRules(userId, workspaceId || '', {
             weight,
             destination: {
               zip: destinationZip,

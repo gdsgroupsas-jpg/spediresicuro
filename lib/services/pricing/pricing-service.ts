@@ -61,14 +61,17 @@ export class PricingService {
 
   /**
    * Calcola preventivo per un utente
+   *
+   * ✨ M3: Aggiunto workspaceId per isolamento multi-tenant
    */
   async calculateQuote(
     userId: string,
+    workspaceId: string,
     params: QuoteParams,
     priceListId?: string
   ): Promise<QuoteResult | null> {
-    // Check cache
-    const cacheKey = this.buildCacheKey(userId, params, priceListId);
+    // ✨ M3: Cache key include workspaceId
+    const cacheKey = this.buildCacheKey(userId, workspaceId, params, priceListId);
     if (this.options.cacheEnabled) {
       const cached = this.cache.get(cacheKey);
       if (cached && cached.expiry > Date.now()) {
@@ -77,7 +80,8 @@ export class PricingService {
     }
 
     try {
-      const result = await calculatePriceWithRules(userId, params, priceListId);
+      // ✨ M3: Passa workspaceId a calculatePriceWithRules
+      const result = await calculatePriceWithRules(userId, workspaceId, params, priceListId);
 
       if (!result) return null;
 
@@ -104,10 +108,16 @@ export class PricingService {
 
   /**
    * Ottiene il listino applicabile per un utente
+   *
+   * ✨ M3: Aggiunto workspaceId per isolamento multi-tenant
    */
-  async getApplicablePriceList(userId: string, courierCode?: string): Promise<PriceList | null> {
+  async getApplicablePriceList(
+    userId: string,
+    workspaceId: string,
+    courierCode?: string
+  ): Promise<PriceList | null> {
     try {
-      return await getApplicablePriceList(userId, courierCode);
+      return await getApplicablePriceList(userId, workspaceId, courierCode);
     } catch (error) {
       console.error('[PRICING_SERVICE] Get price list error:', error);
       return null;
@@ -139,11 +149,14 @@ export class PricingService {
   }
 
   /**
-   * Invalida cache per un utente
+   * Invalida cache per un utente in un workspace
+   *
+   * ✨ M3: Aggiunto workspaceId per isolamento cache
    */
-  invalidateCacheForUser(userId: string): void {
+  invalidateCacheForUser(userId: string, workspaceId?: string): void {
+    const prefix = workspaceId ? `${userId}:${workspaceId}:` : `${userId}:`;
     for (const key of this.cache.keys()) {
-      if (key.startsWith(`${userId}:`)) {
+      if (key.startsWith(prefix)) {
         this.cache.delete(key);
       }
     }
@@ -158,9 +171,16 @@ export class PricingService {
 
   /**
    * Costruisce chiave cache
+   *
+   * ✨ M3: Include workspaceId per isolamento multi-tenant
    */
-  private buildCacheKey(userId: string, params: QuoteParams, priceListId?: string): string {
-    return `${userId}:${params.weight}:${params.destination.zip || ''}:${
+  private buildCacheKey(
+    userId: string,
+    workspaceId: string,
+    params: QuoteParams,
+    priceListId?: string
+  ): string {
+    return `${userId}:${workspaceId}:${params.weight}:${params.destination.zip || ''}:${
       params.courierId || ''
     }:${params.serviceType || ''}:${priceListId || ''}`;
   }

@@ -7,6 +7,7 @@
 'use server';
 
 import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import {
   createPriceList,
@@ -302,6 +303,8 @@ export async function updatePriceListAction(
 
 /**
  * Ottiene listino applicabile per utente corrente
+ *
+ * ✨ M3: Usa getWorkspaceAuth per isolamento multi-tenant
  */
 export async function getApplicablePriceListAction(courierId?: string): Promise<{
   success: boolean;
@@ -309,22 +312,25 @@ export async function getApplicablePriceListAction(courierId?: string): Promise<
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
+
+    const workspaceId = wsContext.workspace.id;
 
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('id')
-      .eq('email', context.actor.email)
+      .eq('email', wsContext.actor.email)
       .single();
 
     if (!user) {
       return { success: false, error: 'Utente non trovato' };
     }
 
-    const priceList = await getApplicablePriceList(user.id, courierId);
+    // ✨ M3: Passa workspaceId
+    const priceList = await getApplicablePriceList(user.id, workspaceId, courierId);
 
     return { success: true, priceList };
   } catch (error: any) {
@@ -371,15 +377,18 @@ export async function calculateQuoteAction(
   };
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    // ✨ M3: Usa getWorkspaceAuth per avere context con workspace
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
+
+    const workspaceId = wsContext.workspace.id;
 
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('id, is_reseller')
-      .eq('email', context.actor.email)
+      .eq('email', wsContext.actor.email)
       .single();
 
     if (!user) {
@@ -389,7 +398,7 @@ export async function calculateQuoteAction(
     // ✨ Se è reseller e non è specificato un listino, usa confronto automatico
     if (user.is_reseller && !priceListId) {
       const { calculateBestPriceForReseller } = await import('@/lib/db/price-lists-advanced');
-      const bestPriceResult = await calculateBestPriceForReseller(user.id, params);
+      const bestPriceResult = await calculateBestPriceForReseller(user.id, workspaceId, params);
 
       if (!bestPriceResult) {
         return {
@@ -412,7 +421,8 @@ export async function calculateQuoteAction(
 
     // Calcolo normale (utente standard o listino specificato)
     const { calculatePriceWithRules } = await import('@/lib/db/price-lists-advanced');
-    const result = await calculatePriceWithRules(user.id, params, priceListId);
+    // ✨ M3: Passa workspaceId a calculatePriceWithRules
+    const result = await calculatePriceWithRules(user.id, workspaceId, params, priceListId);
 
     if (!result) {
       return {

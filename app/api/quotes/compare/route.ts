@@ -5,7 +5,7 @@
  * con i prezzi calcolati per permettere confronto e selezione manuale
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { calculateBestPriceForReseller } from '@/lib/db/price-lists-advanced';
 import type { CourierServiceType } from '@/types/shipments';
@@ -13,10 +13,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    // ✨ M3: Usa getWorkspaceAuth per avere context con workspace
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
+
+    const workspaceId = wsContext.workspace.id;
 
     const body = await request.json();
     const { weight, volume, destination, courierId, serviceType = 'standard', options = {} } = body;
@@ -34,7 +37,7 @@ export async function POST(request: NextRequest) {
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('id, is_reseller, account_type')
-      .eq('email', context.actor.email)
+      .eq('email', wsContext.actor.email)
       .single();
 
     if (!user) {
@@ -43,7 +46,8 @@ export async function POST(request: NextRequest) {
 
     // Se è reseller, calcola confronto API Reseller vs Master
     if (user.is_reseller) {
-      const comparison = await calculateBestPriceForReseller(user.id, {
+      // ✨ M3: Passa workspaceId
+      const comparison = await calculateBestPriceForReseller(user.id, workspaceId, {
         weight: parseFloat(weight),
         volume: volume ? parseFloat(volume) : undefined,
         destination: {
@@ -123,7 +127,8 @@ export async function POST(request: NextRequest) {
 
     // Utente standard: calcola solo prezzo normale
     const { calculatePriceWithRules } = await import('@/lib/db/price-lists-advanced');
-    const result = await calculatePriceWithRules(user.id, {
+    // ✨ M3: Passa workspaceId
+    const result = await calculatePriceWithRules(user.id, workspaceId, {
       weight: parseFloat(weight),
       volume: volume ? parseFloat(volume) : undefined,
       destination: {

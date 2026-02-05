@@ -73,9 +73,12 @@ export class FulfillmentOrchestrator {
    * Calcola preventivo usando sistema listini avanzato
    *
    * Recupera listino applicabile e calcola prezzo con regole PriceRule
+   *
+   * ✨ M3: Aggiunto workspaceId per isolamento multi-tenant
    */
   async calculateQuote(
     userId: string,
+    workspaceId: string,
     params: {
       weight: number;
       volume?: number;
@@ -96,7 +99,7 @@ export class FulfillmentOrchestrator {
     priceListId?: string
   ): Promise<PriceCalculationResult | null> {
     try {
-      return await calculatePriceWithRules(userId, params, priceListId);
+      return await calculatePriceWithRules(userId, workspaceId, params, priceListId);
     } catch (error: any) {
       console.error('Errore calcolo preventivo:', error);
       return null;

@@ -13,6 +13,7 @@ import { calculateBestPriceForReseller } from '@/lib/db/price-lists-advanced';
 
 export interface PriceCalculationParams {
   userId: string;
+  workspaceId: string; // ✨ M3: Aggiunto per isolamento multi-tenant
   courierCode: string; // es. "Gls", "PosteDeliveryBusiness"
   weight: number;
   destination: {
@@ -53,6 +54,7 @@ export async function calculatePriceFromPriceList(
   try {
     const {
       userId,
+      workspaceId,
       courierCode,
       weight,
       destination,
@@ -61,10 +63,10 @@ export async function calculatePriceFromPriceList(
     } = params;
 
     // Validazione parametri
-    if (!userId || !courierCode || !weight || weight <= 0) {
+    if (!userId || !workspaceId || !courierCode || !weight || weight <= 0) {
       return {
         success: false,
-        error: 'Parametri mancanti o non validi (userId, courierCode, weight)',
+        error: 'Parametri mancanti o non validi (userId, workspaceId, courierCode, weight)',
       };
     }
 
@@ -101,7 +103,8 @@ export async function calculatePriceFromPriceList(
 
     // Per reseller e superadmin: usa sistema listini avanzato
     if (isReseller || isSuperadmin) {
-      const bestPriceResult = await calculateBestPriceForReseller(user.id, {
+      // ✨ M3: Passa workspaceId
+      const bestPriceResult = await calculateBestPriceForReseller(user.id, workspaceId, {
         weight: weight,
         destination: {
           zip: destination.zip,

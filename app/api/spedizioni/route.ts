@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { addSpedizione, getSpedizioni } from '@/lib/database';
 import type { AuthContext } from '@/lib/auth-context';
 import { createApiLogger, getRequestId } from '@/lib/api-helpers';
@@ -501,8 +502,13 @@ export async function POST(request: NextRequest) {
         );
       }
 
+      // ✨ M3: Recupera workspace per pricing
+      const wsContext = await getWorkspaceAuth();
+      const workspaceId = wsContext?.workspace?.id || '';
+
       const priceResult = await calculatePriceFromPriceList({
         userId,
+        workspaceId, // ✨ M3: Aggiunto per isolamento multi-tenant
         courierCode: body.corriere || '',
         weight: peso,
         destination: {

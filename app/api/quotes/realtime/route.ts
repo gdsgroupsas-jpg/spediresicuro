@@ -311,6 +311,8 @@ export async function POST(request: NextRequest) {
 
 /**
  * Fallback a listini quando API non disponibile
+ *
+ * ✨ M3: Aggiunto supporto workspace per isolamento multi-tenant
  */
 async function handleListinoFallback(
   userEmail: string,
@@ -324,14 +326,18 @@ async function handleListinoFallback(
 ) {
   try {
     const { calculatePriceWithRules } = await import('@/lib/db/price-lists-advanced');
+    // ✨ M3: Recupera user con primary_workspace_id per isolamento
     const { data: user } = await supabaseAdmin
       .from('users')
-      .select('id')
+      .select('id, primary_workspace_id')
       .eq('email', userEmail)
       .single();
 
     if (user && courier) {
-      const listinoResult = await calculatePriceWithRules(user.id, {
+      // ✨ M3: Usa primary_workspace_id o fallback a empty string
+      const workspaceId = user.primary_workspace_id || '';
+
+      const listinoResult = await calculatePriceWithRules(user.id, workspaceId, {
         weight: parseFloat(String(weight)),
         destination: {
           zip: zip,

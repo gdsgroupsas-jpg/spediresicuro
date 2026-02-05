@@ -14,7 +14,7 @@
  * ⚠️ SICUREZZA: RLS garantisce che ogni utente veda solo i suoi listini
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import {
   calculateBestPriceForReseller,
@@ -24,10 +24,13 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    // ✨ M3: Usa getWorkspaceAuth per avere context con workspace
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
+
+    const workspaceId = wsContext.workspace.id;
 
     const body = await request.json();
     const {
@@ -54,7 +57,7 @@ export async function POST(request: NextRequest) {
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
+      .eq('email', wsContext.actor.email)
       .single();
 
     if (!user) {
@@ -70,7 +73,7 @@ export async function POST(request: NextRequest) {
     let availableCouriers = await getAvailableCouriersForUser(user.id);
 
     console.log(
-      `🔍 [QUOTES DB] Utente: ${context.actor.email}, isReseller: ${isReseller}, isSuperadmin: ${isSuperadmin}`
+      `🔍 [QUOTES DB] Utente: ${wsContext.actor.email}, isReseller: ${isReseller}, isSuperadmin: ${isSuperadmin}`
     );
     console.log(`🔍 [QUOTES DB] Corrieri disponibili dalla config: ${availableCouriers.length}`);
     availableCouriers.forEach((c, i) => {
@@ -318,7 +321,8 @@ export async function POST(request: NextRequest) {
 
           if (isReseller || isSuperadmin) {
             // ✨ Passa anche contractCode per filtrare listini per contract_code nei metadata
-            const bestPriceResult = await calculateBestPriceForReseller(user.id, {
+            // ✨ M3: Passa workspaceId
+            const bestPriceResult = await calculateBestPriceForReseller(user.id, workspaceId, {
               weight: parseFloat(weight),
               destination: {
                 zip,
@@ -362,7 +366,8 @@ export async function POST(request: NextRequest) {
             }
           } else {
             // Utente normale: calcola da listino assegnato
-            quoteResult = await calculatePriceWithRules(user.id, {
+            // ✨ M3: Passa workspaceId
+            quoteResult = await calculatePriceWithRules(user.id, workspaceId, {
               weight: parseFloat(weight),
               destination: {
                 zip,

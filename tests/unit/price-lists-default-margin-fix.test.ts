@@ -29,6 +29,7 @@ import { calculatePriceFromList } from '@/lib/pricing/calculator';
 
 describe('Fix Margine Default - Test Pesanti', () => {
   const mockUserId = 'test-user-id';
+  const mockWorkspaceId = 'test-workspace-id'; // ✨ M3: Aggiunto per nuova signature
 
   // Fixture: Listino Master (SUPPLIER)
   const masterPriceList: PriceList = {
@@ -142,20 +143,22 @@ describe('Fix Margine Default - Test Pesanti', () => {
   describe('Scenario 1: Listino CUSTOM con Master, Prezzi Identici, SENZA Margine Configurato', () => {
     it('deve applicare margine default globale (20%) quando isManuallyModified = false', async () => {
       // Mock: getPriceListById chiama supabaseAdmin.from('price_lists')
-      // Prima chiamata: recupera listino CUSTOM
+      // Prima chiamata: recupera listino CUSTOM (con filtro workspace .or())
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: Aggiunto per filtro workspace
         single: vi.fn().mockResolvedValue({
           data: { ...customPriceListIdentical, entries: customPriceListIdentical.entries },
           error: null,
         }),
       } as any);
 
-      // Seconda chiamata: recupera master list (quando calcola supplierPrice)
+      // Seconda chiamata: recupera master list (con filtro workspace .or())
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: Aggiunto per filtro workspace
         single: vi.fn().mockResolvedValue({
           data: { ...masterPriceList, entries: masterPriceList.entries },
           error: null,
@@ -186,6 +189,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       const result = await calculatePriceWithRules(
         mockUserId,
+        mockWorkspaceId, // ✨ M3
         {
           weight: 1.5,
           destination: {
@@ -234,6 +238,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
         vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
           single: vi.fn().mockResolvedValue({
             data: customPriceListIdentical,
             error: null,
@@ -243,6 +248,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
         vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
           single: vi.fn().mockResolvedValue({
             data: masterPriceList,
             error: null,
@@ -271,6 +277,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
         const result = await calculatePriceWithRules(
           mockUserId,
+          mockWorkspaceId, // ✨ M3
           {
             weight: testCase.weight,
             destination: {
@@ -305,6 +312,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: customPriceListModified,
           error: null,
@@ -314,6 +322,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: masterPriceList,
           error: null,
@@ -344,6 +353,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       const result = await calculatePriceWithRules(
         mockUserId,
+        mockWorkspaceId, // ✨ M3
         {
           weight: 1.5,
           destination: {
@@ -378,6 +388,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: customPriceListWithMargin,
           error: null,
@@ -387,6 +398,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: masterPriceList,
           error: null,
@@ -417,6 +429,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       const result = await calculatePriceWithRules(
         mockUserId,
+        mockWorkspaceId, // ✨ M3
         {
           weight: 1.5,
           destination: {
@@ -459,6 +472,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: customWithFixedMargin,
           error: null,
@@ -468,6 +482,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: masterPriceList,
           error: null,
@@ -496,6 +511,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       const result = await calculatePriceWithRules(
         mockUserId,
+        mockWorkspaceId, // ✨ M3
         {
           weight: 1.5,
           destination: {
@@ -521,6 +537,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: customPriceListIdentical,
           error: null,
@@ -530,6 +547,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: masterPriceList,
           error: null,
@@ -558,6 +576,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       const result = await calculatePriceWithRules(
         mockUserId,
+        mockWorkspaceId, // ✨ M3
         {
           weight: 1.5,
           destination: {
@@ -593,6 +612,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
         vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
           single: vi.fn().mockResolvedValue({
             data: scenario.list,
             error: null,
@@ -602,6 +622,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
         vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
           select: vi.fn().mockReturnThis(),
           eq: vi.fn().mockReturnThis(),
+          or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
           single: vi.fn().mockResolvedValue({
             data: masterPriceList,
             error: null,
@@ -631,6 +652,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
         const result = await calculatePriceWithRules(
           mockUserId,
+          mockWorkspaceId, // ✨ M3
           {
             weight: 1.5,
             destination: {
@@ -712,6 +734,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: glsCustom,
           error: null,
@@ -721,6 +744,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: glsMaster,
           error: null,
@@ -749,6 +773,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       const result = await calculatePriceWithRules(
         mockUserId,
+        mockWorkspaceId, // ✨ M3
         {
           weight: 1.5,
           destination: {
@@ -815,6 +840,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: posteCustom,
           error: null,
@@ -824,6 +850,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
       vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
+        or: vi.fn().mockReturnThis(), // ✨ M3: workspace filter
         single: vi.fn().mockResolvedValue({
           data: posteMaster,
           error: null,
@@ -852,6 +879,7 @@ describe('Fix Margine Default - Test Pesanti', () => {
 
       const result = await calculatePriceWithRules(
         mockUserId,
+        mockWorkspaceId, // ✨ M3
         {
           weight: 1.5,
           destination: {
