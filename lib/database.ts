@@ -1330,9 +1330,10 @@ export async function getSpedizioni(
 
   try {
     // ⚠️ SICUREZZA: Filtra per user_id e/o workspace_id per utenti normali
+    // Include workspace info per UI adattiva (colonna workspace nelle tabelle)
     let query = supabaseAdmin
       .from('shipments')
-      .select('*')
+      .select('*, workspaces:workspace_id(id, name, type)')
       .order('created_at', { ascending: false });
 
     // ⚠️ WORKSPACE FILTER: Architecture V2 con visibilita gerarchica

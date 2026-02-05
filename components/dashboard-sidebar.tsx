@@ -26,6 +26,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { useGiacenzeCount } from '@/hooks/useGiacenzeCount';
+import { useWorkspaceUI } from '@/hooks/useWorkspaceUI';
 import WorkspaceSwitcher from '@/components/workspace-switcher';
 
 export default function DashboardSidebar() {
@@ -35,6 +36,9 @@ export default function DashboardSidebar() {
   const [isReseller, setIsReseller] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const giacenzeCount = useGiacenzeCount();
+
+  // UI adattiva per workspace type (nasconde Listini per client)
+  const { showPriceListMenu, isClient: isClientWorkspace } = useWorkspaceUI();
 
   // 🆕 LocalStorage keys
   const STORAGE_KEYS = {
@@ -80,11 +84,14 @@ export default function DashboardSidebar() {
   // Ottieni la configurazione di navigazione per l'utente corrente
   const userRole: UserRole = (accountType as UserRole) || 'user';
   const navigationConfig = useMemo(() => {
+    // Se workspace è client, forza isReseller a false (nasconde sezione Business/Listini)
+    const effectiveIsReseller = isClientWorkspace ? false : isReseller;
+
     return getNavigationForUser(userRole, {
-      isReseller,
+      isReseller: effectiveIsReseller,
       accountType: accountType || undefined,
     });
-  }, [userRole, isReseller, accountType]);
+  }, [userRole, isReseller, accountType, isClientWorkspace]);
 
   // 🆕 Flatten all navigable items for keyboard navigation
   const allNavigableItems = useMemo(() => {

@@ -33,6 +33,7 @@ import {
   Camera,
 } from 'lucide-react';
 import DashboardNav from '@/components/dashboard-nav';
+import { useWorkspaceUI } from '@/hooks/useWorkspaceUI';
 import { ExportService } from '@/lib/adapters/export';
 import {
   generateMultipleShipmentsCSV,
@@ -126,6 +127,12 @@ interface Spedizione {
   vat_rate?: number;
   // ✨ NUOVO: Platform fee per breakdown (0 per superadmin)
   platform_fee?: number;
+  // ✨ NUOVO: Workspace info per UI gerarchica
+  workspaces?: {
+    id: string;
+    name: string;
+    type: 'platform' | 'reseller' | 'client';
+  } | null;
 }
 
 // Componente Badge Status
@@ -250,6 +257,9 @@ export default function ListaSpedizioniPage() {
   const router = useRouter();
   const { data: session } = useSession();
 
+  // UI adattiva per tipo workspace (Platform/Reseller vedono colonna Workspace)
+  const { showWorkspaceColumn } = useWorkspaceUI();
+
   // Onboarding gating: verifica se profilo completato
   const { isComplete: isProfileComplete, isLoading: isProfileLoading } = useProfileCompletion();
   const profileIncomplete = !isProfileLoading && isProfileComplete === false;
@@ -271,6 +281,7 @@ export default function ListaSpedizioniPage() {
   const [dateFilter, setDateFilter] = useState<string>('all');
   const [courierFilter, setCourierFilter] = useState<string>('all');
   const [returnFilter, setReturnFilter] = useState<string>('all'); // 'all', 'returns', 'no-returns'
+  const [workspaceFilter, setWorkspaceFilter] = useState<string>('all'); // Filtro workspace per hierarchy
   const [customDateFrom, setCustomDateFrom] = useState<string>('');
   const [customDateTo, setCustomDateTo] = useState<string>('');
   const [showFilters, setShowFilters] = useState(false);
@@ -705,6 +716,11 @@ export default function ListaSpedizioniPage() {
       filtered = filtered.filter((s: any) => !s.is_return || s.is_return === false);
     }
 
+    // Filtro per workspace (solo per platform/reseller)
+    if (workspaceFilter !== 'all') {
+      filtered = filtered.filter((s) => s.workspaces?.id === workspaceFilter);
+    }
+
     return filtered;
   }, [
     spedizioni,
@@ -713,6 +729,7 @@ export default function ListaSpedizioniPage() {
     dateFilter,
     courierFilter,
     returnFilter,
+    workspaceFilter,
     customDateFrom,
     customDateTo,
   ]);
@@ -1330,6 +1347,31 @@ export default function ListaSpedizioniPage() {
                 </select>
               </div>
 
+              {/* Filtro Workspace (solo per Platform/Reseller) */}
+              {showWorkspaceColumn && (
+                <div>
+                  <select
+                    value={workspaceFilter}
+                    onChange={(e) => setWorkspaceFilter(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#FF9500] focus:border-transparent bg-white text-gray-900 font-medium"
+                  >
+                    <option value="all">Tutti i workspace</option>
+                    {/* Estrai workspace unici dalle spedizioni */}
+                    {Array.from(
+                      new Map(
+                        spedizioni
+                          .filter((s) => s.workspaces)
+                          .map((s) => [s.workspaces!.id, s.workspaces!])
+                      ).values()
+                    ).map((ws) => (
+                      <option key={ws.id} value={ws.id}>
+                        {ws.name} ({ws.type})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
               {/* Filtro Data */}
               <div>
                 <select
@@ -1377,7 +1419,8 @@ export default function ListaSpedizioniPage() {
               statusFilter !== 'all' ||
               dateFilter !== 'all' ||
               returnFilter !== 'all' ||
-              courierFilter !== 'all') && (
+              courierFilter !== 'all' ||
+              workspaceFilter !== 'all') && (
               <div className="mt-4 flex items-center justify-between">
                 <div className="text-sm text-gray-600">
                   Mostrando{' '}
@@ -1579,6 +1622,14 @@ export default function ListaSpedizioniPage() {
                     >
                       Destinatario
                     </th>
+                    {showWorkspaceColumn && (
+                      <th
+                        scope="col"
+                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      >
+                        Workspace
+                      </th>
+                    )}
                     <th
                       scope="col"
                       className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -1664,6 +1715,27 @@ export default function ListaSpedizioniPage() {
                           </div>
                         </div>
                       </td>
+                      {showWorkspaceColumn && (
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          {spedizione.workspaces ? (
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${
+                                  spedizione.workspaces.type === 'platform'
+                                    ? 'bg-purple-100 text-purple-800'
+                                    : spedizione.workspaces.type === 'reseller'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                }`}
+                              >
+                                {spedizione.workspaces.name}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-sm text-gray-400">—</span>
+                          )}
+                        </td>
+                      )}
                       <td className="px-6 py-4 whitespace-nowrap">
                         {spedizione.tracking ? (
                           <button
