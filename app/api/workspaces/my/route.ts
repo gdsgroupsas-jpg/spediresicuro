@@ -64,7 +64,18 @@ export async function GET() {
         return NextResponse.json({ error: 'Database error' }, { status: 500 });
       }
 
-      workspaces = (data || []).map((w: any) => ({
+      // Ordina: platform first (depth 0), poi reseller (depth 1), poi client (depth 2)
+      // All'interno di ogni depth, ordina per nome
+      const sortedData = [...(data || [])].sort((a, b) => {
+        // Prima per depth (platform = 0 prima)
+        if (a.depth !== b.depth) {
+          return a.depth - b.depth;
+        }
+        // Poi per nome
+        return a.name.localeCompare(b.name);
+      });
+
+      workspaces = sortedData.map((w: any) => ({
         workspace_id: w.id,
         workspace_name: w.name,
         workspace_slug: w.slug,
