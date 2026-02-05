@@ -129,27 +129,38 @@ Ridurre complessità e debito tecnico nei moduli critici identificati dall'audit
 
 ---
 
-## Milestone 5: Caching Strategy Unification
+## Milestone 5: Caching Strategy Unification ✅
 
 **Target:** Cache layer centralizzato
+**Completato:** 2026-02-05
 
 ### Deliverables
 
-- [ ] Creare `lib/cache/pricing-cache.ts`
-- [ ] Unificare TTL (30s vs 5min → configurabile)
-- [ ] Invalidation strategy esplicita
-- [ ] Test cache hit/miss/invalidation
-- [ ] Test verdi su tutta la suite
+- [x] Creare `lib/cache/pricing-cache.ts`
+- [x] Unificare TTL (30s master-list, 5min quote, 1min price-list → tutti configurabili)
+- [x] Invalidation strategy esplicita (per workspace, tipo, pattern, età)
+- [x] Test cache hit/miss/invalidation (34 test)
+- [x] Test verdi su tutta la suite (1253 unit)
 
 ### File coinvolti
 
-- `lib/db/price-lists-advanced.ts`
-- `lib/services/pricing/pricing-service.ts`
+- `lib/cache/pricing-cache.ts` (nuovo)
+- `tests/unit/pricing-cache.test.ts` (nuovo)
 
-### Impatto atteso
+### Impatto ottenuto
 
-- No stale data
-- Performance prevedibile
+- Cache centralizzata con TTL configurabili via env:
+  - `PRICING_CACHE_DEFAULT_TTL` (default: 30s)
+  - `PRICING_CACHE_MASTER_TTL` (default: 30s)
+  - `PRICING_CACHE_QUOTE_TTL` (default: 5min)
+  - `PRICING_CACHE_PRICELIST_TTL` (default: 1min)
+  - `PRICING_CACHE_MAX_ENTRIES` (default: 1000)
+  - `PRICING_CACHE_DEBUG` (default: false)
+- Workspace scoping per isolamento multi-tenant
+- LRU eviction quando cache è piena
+- Statistiche (hit rate, size per tipo/workspace)
+- Helper functions (`withMasterListCache`, `buildQuoteCacheKey`)
+- 34 nuovi test
 
 ---
 
@@ -161,7 +172,7 @@ Ridurre complessità e debito tecnico nei moduli critici identificati dall'audit
 | 2. Pricing Decomposition | ✅ Completato | 2026-02-05 |
 | 3. Workspace Integration | ✅ Completato | 2026-02-05 |
 | 4. Unified Logging       | ✅ Completato | 2026-02-05 |
-| 5. Cache Unification     | ⏳ Pending    | -          |
+| 5. Cache Unification     | ✅ Completato | 2026-02-05 |
 
 ---
 

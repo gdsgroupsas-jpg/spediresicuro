@@ -120,3 +120,58 @@ export function sanitizeString(str: string): string {
     .replace(/<[^>]*>/g, '')
     .replace(/[<>]/g, '');
 }
+
+/**
+ * Asserisce che workspaceId sia valido (definito, non vuoto, UUID valido)
+ *
+ * ⚠️ SICUREZZA: Previene SQL injection nel filtro workspace
+ *
+ * @param workspaceId - Workspace ID da validare
+ * @throws Error con codice WORKSPACE_ID_REQUIRED o INVALID_WORKSPACE_ID se invalido
+ *
+ * @example
+ * assertValidWorkspaceId(workspaceId); // throw se invalido
+ * // workspaceId è garantito essere UUID valido
+ */
+export function assertValidWorkspaceId(workspaceId: string): asserts workspaceId is string {
+  if (workspaceId === undefined || workspaceId === null) {
+    throw new Error(
+      'WORKSPACE_ID_REQUIRED: workspaceId è obbligatorio e non può essere null o undefined'
+    );
+  }
+
+  if (typeof workspaceId !== 'string') {
+    throw new Error(
+      `WORKSPACE_ID_REQUIRED: workspaceId deve essere una stringa, ricevuto: ${typeof workspaceId}`
+    );
+  }
+
+  if (workspaceId.trim() === '') {
+    throw new Error('WORKSPACE_ID_REQUIRED: workspaceId non può essere una stringa vuota');
+  }
+
+  if (!validateUUID(workspaceId)) {
+    throw new Error(
+      `INVALID_WORKSPACE_ID: workspaceId deve essere un UUID valido, ricevuto: ${workspaceId.substring(0, 20)}...`
+    );
+  }
+}
+
+/**
+ * Costruisce filtro workspace sicuro per query Supabase
+ *
+ * ⚠️ SICUREZZA: Valida workspaceId come UUID prima di costruire il filtro
+ * Previene SQL injection verificando che il valore sia un UUID valido
+ *
+ * @param workspaceId - Workspace ID (deve essere UUID valido)
+ * @returns Stringa filtro per .or() Supabase
+ * @throws Error se workspaceId non è UUID valido
+ *
+ * @example
+ * const filter = buildWorkspaceFilter(workspaceId);
+ * query = query.or(filter); // safe
+ */
+export function buildWorkspaceFilter(workspaceId: string): string {
+  assertValidWorkspaceId(workspaceId);
+  return `workspace_id.eq.${workspaceId},workspace_id.is.null`;
+}

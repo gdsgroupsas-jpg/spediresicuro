@@ -27,6 +27,7 @@ import {
 } from '@/lib/pricing/vat-utils';
 import type { PriceCalculationResult, PriceList, PriceRule } from '@/types/listini';
 import type { CourierServiceType } from '@/types/shipments';
+import { buildWorkspaceFilter, validateUUID } from '@/lib/validators';
 import { supabaseAdmin } from './client';
 
 // ✨ PERFORMANCE: In-memory cache for master price lists to avoid repeated queries
@@ -60,8 +61,9 @@ async function getCachedMasterList(
     .eq('id', masterListId);
 
   // ✨ M3: Filtro workspace - master list deve essere nel workspace o globale
-  if (workspaceId) {
-    query = query.or(`workspace_id.eq.${workspaceId},workspace_id.is.null`);
+  // ✨ M5-FIX: Usa buildWorkspaceFilter per prevenire SQL injection
+  if (workspaceId && validateUUID(workspaceId)) {
+    query = query.or(buildWorkspaceFilter(workspaceId));
   }
 
   const { data, error } = await query.single();
@@ -133,7 +135,10 @@ async function getApplicablePriceListManual(
   const dateStr = date.toISOString().split('T')[0];
 
   // ✨ M3: Tutti i listini devono essere nel workspace dell'utente o globali (workspace_id IS NULL)
-  const workspaceFilter = `workspace_id.eq.${workspaceId},workspace_id.is.null`;
+  // ✨ M5-FIX: Usa buildWorkspaceFilter per prevenire SQL injection
+  const workspaceFilter = validateUUID(workspaceId)
+    ? buildWorkspaceFilter(workspaceId)
+    : 'workspace_id.is.null';
 
   // 1. Prova listino assegnato direttamente (assigned_to_user_id)
   const { data: assignedList } = await supabaseAdmin
@@ -1280,8 +1285,9 @@ async function getPriceListById(id: string, workspaceId?: string): Promise<Price
     .eq('id', id);
 
   // ✨ M3: Filtro workspace - listino deve essere nel workspace o globale
-  if (workspaceId) {
-    query = query.or(`workspace_id.eq.${workspaceId},workspace_id.is.null`);
+  // ✨ M5-FIX: Usa buildWorkspaceFilter per prevenire SQL injection
+  if (workspaceId && validateUUID(workspaceId)) {
+    query = query.or(buildWorkspaceFilter(workspaceId));
   }
 
   const { data, error } = await query.single();
