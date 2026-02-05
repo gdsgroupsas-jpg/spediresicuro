@@ -32,7 +32,12 @@ import {
   Eye,
   Trash2,
 } from 'lucide-react';
-import { createSubAdmin, getDirectSubAdmins, getHierarchyStats } from '@/actions/admin';
+import {
+  createSubAdmin,
+  getDirectSubAdmins,
+  getHierarchyStats,
+  deleteSubAdmin,
+} from '@/actions/admin';
 
 interface SubAdmin {
   id: string;
@@ -67,6 +72,9 @@ export default function TeamManagementPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
   const [createSuccess, setCreateSuccess] = useState<string | null>(null);
+
+  // Stati per eliminazione
+  const [isDeleting, setIsDeleting] = useState<string | null>(null); // ID del sub-admin in eliminazione
 
   // Carica dati
   useEffect(() => {
@@ -185,6 +193,35 @@ export default function TeamManagementPage() {
       setCreateError(err.message || 'Errore sconosciuto');
     } finally {
       setIsCreating(false);
+    }
+  }
+
+  // Gestisci eliminazione sotto-admin
+  async function handleDeleteSubAdmin(admin: SubAdmin) {
+    if (
+      !confirm(
+        `Sei sicuro di voler eliminare ${admin.name}?\n\nQuesta azione non può essere annullata.`
+      )
+    ) {
+      return;
+    }
+
+    setIsDeleting(admin.id);
+
+    try {
+      const result = await deleteSubAdmin(admin.id);
+
+      if (result.success) {
+        // Ricarica lista
+        await loadSubAdmins();
+        await loadStats();
+      } else {
+        alert(result.error || "Errore durante l'eliminazione");
+      }
+    } catch (err: any) {
+      alert(err.message || 'Errore sconosciuto');
+    } finally {
+      setIsDeleting(null);
     }
   }
 
@@ -389,6 +426,18 @@ export default function TeamManagementPage() {
                             title="Visualizza Dettagli"
                           >
                             <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDeleteSubAdmin(admin)}
+                            disabled={isDeleting === admin.id}
+                            className="text-red-600 hover:text-red-900 p-1 rounded hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            title="Elimina Sotto-Admin"
+                          >
+                            {isDeleting === admin.id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="w-4 h-4" />
+                            )}
                           </button>
                         </div>
                       </td>

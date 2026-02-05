@@ -358,3 +358,117 @@ export async function getHierarchyStats(parentEmail: string): Promise<{
     };
   }
 }
+
+/**
+ * Elimina (soft delete) un sotto-admin
+ *
+ * @param subAdminId - ID del sotto-admin da eliminare
+ * @returns Oggetto con success e messaggio
+ */
+export async function deleteSubAdmin(subAdminId: string): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    // 1. Verifica autenticazione
+    const context = await getSafeAuth();
+
+    if (!context?.actor?.email) {
+      return {
+        success: false,
+        error: 'Non autenticato.',
+      };
+    }
+
+    const parentEmail = context.actor.email;
+
+    // 2. Ottieni parent ID
+    const { data: parent, error: parentError } = await supabaseAdmin
+      .from('users')
+      .select('id, account_type')
+      .eq('email', parentEmail)
+      .single();
+
+    if (parentError || !parent) {
+      return {
+        success: false,
+        error: 'Utente non trovato.',
+      };
+    }
+
+    // 3. Verifica che sia admin o superadmin
+    if (parent.account_type !== 'admin' && parent.account_type !== 'superadmin') {
+      return {
+        success: false,
+        error: 'Solo gli admin possono eliminare sotto-admin.',
+      };
+    }
+
+    // 4. Verifica che il sotto-admin esista e sia figlio di questo admin
+    const { data: subAdmin, error: subAdminError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, name, parent_admin_id, account_type')
+      .eq('id', subAdminId)
+      .single();
+
+    if (subAdminError || !subAdmin) {
+      return {
+        success: false,
+        error: 'Sotto-admin non trovato.',
+      };
+    }
+
+    // Superadmin può eliminare chiunque, admin solo i propri figli
+    if (parent.account_type !== 'superadmin' && subAdmin.parent_admin_id !== parent.id) {
+      return {
+        success: false,
+        error: 'Non puoi eliminare un sotto-admin che non hai creato.',
+      };
+    }
+
+    // 5. Soft delete: imposta account_type a 'deleted' o elimina
+    // Per sicurezza facciamo soft delete impostando un flag
+    const { error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({
+        account_type: 'deleted',
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', subAdminId);
+
+    if (updateError) {
+      console.error('Errore eliminazione sotto-admin:', updateError);
+      return {
+        success: false,
+        error: "Errore durante l'eliminazione.",
+      };
+    }
+
+    // 6. Log audit
+    await supabaseAdmin.from('audit_logs').insert({
+      action: 'SUBADMIN_DELETED',
+      resource_type: 'user',
+      resource_id: subAdminId,
+      user_id: parent.id,
+      metadata: {
+        deleted_user_email: subAdmin.email,
+        deleted_user_name: subAdmin.name,
+        deleted_by: parentEmail,
+      },
+      severity: 'warning',
+      message: `Sotto-admin ${subAdmin.name} eliminato da ${parentEmail}`,
+    });
+
+    return {
+      success: true,
+      message: `Sotto-admin ${subAdmin.name} eliminato con successo.`,
+    };
+  } catch (error: any) {
+    console.error('Errore in deleteSubAdmin:', error);
+    return {
+      success: false,
+      error: error.message || "Errore sconosciuto durante l'eliminazione.",
+    };
+  }
+}
