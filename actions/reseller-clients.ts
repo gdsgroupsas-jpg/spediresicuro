@@ -67,38 +67,90 @@ export async function getResellerClientsWithListino(): Promise<{
       return { success: false, error: 'Utente non trovato' };
     }
 
-    // Verifica sia reseller
+    // Verifica sia reseller o superadmin
     if (!currentUser.is_reseller && currentUser.account_type !== 'superadmin') {
       return { success: false, error: 'Non sei un reseller' };
     }
 
-    // Query per ottenere i sub-users (clienti) del reseller
-    const { data: clients, error: clientsError } = await supabaseAdmin
-      .from('users')
-      .select(
-        `
-        id,
-        email,
-        name,
-        wallet_balance,
-        created_at,
-        dati_cliente,
-        assigned_price_list_id
-      `
-      )
-      .eq('parent_id', currentUser.id)
-      .order('created_at', { ascending: false });
+    // Strategia: workspace V2 (primaria) + fallback parent_id (legacy)
+    let clientIds: string[] = [];
 
-    if (clientsError) {
-      console.error('Errore caricamento clienti:', clientsError);
-      return { success: false, error: 'Errore nel caricamento dei clienti' };
+    // Trova il workspace dell'utente corrente
+    const { data: userWs } = await supabaseAdmin
+      .from('users')
+      .select('primary_workspace_id')
+      .eq('id', currentUser.id)
+      .single();
+
+    if (userWs?.primary_workspace_id) {
+      // Workspace V2: trova tutti i workspace figli (reseller o client)
+      const { data: childWorkspaces } = await supabaseAdmin
+        .from('workspaces')
+        .select('id')
+        .eq('parent_workspace_id', userWs.primary_workspace_id)
+        .eq('status', 'active');
+
+      if (childWorkspaces && childWorkspaces.length > 0) {
+        const childWsIds = childWorkspaces.map((w) => w.id);
+
+        // Trova gli owner di ogni workspace figlio
+        const { data: childMembers } = await supabaseAdmin
+          .from('workspace_members')
+          .select('user_id')
+          .in('workspace_id', childWsIds)
+          .eq('role', 'owner')
+          .eq('status', 'active');
+
+        if (childMembers) {
+          clientIds = childMembers.map((m) => m.user_id);
+        }
+      }
+    }
+
+    // Fallback legacy: cerca anche per parent_id (utenti pre-workspace)
+    const { data: legacyClients } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('parent_id', currentUser.id);
+
+    if (legacyClients) {
+      for (const lc of legacyClients) {
+        if (!clientIds.includes(lc.id)) {
+          clientIds.push(lc.id);
+        }
+      }
+    }
+
+    // Carica dati completi dei clienti trovati
+    let clients: any[] = [];
+    if (clientIds.length > 0) {
+      const { data: clientsData, error: clientsError } = await supabaseAdmin
+        .from('users')
+        .select(
+          `
+          id,
+          email,
+          name,
+          wallet_balance,
+          created_at,
+          dati_cliente,
+          assigned_price_list_id
+        `
+        )
+        .in('id', clientIds)
+        .order('created_at', { ascending: false });
+
+      if (clientsError) {
+        console.error('Errore caricamento clienti:', clientsError);
+        return { success: false, error: 'Errore nel caricamento dei clienti' };
+      }
+
+      clients = clientsData || [];
     }
 
     if (!clients || clients.length === 0) {
       return { success: true, clients: [] };
     }
-
-    const clientIds = clients.map((c) => c.id);
 
     // Ottieni conteggio spedizioni e totale speso per ogni cliente
     const { data: shipmentsStats } = await supabaseAdmin
@@ -207,6 +259,92 @@ export async function getResellerClientsWithListino(): Promise<{
   } catch (error: any) {
     console.error('Errore getResellerClientsWithListino:', error);
     return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+export interface WorkspaceChild {
+  id: string;
+  name: string;
+  type: string;
+  depth: number;
+  status: string;
+  ownerName: string | null;
+  ownerEmail: string | null;
+}
+
+/**
+ * Ottiene i workspace figli per il pannello superadmin
+ */
+export async function getChildWorkspaces(): Promise<{
+  success: boolean;
+  workspaces?: WorkspaceChild[];
+  platformName?: string;
+  error?: string;
+}> {
+  try {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    const { data: currentUser } = await supabaseAdmin
+      .from('users')
+      .select('id, account_type, primary_workspace_id')
+      .eq('email', context.actor.email)
+      .single();
+
+    if (!currentUser?.primary_workspace_id) {
+      return { success: true, workspaces: [] };
+    }
+
+    // Carica workspace corrente (per il nome)
+    const { data: parentWs } = await supabaseAdmin
+      .from('workspaces')
+      .select('name')
+      .eq('id', currentUser.primary_workspace_id)
+      .single();
+
+    // Carica workspace figli
+    const { data: children } = await supabaseAdmin
+      .from('workspaces')
+      .select('id, name, type, depth, status')
+      .eq('parent_workspace_id', currentUser.primary_workspace_id)
+      .eq('status', 'active')
+      .order('name');
+
+    if (!children || children.length === 0) {
+      return { success: true, workspaces: [], platformName: parentWs?.name };
+    }
+
+    // Carica owner di ogni workspace figlio
+    const wsIds = children.map((w) => w.id);
+    const { data: owners } = await supabaseAdmin
+      .from('workspace_members')
+      .select('workspace_id, user_id, users(name, email)')
+      .in('workspace_id', wsIds)
+      .eq('role', 'owner')
+      .eq('status', 'active');
+
+    const ownerMap = new Map<string, { name: string | null; email: string | null }>();
+    owners?.forEach((o) => {
+      const user = o.users as any;
+      ownerMap.set(o.workspace_id, { name: user?.name, email: user?.email });
+    });
+
+    const workspaces: WorkspaceChild[] = children.map((w) => ({
+      id: w.id,
+      name: w.name,
+      type: w.type,
+      depth: w.depth,
+      status: w.status,
+      ownerName: ownerMap.get(w.id)?.name || null,
+      ownerEmail: ownerMap.get(w.id)?.email || null,
+    }));
+
+    return { success: true, workspaces, platformName: parentWs?.name };
+  } catch (error: any) {
+    console.error('Errore getChildWorkspaces:', error);
+    return { success: false, error: error.message };
   }
 }
 

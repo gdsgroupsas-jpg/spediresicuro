@@ -14,7 +14,17 @@
  * - Creazione clienti
  */
 
-import { FileText, Filter, RefreshCw, Search, ShieldAlert, Users, UserPlus } from 'lucide-react';
+import {
+  Building2,
+  FileText,
+  Filter,
+  Network,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  Users,
+  UserPlus,
+} from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -40,7 +50,9 @@ import { WalletRechargeDialog } from '@/app/dashboard/reseller-team/_components/
 import {
   getResellerClientsStats,
   getResellerClientsWithListino,
+  getChildWorkspaces,
   type ClientsStatsResult,
+  type WorkspaceChild,
 } from '@/actions/reseller-clients';
 
 type SortField = 'name' | 'wallet_balance' | 'shipments_count' | 'created_at';
@@ -53,6 +65,8 @@ function ResellerClientiContent() {
   // Data state
   const [clients, setClients] = useState<ClientWithListino[]>([]);
   const [stats, setStats] = useState<ClientsStatsResult | null>(null);
+  const [childWorkspaces, setChildWorkspaces] = useState<WorkspaceChild[]>([]);
+  const [platformName, setPlatformName] = useState<string>('');
   const [isLoading, setIsLoading] = useState(true);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -74,9 +88,10 @@ function ResellerClientiContent() {
   // Load data
   const loadData = useCallback(async () => {
     try {
-      const [clientsResult, statsResult] = await Promise.all([
+      const [clientsResult, statsResult, wsResult] = await Promise.all([
         getResellerClientsWithListino(),
         getResellerClientsStats(),
+        getChildWorkspaces(),
       ]);
 
       if (clientsResult.success && clientsResult.clients) {
@@ -84,6 +99,10 @@ function ResellerClientiContent() {
       }
       if (statsResult.success && statsResult.stats) {
         setStats(statsResult.stats);
+      }
+      if (wsResult.success && wsResult.workspaces) {
+        setChildWorkspaces(wsResult.workspaces);
+        setPlatformName(wsResult.platformName || '');
       }
     } catch (error) {
       console.error('Errore caricamento dati:', error);
@@ -215,6 +234,45 @@ function ResellerClientiContent() {
             </div>
           }
         />
+
+        {/* Pannello Gerarchia Workspace (visibile se ci sono workspace figli) */}
+        {childWorkspaces.length > 0 && (
+          <div className="bg-gradient-to-r from-indigo-50 to-blue-50 rounded-xl border border-indigo-200/60 p-4 mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <Network className="w-5 h-5 text-indigo-600" />
+              <h3 className="font-semibold text-indigo-900">{platformName || 'Piattaforma'}</h3>
+              <Badge variant="secondary" className="text-xs bg-indigo-100 text-indigo-700">
+                {childWorkspaces.length} workspace
+              </Badge>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-2">
+              {childWorkspaces.map((ws) => (
+                <div
+                  key={ws.id}
+                  className="flex items-center gap-2 bg-white/80 rounded-lg px-3 py-2 border border-indigo-100"
+                >
+                  <Building2 className="w-4 h-4 text-indigo-500 flex-shrink-0" />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-gray-900 truncate">
+                      {ws.ownerName || ws.name}
+                    </p>
+                    <p className="text-xs text-gray-500 truncate">{ws.ownerEmail || ws.type}</p>
+                  </div>
+                  <Badge
+                    variant="secondary"
+                    className={`text-[10px] ml-auto flex-shrink-0 ${
+                      ws.type === 'reseller'
+                        ? 'bg-amber-100 text-amber-700'
+                        : 'bg-blue-100 text-blue-700'
+                    }`}
+                  >
+                    {ws.type === 'reseller' ? 'Reseller' : 'Cliente'}
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <ClientStatsCards stats={stats} isLoading={isLoading} />

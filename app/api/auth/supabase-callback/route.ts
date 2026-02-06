@@ -116,16 +116,44 @@ export async function POST(request: NextRequest) {
           .single();
 
         if (defaultOrg) {
-          // Trova platform workspace come parent
-          const { data: platformWs } = await supabaseAdmin
+          // Trova IL platform workspace canonico (SpedireSicuro Platform)
+          // ⚠️ CRITICO: cerchiamo per nome esatto per evitare ambiguità
+          // se esistono più workspace platform nella stessa org
+          let platformWs: { id: string } | null = null;
+
+          const { data: namedPlatform } = await supabaseAdmin
             .from('workspaces')
             .select('id')
             .eq('organization_id', defaultOrg.id)
             .eq('type', 'platform')
             .eq('depth', 0)
             .eq('status', 'active')
-            .limit(1)
+            .eq('name', 'SpedireSicuro Platform')
             .single();
+
+          if (namedPlatform) {
+            platformWs = namedPlatform;
+          } else {
+            // Fallback: prendi l'unico platform (se ce n'è uno solo)
+            const { data: allPlatforms } = await supabaseAdmin
+              .from('workspaces')
+              .select('id, name')
+              .eq('organization_id', defaultOrg.id)
+              .eq('type', 'platform')
+              .eq('depth', 0)
+              .eq('status', 'active');
+
+            if (allPlatforms?.length === 1) {
+              platformWs = allPlatforms[0];
+            } else {
+              console.error(
+                '❌ [SUPABASE CALLBACK] Ambiguità: trovati',
+                allPlatforms?.length || 0,
+                'platform workspaces. Nomi:',
+                allPlatforms?.map((w) => w.name)
+              );
+            }
+          }
 
           const wsName = `${fullUser.name || email.split('@')[0]} Workspace`;
 
