@@ -408,10 +408,11 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // 5. ATOMICITY: Revoca invito
+    // NOTA: Il CHECK constraint accetta solo: pending, accepted, expired, revoked
     const { error: updateError } = await supabaseAdmin
       .from('workspace_invitations')
       .update({
-        status: 'cancelled',
+        status: 'revoked',
       })
       .eq('id', invitationId);
 
