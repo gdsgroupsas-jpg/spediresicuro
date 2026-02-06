@@ -1681,12 +1681,22 @@ export async function DELETE(request: NextRequest) {
             'ℹ️ [WALLET] Skip rimborso: proprietario è superadmin (wallet non debitato alla creazione)'
           );
         } else {
+          // ✨ FIX CONTABILE: Usa refund_wallet_balance con tipo SHIPMENT_REFUND
+          // invece di increment_wallet_balance che registra come DEPOSIT
           const idempotencyKey = `cancel-${id}`;
-          const { error: refundError } = await supabaseAdmin.rpc('increment_wallet_balance', {
-            p_user_id: shipmentData.user_id,
-            p_amount: refundAmount,
-            p_idempotency_key: idempotencyKey,
-          });
+          const trackingRef = shipmentData.tracking_number || shipmentData.ldv || '';
+          const refundDescription = `Rimborso cancellazione spedizione ${trackingRef}`.trim();
+
+          const { data: refundResult, error: refundError } = await supabaseAdmin.rpc(
+            'refund_wallet_balance',
+            {
+              p_user_id: shipmentData.user_id,
+              p_amount: refundAmount,
+              p_idempotency_key: idempotencyKey,
+              p_description: refundDescription,
+              p_shipment_id: id,
+            }
+          );
 
           if (refundError) {
             console.error('❌ [WALLET] Errore rimborso cancellazione:', refundError.message);
@@ -1710,7 +1720,10 @@ export async function DELETE(request: NextRequest) {
               error: refundError.message,
             };
           } else {
-            console.log(`✅ [WALLET] Rimborso €${refundAmount} per cancellazione spedizione ${id}`);
+            const isReplay = refundResult?.idempotent_replay;
+            console.log(
+              `✅ [WALLET] Rimborso €${refundAmount} per cancellazione spedizione ${id}${isReplay ? ' (idempotent replay)' : ''}`
+            );
             walletRefundResult = { success: true, amount: refundAmount };
           }
         } // close !ownerIsSuperadmin

@@ -427,11 +427,12 @@ export async function createShipmentCore(params: {
         const refundFn =
           deps.overrides?.refundWallet ??
           (async ({ userId, amount }) => {
-            // P0: Refund con idempotency (derivata da shipment idempotency_key)
-            const { error } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            // ✨ FIX CONTABILE: Usa refund_wallet_balance con tipo SHIPMENT_REFUND
+            const { error } = await supabaseAdmin.rpc('refund_wallet_balance', {
               p_user_id: userId,
               p_amount: amount,
-              p_idempotency_key: `${idempotencyKey}-refund`, // P0: Idempotent refund
+              p_idempotency_key: `${idempotencyKey}-refund`,
+              p_description: 'Rimborso automatico: errore creazione etichetta corriere',
             });
             return { error: error ? { message: error.message, code: error.code } : null };
           });
@@ -741,11 +742,12 @@ export async function createShipmentCore(params: {
         const refundFn =
           deps.overrides?.refundWallet ??
           (async ({ userId, amount }) => {
-            // P0: Refund con idempotency (derivata da shipment idempotency_key)
-            const { error } = await supabaseAdmin.rpc('increment_wallet_balance', {
+            // ✨ FIX CONTABILE: Usa refund_wallet_balance con tipo SHIPMENT_REFUND
+            const { error } = await supabaseAdmin.rpc('refund_wallet_balance', {
               p_user_id: userId,
               p_amount: amount,
-              p_idempotency_key: `${idempotencyKey}-refund`, // P0: Idempotent refund
+              p_idempotency_key: `${idempotencyKey}-refund`,
+              p_description: 'Rimborso automatico: errore creazione etichetta corriere',
             });
             return { error: error ? { message: error.message, code: error.code } : null };
           });
