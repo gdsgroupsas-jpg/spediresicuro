@@ -70,8 +70,9 @@ export async function POST(request: NextRequest) {
     }
 
     // Validazione accountType
-    const validAccountType = accountType === 'admin' ? 'admin' : 'user';
+    const validAccountType = ['admin', 'reseller'].includes(accountType) ? accountType : 'user';
     const role = validAccountType === 'admin' ? 'admin' : 'user';
+    const isReseller = validAccountType === 'reseller';
 
     // ⚠️ CRITICO: Usa auth.signUp() (flusso reale) invece di admin.createUser()
     // auth.signUp() invia automaticamente email di conferma se "Enable email confirmations" è ON
@@ -182,6 +183,7 @@ export async function POST(request: NextRequest) {
           provider: 'email',
           role: role,
           account_type: validAccountType,
+          ...(isReseller && { is_reseller: true, reseller_role: 'admin' }),
         },
       });
 
@@ -212,6 +214,8 @@ export async function POST(request: NextRequest) {
             name: name.trim(),
             role: role,
             account_type: validAccountType,
+            is_reseller: isReseller,
+            ...(isReseller && { reseller_role: 'admin' }),
             provider: 'email',
             provider_id: null,
             image: null,

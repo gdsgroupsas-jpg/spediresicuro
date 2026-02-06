@@ -22,6 +22,7 @@ import {
   Eye,
   EyeOff,
   Shield,
+  Building2,
 } from 'lucide-react';
 import Link from 'next/link';
 import { LogoHorizontal } from '@/components/logo';
@@ -171,7 +172,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [accountType, setAccountType] = useState<'user' | 'admin'>('user');
+  const [accountType, setAccountType] = useState<'user' | 'admin' | 'reseller'>('user');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
@@ -625,7 +626,7 @@ export default function LoginPage() {
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
                   Tipo Account
                 </label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   {/* Account User */}
                   <button
                     type="button"
@@ -646,13 +647,45 @@ export default function LoginPage() {
                       >
                         <User className="w-5 h-5" />
                       </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-900 mb-1">Account User</div>
-                        <div className="text-xs text-gray-600">
-                          Esperienza base con funzionalità essenziali
-                        </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 mb-1 text-sm">User</div>
+                        <div className="text-xs text-gray-600">Spedizioni personali</div>
                       </div>
                       {accountType === 'user' && (
+                        <div className="flex-shrink-0">
+                          <div className="w-5 h-5 rounded-full bg-[#FF9500] flex items-center justify-center">
+                            <CheckCircle className="w-3 h-3 text-white" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Account Reseller */}
+                  <button
+                    type="button"
+                    onClick={() => setAccountType('reseller')}
+                    className={`p-4 border-2 rounded-xl transition-all text-left ${
+                      accountType === 'reseller'
+                        ? 'border-[#FF9500] bg-orange-50'
+                        : 'border-gray-200 hover:border-gray-300 bg-white'
+                    }`}
+                  >
+                    <div className="flex items-start gap-3">
+                      <div
+                        className={`p-2 rounded-lg ${
+                          accountType === 'reseller'
+                            ? 'bg-[#FF9500] text-white'
+                            : 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 mb-1 text-sm">Reseller</div>
+                        <div className="text-xs text-gray-600">Gestisci clienti e spedizioni</div>
+                      </div>
+                      {accountType === 'reseller' && (
                         <div className="flex-shrink-0">
                           <div className="w-5 h-5 rounded-full bg-[#FF9500] flex items-center justify-center">
                             <CheckCircle className="w-3 h-3 text-white" />
@@ -682,10 +715,10 @@ export default function LoginPage() {
                       >
                         <Shield className="w-5 h-5" />
                       </div>
-                      <div className="flex-1">
-                        <div className="font-semibold text-gray-900 mb-1">Account Admin</div>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-semibold text-gray-900 mb-1 text-sm">Admin</div>
                         <div className="text-xs text-gray-600">
-                          Accesso completo + killer features
+                          Accesso completo + features avanzate
                         </div>
                       </div>
                       {accountType === 'admin' && (

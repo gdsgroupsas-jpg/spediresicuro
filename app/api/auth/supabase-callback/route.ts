@@ -97,6 +97,68 @@ export async function POST(request: NextRequest) {
       console.log('✅ [SUPABASE CALLBACK] Record users creato');
     }
 
+    // Auto-provisioning workspace per reseller senza workspace
+    try {
+      const { data: fullUser } = await supabaseAdmin
+        .from('users')
+        .select('id, is_reseller, name, primary_workspace_id')
+        .eq('email', email)
+        .single();
+
+      if (fullUser?.is_reseller === true && !fullUser.primary_workspace_id) {
+        console.log('🏢 [SUPABASE CALLBACK] Reseller senza workspace, auto-provisioning...');
+
+        // Trova org default
+        const { data: defaultOrg } = await supabaseAdmin
+          .from('organizations')
+          .select('id')
+          .eq('slug', 'spediresicuro')
+          .single();
+
+        if (defaultOrg) {
+          // Trova platform workspace come parent
+          const { data: platformWs } = await supabaseAdmin
+            .from('workspaces')
+            .select('id')
+            .eq('organization_id', defaultOrg.id)
+            .eq('type', 'platform')
+            .eq('depth', 0)
+            .eq('status', 'active')
+            .limit(1)
+            .single();
+
+          const wsName = `${fullUser.name || email.split('@')[0]} Workspace`;
+
+          const { data: workspaceId, error: wsError } = await supabaseAdmin.rpc(
+            'create_workspace_with_owner',
+            {
+              p_organization_id: defaultOrg.id,
+              p_name: wsName,
+              p_parent_workspace_id: platformWs?.id || null,
+              p_owner_user_id: fullUser.id,
+              p_type: 'reseller',
+              p_depth: 1,
+            }
+          );
+
+          if (!wsError && workspaceId) {
+            await supabaseAdmin
+              .from('users')
+              .update({ primary_workspace_id: workspaceId })
+              .eq('id', fullUser.id);
+            console.log('✅ [SUPABASE CALLBACK] Workspace reseller creato:', workspaceId);
+          } else if (wsError) {
+            console.error('❌ [SUPABASE CALLBACK] Errore creazione workspace:', wsError.message);
+          }
+        }
+      }
+    } catch (wsProvisionError: any) {
+      console.error(
+        '⚠️ [SUPABASE CALLBACK] Errore auto-provisioning workspace (non blocca):',
+        wsProvisionError.message
+      );
+    }
+
     // ⚠️ CRITICO: Genera token temporaneo per auto-login NextAuth
     // Il token viene usato come "password" speciale che verifyUserCredentials riconosce
     // Formato: SUPABASE_TOKEN:{accessToken}:{timestamp}

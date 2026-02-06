@@ -741,6 +741,63 @@ export async function createReseller(data: {
     const userId = newUser.id;
     console.log('✅ [CREATE RESELLER] Record creato in public.users:', userId);
 
+    // 5b. Auto-provisioning workspace per il nuovo reseller
+    console.log('🏢 [CREATE RESELLER] Creazione workspace automatico...');
+    try {
+      // Trova organizzazione default SpedireSicuro
+      const { data: defaultOrg } = await supabaseAdmin
+        .from('organizations')
+        .select('id')
+        .eq('slug', 'spediresicuro')
+        .single();
+
+      if (!defaultOrg) {
+        console.error('❌ [CREATE RESELLER] Organizzazione default "spediresicuro" non trovata');
+      } else {
+        // Trova platform workspace come parent
+        const { data: platformWs } = await supabaseAdmin
+          .from('workspaces')
+          .select('id')
+          .eq('organization_id', defaultOrg.id)
+          .eq('type', 'platform')
+          .eq('depth', 0)
+          .eq('status', 'active')
+          .limit(1)
+          .single();
+
+        // Crea workspace reseller via RPC atomico
+        const { data: workspaceId, error: wsError } = await supabaseAdmin.rpc(
+          'create_workspace_with_owner',
+          {
+            p_organization_id: defaultOrg.id,
+            p_name: `${resellerName.trim()} Workspace`,
+            p_parent_workspace_id: platformWs?.id || null,
+            p_owner_user_id: userId,
+            p_type: 'reseller',
+            p_depth: 1,
+          }
+        );
+
+        if (wsError) {
+          console.error('❌ [CREATE RESELLER] Errore creazione workspace:', wsError.message);
+        } else if (workspaceId) {
+          // Setta primary_workspace_id
+          await supabaseAdmin
+            .from('users')
+            .update({ primary_workspace_id: workspaceId })
+            .eq('id', userId);
+
+          console.log('✅ [CREATE RESELLER] Workspace creato:', workspaceId);
+        }
+      }
+    } catch (wsProvisionError: any) {
+      console.error(
+        '⚠️ [CREATE RESELLER] Errore auto-provisioning workspace (non blocca):',
+        wsProvisionError.message
+      );
+      // Non blocca la creazione del reseller
+    }
+
     // 6. Se c'è credito iniziale, crea transazione wallet
     if (data.initialCredit && data.initialCredit > 0) {
       await supabaseAdmin.from('wallet_transactions').insert([
