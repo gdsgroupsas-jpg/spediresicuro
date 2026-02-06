@@ -19,6 +19,8 @@ import PageHeader from '@/components/page-header';
 import UserFeaturesList from '@/components/features/user-features-list';
 import { Shield, ArrowRight, AlertCircle } from 'lucide-react';
 import { useProfileCompletion } from '@/lib/hooks/use-profile-completion';
+import { WelcomeGate } from '@/components/invite/welcome-gate';
+import { WELCOME_SEEN_KEY } from '@/lib/welcome-gate-helpers';
 
 // Interfaccia per le statistiche
 interface Stats {
@@ -178,6 +180,17 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [recentSpedizioni, setRecentSpedizioni] = useState<any[]>([]);
   const [margine, setMargine] = useState(15);
+
+  // WelcomeGate: primo accesso in assoluto
+  const [showWelcome, setShowWelcome] = useState(false);
+  useEffect(() => {
+    if (status === 'authenticated' && typeof window !== 'undefined') {
+      const hasSeenWelcome = localStorage.getItem(WELCOME_SEEN_KEY);
+      if (!hasSeenWelcome) {
+        setShowWelcome(true);
+      }
+    }
+  }, [status]);
 
   // Verifica se i dati cliente sono completati (solo per nuovi utenti)
   useEffect(() => {
@@ -386,6 +399,19 @@ export default function DashboardPage() {
     stats.totaleSpedizioni > 0
       ? Math.round((stats.spedizioniConsegnate / stats.totaleSpedizioni) * 100)
       : 0;
+
+  // WelcomeGate: primo accesso — Anne accoglie l'utente
+  if (showWelcome) {
+    return (
+      <WelcomeGate
+        userName={session?.user?.name || ''}
+        onComplete={() => {
+          localStorage.setItem(WELCOME_SEEN_KEY, 'true');
+          setShowWelcome(false);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">

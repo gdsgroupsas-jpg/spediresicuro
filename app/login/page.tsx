@@ -18,6 +18,7 @@ import {
   Loader2,
   UserPlus,
   User,
+  Users,
   CheckCircle,
   Eye,
   EyeOff,
@@ -26,6 +27,7 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { LogoHorizontal } from '@/components/logo';
+import { isInviteFlow as checkInviteFlow } from '@/lib/invite-flow-helpers';
 
 type AuthMode = 'login' | 'register';
 
@@ -189,6 +191,9 @@ function LoginPageContent() {
   const callbackUrl =
     rawCallbackUrl.startsWith('/') && !rawCallbackUrl.startsWith('//') ? rawCallbackUrl : '';
   const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login';
+
+  // Rileva se stiamo arrivando da un invito workspace (usa utility condivisa)
+  const isInviteFlow = checkInviteFlow(callbackUrl);
 
   const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
@@ -521,9 +526,23 @@ function LoginPageContent() {
             <p className="text-gray-600">
               {mode === 'login'
                 ? 'Inserisci le tue credenziali per accedere'
-                : 'Registrati per iniziare a gestire le tue spedizioni'}
+                : isInviteFlow
+                  ? 'Crea un account per entrare nel workspace'
+                  : 'Registrati per iniziare a gestire le tue spedizioni'}
             </p>
           </div>
+
+          {/* Banner invito workspace (visibile sia in login che register) */}
+          {isInviteFlow && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-xl text-sm text-blue-700 flex items-center gap-2">
+              <Users className="w-4 h-4 flex-shrink-0" />
+              <span>
+                {mode === 'register'
+                  ? 'Sei stato invitato in un workspace. Crea il tuo account per entrare nel team.'
+                  : 'Stai accedendo per accettare un invito al workspace.'}
+              </span>
+            </div>
+          )}
 
           {/* OAuth Providers - Disponibile sia per Login che Registrazione */}
           <OAuthButtons isLoading={isLoading} callbackUrl={callbackUrl} />
@@ -643,8 +662,8 @@ function LoginPageContent() {
               </div>
             )}
 
-            {/* Tipo Account (solo per registrazione) - prima del pulsante Registrati */}
-            {mode === 'register' && (
+            {/* Tipo Account (solo per registrazione, nascosto per invite flow) */}
+            {mode === 'register' && !isInviteFlow && (
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-3">
                   Tipo Account

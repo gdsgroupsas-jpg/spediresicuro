@@ -199,7 +199,8 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
 
     if (userEmail && userEmail !== inviteEmail) {
       // Warning ma non blocchiamo - potrebbero avere email diverse
-      console.warn(`Email mismatch: user ${context.target.id} accepting invite for ${inviteEmail}`);
+      // GDPR: solo user ID e invitation ID nei log, mai email in chiaro
+      console.warn(`Email mismatch: user ${context.target.id} accepting invite ${invitation.id}`);
     }
 
     // 7. Verifica che non sia già membro

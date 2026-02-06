@@ -4,6 +4,7 @@
  * Pagina pubblica per accettare inviti al workspace
  * - Verifica validità token
  * - Mostra info workspace
+ * - Auto-accept quando utente è loggato
  * - Permette di accettare l'invito (richiede login)
  *
  * @module app/invite/[token]
@@ -11,7 +12,7 @@
 
 'use client';
 
-import { useState, useEffect, use } from 'react';
+import { useState, useEffect, useCallback, useRef, use } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -26,6 +27,9 @@ import {
   UserPlus,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { shouldAutoAccept } from '@/lib/invite-flow-helpers';
+import { WelcomeGate } from '@/components/invite/welcome-gate';
+import { getRoleLabel } from '@/lib/welcome-gate-helpers';
 
 interface InvitationInfo {
   id: string;
@@ -60,6 +64,10 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
     message: string;
     workspaceId?: string;
   } | null>(null);
+  const [showWelcomeGate, setShowWelcomeGate] = useState(false);
+
+  // useRef per guard auto-accept: non causa re-render, semanticamente corretto
+  const autoAcceptedRef = useRef(false);
 
   // Fetch invitation info
   useEffect(() => {
@@ -93,14 +101,8 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
     }
   }, [token]);
 
-  // Accept invitation
-  const handleAccept = async () => {
-    if (!session) {
-      // Redirect to login with callback
-      router.push(`/login?callbackUrl=/invite/${token}`);
-      return;
-    }
-
+  // Logica interna di accettazione (memoizzata, stabile tra render)
+  const handleAcceptInternal = useCallback(async () => {
     setIsAccepting(true);
 
     try {
@@ -124,10 +126,8 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
         workspaceId: data.workspace?.id,
       });
 
-      // Redirect to workspace after 2 seconds
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 2000);
+      // Mostra WelcomeGate animato (il redirect avviene dal suo onComplete)
+      setShowWelcomeGate(true);
     } catch (err: any) {
       setAcceptResult({
         success: false,
@@ -136,20 +136,40 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
     } finally {
       setIsAccepting(false);
     }
-  };
+  }, [token, router]);
 
-  const getRoleLabel = (role: string) => {
-    switch (role) {
-      case 'admin':
-        return 'Amministratore';
-      case 'operator':
-        return 'Operatore';
-      case 'viewer':
-        return 'Visualizzatore';
-      default:
-        return role;
+  // Auto-accept: quando l'utente è loggato e l'invito è valido, accetta automaticamente
+  useEffect(() => {
+    if (
+      shouldAutoAccept({
+        sessionStatus,
+        hasSession: !!session,
+        hasInvitation: !!invitation,
+        hasAcceptResult: !!acceptResult,
+        isAccepting,
+        autoAccepted: autoAcceptedRef.current,
+      })
+    ) {
+      autoAcceptedRef.current = true;
+      handleAcceptInternal();
     }
-  };
+  }, [sessionStatus, session, invitation, acceptResult, isAccepting, handleAcceptInternal]);
+
+  // Accept invitation (click manuale - fallback se auto-accept non parte)
+  const handleAccept = useCallback(async () => {
+    if (!session) {
+      router.push(`/login?callbackUrl=/invite/${token}`);
+      return;
+    }
+
+    handleAcceptInternal();
+  }, [session, router, token, handleAcceptInternal]);
+
+  // Reset per "Riprova" dopo errore
+  const handleRetry = useCallback(() => {
+    setAcceptResult(null);
+    autoAcceptedRef.current = false;
+  }, []);
 
   // Loading state
   if (isLoading) {
@@ -183,7 +203,20 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
     );
   }
 
-  // Success state
+  // WelcomeGate — schermata cinematografica dopo accept
+  if (showWelcomeGate && acceptResult?.success && invitation) {
+    return (
+      <WelcomeGate
+        userName={session?.user?.name || ''}
+        workspaceName={invitation.workspace.name}
+        organizationName={invitation.organization.name}
+        role={invitation.role}
+        onComplete={() => router.push('/dashboard')}
+      />
+    );
+  }
+
+  // Success state (fallback se WelcomeGate non scatta)
   if (acceptResult?.success) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center p-4">
@@ -209,7 +242,7 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Errore</h1>
           <p className="text-gray-600 mb-6">{acceptResult.message}</p>
-          <Button onClick={() => setAcceptResult(null)} variant="outline" className="w-full">
+          <Button onClick={handleRetry} variant="outline" className="w-full">
             Riprova
           </Button>
         </div>
@@ -272,23 +305,11 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
 
         {/* Actions */}
         {session ? (
-          <Button
-            onClick={handleAccept}
-            disabled={isAccepting}
-            className="w-full bg-gradient-to-r from-[#FF9500] to-[#FF6B35] hover:from-[#E88500] hover:to-[#E55A2B] shadow-lg"
-          >
-            {isAccepting ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Accettazione in corso...
-              </>
-            ) : (
-              <>
-                <UserPlus className="w-4 h-4 mr-2" />
-                Accetta Invito
-              </>
-            )}
-          </Button>
+          // Auto-accept in corso
+          <div className="text-center">
+            <Loader2 className="w-8 h-8 animate-spin text-[#FF9500] mx-auto mb-3" />
+            <p className="text-gray-600">Accettazione in corso...</p>
+          </div>
         ) : (
           <div className="space-y-3">
             <p className="text-sm text-center text-gray-600">
