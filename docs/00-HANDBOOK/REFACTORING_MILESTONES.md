@@ -294,18 +294,122 @@ ma l'esperienza reseller era frammentata:
 
 ---
 
+## WelcomeGate — Onboarding Cinematografico ✅
+
+**Target:** Primo impatto memorabile per ogni nuovo utente
+**Completato:** 2026-02-06
+
+### Problema
+
+Il primo login mostrava un banale "Benvenuto!" con checkmark verde. Zero emozione,
+zero brand identity. Stessa esperienza per invitati, reseller e utenti normali.
+
+### Soluzione
+
+Animazione cinematografica in 3 fasi (~5.5s):
+
+1. **Logo prende vita** — anello SVG si disegna (stroke-dasharray), freccia scatta con spring bounce, pulse ring
+2. **Anne parla** — typing effect personalizzato ("Ciao Marco!", "Benvenuto nel team di Acme Logistics")
+3. **Fade-out** → redirect alla dashboard
+
+### Deliverables
+
+- [x] `lib/welcome-gate-helpers.ts` — funzioni pure testabili (messaggi, particelle, ruoli)
+- [x] `components/invite/welcome-gate.tsx` — componente full-screen con logo animato + typing
+- [x] Integrazione in `app/invite/[token]/page.tsx` (dopo accept invite)
+- [x] Integrazione in `app/dashboard/page.tsx` (primo login, localStorage)
+- [x] `prefers-reduced-motion`: tutto istantaneo, redirect dopo 2s
+- [x] 22 test unit
+- [x] Test verdi su tutta la suite (1532 unit)
+
+### Varianti personalizzate
+
+| Contesto             | Messaggio Anne                    | Badge                       |
+| -------------------- | --------------------------------- | --------------------------- |
+| Invitato a workspace | "Benvenuto nel team di {orgName}" | Ruolo (Operatore, Admin...) |
+| Reseller nuovo       | "Benvenuto su SpedireSicuro"      | Nessuno                     |
+| Utente normale       | "Benvenuto su SpedireSicuro"      | Nessuno                     |
+
+---
+
+## Workspace Hierarchy Hardening ✅
+
+**Target:** Fix critici gerarchia workspace e visibilita utenti
+**Completato:** 2026-02-06
+
+### Problemi risolti
+
+| Problema                                     | Root Cause                                        | Fix                                                                                                  |
+| -------------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| Reseller invisibili nella pagina clienti     | Query legacy `parent_id` invece di workspace V2   | Upgrade a `workspace_members` + `parent_workspace_id` con fallback legacy                            |
+| Workspace assegnati al parent sbagliato      | Due workspace `platform depth=0` nella stessa org | Provisioning hardened: ricerca per nome esatto "SpedireSicuro Platform" con fallback single-platform |
+| Team member (Dario) mostrato come "Reseller" | Trigger DB forza `type='reseller'` per depth=1    | Badge override basato su `owner_account_type` nel workspace switcher                                 |
+| Team member con workspace separato inutile   | Auto-provisioning trattava admin come reseller    | Migrazione manuale: Dario spostato nel team Platform come admin                                      |
+
+### Architettura workspace (regola definitiva)
+
+```text
+SpedireSicuro Platform [platform, depth=0]
+  ├── {Reseller} Workspace [reseller, depth=1] — owner: reseller
+  │   └── {Cliente} Workspace [client, depth=2] — owner: cliente del reseller
+  └── Team members → aggiunti come MEMBRI del Platform (non workspace separati)
+```
+
+**Regola critica:** i membri del team (admin, operatori) NON hanno workspace propri.
+Vanno aggiunti come `workspace_members` del workspace Platform con ruolo appropriato.
+Solo i reseller e i loro clienti hanno workspace dedicati.
+
+### Trigger DB da conoscere
+
+Il trigger `enforce_workspace_depth` forza automaticamente il tipo workspace:
+
+- `depth=0` → `type='platform'`
+- `depth=1` → `type='reseller'`
+- `depth=2` → `type='client'`
+
+Non e possibile cambiare il tipo direttamente via UPDATE. Il badge nel workspace
+switcher usa `owner_account_type` per mostrare "Admin" quando l'owner e admin/superadmin.
+
+### Deliverables
+
+- [x] Hardened provisioning in `app/api/auth/supabase-callback/route.ts`
+- [x] Upgrade query clienti a workspace V2 in `actions/reseller-clients.ts`
+- [x] Nuova action `getChildWorkspaces()` per pannello workspace
+- [x] Pannello gerarchia workspace in `app/dashboard/reseller/clienti/page.tsx`
+- [x] Badge "Admin" nel workspace switcher (`owner_account_type` override)
+- [x] `UserWorkspaceInfo.owner_account_type` — campo opzionale per superadmin view
+- [x] API `/api/workspaces/my` arricchita con owner info
+- [x] Fix DB: Dario migrato da workspace standalone a membro Platform
+- [x] Fix DB: workspace orfani riparentati sotto SpedireSicuro Platform
+- [x] Script diagnostici in `scripts/` per debug futuro
+- [x] Test verdi su tutta la suite (1532 unit)
+
+### File modificati
+
+- `app/api/auth/supabase-callback/route.ts` (provisioning hardened)
+- `app/api/workspaces/my/route.ts` (owner_account_type per superadmin)
+- `actions/reseller-clients.ts` (workspace V2 query + getChildWorkspaces)
+- `app/dashboard/reseller/clienti/page.tsx` (pannello workspace)
+- `components/workspace-switcher.tsx` (badge Admin override)
+- `types/workspace.ts` (owner_account_type)
+- `scripts/fix-*.ts`, `scripts/check-*.ts` (diagnostica e fix DB)
+
+---
+
 ## Tracking
 
-| Milestone                   | Status        | Completato |
-| --------------------------- | ------------- | ---------- |
-| 1. VAT Consolidation        | ✅ Completato | 2026-02-05 |
-| 2. Pricing Decomposition    | ✅ Completato | 2026-02-05 |
-| 3. Workspace Integration    | ✅ Completato | 2026-02-05 |
-| 4. Unified Logging          | ✅ Completato | 2026-02-05 |
-| 5. Cache Unification        | ✅ Completato | 2026-02-05 |
-| 6. Security Hardening       | ✅ Completato | 2026-02-06 |
-| 7. Wallet Refund Accounting | ✅ Completato | 2026-02-06 |
-| 8. Reseller Team Navigation | ✅ Completato | 2026-02-06 |
+| Milestone                         | Status        | Completato |
+| --------------------------------- | ------------- | ---------- |
+| 1. VAT Consolidation              | ✅ Completato | 2026-02-05 |
+| 2. Pricing Decomposition          | ✅ Completato | 2026-02-05 |
+| 3. Workspace Integration          | ✅ Completato | 2026-02-05 |
+| 4. Unified Logging                | ✅ Completato | 2026-02-05 |
+| 5. Cache Unification              | ✅ Completato | 2026-02-05 |
+| 6. Security Hardening             | ✅ Completato | 2026-02-06 |
+| 7. Wallet Refund Accounting       | ✅ Completato | 2026-02-06 |
+| 8. Reseller Team Navigation       | ✅ Completato | 2026-02-06 |
+| 9. WelcomeGate Onboarding         | ✅ Completato | 2026-02-06 |
+| 10. Workspace Hierarchy Hardening | ✅ Completato | 2026-02-06 |
 
 ---
 
