@@ -186,15 +186,22 @@ export default function WorkspaceTeamPage() {
 
   // Determina se mostrare il wizard primo setup
   // Il wizard riappare ogni volta che l'utente torna a essere solo
-  // (0 inviti attivi, max 1 membro). Il dismiss vale solo per la sessione corrente.
+  // (0 inviti attivi, max 1 membro). Il dismiss si resetta quando i dati cambiano.
   useEffect(() => {
-    if (isLoading || wizardDismissed) return;
+    if (isLoading) return;
 
-    // Solo owner, nessun altro membro, nessun invito pending
     const activeInvitations = invitations.filter((i) => !i.is_expired && i.status === 'pending');
     const isAlone = members.length <= 1 && activeInvitations.length === 0;
-    setShowWizard(isAlone && canManageMembers);
-  }, [members, invitations, isLoading, canManageMembers, wizardDismissed]);
+    const shouldShow = isAlone && canManageMembers;
+
+    if (shouldShow) {
+      // Reset dismiss quando l'utente torna solo (es. dopo cancellazione inviti)
+      setWizardDismissed(false);
+      setShowWizard(true);
+    } else {
+      setShowWizard(false);
+    }
+  }, [members, invitations, isLoading, canManageMembers]);
 
   const handleWizardComplete = () => {
     setShowWizard(false);
