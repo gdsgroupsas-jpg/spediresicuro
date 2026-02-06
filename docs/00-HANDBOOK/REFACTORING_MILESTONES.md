@@ -164,18 +164,6 @@ Ridurre complessità e debito tecnico nei moduli critici identificati dall'audit
 
 ---
 
-## Tracking
-
-| Milestone                | Status        | Completato |
-| ------------------------ | ------------- | ---------- |
-| 1. VAT Consolidation     | ✅ Completato | 2026-02-05 |
-| 2. Pricing Decomposition | ✅ Completato | 2026-02-05 |
-| 3. Workspace Integration | ✅ Completato | 2026-02-05 |
-| 4. Unified Logging       | ✅ Completato | 2026-02-05 |
-| 5. Cache Unification     | ✅ Completato | 2026-02-05 |
-
----
-
 ## Security Hardening ✅
 
 **Target:** Fix vulnerabilità identificate da code review severa
@@ -213,16 +201,111 @@ Ridurre complessità e debito tecnico nei moduli critici identificati dall'audit
 
 ---
 
+## Wallet Refund Accounting ✅
+
+**Target:** Tracciabilita contabile completa per rimborsi wallet
+**Completato:** 2026-02-06
+
+### Problema
+
+I rimborsi cancellazione spedizione usavano `increment_wallet_balance()` che registra
+transazioni con tipo `DEPOSIT`. Impossibile distinguere ricariche volontarie da rimborsi
+nello storico movimenti. Per un operatore finanziario questo e inaccettabile.
+
+### Soluzione (standard enterprise: Stripe, PayPal)
+
+Ogni movimento economico ha la sua controparte contabile distinta:
+
+| Evento                   | Funzione SQL               | Tipo transazione  |
+| ------------------------ | -------------------------- | ----------------- |
+| Creazione spedizione     | `decrement_wallet_balance` | `SHIPMENT_CHARGE` |
+| Cancellazione spedizione | `refund_wallet_balance`    | `SHIPMENT_REFUND` |
+| Ricarica wallet          | `increment_wallet_balance` | `DEPOSIT`         |
+
+### Deliverables
+
+- [x] Nuova funzione SQL `refund_wallet_balance()` con tipo `SHIPMENT_REFUND`
+- [x] Idempotenza via `idempotency_key` (previene doppi rimborsi)
+- [x] Lock pessimistico `FOR UPDATE NOWAIT` (concurrency-safe)
+- [x] Reference tracking: `reference_id` (shipment_id) + `reference_type` (shipment_cancellation)
+- [x] Aggiornati 3 percorsi rimborso: user cancel, admin cancel, compensazione errore corriere
+- [x] Skip rimborso per superadmin (wallet non debitato alla creazione)
+- [x] Compensation queue come fallback se rimborso fallisce
+- [x] 25 test di coerenza contabile
+- [x] Migration applicata in produzione
+- [x] Test verdi su tutta la suite (1348 unit)
+
+### File coinvolti
+
+- `supabase/migrations/20260206100000_wallet_refund_function.sql` (nuovo)
+- `app/api/spedizioni/route.ts` (refactored: `increment` → `refund`)
+- `app/api/admin/shipments/[id]/route.ts` (refactored: `increment` → `refund`)
+- `lib/shipments/create-shipment-core.ts` (refactored: `increment` → `refund`)
+- `tests/unit/wallet-refund-accounting.test.ts` (nuovo)
+
+### Impatto
+
+- Ogni euro in entrata/uscita dal wallet ha tipo contabile distinto
+- Storico movimenti leggibile: il cliente vede "Rimborso cancellazione spedizione XY"
+- Audit trail completo: chi ha rimborsato, quando, per quale spedizione
+- Idempotenza: retry sicuri senza doppi accrediti
+- Standard enterprise (Stripe, PayPal registrano OGNI movimento con tipo dedicato)
+
+---
+
+## Reseller Team Navigation ✅
+
+**Target:** Esperienza reseller coerente — navigazione, settings, eliminazione pagine legacy
+**Completato:** 2026-02-06
+
+### Problema
+
+L'infrastruttura workspace/team era completa (DB, API, types, auth, pagina team, invite flow)
+ma l'esperienza reseller era frammentata:
+
+- "Team Workspace" sepolto in "Il Mio Account" in fondo alla sidebar
+- Pagina legacy `/dashboard/reseller-team` confondeva con la nuova `/dashboard/workspace/team`
+- Nessuna pagina "Impostazioni Workspace" per panoramica
+
+### Deliverables
+
+- [x] Spostare "Il Mio Team" e "Impostazioni Workspace" nella sezione "Gestione Business"
+- [x] Guard anti-duplicazione: reseller non vede `workspace-team` in "Il Mio Account"
+- [x] Redirect pagina legacy `reseller-team` → `reseller/clienti`
+- [x] Nuova pagina Workspace Settings (read-only): info workspace, organizzazione, wallet, team count, ruolo e permessi
+- [x] 29 nuovi test (7 navigazione + 22 workspace settings)
+- [x] Test verdi su tutta la suite (1377 unit)
+
+### File coinvolti
+
+- `lib/config/navigationConfig.ts` (refactored)
+- `app/dashboard/reseller-team/page.tsx` (sostituito con redirect)
+- `app/dashboard/workspace/settings/page.tsx` (nuovo)
+- `tests/unit/navigationConfig.test.ts` (aggiornato)
+- `tests/unit/workspace-settings.test.ts` (nuovo)
+
+### Review sicurezza
+
+- Pagina settings read-only, nessuna mutazione
+- Permission check `settings:view` prima del render
+- Fetch members protetto server-side (auth + `members:view`)
+- Nessun dato di terzi esposto (solo info proprie dell'utente)
+- Nessuna email nei log (GDPR)
+
+---
+
 ## Tracking
 
-| Milestone                | Status        | Completato |
-| ------------------------ | ------------- | ---------- |
-| 1. VAT Consolidation     | ✅ Completato | 2026-02-05 |
-| 2. Pricing Decomposition | ✅ Completato | 2026-02-05 |
-| 3. Workspace Integration | ✅ Completato | 2026-02-05 |
-| 4. Unified Logging       | ✅ Completato | 2026-02-05 |
-| 5. Cache Unification     | ✅ Completato | 2026-02-05 |
-| 6. Security Hardening    | ✅ Completato | 2026-02-06 |
+| Milestone                   | Status        | Completato |
+| --------------------------- | ------------- | ---------- |
+| 1. VAT Consolidation        | ✅ Completato | 2026-02-05 |
+| 2. Pricing Decomposition    | ✅ Completato | 2026-02-05 |
+| 3. Workspace Integration    | ✅ Completato | 2026-02-05 |
+| 4. Unified Logging          | ✅ Completato | 2026-02-05 |
+| 5. Cache Unification        | ✅ Completato | 2026-02-05 |
+| 6. Security Hardening       | ✅ Completato | 2026-02-06 |
+| 7. Wallet Refund Accounting | ✅ Completato | 2026-02-06 |
+| 8. Reseller Team Navigation | ✅ Completato | 2026-02-06 |
 
 ---
 
