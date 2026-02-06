@@ -290,6 +290,20 @@ const resellerSection: NavSection = {
       icon: FileSpreadsheet,
       description: 'Report per fatturazione ai clienti',
     },
+    {
+      id: 'reseller-team',
+      label: 'Il Mio Team',
+      href: '/dashboard/workspace/team',
+      icon: Users,
+      description: 'Gestisci i membri del tuo team',
+    },
+    {
+      id: 'workspace-settings',
+      label: 'Impostazioni Workspace',
+      href: '/dashboard/workspace/settings',
+      icon: Settings,
+      description: 'Configurazione e panoramica workspace',
+    },
   ],
 };
 
@@ -630,12 +644,10 @@ export function getNavigationForUser(
   }
 
   // 6. SEZIONI PERSONALI (tutti gli utenti)
-  // Aggiungi Team Workspace SOLO per chi può avere un team:
-  // - admin/superadmin: gestiscono la piattaforma
-  // - reseller: hanno clienti e team
-  // - byoc: aziende con team interno
+  // Aggiungi Team Workspace in "Il Mio Account" SOLO per admin/superadmin/byoc
+  // I reseller lo hanno gia' in "Gestione Business" come "Il Mio Team"
   const showTeamWorkspace =
-    role === 'admin' || role === 'superadmin' || isReseller || accountType === 'byoc';
+    (role === 'admin' || role === 'superadmin' || accountType === 'byoc') && !isReseller;
 
   const accountItems = showTeamWorkspace
     ? [

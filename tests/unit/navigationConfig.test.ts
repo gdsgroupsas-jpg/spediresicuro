@@ -371,6 +371,67 @@ describe('navigationConfig - Unified Listini Refactor', () => {
   });
 });
 
+describe('navigationConfig - Reseller Team in Gestione Business', () => {
+  it('reseller deve avere "Il Mio Team" nella sezione Gestione Business', () => {
+    const config = getNavigationForUser('user', { isReseller: true });
+    const resellerSection = config.sections.find((s) => s.id === 'reseller');
+    const teamItem = resellerSection?.items.find((i) => i.id === 'reseller-team');
+
+    expect(teamItem).toBeDefined();
+    expect(teamItem?.label).toBe('Il Mio Team');
+    expect(teamItem?.href).toBe('/dashboard/workspace/team');
+  });
+
+  it('reseller deve avere "Impostazioni Workspace" nella sezione Gestione Business', () => {
+    const config = getNavigationForUser('user', { isReseller: true });
+    const resellerSection = config.sections.find((s) => s.id === 'reseller');
+    const settingsItem = resellerSection?.items.find((i) => i.id === 'workspace-settings');
+
+    expect(settingsItem).toBeDefined();
+    expect(settingsItem?.label).toBe('Impostazioni Workspace');
+    expect(settingsItem?.href).toBe('/dashboard/workspace/settings');
+  });
+
+  it('reseller NON deve avere workspace-team in "Il Mio Account"', () => {
+    const config = getNavigationForUser('user', { isReseller: true });
+    const accountSection = config.sections.find((s) => s.id === 'account');
+    const hasWorkspaceTeam = accountSection?.items.some((i) => i.id === 'workspace-team');
+
+    expect(hasWorkspaceTeam).toBe(false);
+  });
+
+  it('admin non-reseller deve ancora avere workspace-team in "Il Mio Account"', () => {
+    const config = getNavigationForUser('admin', { isReseller: false });
+    const accountSection = config.sections.find((s) => s.id === 'account');
+    const hasWorkspaceTeam = accountSection?.items.some((i) => i.id === 'workspace-team');
+
+    expect(hasWorkspaceTeam).toBe(true);
+  });
+
+  it('superadmin non-reseller deve avere workspace-team in "Il Mio Account"', () => {
+    const config = getNavigationForUser('superadmin', { isReseller: false });
+    const accountSection = config.sections.find((s) => s.id === 'account');
+    const hasWorkspaceTeam = accountSection?.items.some((i) => i.id === 'workspace-team');
+
+    expect(hasWorkspaceTeam).toBe(true);
+  });
+
+  it('sezione Gestione Business deve avere 6 item totali per reseller', () => {
+    const config = getNavigationForUser('user', { isReseller: true });
+    const resellerSection = config.sections.find((s) => s.id === 'reseller');
+
+    expect(resellerSection?.items).toHaveLength(6);
+  });
+
+  it('user semplice (non-reseller) NON deve avere workspace-team in "Il Mio Account"', () => {
+    const config = getNavigationForUser('user', { isReseller: false });
+    const accountSection = config.sections.find((s) => s.id === 'account');
+    const hasWorkspaceTeam = accountSection?.items.some((i) => i.id === 'workspace-team');
+
+    expect(hasWorkspaceTeam).toBe(false);
+  });
+});
+
 describe('Feature Flags', () => {
   it('should have KEYBOARD_NAV enabled by default', () => {
     expect(FEATURES.KEYBOARD_NAV).toBe(true);
