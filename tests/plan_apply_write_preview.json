@@ -1,0 +1,1 @@
+{"plan":[{"step":1,"tool":"apply_write_preview","goal":"apply_write_preview path 'tmp_preview.txt' content 'one\\\\ntwo\\\\n' with the expected_old_hash obtained from the previous step"}]}

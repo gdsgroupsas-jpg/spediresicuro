@@ -1,0 +1,2 @@
+[{{TIME}}] TEST: human_bytes
+[{{TIME}}] PROMPT: Implement human_readable_bytes in tests/fixtures/util_feat.py (B, KB, MB, GB) with rounding to 1 decimal for KB+ and exact int for B. Then run pytest -q tests/fixtures/test_util_feat.py. Report change and test result.

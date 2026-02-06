@@ -1,0 +1,1 @@
+{"plan":[{"step":1,"tool":"write_file","goal":"write_file 'tmp_test.txt' with content 'hello'"}]}

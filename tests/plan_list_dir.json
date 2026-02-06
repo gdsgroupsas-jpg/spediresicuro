@@ -1,0 +1,1 @@
+{"plan":[{"step":1,"tool":"list_dir","goal":"read the list of files and folders in the base directory"}]}

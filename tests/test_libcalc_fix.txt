@@ -1,0 +1,2 @@
+[{{TIME}}] TEST: libcalc_fix
+[{{TIME}}] PROMPT: Fix add(a,b) in tests/fixtures/libcalc.py to perform addition. Use safe_write, then run pytest -q tests/fixtures/test_libcalc.py. Report test result.

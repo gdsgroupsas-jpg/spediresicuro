@@ -1,0 +1,2 @@
+[{{TIME}}] TEST: config_multi2
+[{{TIME}}] PROMPT: Sync API_URL to https://api.example.com/v4, version to 4, feature_x to true across config.json, tests/fixtures/config_multi2.(json|yaml|ini|env) and tests/fixtures/config_like.txt. Use safe_write and verify via python_exec that all values match; fail if mismatch.

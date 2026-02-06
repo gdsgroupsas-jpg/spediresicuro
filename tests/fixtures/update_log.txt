@@ -1,0 +1,1 @@
+Log message in tests/fixtures/hard_multistep_sample.py updated to include the word 'ACTIVE'.

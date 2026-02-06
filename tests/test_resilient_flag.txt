@@ -1,0 +1,2 @@
+[{{TIME}}] TEST: resilient_flag
+[{{TIME}}] PROMPT: Set MAGIC_FLAG to True in the correct file. It appears only in tests/fixtures/resilient_target.py. Use replace_text; if no replacements, treat as failure. Report the change.

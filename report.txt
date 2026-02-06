@@ -1,0 +1,1 @@
+API_URL was updated to https://api.example.com/v2 in config.json and tests/fixtures/config_like.txt.

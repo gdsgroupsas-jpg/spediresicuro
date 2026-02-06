@@ -1,0 +1,2 @@
+[{{TIME}}] TEST: ast_cross_move
+[{{TIME}}] PROMPT: Move method util from class Foo in tests/fixtures/ast_cross_a.py to class Bar in tests/fixtures/ast_cross_b.py. Remove util from Foo. Use safe_write. Then run python_exec to assert Bar().util() == "ok" and Foo has no attribute util (AttributeError). Report changes.

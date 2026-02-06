@@ -1,0 +1,2 @@
+[{{TIME}}] TEST: refactor_dist
+[{{TIME}}] PROMPT: Rename function compute_total to compute_sum in tests/fixtures/libref.py and update all imports/call sites (tests/fixtures/service_ref.py, tests/fixtures/test_refactor_dist.py) and the stub tests/fixtures/libref.pyi. Use safe_write. Then run pytest -q tests/fixtures/test_refactor_dist.py to validate. Report changes and test result.

@@ -1,0 +1,5 @@
+{
+  "api_url": "https://old.example.com/api",
+  "version": 1,
+  "feature_x": false
+}

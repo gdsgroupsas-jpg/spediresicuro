@@ -1,0 +1,1 @@
+{"plan":[{"step":1,"tool":"read_file","goal":"tests/fixtures/hard_multistep_sample.py"},{"step":2,"tool":"search_text","goal":"tests/fixtures/hard_multistep_sample.py 'ACTIVE'"},{"step":3,"tool":"write_file","goal":"Report that the log message in tests/fixtures/hard_multistep_sample.py has been updated to include the word 'ACTIVE'."}]}

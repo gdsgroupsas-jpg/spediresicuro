@@ -1,0 +1,6 @@
+Traceback (most recent call last):
+  File "tests/fixtures/log_error_sample.py", line 6, in <module>
+    print(average([5]))
+  File "tests/fixtures/log_error_sample.py", line 2, in average
+    return sum(values) / (len(values) - 1)
+ZeroDivisionError: division by zero

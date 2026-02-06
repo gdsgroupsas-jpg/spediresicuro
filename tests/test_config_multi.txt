@@ -1,0 +1,2 @@
+[{{TIME}}] TEST: config_multi
+[{{TIME}}] PROMPT: Normalize API_URL to https://api.example.com/v3 and version to 3 across config.json, tests/fixtures/config_multi.yaml, tests/fixtures/config_multi.ini, and tests/fixtures/config_like.txt. Use safe_write and report diffs.

@@ -1,0 +1,2 @@
+[{{TIME}}] TEST: ast_types_hints
+[{{TIME}}] PROMPT: In tests/fixtures/ast_types.py add method health_check(self) -> bool: return True to every class, add type hints to ping methods (self) -> str for Alpha, (self, x: int) -> int for Beta, and ensure defaults are typed. Use safe_write, then run python_exec to import the module and assert Alpha().health_check() and Beta().health_check() return True. Report changes.

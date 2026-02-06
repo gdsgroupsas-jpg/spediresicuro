@@ -1,0 +1,1 @@
+{"plan":[{"step":1,"tool":"git_diff","goal":"Report the change."}]}

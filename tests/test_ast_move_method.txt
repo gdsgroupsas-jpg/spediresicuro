@@ -1,0 +1,92 @@
+[14:59:23] TEST: ast_move_method
+[14:59:23] PROMPT: Move beta_extra from class Beta to class Alpha in tests/fixtures/ast_move_sample.py, removing it from Beta. Use safe_write, then run python_exec to assert Alpha().beta_extra() == 'beta extra' and Beta has no beta_extra. Report changes.
+[14:59:23] MODEL_INPUT: Move beta_extra from class Beta to class Alpha in tests/fixtures/ast_move_sample.py, removing it from Beta. Use safe_write, then run python_exec to assert Alpha().beta_extra() == 'beta extra' and Beta has no beta_extra. Report changes.
+[14:59:23] SYS: Models: task_planner=gpt-oss:20b-cloud planner=gpt-oss:20b-cloud tool=gpt-oss:20b-cloud final=gpt-oss:20b-cloud summary=gpt-oss:20b-cloud translator=gpt-oss:20b-cloud coder=gpt-oss:20b-cloud tool_analysis=gpt-oss:20b-cloud tool_argument=gpt-oss:20b-cloud
+[14:59:25] TRANSLATED_CLEAN: Move beta_extra from class Beta to class Alpha in tests/fixtures/ast_move_sample.py, removing it from Beta. Use safe_write, then run python_exec to assert Alpha().beta_extra() == 'beta extra' and Beta has no beta_extra. Report changes.
+[14:59:25] SYS: Task planner: generazione piano JSON...
+[14:59:35] TASK_PLAN: {"tasks":[{"step":1,"goal":"read tests/fixtures/ast_move_sample.py"},{"step":2,"goal":"write tests/fixtures/ast_move_sample.py moving beta_extra method from class Beta to class Alpha, removing it from Beta using safe_write"},{"step":3,"goal":"run python_exec to assert Alpha().beta_extra() == 'beta extra' and Beta has no beta_extra"}]}
+[14:59:35] ATTEMPT: task_planner:global:1
+[14:59:35] SYS: Task planner: 3 task
+[14:59:35] SYS: Task 1/3: read tests/fixtures/ast_move_sample.py
+[14:59:35] SYS: Tool planner: generazione piano JSON...
+[14:59:36] PLAN: {"plan":[{"step":1,"tool":"read_file","goal":"read tests/fixtures/ast_move_sample.py"}]}
+[14:59:36] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file","goal":"read tests/fixtures/ast_move_sample.py"}]}
+[14:59:36] ATTEMPT: planner:global:1
+[14:59:36] SYS: Tool planner: 1 step
+[14:59:36] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "read tests/fixtures/ast_move_sample.py", "args_template": {}, "repo_index": {"files": ["tests/fixtures/ast_move_sample.py", "tests/plan_ast_move_method.json", "tests/test_ast_move_method.txt"]}}
+[14:59:37] ATTEMPT: tool_analysis:read_file:1
+[14:59:37] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "read tests/fixtures/ast_move_sample.py", "path": "tests/fixtures/ast_move_sample.py", "tool_context": {}, "args_template": {}}
+[14:59:38] ATTEMPT: tool_argument:read_file:1
+[14:59:38] SYS: Tool-caller: prepara args per read_file
+[14:59:39] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/ast_move_sample.py"}, "required": ["path"], "example": {"tool": "read_file", "args": {"path": "path/to/file_or_dir"}}}
+[14:59:39] TOOL_CALLER_RAW: {"tool":"read_file","args":{"path":"tests/fixtures/ast_move_sample.py"}}
+[14:59:39] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/ast_move_sample.py\"}}"}]
+[14:59:39] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/ast_move_sample.py\"}}"}]
+[14:59:39] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/ast_move_sample.py\"}}"}]
+[14:59:39] ATTEMPT: tool:read_file:1
+[14:59:39] TOOL: Chiamata tool: read_file {"path": "tests/fixtures/ast_move_sample.py"}
+[14:59:39] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/ast_move_sample.py", "content": "class Alpha:\n    def ping(self):\n        return \"alpha\"\n\nclass Beta:\n    def ping(self):\n        return \"beta\"\n\n    def beta_extra(self):\n        return \"beta extra\"\n"}
+[14:59:39] SYS: Generazione output finale (task)...
+[14:59:41] ATTEMPT: final:global:1
+[14:59:41] SYS: Task 2/3: write tests/fixtures/ast_move_sample.py moving beta_extra method from class Beta to class Alpha, removing it from Beta using safe_write
+[14:59:41] SYS: Tool planner: generazione piano JSON...
+[14:59:48] PLAN: {"plan":[{"step":1,"tool":"safe_write","goal":"write tests/fixtures/ast_move_sample.py moving beta_extra method from class Beta to class Alpha, removing it from Beta using safe_write"}]}
+[14:59:48] PLAN_JSON: {"plan":[{"step":1,"tool":"safe_write","goal":"write tests/fixtures/ast_move_sample.py moving beta_extra method from class Beta to class Alpha, removing it from Beta using safe_write"}]}
+[14:59:48] ATTEMPT: planner:global:1
+[14:59:48] SYS: Tool planner: 1 step
+[14:59:48] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "safe_write", "description": "Safely write a file with diff preview (requires approval). Set dry_run=true to only preview.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}, "dry_run": {"type": "boolean"}}, "required": ["path", "content"]}}, "goal": "write tests/fixtures/ast_move_sample.py moving beta_extra method from class Beta to class Alpha, removing it from Beta using safe_write", "args_template": {"content": "__CONTENT__", "dry_run": false}, "repo_index": {"files": ["tests/fixtures/ast_move_sample.py", "tests/plan_ast_move_method.json", "tests/test_ast_move_method.txt"]}}
+[14:59:49] ATTEMPT: tool_analysis:safe_write:1
+[14:59:49] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "safe_write", "description": "Safely write a file with diff preview (requires approval). Set dry_run=true to only preview.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}, "dry_run": {"type": "boolean"}}, "required": ["path", "content"]}}, "goal": "write tests/fixtures/ast_move_sample.py moving beta_extra method from class Beta to class Alpha, removing it from Beta using safe_write", "path": "tests/fixtures/ast_move_sample.py", "tool_context": {}, "args_template": {"content": "__CONTENT__", "dry_run": false}}
+[14:59:53] ATTEMPT: tool_argument:safe_write:1
+[14:59:53] SYS: Coder: genera contenuto (attempt 1)
+[14:59:56] CODER_RAW: class Alpha:
+    def ping(self):
+        return "alpha"
+
+    def beta_extra(self):
+        return "beta extra"
+
+class Beta:
+    def ping(self):
+        return "beta"
+[14:59:56] ATTEMPT: coder:safe_write:1
+[14:59:56] SYS: Tool-caller: prepara args per safe_write
+[14:59:57] TOOL_CALLER_PROMPT: {"tool": {"name": "safe_write", "description": "Safely write a file with diff preview (requires approval). Set dry_run=true to only preview.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}, "dry_run": {"type": "boolean"}}, "required": ["path", "content"]}}, "args": {"path": "tests/fixtures/ast_move_sample.py", "content": "class Alpha:\\n    def alpha_method(self):\\n        pass\\n\\n    def beta_extra(self):\\n        pass\\n\\nclass Beta:\\n    def beta_method(self):\\n        pass", "dry_run": false}, "required": ["path", "content"], "example": {"tool": "safe_write", "args": {"path": "path/to/file_or_dir", "content": "..."}}, "content_placeholder": "__CONTENT__"}
+[14:59:57] TOOL_CALLER_RAW: {"tool":"safe_write","args":{"path":"tests/fixtures/ast_move_sample.py","content":"class Alpha:\\n    def alpha_method(self):\\n        pass\\n\\n    def beta_extra(self):\\n        pass\\n\\nclass Beta:\\n    def beta_method(self):\\n        pass","dry_run":false}}
+[14:59:57] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"safe_write\",\"args\":{\"path\":\"tests/fixtures/ast_move_sample.py\",\"content\":\"class Alpha:\\\\n    def alpha_method(self):\\\\n        pass\\\\n\\\\n    def beta_extra(self):\\\\n        pass\\\\n\\\\nclass Beta:\\\\n    def beta_method(self):\\\\n        pass\",\"dry_run\":false}}"}]
+[14:59:57] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"safe_write\",\"args\":{\"path\":\"tests/fixtures/ast_move_sample.py\",\"content\":\"class Alpha:\\\\n    def alpha_method(self):\\\\n        pass\\\\n\\\\n    def beta_extra(self):\\\\n        pass\\\\n\\\\nclass Beta:\\\\n    def beta_method(self):\\\\n        pass\",\"dry_run\":false}}"}]
+[14:59:57] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"safe_write\",\"args\":{\"path\":\"tests/fixtures/ast_move_sample.py\",\"content\":\"class Alpha:\\\\n    def alpha_method(self):\\\\n        pass\\\\n\\\\n    def beta_extra(self):\\\\n        pass\\\\n\\\\nclass Beta:\\\\n    def beta_method(self):\\\\n        pass\",\"dry_run\":false}}"}]
+[14:59:57] ATTEMPT: tool:safe_write:1
+[14:59:57] TOOL: Chiamata tool: safe_write {"path": "tests/fixtures/ast_move_sample.py", "content": "class Alpha:\n    def ping(self):\n        return \"alpha\"\n\n    def beta_extra(self):\n        return \"beta extra\"\n\nclass Beta:\n    def ping(self):\n        return \"beta\"", "dry_run": false}
+[14:59:57] REQUEST_APPROVAL: {"name": "safe_write", "args": {"path": "tests/fixtures/ast_move_sample.py", "content": "class Alpha:\n    def ping(self):\n        return \"alpha\"\n\n    def beta_extra(self):\n        return \"beta extra\"\n\nclass Beta:\n    def ping(self):\n        return \"beta\"", "dry_run": false}}
+[14:59:57] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/ast_move_sample.py", "dry_run": false, "diff": "--- tests/fixtures/ast_move_sample.py\n+++ tests/fixtures/ast_move_sample.py\n@@ -2,9 +2,9 @@\n     def ping(self):\n         return \"alpha\"\n \n+    def beta_extra(self):\n+        return \"beta extra\"\n+\n class Beta:\n     def ping(self):\n         return \"beta\"\n-\n-    def beta_extra(self):\n-        return \"beta extra\"", "old_hash": "d4542168b4fe2090e0665c06e86d3b7fd39437a155f00b829af1ad5f498e1b17", "new_hash": "fb8b10896dfe2521ddc726ffd6fa24aa1855394a3fd46d1fc8c7b222a98f7ed1", "bytes": 165}
+[14:59:57] SYS: Generazione output finale (task)...
+[15:00:01] ATTEMPT: final:global:1
+[15:00:01] SYS: Task 3/3: run python_exec to assert Alpha().beta_extra() == 'beta extra' and Beta has no beta_extra
+[15:00:01] SYS: Tool planner: generazione piano JSON...
+[15:00:04] PLAN: {"plan":[{"step":1,"tool":"python_exec","goal":"Assert Alpha().beta_extra() == 'beta extra' and Beta has no beta_extra"}]}
+[15:00:04] PLAN_JSON: {"plan":[{"step":1,"tool":"python_exec","goal":"Assert Alpha().beta_extra() == 'beta extra' and Beta has no beta_extra"}]}
+[15:00:04] ATTEMPT: planner:global:1
+[15:00:04] SYS: Tool planner: 1 step
+[15:00:04] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "python_exec", "description": "Execute Python code (requires approval). A path is required as execution context.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "code": {"type": "string"}, "timeout_sec": {"type": "integer"}}, "required": ["path", "code"]}}, "goal": "Assert Alpha().beta_extra() == 'beta extra' and Beta has no beta_extra", "args_template": {}, "repo_index": {"files": ["tests/fixtures/ast_move_sample.py", "tests/plan_ast_move_method.json", "tests/test_ast_move_method.txt"]}}
+[15:00:07] ATTEMPT: tool_analysis:python_exec:1
+[15:00:07] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "python_exec", "description": "Execute Python code (requires approval). A path is required as execution context.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "code": {"type": "string"}, "timeout_sec": {"type": "integer"}}, "required": ["path", "code"]}}, "goal": "Assert Alpha().beta_extra() == 'beta extra' and Beta has no beta_extra", "path": "tests/fixtures/ast_move_sample.py", "tool_context": {}, "args_template": {}}
+[15:00:10] ATTEMPT: tool_argument:python_exec:1
+[15:00:10] SYS: Tool-caller: prepara args per python_exec
+[15:00:15] TOOL_CALLER_PROMPT: {"tool": {"name": "python_exec", "description": "Execute Python code (requires approval). A path is required as execution context.", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "code": {"type": "string"}, "timeout_sec": {"type": "integer"}}, "required": ["path", "code"]}}, "args": {"path": "tests/fixtures/ast_move_sample.py", "code": "from importlib.machinery import SourceFileLoader\nmodule = SourceFileLoader('mod', 'tests/fixtures/ast_move_sample.py').load_module()\nAlpha = module.Alpha\nBeta = module.Beta\n\nassert Alpha().beta_extra() == 'beta extra'\nassert not hasattr(Beta, 'beta_extra')"}, "required": ["path", "code"], "example": {"tool": "python_exec", "args": {"path": "path/to/file_or_dir", "code": "..."}}}
+[15:00:15] TOOL_CALLER_RAW: {"tool":"python_exec","args":{"path":"tests/fixtures/ast_move_sample.py","code":"from importlib.machinery import SourceFileLoader\nmodule = SourceFileLoader('mod', 'tests/fixtures/ast_move_sample.py').load_module()\nAlpha = module.Alpha\nBeta = module.Beta\n\nassert Alpha().beta_extra() == 'beta extra'\nassert not hasattr(Beta, 'beta_extra')"}}
+[15:00:15] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"python_exec\",\"args\":{\"path\":\"tests/fixtures/ast_move_sample.py\",\"code\":\"from importlib.machinery import SourceFileLoader\\nmodule = SourceFileLoader('mod', 'tests/fixtures/ast_move_sample.py').load_module()\\nAlpha = module.Alpha\\nBeta = module.Beta\\n\\nassert Alpha().beta_extra() == 'beta extra'\\nassert not hasattr(Beta, 'beta_extra')\"}}"}]
+[15:00:15] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"python_exec\",\"args\":{\"path\":\"tests/fixtures/ast_move_sample.py\",\"code\":\"from importlib.machinery import SourceFileLoader\\nmodule = SourceFileLoader('mod', 'tests/fixtures/ast_move_sample.py').load_module()\\nAlpha = module.Alpha\\nBeta = module.Beta\\n\\nassert Alpha().beta_extra() == 'beta extra'\\nassert not hasattr(Beta, 'beta_extra')\"}}"}]
+[15:00:15] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"python_exec\",\"args\":{\"path\":\"tests/fixtures/ast_move_sample.py\",\"code\":\"from importlib.machinery import SourceFileLoader\\nmodule = SourceFileLoader('mod', 'tests/fixtures/ast_move_sample.py').load_module()\\nAlpha = module.Alpha\\nBeta = module.Beta\\n\\nassert Alpha().beta_extra() == 'beta extra'\\nassert not hasattr(Beta, 'beta_extra')\"}}"}]
+[15:00:15] ATTEMPT: tool:python_exec:1
+[15:00:15] TOOL: Chiamata tool: python_exec {"path": "tests/fixtures/ast_move_sample.py", "code": "from importlib.machinery import SourceFileLoader\nmodule = SourceFileLoader('mod', 'tests/fixtures/ast_move_sample.py').load_module()\nAlpha = module.Alpha\nBeta = module.Beta\n\nassert Alpha().beta_extra() == 'beta extra'\nassert not hasattr(Beta, 'beta_extra')"}
+[15:00:15] REQUEST_APPROVAL: {"name": "python_exec", "args": {"path": "tests/fixtures/ast_move_sample.py", "code": "from importlib.machinery import SourceFileLoader\nmodule = SourceFileLoader('mod', 'tests/fixtures/ast_move_sample.py').load_module()\nAlpha = module.Alpha\nBeta = module.Beta\n\nassert Alpha().beta_extra() == 'beta extra'\nassert not hasattr(Beta, 'beta_extra')"}}
+[15:00:15] TOOL_RESULT: {"ok": true, "returncode": 0, "stdout": "", "stderr": ""}
+[15:00:15] SYS: Generazione output finale (task)...
+[15:00:19] ATTEMPT: final:global:1
+[15:00:19] SYS: Generazione riepilogo finale...
+[15:00:24] ATTEMPT: summary:global:1
+[15:00:24] MODEL_OUTPUT: Il file `tests/fixtures/ast_move_sample.py` è stato aggiornato per spostare il metodo `beta_extra` dalla classe `Beta` alla classe `Alpha`, e la modifica è stata verificata: `Alpha().beta_extra()` restituisce `"beta extra"` e `Beta` non ha più un attributo `beta_extra`. Non sono state apportate ulteriori modifiche.
+[15:00:24] ATTEMPTS: planner=1 toolcaller={'read_file': 1, 'safe_write': 1, 'python_exec': 1} final=1
+[15:00:24] RESULT: PASS
+

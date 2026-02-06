@@ -1,0 +1,2 @@
+[{{TIME}}] TEST: slugify_adv
+[{{TIME}}] PROMPT: Implement slugify in tests/fixtures/util_slug.py with transliteration: normalize unicode, map umlauts (ä->ae, ö->oe, ü->ue, Ä->Ae, Ö->Oe, Ü->Ue, ß->ss), basic pinyin for ?? -> shi-jie, strip non-alnum, collapse spaces/underscores/hyphens to single '-', lowercase, trim hyphens. Then run pytest -q tests/fixtures/test_util_slug.py. Use safe_write, report change and test result.

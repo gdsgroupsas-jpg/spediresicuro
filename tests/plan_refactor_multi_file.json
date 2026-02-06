@@ -1,0 +1,1 @@
+{"plan":[{"step":1,"tool":"read_file","goal":"Check that compute_total was renamed to compute_sum in tests/fixtures/refactor_multi_b.py"},{"step":2,"tool":"search_text","goal":"Verify references updated to compute_sum in tests/fixtures/refactor_multi_a.py"}]}

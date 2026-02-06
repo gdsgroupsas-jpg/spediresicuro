@@ -1,0 +1,14 @@
+{
+  "base_dir": "C:/Users/delgi/OneDrive/Desktop/AGENTE ANYA",
+  "ollama_model": "gpt-oss:20b-cloud",
+  "ollama_host": "http://localhost:11434",
+  "ollama_planner_model": "gpt-oss:20b-cloud",
+  "ollama_tool_model": "gpt-oss:20b-cloud",
+  "ollama_final_model": "gpt-oss:20b-cloud",
+  "ollama_translator_model": "gpt-oss:20b-cloud",
+  "ollama_coder_model": "gpt-oss:20b-cloud",
+  "ollama_task_planner_model": "gpt-oss:20b-cloud",
+  "ollama_summary_model": "gpt-oss:20b-cloud",
+  "version": "v2",
+  "API_URL": "https://api.example.com/v2"
+}

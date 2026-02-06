@@ -1,0 +1,8 @@
+[{{TIME}}] TEST: diff_repair
+[{{TIME}}] PROMPT: Apply a unified diff to tests/fixtures/diff_target.txt adding a new line between beta and gamma. The provided diff is outdated; regenerate the correct diff and apply via apply_patch_unified. Fail if you just apply the stale diff without fixing.
+--- a/tests/fixtures/diff_target.txt
++++ b/tests/fixtures/diff_target.txt
+@@ -1,2 +1,3 @@
+ line alpha
++line beta new
+ line gamma

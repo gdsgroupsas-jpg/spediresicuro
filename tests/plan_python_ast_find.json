@@ -1,0 +1,1 @@
+{"plan":[{"step":1,"tool":"python_ast_find","goal":"Search for 'PythonTools' definition in file 'tools/python_tools.py' using python_ast_find tool."}]}
