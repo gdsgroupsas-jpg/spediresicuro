@@ -64,6 +64,22 @@ export async function GET() {
         return NextResponse.json({ error: 'Database error' }, { status: 500 });
       }
 
+      // Carica owner di ogni workspace per mostrare account_type nel badge
+      const wsIds = (data || []).map((w: any) => w.id);
+      const { data: owners } = await supabaseAdmin
+        .from('workspace_members')
+        .select('workspace_id, users(account_type)')
+        .in('workspace_id', wsIds)
+        .eq('role', 'owner')
+        .eq('status', 'active');
+
+      const ownerTypeMap = new Map<string, string>();
+      owners?.forEach((o: any) => {
+        if (o.users?.account_type) {
+          ownerTypeMap.set(o.workspace_id, o.users.account_type);
+        }
+      });
+
       // Ordina: platform first (depth 0), poi reseller (depth 1), poi client (depth 2)
       // All'interno di ogni depth, ordina per nome
       const sortedData = [...(data || [])].sort((a, b) => {
@@ -89,6 +105,7 @@ export async function GET() {
         wallet_balance: Number(w.wallet_balance),
         branding: w.organizations.branding || {},
         member_status: 'active' as const,
+        owner_account_type: ownerTypeMap.get(w.id),
       }));
     } else {
       // Utente normale: solo workspace dove e' membro

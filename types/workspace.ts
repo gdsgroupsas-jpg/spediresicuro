@@ -462,6 +462,8 @@ export interface UserWorkspaceInfo {
   wallet_balance: number;
   branding: OrganizationBranding;
   member_status: WorkspaceMemberStatus;
+  /** Account type dell'owner del workspace (solo per superadmin view) */
+  owner_account_type?: string;
 }
 
 /**

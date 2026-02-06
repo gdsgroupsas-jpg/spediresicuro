@@ -47,7 +47,11 @@ function getWorkspaceIcon(type: WorkspaceType) {
   }
 }
 
-function getWorkspaceTypeLabel(type: WorkspaceType): string {
+function getWorkspaceTypeLabel(type: WorkspaceType, ownerAccountType?: string): string {
+  // Owner admin/superadmin → badge "Admin" (non "Reseller")
+  if (ownerAccountType === 'admin' || ownerAccountType === 'superadmin') {
+    return 'Admin';
+  }
   switch (type) {
     case 'platform':
       return 'Platform';
@@ -60,7 +64,11 @@ function getWorkspaceTypeLabel(type: WorkspaceType): string {
   }
 }
 
-function getWorkspaceTypeColor(type: WorkspaceType): string {
+function getWorkspaceTypeColor(type: WorkspaceType, ownerAccountType?: string): string {
+  // Owner admin/superadmin → colore distinto
+  if (ownerAccountType === 'admin' || ownerAccountType === 'superadmin') {
+    return 'bg-red-100 text-red-700';
+  }
   switch (type) {
     case 'platform':
       return 'bg-purple-100 text-purple-700';
@@ -263,10 +271,10 @@ export default function WorkspaceSwitcher({ compact = false, className }: Worksp
                       <span
                         className={cn(
                           'text-[10px] px-1.5 py-0.5 rounded font-medium',
-                          getWorkspaceTypeColor(ws.workspace_type)
+                          getWorkspaceTypeColor(ws.workspace_type, ws.owner_account_type)
                         )}
                       >
-                        {getWorkspaceTypeLabel(ws.workspace_type)}
+                        {getWorkspaceTypeLabel(ws.workspace_type, ws.owner_account_type)}
                       </span>
                     </div>
                     <p className="text-xs text-gray-500 truncate">{ws.organization_name}</p>
