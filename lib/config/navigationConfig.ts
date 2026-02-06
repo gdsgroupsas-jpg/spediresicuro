@@ -365,10 +365,10 @@ const adminSection: NavSection = {
       items: [
         {
           id: 'team',
-          label: 'Team Aziendale',
-          href: '/dashboard/team',
+          label: 'Team Piattaforma',
+          href: '/dashboard/workspace/team',
           icon: Building2,
-          description: 'Gestione team e sub-admin',
+          description: 'Gestione membri del team piattaforma',
         },
         {
           id: 'leads',
@@ -644,10 +644,10 @@ export function getNavigationForUser(
   }
 
   // 6. SEZIONI PERSONALI (tutti gli utenti)
-  // Aggiungi Team Workspace in "Il Mio Account" SOLO per admin/superadmin/byoc
+  // Team Workspace in "Il Mio Account" SOLO per BYOC (non reseller)
+  // Admin/superadmin lo hanno gia' in "Amministrazione > Utenti & Team" come "Team Piattaforma"
   // I reseller lo hanno gia' in "Gestione Business" come "Il Mio Team"
-  const showTeamWorkspace =
-    (role === 'admin' || role === 'superadmin' || accountType === 'byoc') && !isReseller;
+  const showTeamWorkspace = accountType === 'byoc' && !isReseller;
 
   const accountItems = showTeamWorkspace
     ? [

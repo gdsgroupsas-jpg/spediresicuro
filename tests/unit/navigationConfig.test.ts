@@ -400,16 +400,24 @@ describe('navigationConfig - Reseller Team in Gestione Business', () => {
     expect(hasWorkspaceTeam).toBe(false);
   });
 
-  it('admin non-reseller deve ancora avere workspace-team in "Il Mio Account"', () => {
+  it('admin non-reseller NON deve avere workspace-team in "Il Mio Account" (lo ha in Amministrazione)', () => {
     const config = getNavigationForUser('admin', { isReseller: false });
     const accountSection = config.sections.find((s) => s.id === 'account');
     const hasWorkspaceTeam = accountSection?.items.some((i) => i.id === 'workspace-team');
 
-    expect(hasWorkspaceTeam).toBe(true);
+    expect(hasWorkspaceTeam).toBe(false);
   });
 
-  it('superadmin non-reseller deve avere workspace-team in "Il Mio Account"', () => {
+  it('superadmin non-reseller NON deve avere workspace-team in "Il Mio Account" (lo ha in Amministrazione)', () => {
     const config = getNavigationForUser('superadmin', { isReseller: false });
+    const accountSection = config.sections.find((s) => s.id === 'account');
+    const hasWorkspaceTeam = accountSection?.items.some((i) => i.id === 'workspace-team');
+
+    expect(hasWorkspaceTeam).toBe(false);
+  });
+
+  it('BYOC deve avere workspace-team in "Il Mio Account"', () => {
+    const config = getNavigationForUser('user', { accountType: 'byoc' });
     const accountSection = config.sections.find((s) => s.id === 'account');
     const hasWorkspaceTeam = accountSection?.items.some((i) => i.id === 'workspace-team');
 
@@ -429,6 +437,47 @@ describe('navigationConfig - Reseller Team in Gestione Business', () => {
     const hasWorkspaceTeam = accountSection?.items.some((i) => i.id === 'workspace-team');
 
     expect(hasWorkspaceTeam).toBe(false);
+  });
+});
+
+describe('navigationConfig - Team Piattaforma per Superadmin', () => {
+  it('superadmin deve avere "Team Piattaforma" in Amministrazione > Utenti & Team', () => {
+    const config = getNavigationForUser('superadmin', { isReseller: false });
+    const adminSection = config.sections.find((s) => s.id === 'admin');
+    const usersSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-users');
+    const teamItem = usersSubsection?.items.find((i) => i.id === 'team');
+
+    expect(teamItem).toBeDefined();
+    expect(teamItem?.label).toBe('Team Piattaforma');
+    expect(teamItem?.href).toBe('/dashboard/workspace/team');
+  });
+
+  it('admin deve avere "Team Piattaforma" in Amministrazione > Utenti & Team', () => {
+    const config = getNavigationForUser('admin', { isReseller: false });
+    const adminSection = config.sections.find((s) => s.id === 'admin');
+    const usersSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-users');
+    const teamItem = usersSubsection?.items.find((i) => i.id === 'team');
+
+    expect(teamItem).toBeDefined();
+    expect(teamItem?.label).toBe('Team Piattaforma');
+    expect(teamItem?.href).toBe('/dashboard/workspace/team');
+  });
+
+  it('"Team Piattaforma" punta alla pagina workspace team (non vecchia pagina /dashboard/team)', () => {
+    const config = getNavigationForUser('superadmin', { isReseller: false });
+    const adminSection = config.sections.find((s) => s.id === 'admin');
+    const usersSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-users');
+    const teamItem = usersSubsection?.items.find((i) => i.id === 'team');
+
+    expect(teamItem?.href).not.toBe('/dashboard/team');
+    expect(teamItem?.href).toBe('/dashboard/workspace/team');
+  });
+
+  it('user NON vede Amministrazione (e quindi nemmeno Team Piattaforma)', () => {
+    const config = getNavigationForUser('user', { isReseller: false });
+    const adminSection = config.sections.find((s) => s.id === 'admin');
+
+    expect(adminSection).toBeUndefined();
   });
 });
 
