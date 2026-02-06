@@ -185,27 +185,18 @@ export default function WorkspaceTeamPage() {
   }, [workspace, wsLoading, router, canViewMembers, fetchMembers, fetchInvitations]);
 
   // Determina se mostrare il wizard primo setup
-  // Condizioni: solo 1 membro (owner), nessun invito, wizard non gia' dismissato
+  // Il wizard riappare ogni volta che l'utente torna a essere solo
+  // (0 inviti attivi, max 1 membro). Il dismiss vale solo per la sessione corrente.
   useEffect(() => {
     if (isLoading || wizardDismissed) return;
 
-    const wizardKey = workspace?.workspace_id ? `team_wizard_done_${workspace.workspace_id}` : null;
-    const alreadyDone = wizardKey ? localStorage.getItem(wizardKey) === 'true' : false;
-
-    if (alreadyDone) {
-      setShowWizard(false);
-      return;
-    }
-
     // Solo owner, nessun altro membro, nessun invito pending
-    const isAlone = members.length <= 1 && invitations.filter((i) => !i.is_expired).length === 0;
+    const activeInvitations = invitations.filter((i) => !i.is_expired && i.status === 'pending');
+    const isAlone = members.length <= 1 && activeInvitations.length === 0;
     setShowWizard(isAlone && canManageMembers);
-  }, [members, invitations, isLoading, workspace?.workspace_id, canManageMembers, wizardDismissed]);
+  }, [members, invitations, isLoading, canManageMembers, wizardDismissed]);
 
   const handleWizardComplete = () => {
-    if (workspace?.workspace_id) {
-      localStorage.setItem(`team_wizard_done_${workspace.workspace_id}`, 'true');
-    }
     setShowWizard(false);
     setWizardDismissed(true);
     // Ricarica dati per mostrare il nuovo invito
@@ -214,9 +205,6 @@ export default function WorkspaceTeamPage() {
   };
 
   const handleWizardSkip = () => {
-    if (workspace?.workspace_id) {
-      localStorage.setItem(`team_wizard_done_${workspace.workspace_id}`, 'true');
-    }
     setShowWizard(false);
     setWizardDismissed(true);
   };

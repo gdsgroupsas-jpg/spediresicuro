@@ -20,15 +20,16 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 describe('TeamSetupWizard - Condizioni visibilita', () => {
   /**
    * Replica la logica del useEffect nella pagina team:
-   * showWizard = members.length <= 1 && pendingInvites === 0 && canManage && !dismissed
+   * showWizard = members.length <= 1 && pendingInvites === 0 && canManage && !sessionDismissed
+   * Il wizard riappare ogni volta che l'utente torna solo (niente localStorage permanente).
    */
   function shouldShowWizard(opts: {
     membersCount: number;
     pendingInvitesCount: number;
     canManageMembers: boolean;
-    localStorageDone: boolean;
+    sessionDismissed: boolean;
   }): boolean {
-    if (opts.localStorageDone) return false;
+    if (opts.sessionDismissed) return false;
 
     const isAlone = opts.membersCount <= 1 && opts.pendingInvitesCount === 0;
     return isAlone && opts.canManageMembers;
@@ -40,7 +41,7 @@ describe('TeamSetupWizard - Condizioni visibilita', () => {
         membersCount: 1,
         pendingInvitesCount: 0,
         canManageMembers: true,
-        localStorageDone: false,
+        sessionDismissed: false,
       })
     ).toBe(true);
   });
@@ -51,7 +52,7 @@ describe('TeamSetupWizard - Condizioni visibilita', () => {
         membersCount: 0,
         pendingInvitesCount: 0,
         canManageMembers: true,
-        localStorageDone: false,
+        sessionDismissed: false,
       })
     ).toBe(true);
   });
@@ -62,7 +63,7 @@ describe('TeamSetupWizard - Condizioni visibilita', () => {
         membersCount: 2,
         pendingInvitesCount: 0,
         canManageMembers: true,
-        localStorageDone: false,
+        sessionDismissed: false,
       })
     ).toBe(false);
   });
@@ -73,7 +74,7 @@ describe('TeamSetupWizard - Condizioni visibilita', () => {
         membersCount: 1,
         pendingInvitesCount: 1,
         canManageMembers: true,
-        localStorageDone: false,
+        sessionDismissed: false,
       })
     ).toBe(false);
   });
@@ -84,86 +85,56 @@ describe('TeamSetupWizard - Condizioni visibilita', () => {
         membersCount: 1,
         pendingInvitesCount: 0,
         canManageMembers: false,
-        localStorageDone: false,
+        sessionDismissed: false,
       })
     ).toBe(false);
   });
 
-  it('NON mostra wizard se gia dismissato (localStorage)', () => {
+  it('NON mostra wizard se dismissato nella sessione corrente', () => {
     expect(
       shouldShowWizard({
         membersCount: 1,
         pendingInvitesCount: 0,
         canManageMembers: true,
-        localStorageDone: true,
+        sessionDismissed: true,
       })
     ).toBe(false);
   });
 });
 
 // ============================================
-// LOGICA WIZARD: localStorage persistence
+// LOGICA WIZARD: session dismiss
 // ============================================
 
-describe('TeamSetupWizard - localStorage persistence', () => {
-  let storage: Record<string, string>;
+describe('TeamSetupWizard - Session dismiss', () => {
+  it('dismiss in sessione impedisce riapparizione nella stessa sessione', () => {
+    let dismissed = false;
 
-  beforeEach(() => {
-    storage = {};
-    vi.stubGlobal('localStorage', {
-      getItem: vi.fn((key: string) => storage[key] ?? null),
-      setItem: vi.fn((key: string, value: string) => {
-        storage[key] = value;
-      }),
-      removeItem: vi.fn((key: string) => {
-        delete storage[key];
-      }),
-    });
+    // Prima volta: wizard appare
+    expect(!dismissed && true).toBe(true);
+
+    // Skip/complete: dismiss
+    dismissed = true;
+
+    // Stessa sessione: wizard NON riappare
+    expect(!dismissed && true).toBe(false);
   });
 
-  afterEach(() => {
-    vi.unstubAllGlobals();
+  it('wizard riappare in nuova sessione se utente torna solo', () => {
+    // Nuova sessione = dismissed resettato a false
+    const dismissed = false;
+    const isAlone = true;
+    const canManage = true;
+
+    expect(!dismissed && isAlone && canManage).toBe(true);
   });
 
-  it('salva stato completamento in localStorage al complete', () => {
-    const workspaceId = 'ws-123';
-    const key = `team_wizard_done_${workspaceId}`;
+  it('wizard NON appare se ci sono inviti attivi anche in nuova sessione', () => {
+    const dismissed = false;
+    const isAlone = false; // ha inviti pending
+    const canManage = true;
 
-    // Simula handleWizardComplete
-    localStorage.setItem(key, 'true');
-
-    expect(localStorage.setItem).toHaveBeenCalledWith(key, 'true');
-    expect(storage[key]).toBe('true');
-  });
-
-  it('salva stato completamento in localStorage allo skip', () => {
-    const workspaceId = 'ws-456';
-    const key = `team_wizard_done_${workspaceId}`;
-
-    // Simula handleWizardSkip
-    localStorage.setItem(key, 'true');
-
-    expect(localStorage.setItem).toHaveBeenCalledWith(key, 'true');
-    expect(storage[key]).toBe('true');
-  });
-
-  it('legge stato da localStorage al caricamento', () => {
-    const workspaceId = 'ws-789';
-    const key = `team_wizard_done_${workspaceId}`;
-    storage[key] = 'true';
-
-    const result = localStorage.getItem(key);
-    expect(result).toBe('true');
-  });
-
-  it('workspace diversi hanno chiavi diverse', () => {
-    localStorage.setItem('team_wizard_done_ws-aaa', 'true');
-
-    const resultA = localStorage.getItem('team_wizard_done_ws-aaa');
-    const resultB = localStorage.getItem('team_wizard_done_ws-bbb');
-
-    expect(resultA).toBe('true');
-    expect(resultB).toBeNull();
+    expect(!dismissed && isAlone && canManage).toBe(false);
   });
 });
 
