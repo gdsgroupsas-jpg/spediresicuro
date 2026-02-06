@@ -105,6 +105,34 @@ const permissionGroups: Record<string, { label: string; permissions: WorkspacePe
     label: 'Report',
     permissions: ['reports:view', 'reports:export'],
   },
+  warehouse: {
+    label: 'Magazzino',
+    permissions: [
+      'warehouse:view',
+      'warehouse:manage',
+      'warehouse:inventory',
+      'warehouse:pickup',
+      'warehouse:delivery',
+    ],
+  },
+  billing: {
+    label: 'Contabilita',
+    permissions: ['billing:view', 'billing:manage', 'billing:invoices', 'billing:reconcile'],
+  },
+  clients: {
+    label: 'Clienti',
+    permissions: [
+      'clients:view',
+      'clients:create',
+      'clients:edit',
+      'clients:delete',
+      'clients:manage',
+    ],
+  },
+  quotes: {
+    label: 'Preventivi',
+    permissions: ['quotes:view', 'quotes:create', 'quotes:edit', 'quotes:delete'],
+  },
 };
 
 function formatPermission(perm: WorkspacePermission): string {
@@ -122,6 +150,11 @@ function formatPermission(perm: WorkspacePermission): string {
     remove: 'Rimuovi',
     edit_role: 'Cambia ruolo',
     export: 'Esporta',
+    inventory: 'Inventario',
+    pickup: 'Ritiro',
+    delivery: 'Consegna',
+    invoices: 'Fatture',
+    reconcile: 'Riconcilia',
   };
   return labels[action] || action;
 }

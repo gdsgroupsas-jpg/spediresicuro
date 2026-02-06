@@ -232,7 +232,29 @@ export type WorkspacePermission =
   | 'contacts:delete'
   // Reports
   | 'reports:view'
-  | 'reports:export';
+  | 'reports:export'
+  // Warehouse (magazzino)
+  | 'warehouse:view'
+  | 'warehouse:manage'
+  | 'warehouse:inventory'
+  | 'warehouse:pickup'
+  | 'warehouse:delivery'
+  // Billing (contabilita)
+  | 'billing:view'
+  | 'billing:manage'
+  | 'billing:invoices'
+  | 'billing:reconcile'
+  // Clients (gestione clienti reseller)
+  | 'clients:view'
+  | 'clients:create'
+  | 'clients:edit'
+  | 'clients:delete'
+  | 'clients:manage'
+  // Quotes (preventivi)
+  | 'quotes:view'
+  | 'quotes:create'
+  | 'quotes:edit'
+  | 'quotes:delete';
 
 export type WorkspaceMemberStatus = 'pending' | 'active' | 'suspended' | 'removed';
 
@@ -481,6 +503,13 @@ export function roleHasPermission(
       'wallet:view',
       'contacts:view',
       'contacts:create',
+      'warehouse:view',
+      'warehouse:pickup',
+      'warehouse:delivery',
+      'clients:view',
+      'quotes:view',
+      'quotes:create',
+      'billing:view',
     ];
     return operatorPermissions.includes(permission);
   }
