@@ -7,9 +7,9 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { signIn, useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import {
   LogIn,
   Mail,
@@ -30,7 +30,7 @@ import { LogoHorizontal } from '@/components/logo';
 type AuthMode = 'login' | 'register';
 
 // Componente per i pulsanti OAuth
-function OAuthButtons({ isLoading }: { isLoading: boolean }) {
+function OAuthButtons({ isLoading, callbackUrl }: { isLoading: boolean; callbackUrl: string }) {
   const [oauthProviders, setOauthProviders] = useState<string[]>([]);
   const [oauthError, setOauthError] = useState<string | null>(null);
 
@@ -54,7 +54,7 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
       // NextAuth gestisce automaticamente il redirect per OAuth
       // Per provider OAuth, signIn reindirizza automaticamente e non ritorna un valore
       await signIn('google', {
-        callbackUrl: '/dashboard',
+        callbackUrl: callbackUrl || '/dashboard',
       });
 
       console.log('✅ [LOGIN] signIn Google chiamato, redirect in corso...');
@@ -124,7 +124,7 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
         {/* GitHub OAuth */}
         <button
           type="button"
-          onClick={() => signIn('github', { callbackUrl: '/dashboard' })}
+          onClick={() => signIn('github', { callbackUrl: callbackUrl || '/dashboard' })}
           disabled={isLoading}
           className="w-full px-4 py-3 bg-gray-900 border border-gray-900 rounded-xl font-medium text-white hover:bg-gray-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-sm hover:shadow-md"
         >
@@ -141,7 +141,7 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
         {/* Facebook OAuth */}
         <button
           type="button"
-          onClick={() => signIn('facebook', { callbackUrl: '/dashboard' })}
+          onClick={() => signIn('facebook', { callbackUrl: callbackUrl || '/dashboard' })}
           disabled={isLoading}
           className="w-full px-4 py-3 bg-[#1877F2] border border-[#1877F2] rounded-xl font-medium text-white hover:bg-[#166FE5] transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-sm hover:shadow-md"
         >
@@ -165,9 +165,32 @@ function OAuthButtons({ isLoading }: { isLoading: boolean }) {
 }
 
 export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#FF9500]" />
+        </div>
+      }
+    >
+      <LoginPageContent />
+    </Suspense>
+  );
+}
+
+function LoginPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { data: session, status } = useSession();
-  const [mode, setMode] = useState<AuthMode>('login');
+
+  // Parametri URL: callbackUrl per redirect post-login, mode per partire in registrazione
+  const rawCallbackUrl = searchParams.get('callbackUrl') || '';
+  // Sicurezza: solo path relativi (no open redirect)
+  const callbackUrl =
+    rawCallbackUrl.startsWith('/') && !rawCallbackUrl.startsWith('//') ? rawCallbackUrl : '';
+  const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login';
+
+  const [mode, setMode] = useState<AuthMode>(initialMode);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -242,6 +265,13 @@ export default function LoginPage() {
       // Verifica se i dati cliente sono completati
       async function checkAndRedirect() {
         try {
+          // Se c'è un callbackUrl esplicito (es. invito), redirect diretto
+          if (callbackUrl) {
+            router.refresh();
+            router.push(callbackUrl);
+            return;
+          }
+
           // Email dell'utente corrente
           const userEmail = session?.user?.email?.toLowerCase() || '';
 
@@ -255,10 +285,9 @@ export default function LoginPage() {
             if (typeof window !== 'undefined' && session?.user?.email) {
               localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
             }
-            // Usa router.push invece di window.location.href per migliore compatibilità mobile
             router.refresh();
             router.push('/dashboard');
-            return; // Esci senza controllare il database
+            return;
           }
 
           console.log('📋 [LOGIN] Chiamata API per verificare dati cliente...');
@@ -271,34 +300,28 @@ export default function LoginPage() {
               datiCompletati: userData.datiCliente?.datiCompletati,
             });
 
-            // Se i dati sono completati, salva in localStorage per evitare controlli futuri
             if (userData.datiCliente && userData.datiCliente.datiCompletati) {
               console.log('✅ [LOGIN] Dati cliente completati, salvo in localStorage');
               if (typeof window !== 'undefined' && session?.user?.email) {
                 localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
               }
               console.log('🔄 [LOGIN] Reindirizzamento a /dashboard');
-              // Usa router.push invece di window.location.href per migliore compatibilità mobile
               router.refresh();
               router.push('/dashboard');
             } else {
-              // Se i dati non sono completati, reindirizza alla pagina dati-cliente
               console.log(
                 '🔄 [LOGIN] Dati non completati, reindirizzamento a /dashboard/dati-cliente'
               );
-              // Usa router.push invece di window.location.href per migliore compatibilità mobile
               router.refresh();
               router.push('/dashboard/dati-cliente');
             }
           } else {
             console.warn('⚠️ [LOGIN] Errore recupero dati cliente, redirect a dashboard');
-            // Se non riesce a recuperare i dati, reindirizza comunque al dashboard
             router.refresh();
             router.push('/dashboard');
           }
         } catch (err: any) {
           console.error('❌ [LOGIN] Errore verifica dati cliente:', err);
-          // In caso di errore, reindirizza al dashboard
           router.refresh();
           router.push('/dashboard');
         }
@@ -421,7 +444,7 @@ export default function LoginPage() {
 
           // Usa router.push con refresh per aggiornare la sessione
           router.refresh();
-          router.push('/dashboard');
+          router.push(callbackUrl || '/dashboard');
         } else {
           console.warn('⚠️ [LOGIN] Risultato login non valido:', result);
           setError('Errore durante il login. Riprova.');
@@ -503,7 +526,7 @@ export default function LoginPage() {
           </div>
 
           {/* OAuth Providers - Disponibile sia per Login che Registrazione */}
-          <OAuthButtons isLoading={isLoading} />
+          <OAuthButtons isLoading={isLoading} callbackUrl={callbackUrl} />
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Nome (solo per registrazione) */}

@@ -42,10 +42,8 @@ import {
   Trash2,
   Mail,
   Clock,
-  CheckCircle2,
   AlertCircle,
   Loader2,
-  Copy,
   Crown,
   UserCog,
 } from 'lucide-react';
@@ -100,26 +98,18 @@ export default function WorkspaceTeamPage() {
   const [error, setError] = useState<string | null>(null);
 
   // Modals
-  const [showInviteModal, setShowInviteModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [selectedMember, setSelectedMember] = useState<WorkspaceMemberUI | null>(null);
-
-  // Invite form
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteRole, setInviteRole] = useState<Exclude<WorkspaceMemberRole, 'owner'>>('viewer');
-  const [isInviting, setIsInviting] = useState(false);
-  const [inviteResult, setInviteResult] = useState<{
-    success: boolean;
-    message: string;
-    url?: string;
-  } | null>(null);
 
   // Edit form
   const [editRole, setEditRole] = useState<WorkspaceMemberRole>('viewer');
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Wizard primo setup
+  // Wizard (unica interfaccia di invito)
+  // showWizard=true + wizardMode='welcome' → primo setup (step welcome)
+  // showWizard=true + wizardMode='invite' → invito diretto (step invite)
   const [showWizard, setShowWizard] = useState(false);
+  const [wizardMode, setWizardMode] = useState<'welcome' | 'invite'>('welcome');
   const [wizardDismissed, setWizardDismissed] = useState(false);
 
   // Permissions
@@ -184,24 +174,25 @@ export default function WorkspaceTeamPage() {
     loadData();
   }, [workspace, wsLoading, router, canViewMembers, fetchMembers, fetchInvitations]);
 
-  // Determina se mostrare il wizard primo setup
-  // Il wizard riappare ogni volta che l'utente torna a essere solo
-  // (0 inviti attivi, max 1 membro). Il dismiss si resetta quando i dati cambiano.
+  // Mostra wizard welcome automaticamente se utente e' solo (primo setup)
   useEffect(() => {
     if (isLoading) return;
 
     const activeInvitations = invitations.filter((i) => !i.is_expired && i.status === 'pending');
     const isAlone = members.length <= 1 && activeInvitations.length === 0;
-    const shouldShow = isAlone && canManageMembers;
+    const shouldShowWelcome = isAlone && canManageMembers && !wizardDismissed;
 
-    if (shouldShow) {
-      // Reset dismiss quando l'utente torna solo (es. dopo cancellazione inviti)
-      setWizardDismissed(false);
+    if (shouldShowWelcome) {
+      setWizardMode('welcome');
       setShowWizard(true);
-    } else {
-      setShowWizard(false);
     }
-  }, [members, invitations, isLoading, canManageMembers]);
+  }, [members, invitations, isLoading, canManageMembers, wizardDismissed]);
+
+  // Apre il wizard in modalita' invito diretto (dal bottone "Invita Membro")
+  const handleOpenInviteWizard = () => {
+    setWizardMode('invite');
+    setShowWizard(true);
+  };
 
   const handleWizardComplete = () => {
     setShowWizard(false);
@@ -219,51 +210,6 @@ export default function WorkspaceTeamPage() {
   // ============================================
   // HANDLERS
   // ============================================
-
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!workspace?.workspace_id || !inviteEmail) return;
-
-    setIsInviting(true);
-    setInviteResult(null);
-
-    try {
-      const response = await fetch(`/api/workspaces/${workspace.workspace_id}/invite`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: inviteEmail,
-          role: inviteRole,
-        }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        setInviteResult({ success: false, message: data.error || "Errore durante l'invito" });
-        return;
-      }
-
-      setInviteResult({
-        success: true,
-        message: data.message,
-        url: data.invitation?.invite_url,
-      });
-
-      // Refresh invitations
-      await fetchInvitations();
-
-      // Reset form after success
-      setTimeout(() => {
-        setInviteEmail('');
-        setInviteRole('viewer');
-      }, 100);
-    } catch (err: any) {
-      setInviteResult({ success: false, message: err.message || 'Errore sconosciuto' });
-    } finally {
-      setIsInviting(false);
-    }
-  };
 
   const handleUpdateRole = async () => {
     if (!workspace?.workspace_id || !selectedMember) return;
@@ -349,11 +295,6 @@ export default function WorkspaceTeamPage() {
       console.error('Error revoking invitation:', err);
       toast.error(err.message);
     }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    toast.success('Link copiato negli appunti!');
   };
 
   const handleResendInvitation = async (invitationId: string) => {
@@ -487,14 +428,19 @@ export default function WorkspaceTeamPage() {
     );
   }
 
-  // Wizard primo setup team
+  // Wizard invito membro (unica interfaccia di invito)
   if (showWizard && workspace) {
+    const isDirectInvite = wizardMode === 'invite';
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <DashboardNav
-            title="Setup Team"
-            subtitle="Configura il tuo team di lavoro"
+            title={isDirectInvite ? 'Invita Membro' : 'Setup Team'}
+            subtitle={
+              isDirectInvite
+                ? `Aggiungi un nuovo membro a "${workspace.workspace_name}"`
+                : 'Configura il tuo team di lavoro'
+            }
             showBackButton
           />
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 mt-6">
@@ -503,6 +449,8 @@ export default function WorkspaceTeamPage() {
               workspaceName={workspace.workspace_name}
               onComplete={handleWizardComplete}
               onSkip={handleWizardSkip}
+              initialStep={wizardMode}
+              hideBackButton={isDirectInvite}
             />
           </div>
         </div>
@@ -521,10 +469,7 @@ export default function WorkspaceTeamPage() {
           actions={
             canManageMembers && (
               <Button
-                onClick={() => {
-                  setInviteResult(null);
-                  setShowInviteModal(true);
-                }}
+                onClick={handleOpenInviteWizard}
                 className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
               >
                 <UserPlus className="w-4 h-4 mr-2" />
@@ -773,139 +718,6 @@ export default function WorkspaceTeamPage() {
           </div>
         )}
       </div>
-
-      {/* Invite Modal */}
-      <Dialog open={showInviteModal} onOpenChange={setShowInviteModal}>
-        <DialogContent onClose={() => setShowInviteModal(false)}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-blue-600" />
-              Invita Nuovo Membro
-            </DialogTitle>
-            <DialogDescription>
-              Invia un invito per unirsi al workspace &quot;{workspace?.workspace_name}&quot;
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogBody>
-            {inviteResult ? (
-              <div
-                className={`p-4 rounded-xl ${inviteResult.success ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}
-              >
-                <div className="flex items-start gap-3">
-                  {inviteResult.success ? (
-                    <CheckCircle2 className="w-5 h-5 text-green-600 mt-0.5" />
-                  ) : (
-                    <AlertCircle className="w-5 h-5 text-red-600 mt-0.5" />
-                  )}
-                  <div className="flex-1">
-                    <p className={inviteResult.success ? 'text-green-800' : 'text-red-800'}>
-                      {inviteResult.message}
-                    </p>
-                    {inviteResult.url && (
-                      <div className="mt-3 p-3 bg-white rounded-lg border">
-                        <p className="text-xs text-gray-500 mb-2">
-                          Link invito (condividi con l&apos;utente):
-                        </p>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={inviteResult.url}
-                            readOnly
-                            className="flex-1 text-xs p-2 bg-gray-50 border rounded"
-                          />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => copyToClipboard(inviteResult.url!)}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={handleInvite} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                    Email <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    value={inviteEmail}
-                    onChange={(e) => setInviteEmail(e.target.value)}
-                    required
-                    disabled={isInviting}
-                    placeholder="nome@azienda.it"
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1.5">Ruolo</label>
-                  <select
-                    value={inviteRole}
-                    onChange={(e) => setInviteRole(e.target.value as any)}
-                    disabled={isInviting}
-                    className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
-                  >
-                    <option value="viewer">Visualizzatore - Solo lettura</option>
-                    <option value="operator">Operatore - Può creare spedizioni</option>
-                    <option value="admin">Amministratore - Gestione completa</option>
-                  </select>
-                </div>
-
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                  <h4 className="text-sm font-medium text-blue-900 mb-2">Info Ruoli:</h4>
-                  <ul className="text-xs text-blue-800 space-y-1">
-                    <li>
-                      <strong>Visualizzatore:</strong> Può solo vedere dati
-                    </li>
-                    <li>
-                      <strong>Operatore:</strong> Può creare spedizioni e gestire contatti
-                    </li>
-                    <li>
-                      <strong>Amministratore:</strong> Può gestire membri e impostazioni
-                    </li>
-                  </ul>
-                </div>
-              </form>
-            )}
-          </DialogBody>
-
-          <DialogFooter>
-            {inviteResult?.success ? (
-              <Button onClick={() => setShowInviteModal(false)}>Chiudi</Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setShowInviteModal(false)}
-                  disabled={isInviting}
-                >
-                  Annulla
-                </Button>
-                <Button onClick={handleInvite} disabled={isInviting || !inviteEmail}>
-                  {isInviting ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Invio...
-                    </>
-                  ) : (
-                    <>
-                      <Mail className="w-4 h-4 mr-2" />
-                      Invia Invito
-                    </>
-                  )}
-                </Button>
-              </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Edit Role Modal */}
       <Dialog open={showEditModal} onOpenChange={setShowEditModal}>

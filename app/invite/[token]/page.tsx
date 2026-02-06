@@ -97,7 +97,7 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
   const handleAccept = async () => {
     if (!session) {
       // Redirect to login with callback
-      router.push(`/auth/signin?callbackUrl=/invite/${token}`);
+      router.push(`/login?callbackUrl=/invite/${token}`);
       return;
     }
 
@@ -295,18 +295,20 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
               Per accettare l&apos;invito devi effettuare l&apos;accesso
             </p>
             <Button
-              onClick={() => router.push(`/auth/signin?callbackUrl=/invite/${token}`)}
+              onClick={() => router.push(`/login?callbackUrl=/invite/${token}`)}
               className="w-full bg-gradient-to-r from-[#FF9500] to-[#FF6B35] hover:from-[#E88500] hover:to-[#E55A2B] shadow-lg"
             >
               <LogIn className="w-4 h-4 mr-2" />
               Accedi per continuare
             </Button>
-            <Link href={`/auth/signup?callbackUrl=/invite/${token}`}>
-              <Button variant="outline" className="w-full mt-2">
-                <UserPlus className="w-4 h-4 mr-2" />
-                Crea un nuovo account
-              </Button>
-            </Link>
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              onClick={() => router.push(`/login?mode=register&callbackUrl=/invite/${token}`)}
+            >
+              <UserPlus className="w-4 h-4 mr-2" />
+              Crea un nuovo account
+            </Button>
           </div>
         )}
 

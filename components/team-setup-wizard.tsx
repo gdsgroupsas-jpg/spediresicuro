@@ -45,6 +45,10 @@ interface TeamSetupWizardProps {
   onComplete: () => void;
   /** Callback per saltare il wizard */
   onSkip: () => void;
+  /** Step iniziale (default: 'welcome'). Usa 'invite' per saltare il benvenuto. */
+  initialStep?: WizardStep;
+  /** Se true, nasconde il pulsante "Indietro" nello step invite */
+  hideBackButton?: boolean;
 }
 
 type WizardStep = 'welcome' | 'invite' | 'result';
@@ -64,8 +68,10 @@ export function TeamSetupWizard({
   workspaceName,
   onComplete,
   onSkip,
+  initialStep = 'welcome',
+  hideBackButton = false,
 }: TeamSetupWizardProps) {
-  const [step, setStep] = useState<WizardStep>('welcome');
+  const [step, setStep] = useState<WizardStep>(initialStep);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'operator' | 'admin' | 'viewer'>('operator');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -199,6 +205,8 @@ export function TeamSetupWizard({
           isSubmitting={isSubmitting}
           onSubmit={handleInvite}
           onBack={() => setStep('welcome')}
+          hideBackButton={hideBackButton || initialStep === 'invite'}
+          onCancel={onSkip}
         />
       )}
 
@@ -295,6 +303,8 @@ function StepInvite({
   isSubmitting,
   onSubmit,
   onBack,
+  hideBackButton = false,
+  onCancel,
 }: {
   email: string;
   setEmail: (v: string) => void;
@@ -303,6 +313,8 @@ function StepInvite({
   isSubmitting: boolean;
   onSubmit: (e: React.FormEvent) => void;
   onBack: () => void;
+  hideBackButton?: boolean;
+  onCancel?: () => void;
 }) {
   const roles = [
     {
@@ -412,10 +424,16 @@ function StepInvite({
 
         {/* Actions */}
         <div className="flex items-center justify-between pt-2">
-          <Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
-            <ArrowLeft className="w-4 h-4 mr-2" />
-            Indietro
-          </Button>
+          {hideBackButton ? (
+            <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
+              Annulla
+            </Button>
+          ) : (
+            <Button type="button" variant="ghost" onClick={onBack} disabled={isSubmitting}>
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Indietro
+            </Button>
+          )}
           <Button
             type="submit"
             disabled={isSubmitting || !email}
