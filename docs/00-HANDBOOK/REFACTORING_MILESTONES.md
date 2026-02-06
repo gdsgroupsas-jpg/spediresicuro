@@ -176,6 +176,56 @@ Ridurre complessità e debito tecnico nei moduli critici identificati dall'audit
 
 ---
 
+## Security Hardening ✅
+
+**Target:** Fix vulnerabilità identificate da code review severa
+**Completato:** 2026-02-06
+
+### Fix CRITICAL
+
+| Issue                             | File                      | Fix                                           |
+| --------------------------------- | ------------------------- | --------------------------------------------- |
+| Division by zero con vatRate=-100 | `vat-utils.ts`            | Input validation: vatRate deve essere [0,100] |
+| NaN/Infinity propagation          | `vat-utils.ts`            | `assertFinitePositive()` su tutti gli input   |
+| Floating point precision          | `vat-utils.ts`            | `roundToTwoDecimals()` su tutti i risultati   |
+| Cache invalidation totale         | `pricing-cache.ts`        | Blocco keyPattern vuoto                       |
+| Info sensibili nei log            | `price-logger.ts`         | PII scrubbing in produzione                   |
+| LRU errato (insertion order)      | `price-lists-advanced.ts` | LRU basato su `accessTime`                    |
+
+### Fix HIGH
+
+| Issue                        | File               | Fix                                   |
+| ---------------------------- | ------------------ | ------------------------------------- |
+| parseInt NaN su env invalide | `pricing-cache.ts` | `parseEnvInt()` con fallback          |
+| Cache key collision          | `pricing-cache.ts` | `escapeCacheKeyPart()` per separatore |
+
+### Test aggiunti
+
+- `tests/unit/vat-utils-critical.test.ts` - 29 test input validation
+- `tests/unit/validators.test.ts` - 16 test SQL injection prevention
+
+### Impatto
+
+- Prevenzione errori runtime su input malformati
+- Precisione finanziaria garantita (2 decimali)
+- Nessun leak di dati sensibili in produzione
+- Cache thread-safe con eviction corretta
+
+---
+
+## Tracking
+
+| Milestone                | Status        | Completato |
+| ------------------------ | ------------- | ---------- |
+| 1. VAT Consolidation     | ✅ Completato | 2026-02-05 |
+| 2. Pricing Decomposition | ✅ Completato | 2026-02-05 |
+| 3. Workspace Integration | ✅ Completato | 2026-02-05 |
+| 4. Unified Logging       | ✅ Completato | 2026-02-05 |
+| 5. Cache Unification     | ✅ Completato | 2026-02-05 |
+| 6. Security Hardening    | ✅ Completato | 2026-02-06 |
+
+---
+
 ## Note
 
 - Ogni milestone richiede test verdi PRIMA del merge
