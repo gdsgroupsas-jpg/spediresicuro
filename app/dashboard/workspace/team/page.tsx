@@ -23,6 +23,7 @@ import DashboardNav from '@/components/dashboard-nav';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { TeamSetupWizard } from '@/components/team-setup-wizard';
 import {
   Dialog,
   DialogContent,
@@ -117,6 +118,10 @@ export default function WorkspaceTeamPage() {
   const [editRole, setEditRole] = useState<WorkspaceMemberRole>('viewer');
   const [isUpdating, setIsUpdating] = useState(false);
 
+  // Wizard primo setup
+  const [showWizard, setShowWizard] = useState(false);
+  const [wizardDismissed, setWizardDismissed] = useState(false);
+
   // Permissions
   const canManageMembers = hasPermission('members:invite') || hasPermission('members:remove');
   const canEditRoles = hasPermission('members:edit_role');
@@ -178,6 +183,43 @@ export default function WorkspaceTeamPage() {
 
     loadData();
   }, [workspace, wsLoading, router, canViewMembers, fetchMembers, fetchInvitations]);
+
+  // Determina se mostrare il wizard primo setup
+  // Condizioni: solo 1 membro (owner), nessun invito, wizard non gia' dismissato
+  useEffect(() => {
+    if (isLoading || wizardDismissed) return;
+
+    const wizardKey = workspace?.workspace_id ? `team_wizard_done_${workspace.workspace_id}` : null;
+    const alreadyDone = wizardKey ? localStorage.getItem(wizardKey) === 'true' : false;
+
+    if (alreadyDone) {
+      setShowWizard(false);
+      return;
+    }
+
+    // Solo owner, nessun altro membro, nessun invito pending
+    const isAlone = members.length <= 1 && invitations.filter((i) => !i.is_expired).length === 0;
+    setShowWizard(isAlone && canManageMembers);
+  }, [members, invitations, isLoading, workspace?.workspace_id, canManageMembers, wizardDismissed]);
+
+  const handleWizardComplete = () => {
+    if (workspace?.workspace_id) {
+      localStorage.setItem(`team_wizard_done_${workspace.workspace_id}`, 'true');
+    }
+    setShowWizard(false);
+    setWizardDismissed(true);
+    // Ricarica dati per mostrare il nuovo invito
+    fetchMembers();
+    fetchInvitations();
+  };
+
+  const handleWizardSkip = () => {
+    if (workspace?.workspace_id) {
+      localStorage.setItem(`team_wizard_done_${workspace.workspace_id}`, 'true');
+    }
+    setShowWizard(false);
+    setWizardDismissed(true);
+  };
 
   // ============================================
   // HANDLERS
@@ -444,6 +486,29 @@ export default function WorkspaceTeamPage() {
             <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-900 mb-2">Accesso Negato</h2>
             <p className="text-gray-600">{error}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Wizard primo setup team
+  if (showWizard && workspace) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <DashboardNav
+            title="Setup Team"
+            subtitle="Configura il tuo team di lavoro"
+            showBackButton
+          />
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-8 mt-6">
+            <TeamSetupWizard
+              workspaceId={workspace.workspace_id}
+              workspaceName={workspace.workspace_name}
+              onComplete={handleWizardComplete}
+              onSkip={handleWizardSkip}
+            />
           </div>
         </div>
       </div>
