@@ -23,7 +23,6 @@ import type {
   UpdateProspectDTO,
   ProspectFilters,
   ProspectStats,
-  VALID_TRANSITIONS,
 } from '@/types/reseller-prospects';
 
 // ============================================
@@ -248,10 +247,21 @@ export async function updateProspect(
       }
     }
 
+    // Sanitizza input: rimuovi campi che non devono essere modificabili dal client
+    const safeInput = { ...input } as Record<string, unknown>;
+    delete safeInput.workspace_id;
+    delete safeInput.id;
+    delete safeInput.created_at;
+    delete safeInput.lead_score;
+    delete safeInput.converted_user_id;
+    delete safeInput.converted_workspace_id;
+    delete safeInput.converted_at;
+    delete safeInput.linked_quote_ids;
+
     // Aggiorna
     const { data: updated, error: updateError } = await supabaseAdmin
       .from('reseller_prospects')
-      .update(input)
+      .update(safeInput)
       .eq('id', prospectId)
       .select()
       .single();

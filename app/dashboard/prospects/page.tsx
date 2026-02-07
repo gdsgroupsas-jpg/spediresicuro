@@ -381,6 +381,16 @@ export default function ProspectsPage() {
 // COMPONENTI
 // ============================================
 
+// Mappa colori esplicita per Tailwind JIT (classi dinamiche non funzionano)
+const STAT_COLORS: Record<string, { label: string; value: string }> = {
+  gray: { label: 'text-gray-500', value: 'text-gray-600' },
+  blue: { label: 'text-blue-500', value: 'text-blue-600' },
+  orange: { label: 'text-orange-500', value: 'text-orange-600' },
+  green: { label: 'text-green-500', value: 'text-green-600' },
+  indigo: { label: 'text-indigo-500', value: 'text-indigo-600' },
+  red: { label: 'text-red-500', value: 'text-red-600' },
+};
+
 function StatCard({
   label,
   value,
@@ -394,12 +404,11 @@ function StatCard({
   color: string;
   isText?: boolean;
 }) {
+  const colors = STAT_COLORS[color] || STAT_COLORS.gray;
   return (
     <div className="bg-white p-3 rounded-xl border border-gray-200 shadow-sm flex flex-col items-center min-w-[100px]">
-      <span className={`text-xs text-${color}-500 uppercase font-bold`}>{label}</span>
-      <span className={`${isText ? 'text-sm' : 'text-xl'} font-bold text-${color}-600`}>
-        {value}
-      </span>
+      <span className={`text-xs uppercase font-bold ${colors.label}`}>{label}</span>
+      <span className={`${isText ? 'text-sm' : 'text-xl'} font-bold ${colors.value}`}>{value}</span>
     </div>
   );
 }
