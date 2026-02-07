@@ -14,8 +14,10 @@ import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { PROSPECT_SECTORS, DELIVERY_MODES } from '@/types/commercial-quotes';
 import type { CreateCommercialQuoteInput, DeliveryMode } from '@/types/commercial-quotes';
-import { getAvailableCouriersForUserAction } from '@/actions/price-lists';
-import { createCommercialQuoteAction } from '@/actions/commercial-quotes';
+import {
+  createCommercialQuoteAction,
+  getAvailableCarriersForQuotesAction,
+} from '@/actions/commercial-quotes';
 import { AlertTriangle, Building2, Loader2, Plus, Send, Truck, User, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
@@ -98,19 +100,19 @@ export function QuoteForm({ onQuoteCreated }: QuoteFormProps) {
     );
   }, [deliveryMode, filteredCouriers, selectedCourier]);
 
-  // Carica corrieri disponibili
+  // Carica corrieri disponibili (dai listini attivi del workspace)
   useEffect(() => {
     async function loadCouriers() {
       try {
-        const result = await getAvailableCouriersForUserAction();
-        if (result.success && result.couriers) {
+        const result = await getAvailableCarriersForQuotesAction();
+        if (result.success && result.data) {
           setCouriers(
-            result.couriers.map((c: any) => ({
-              courierId: c.courierId,
-              courierName: c.courierName || c.displayName,
-              contractCode: c.contractCode || c.carrierCode,
-              carrierCode: c.carrierCode || c.contractCode,
-              doesClientPickup: c.doesClientPickup ?? false,
+            result.data.map((c) => ({
+              courierId: c.carrierCode,
+              courierName: c.courierName,
+              contractCode: c.contractCode,
+              carrierCode: c.carrierCode,
+              doesClientPickup: c.doesClientPickup,
             }))
           );
         }

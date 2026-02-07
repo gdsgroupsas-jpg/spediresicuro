@@ -1341,6 +1341,105 @@ export async function renewExpiredQuoteAction(
 }
 
 // ============================================
+// AVAILABLE CARRIERS (workspace-scoped)
+// ============================================
+
+/**
+ * Restituisce i corrieri disponibili per il preventivatore commerciale.
+ * Basato sui price_lists attivi del workspace (NON sulle courier_configs dell'utente).
+ * Ogni listino attivo con metadata.contract_code rappresenta un corriere disponibile.
+ */
+export async function getAvailableCarriersForQuotesAction(): Promise<
+  ActionResult<
+    Array<{
+      contractCode: string;
+      carrierCode: string;
+      courierName: string;
+      priceListId: string;
+      doesClientPickup: boolean;
+    }>
+  >
+> {
+  try {
+    const wsAuth = await getWorkspaceAuth();
+    if (!wsAuth) return { success: false, error: 'Non autenticato' };
+
+    const workspaceId = wsAuth.workspace.id;
+
+    // Carica tutti i listini attivi del workspace
+    const { data: priceLists, error } = await supabaseAdmin
+      .from('price_lists')
+      .select('id, name, metadata')
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'active');
+
+    if (error) {
+      return { success: false, error: `Errore caricamento listini: ${error.message}` };
+    }
+
+    if (!priceLists || priceLists.length === 0) {
+      return { success: true, data: [] };
+    }
+
+    // Estrai corrieri dai listini con contract_code nel metadata
+    const carriers: Array<{
+      contractCode: string;
+      carrierCode: string;
+      courierName: string;
+      priceListId: string;
+      doesClientPickup: boolean;
+    }> = [];
+
+    const contractCodes: string[] = [];
+
+    for (const pl of priceLists) {
+      const metadata = pl.metadata as Record<string, unknown> | null;
+      const contractCode = metadata?.contract_code as string | undefined;
+      if (!contractCode) continue;
+
+      const carrierCode = (metadata?.carrier_code as string) || contractCode;
+      const courierName = formatCarrierDisplayName(carrierCode);
+
+      carriers.push({
+        contractCode,
+        carrierCode,
+        courierName,
+        priceListId: pl.id,
+        doesClientPickup: false,
+      });
+      contractCodes.push(contractCode);
+    }
+
+    // Arricchisci con does_client_pickup da supplier_price_list_config
+    if (contractCodes.length > 0) {
+      const { data: configs } = await supabaseAdmin
+        .from('supplier_price_list_config')
+        .select('contract_code, does_client_pickup')
+        .in('contract_code', contractCodes);
+
+      if (configs && configs.length > 0) {
+        const pickupMap = new Map<string, boolean>();
+        for (const cfg of configs) {
+          if (cfg.contract_code) {
+            pickupMap.set(cfg.contract_code, cfg.does_client_pickup ?? false);
+          }
+        }
+        for (const carrier of carriers) {
+          if (pickupMap.has(carrier.contractCode)) {
+            carrier.doesClientPickup = pickupMap.get(carrier.contractCode)!;
+          }
+        }
+      }
+    }
+
+    return { success: true, data: carriers };
+  } catch (error: any) {
+    console.error('Errore getAvailableCarriersForQuotesAction:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+// ============================================
 // HELPERS
 // ============================================
 
