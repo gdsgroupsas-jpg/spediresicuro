@@ -176,7 +176,7 @@ export function ConvertDialog({
                     id="convert-company"
                     value={companyName}
                     onChange={(e) => setCompanyName(e.target.value)}
-                    placeholder="SELFIE SRL"
+                    placeholder="Es. Azienda Esempio SRL"
                     className="mt-1"
                   />
                 </div>

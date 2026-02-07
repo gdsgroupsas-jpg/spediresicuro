@@ -333,7 +333,7 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
                         configName: e.target.value,
                       }))
                     }
-                    placeholder="es. Account Principale, Contratto Drop"
+                    placeholder="es. Account Principale, Account Test"
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
                   />
                   <p className="text-xs text-gray-400 mt-1">
@@ -406,9 +406,8 @@ export default function SpedisciOnlineWizard({ onClose, onSuccess }: SpedisciOnl
                         contractMapping: e.target.value,
                       }))
                     }
-                    placeholder={`postedeliverybusiness-Solution-and-Shipment PosteDeliveryBusiness
-interno-Interno Interno
-ups-UPS5-INTERNAZIONALE-(F)-[CM14] UPS`}
+                    placeholder={`corriere-codice-servizio NomeCorriere
+corriere2-codice2 NomeCorriere2`}
                     rows={6}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"
                   />
@@ -422,13 +421,10 @@ ups-UPS5-INTERNAZIONALE-(F)-[CM14] UPS`}
                       <strong>Esempi corretti:</strong>
                       <br />
                       <code className="bg-gray-100 px-1 rounded block mt-1">
-                        postedeliverybusiness-Solution-and-Shipment PosteDeliveryBusiness
+                        corriere-codice-servizio NomeCorriere
                       </code>
                       <code className="bg-gray-100 px-1 rounded block">
-                        interno-Interno Interno
-                      </code>
-                      <code className="bg-gray-100 px-1 rounded block">
-                        ups-UPS5-INTERNAZIONALE-(F)-[CM14] UPS
+                        corriere2-codice2 NomeCorriere2
                       </code>
                     </p>
                     <p className="text-xs text-blue-600 mt-2">

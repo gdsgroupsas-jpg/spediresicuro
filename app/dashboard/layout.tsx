@@ -85,7 +85,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       <DashboardSidebar />
 
       {/* Main Content Area */}
-      <div className="lg:pl-64 flex flex-col min-h-screen">
+      <div className="lg:pl-64 flex flex-col min-h-screen bg-gray-50 text-gray-900">
         {/* Content */}
         <main className="flex-1 pb-20 lg:pb-0">{children}</main>
       </div>

@@ -240,7 +240,7 @@ export default function PosteWizard({ onClose, onSuccess }: PosteWizardProps) {
                   </label>
                   <input
                     type="text"
-                    placeholder="Es. CDC-123456"
+                    placeholder="Es. CDC-000000"
                     value={formData.cdc}
                     onChange={(e) => setFormData((prev) => ({ ...prev, cdc: e.target.value }))}
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all font-mono text-sm"

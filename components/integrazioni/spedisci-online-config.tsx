@@ -245,7 +245,7 @@ export default function SpedisciOnlineConfig() {
                 type="text"
                 value={dominio}
                 onChange={(e) => setDominio(e.target.value)}
-                placeholder="ecommerceitalia.spedisci.online"
+                placeholder="tuodominio.spedisci.online"
                 className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md text-base font-medium text-gray-900 bg-white hover:border-gray-400 transition-all"
                 style={{ fontSize: '15px', color: '#111827' }}
               />
@@ -260,7 +260,7 @@ export default function SpedisciOnlineConfig() {
               type="url"
               value={baseUrl}
               onChange={(e) => setBaseUrl(e.target.value)}
-              placeholder="https://ecommerceitalia.spedisci.online/api/v2/"
+              placeholder="https://tuodominio.spedisci.online/api/v2/"
               className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md text-base font-mono font-medium text-gray-900 bg-white hover:border-gray-400 transition-all"
               style={{ fontSize: '15px', color: '#111827' }}
             />
@@ -348,7 +348,7 @@ export default function SpedisciOnlineConfig() {
                   type="text"
                   value={newContract.codice}
                   onChange={(e) => setNewContract({ ...newContract, codice: e.target.value })}
-                  placeholder="Es: gls-NN6-STANDARD-(TR-VE)"
+                  placeholder="Es: corriere-CODICE-SERVIZIO"
                   className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono text-gray-900 bg-white"
                   style={{ fontSize: '15px', letterSpacing: '0.3px', color: '#111827' }}
                   onKeyPress={(e) => {

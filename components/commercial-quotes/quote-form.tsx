@@ -155,7 +155,7 @@ export function QuoteForm({ onQuoteCreated }: QuoteFormProps) {
               id="prospect-company"
               value={prospectCompany}
               onChange={(e) => setProspectCompany(e.target.value)}
-              placeholder="Es. SELFIE SRL"
+              placeholder="Es. Azienda Esempio SRL"
               required
               className="mt-1"
             />

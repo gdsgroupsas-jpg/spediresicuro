@@ -275,7 +275,7 @@ export default function SpediamoProWizard({ onClose, onSuccess }: SpediamoProWiz
                     onChange={(e) =>
                       setFormData((prev) => ({ ...prev, configName: e.target.value }))
                     }
-                    placeholder="es. SpediamoPro Principale, Account Test"
+                    placeholder="es. Account Principale, Account Test"
                     className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition-all font-mono text-sm"
                   />
                   <p className="text-xs text-gray-400 mt-1">

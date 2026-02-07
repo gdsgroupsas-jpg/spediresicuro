@@ -534,7 +534,7 @@ export function SupplierPriceListConfigDialog({
                         carrier_code: e.target.value.toLowerCase(),
                       }))
                     }
-                    placeholder="Es: gls, postedeliverybusiness"
+                    placeholder="Es: corriere"
                     className="mt-1"
                   />
                   <p className="text-xs text-gray-500 mt-1">

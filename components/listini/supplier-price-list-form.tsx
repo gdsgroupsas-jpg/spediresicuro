@@ -339,7 +339,7 @@ export function SupplierPriceListForm({
             id="carrier_code"
             value={formData.carrier_code}
             onChange={(e) => setFormData({ ...formData, carrier_code: e.target.value })}
-            placeholder="Es: gls, postedeliverybusiness"
+            placeholder="Es: corriere"
             required
             className="mt-1"
           />

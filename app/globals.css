@@ -76,209 +76,24 @@ html {
 }
 
 /* ============================================
-   FIX: SELEZIONE TESTO NEGLI INPUT
+   INPUT TEXT VISIBILITY
    ============================================ */
-/* ⚠️ P0-3 FIX: Input con sfondo chiaro: testo nero */
-/* Input con sfondo scuro sono esclusi e usano testo bianco */
-input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900']),
-textarea:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900']),
-select:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900']) {
-  color: #111827 !important; /* Grigio scuro/nero - sempre visibile */
-  -webkit-text-fill-color: #111827 !important;
-  -webkit-user-select: text;
-  user-select: text;
+/* Selezione testo con brand color */
+input::selection,
+textarea::selection,
+select::selection {
+  background-color: rgba(250, 204, 21, 0.3);
+  color: #111827;
 }
 
-/* ⚠️ P0-3 FIX: Input con sfondo scuro: testo bianco (override) */
-input[class*='bg-gray-800'],
-input[class*='bg-gray-900'],
-input[class*='bg-\[#0f0f11\]'],
-input[class*='bg-slate-800'],
-input[class*='bg-slate-900'],
-textarea[class*='bg-gray-800'],
-textarea[class*='bg-gray-900'],
-textarea[class*='bg-\[#0f0f11\]'],
-textarea[class*='bg-slate-800'],
-textarea[class*='bg-slate-900'],
-select[class*='bg-gray-800'],
-select[class*='bg-gray-900'],
-select[class*='bg-\[#0f0f11\]'],
-select[class*='bg-slate-800'],
-select[class*='bg-slate-900'] {
-  color: #ffffff !important;
-  -webkit-text-fill-color: #ffffff !important;
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Placeholder visibile per input con sfondo chiaro */
-input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900'])::placeholder,
-textarea:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900'])::placeholder {
-  color: #6b7280 !important; /* Grigio medio */
-  opacity: 0.7 !important;
-}
-
-/* Placeholder visibile per input con sfondo scuro (contrasto WCAG) */
-input[class*='bg-gray-800']::placeholder,
-input[class*='bg-gray-900']::placeholder,
-input[class*='bg-\[#0f0f11\]']::placeholder,
-input[class*='bg-slate-800']::placeholder,
-input[class*='bg-slate-900']::placeholder,
-textarea[class*='bg-gray-800']::placeholder,
-textarea[class*='bg-gray-900']::placeholder,
-textarea[class*='bg-\[#0f0f11\]']::placeholder,
-textarea[class*='bg-slate-800']::placeholder,
-textarea[class*='bg-slate-900']::placeholder {
-  color: #9ca3af !important; /* Grigio chiaro - contrasto WCAG AA su bg-gray-800 */
-  opacity: 1 !important;
-}
-
-/* Stile selezione personalizzato - input con sfondo chiaro */
-input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900'])::selection,
-textarea:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900'])::selection {
-  background-color: rgba(250, 204, 21, 0.3) !important;
-  color: #111827 !important;
-}
-
-input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900'])::-moz-selection,
-textarea:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900'])::-moz-selection {
-  background-color: rgba(250, 204, 21, 0.3) !important;
-  color: #111827 !important;
-}
-
-/* Stile selezione personalizzato - input con sfondo scuro */
-input[class*='bg-gray-800']::selection,
-input[class*='bg-gray-900']::selection,
-input[class*='bg-\[#0f0f11\]']::selection,
-input[class*='bg-slate-800']::selection,
-input[class*='bg-slate-900']::selection,
-textarea[class*='bg-gray-800']::selection,
-textarea[class*='bg-gray-900']::selection,
-textarea[class*='bg-\[#0f0f11\]']::selection,
-textarea[class*='bg-slate-800']::selection,
-textarea[class*='bg-slate-900']::selection,
-select[class*='bg-gray-800']::selection,
-select[class*='bg-gray-900']::selection,
-select[class*='bg-\[#0f0f11\]']::selection,
-select[class*='bg-slate-800']::selection,
-select[class*='bg-slate-900']::selection {
-  background-color: rgba(250, 204, 21, 0.4) !important;
-  color: #ffffff !important;
-}
-
-input[class*='bg-gray-800']::-moz-selection,
-input[class*='bg-gray-900']::-moz-selection,
-input[class*='bg-\[#0f0f11\]']::-moz-selection,
-input[class*='bg-slate-800']::-moz-selection,
-input[class*='bg-slate-900']::-moz-selection,
-textarea[class*='bg-gray-800']::-moz-selection,
-textarea[class*='bg-gray-900']::-moz-selection,
-textarea[class*='bg-\[#0f0f11\]']::-moz-selection,
-textarea[class*='bg-slate-800']::-moz-selection,
-textarea[class*='bg-slate-900']::-moz-selection,
-select[class*='bg-gray-800']::-moz-selection,
-select[class*='bg-gray-900']::-moz-selection,
-select[class*='bg-\[#0f0f11\]']::-moz-selection,
-select[class*='bg-slate-800']::-moz-selection,
-select[class*='bg-slate-900']::-moz-selection {
-  background-color: rgba(250, 204, 21, 0.4) !important;
-  color: #ffffff !important;
-}
-
-/* Previene comportamenti strani di autofill - input con sfondo chiaro */
-input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900']):-webkit-autofill,
-input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900']):-webkit-autofill:hover,
-input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900']):-webkit-autofill:focus,
-input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900']):-webkit-autofill:active {
+/* Autofill: mantieni sfondo bianco e testo scuro */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
   -webkit-text-fill-color: #111827 !important;
   -webkit-box-shadow: 0 0 0px 1000px white inset !important;
   transition: background-color 5000s ease-in-out 0s;
-  color: #111827 !important;
-}
-
-/* Previene comportamenti strani di autofill - input con sfondo scuro */
-input[class*='bg-gray-800']:-webkit-autofill,
-input[class*='bg-gray-800']:-webkit-autofill:hover,
-input[class*='bg-gray-800']:-webkit-autofill:focus,
-input[class*='bg-gray-800']:-webkit-autofill:active,
-input[class*='bg-gray-900']:-webkit-autofill,
-input[class*='bg-gray-900']:-webkit-autofill:hover,
-input[class*='bg-gray-900']:-webkit-autofill:focus,
-input[class*='bg-gray-900']:-webkit-autofill:active,
-input[class*='bg-\[#0f0f11\]']:-webkit-autofill,
-input[class*='bg-\[#0f0f11\]']:-webkit-autofill:hover,
-input[class*='bg-\[#0f0f11\]']:-webkit-autofill:focus,
-input[class*='bg-\[#0f0f11\]']:-webkit-autofill:active,
-input[class*='bg-slate-800']:-webkit-autofill,
-input[class*='bg-slate-800']:-webkit-autofill:hover,
-input[class*='bg-slate-800']:-webkit-autofill:focus,
-input[class*='bg-slate-800']:-webkit-autofill:active,
-input[class*='bg-slate-900']:-webkit-autofill,
-input[class*='bg-slate-900']:-webkit-autofill:hover,
-input[class*='bg-slate-900']:-webkit-autofill:focus,
-input[class*='bg-slate-900']:-webkit-autofill:active {
-  -webkit-text-fill-color: #ffffff !important;
-  -webkit-box-shadow: 0 0 0px 1000px #1f2937 inset !important; /* bg-gray-800 */
-  transition: background-color 5000s ease-in-out 0s;
-  color: #ffffff !important;
-}
-
-/* Forza color scheme light per input con sfondo chiaro */
-input:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900']),
-textarea:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900']),
-select:not([class*='bg-gray-800']):not([class*='bg-gray-900']):not([class*='bg-\[#0f0f11\]']):not(
-    [class*='bg-slate-800']
-  ):not([class*='bg-slate-900']) {
-  color-scheme: light !important;
-}
-
-/* Forza color scheme dark per input con sfondo scuro (migliora contrasto caret) */
-input[class*='bg-gray-800'],
-input[class*='bg-gray-900'],
-input[class*='bg-\[#0f0f11\]'],
-input[class*='bg-slate-800'],
-input[class*='bg-slate-900'],
-textarea[class*='bg-gray-800'],
-textarea[class*='bg-gray-900'],
-textarea[class*='bg-\[#0f0f11\]'],
-textarea[class*='bg-slate-800'],
-textarea[class*='bg-slate-900'],
-select[class*='bg-gray-800'],
-select[class*='bg-gray-900'],
-select[class*='bg-\[#0f0f11\]'],
-select[class*='bg-slate-800'],
-select[class*='bg-slate-900'] {
-  color-scheme: dark !important;
 }
 
 /* Assicura che il logo SVG non venga tagliato */
@@ -445,6 +260,14 @@ header svg {
   }
 
   .card-lift:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 8px 25px -5px rgba(0, 0, 0, 0.1),
+      0 0 0 1px rgba(0, 0, 0, 0.05);
+  }
+
+  /* Card hover per sezioni dark (landing/marketing) */
+  .theme-dark .card-lift:hover {
     transform: translateY(-4px);
     box-shadow:
       0 20px 40px -10px rgba(250, 204, 21, 0.2),
@@ -469,18 +292,35 @@ header svg {
   }
 
   .status-success {
-    @apply bg-green-500/20 text-green-400 border border-green-500/30;
+    @apply bg-emerald-50 text-emerald-700 border border-emerald-200;
   }
 
   .status-warning {
-    @apply bg-yellow-500/20 text-yellow-400 border border-yellow-500/30;
+    @apply bg-amber-50 text-amber-700 border border-amber-200;
   }
 
   .status-error {
-    @apply bg-red-500/20 text-red-400 border border-red-500/30;
+    @apply bg-red-50 text-red-700 border border-red-200;
   }
 
   .status-info {
-    @apply bg-blue-500/20 text-blue-400 border border-blue-500/30;
+    @apply bg-blue-50 text-blue-700 border border-blue-200;
+  }
+
+  /* Status badges per sezioni dark (landing/marketing) */
+  .theme-dark .status-success {
+    @apply bg-green-500/20 text-green-400 border-green-500/30;
+  }
+
+  .theme-dark .status-warning {
+    @apply bg-yellow-500/20 text-yellow-400 border-yellow-500/30;
+  }
+
+  .theme-dark .status-error {
+    @apply bg-red-500/20 text-red-400 border-red-500/30;
+  }
+
+  .theme-dark .status-info {
+    @apply bg-blue-500/20 text-blue-400 border-blue-500/30;
   }
 }

@@ -510,7 +510,7 @@ export default function SpedisciOnlineConfigMulti() {
                     type="text"
                     value={formData.dominio}
                     onChange={(e) => setFormData({ ...formData, dominio: e.target.value })}
-                    placeholder="ecommerceitalia.spedisci.online"
+                    placeholder="tuodominio.spedisci.online"
                     className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 focus:shadow-md text-base font-medium text-gray-900 bg-white hover:border-gray-400 transition-all"
                     style={{ fontSize: '15px' }}
                   />
@@ -523,7 +523,7 @@ export default function SpedisciOnlineConfigMulti() {
                     type="url"
                     value={formData.base_url}
                     onChange={(e) => setFormData({ ...formData, base_url: e.target.value })}
-                    placeholder="https://ecommerceitalia.spedisci.online/api/v2/"
+                    placeholder="https://tuodominio.spedisci.online/api/v2/"
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono text-gray-900 bg-white"
                     style={{ fontSize: '15px' }}
                   />
@@ -581,7 +581,7 @@ export default function SpedisciOnlineConfigMulti() {
                         type="text"
                         value={newContract.codice}
                         onChange={(e) => setNewContract({ ...newContract, codice: e.target.value })}
-                        placeholder="Codice contratto (es: gls-NN6-STANDARD-(TR-VE))"
+                        placeholder="Codice contratto (es: corriere-CODICE-SERVIZIO)"
                         className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-base font-mono text-gray-900 bg-white"
                         style={{ fontSize: '15px' }}
                       />

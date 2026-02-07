@@ -65,6 +65,19 @@ const DropdownMenuTrigger = React.forwardRef<HTMLButtonElement, DropdownMenuTrig
       props.onClick?.(e);
     };
 
+    // asChild: clona il figlio diretto passandogli le prop del trigger
+    if (asChild && React.isValidElement(children)) {
+      return React.cloneElement(children as React.ReactElement<any>, {
+        ref,
+        onClick: (e: React.MouseEvent<HTMLButtonElement>) => {
+          handleClick(e);
+          (children as React.ReactElement<any>).props.onClick?.(e);
+        },
+        'aria-expanded': isOpen,
+        'aria-haspopup': 'menu' as const,
+      });
+    }
+
     return (
       <button
         ref={ref}

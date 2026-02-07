@@ -1,33 +1,57 @@
 'use client';
 
-import { ReactNode } from 'react';
+import { ReactNode, createContext, useContext } from 'react';
 import { cn } from '@/lib/utils';
+
+// Context per propagare il variant ai sotto-componenti
+type CardVariant = 'light' | 'dark';
+const CardVariantContext = createContext<CardVariant>('light');
+function useCardVariant() {
+  return useContext(CardVariantContext);
+}
 
 interface CardProps {
   children: ReactNode;
   className?: string;
   hover?: boolean;
   glass?: boolean;
+  variant?: CardVariant;
 }
 
 /**
- * Card Component - World-Class Design
+ * Card Component
  *
- * Card con effetti hover avanzati, glassmorphism opzionale
- * e stile cruscotto finanziario per dati numerici.
+ * Light (default): bg bianco, bordo grigio, ombra sottile — per dashboard
+ * Dark: bg void, bordo giallo — per landing/marketing
+ * Glass: glassmorphism (sempre dark)
  */
-export function Card({ children, className, hover = true, glass = false }: CardProps) {
+export function Card({
+  children,
+  className,
+  hover = true,
+  glass = false,
+  variant = 'light',
+}: CardProps) {
+  // Glass forza il dark
+  const effectiveVariant = glass ? 'dark' : variant;
+
   return (
-    <div
-      className={cn(
-        'rounded-xl p-6',
-        glass ? 'glass' : 'bg-[#0f0f11] border border-[#FACC15]/10',
-        hover && 'card-lift',
-        className
-      )}
-    >
-      {children}
-    </div>
+    <CardVariantContext.Provider value={effectiveVariant}>
+      <div
+        className={cn(
+          'rounded-xl p-6',
+          glass
+            ? 'glass'
+            : effectiveVariant === 'dark'
+              ? 'bg-[#0f0f11] border border-[#FACC15]/10'
+              : 'bg-white border border-gray-200 shadow-sm',
+          hover && 'card-lift',
+          className
+        )}
+      >
+        {children}
+      </div>
+    </CardVariantContext.Provider>
   );
 }
 
@@ -46,7 +70,18 @@ interface CardTitleProps {
 }
 
 export function CardTitle({ children, className }: CardTitleProps) {
-  return <h3 className={cn('text-lg font-semibold text-gray-100', className)}>{children}</h3>;
+  const variant = useCardVariant();
+  return (
+    <h3
+      className={cn(
+        'text-lg font-semibold',
+        variant === 'dark' ? 'text-gray-100' : 'text-gray-900',
+        className
+      )}
+    >
+      {children}
+    </h3>
+  );
 }
 
 interface CardDescriptionProps {
@@ -55,7 +90,18 @@ interface CardDescriptionProps {
 }
 
 export function CardDescription({ children, className }: CardDescriptionProps) {
-  return <p className={cn('text-sm text-gray-400 mt-1', className)}>{children}</p>;
+  const variant = useCardVariant();
+  return (
+    <p
+      className={cn(
+        'text-sm mt-1',
+        variant === 'dark' ? 'text-gray-400' : 'text-gray-500',
+        className
+      )}
+    >
+      {children}
+    </p>
+  );
 }
 
 interface CardContentProps {
@@ -64,16 +110,16 @@ interface CardContentProps {
 }
 
 export function CardContent({ children, className }: CardContentProps) {
-  return <div className={cn('text-gray-300', className)}>{children}</div>;
+  const variant = useCardVariant();
+  return (
+    <div className={cn(variant === 'dark' ? 'text-gray-300' : 'text-gray-700', className)}>
+      {children}
+    </div>
+  );
 }
 
 /**
  * FinancialDisplay - Stile cruscotto finanziario
- *
- * Componente per mostrare numeri in stile cruscotto:
- * - Font monospaziato per allineamento perfetto
- * - Badge colorati per status
- * - Layout tabellare professionale
  */
 interface FinancialDisplayProps {
   label: string;
@@ -83,6 +129,7 @@ interface FinancialDisplayProps {
 }
 
 export function FinancialDisplay({ label, value, status, className }: FinancialDisplayProps) {
+  const variant = useCardVariant();
   const statusClasses = {
     success: 'status-success',
     warning: 'status-warning',
@@ -93,13 +140,21 @@ export function FinancialDisplay({ label, value, status, className }: FinancialD
   return (
     <div
       className={cn(
-        'flex items-center justify-between py-2 border-b border-[#FACC15]/5',
+        'flex items-center justify-between py-2 border-b',
+        variant === 'dark' ? 'border-[#FACC15]/5' : 'border-gray-100',
         className
       )}
     >
-      <span className="text-sm text-gray-400">{label}</span>
+      <span className={cn('text-sm', variant === 'dark' ? 'text-gray-400' : 'text-gray-500')}>
+        {label}
+      </span>
       <div className="flex items-center gap-2">
-        <span className="font-mono-numbers text-lg font-bold text-gray-100">
+        <span
+          className={cn(
+            'font-mono-numbers text-lg font-bold',
+            variant === 'dark' ? 'text-gray-100' : 'text-gray-900'
+          )}
+        >
           {typeof value === 'number'
             ? value.toLocaleString('it-IT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
             : value}
@@ -121,11 +176,28 @@ interface TableRowProps {
 }
 
 export function TableRow({ label, value, highlight, className }: TableRowProps) {
+  const variant = useCardVariant();
   return (
-    <tr className={cn('border-b border-[#FACC15]/5', highlight && 'bg-[#FACC15]/5', className)}>
-      <td className="py-3 px-4 text-sm text-gray-400">{label}</td>
+    <tr
+      className={cn(
+        'border-b',
+        variant === 'dark' ? 'border-[#FACC15]/5' : 'border-gray-100',
+        highlight && (variant === 'dark' ? 'bg-[#FACC15]/5' : 'bg-amber-50'),
+        className
+      )}
+    >
+      <td
+        className={cn('py-3 px-4 text-sm', variant === 'dark' ? 'text-gray-400' : 'text-gray-500')}
+      >
+        {label}
+      </td>
       <td className="py-3 px-4 text-right">
-        <span className="font-mono-numbers font-semibold text-gray-100">
+        <span
+          className={cn(
+            'font-mono-numbers font-semibold',
+            variant === 'dark' ? 'text-gray-100' : 'text-gray-900'
+          )}
+        >
           {typeof value === 'number' ? value.toLocaleString('it-IT') : value}
         </span>
       </td>
