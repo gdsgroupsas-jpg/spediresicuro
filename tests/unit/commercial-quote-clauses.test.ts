@@ -10,10 +10,18 @@ import { getDefaultClauses, mergeWithCustomClauses } from '@/lib/commercial-quot
 import type { QuoteClause } from '@/types/commercial-quotes';
 
 describe('getDefaultClauses', () => {
-  it('dovrebbe restituire 8 clausole standard', () => {
+  it('dovrebbe restituire 8 clausole standard (senza processing)', () => {
     const clauses = getDefaultClauses('excluded');
     expect(clauses).toHaveLength(8);
     expect(clauses.every((c) => c.type === 'standard')).toBe(true);
+  });
+
+  it("dovrebbe restituire 9 clausole quando goodsNeedsProcessing e' attivo", () => {
+    const clauses = getDefaultClauses('excluded', 22, { goodsNeedsProcessing: true });
+    expect(clauses).toHaveLength(9);
+    expect(clauses.every((c) => c.type === 'standard')).toBe(true);
+    const processingClause = clauses.find((c) => c.title === 'Lavorazione');
+    expect(processingClause).toBeDefined();
   });
 
   it('dovrebbe avere titoli unici per ogni clausola', () => {
@@ -89,6 +97,77 @@ describe('getDefaultClauses', () => {
     expect(titles).toContain('Tracking');
     expect(titles).toContain('Supplementi esclusi');
     expect(titles).toContain('Tempi di consegna');
+  });
+
+  // --- Test Delivery Mode ---
+
+  it('dovrebbe generare clausola ritiro corriere per carrier_pickup', () => {
+    const clauses = getDefaultClauses('excluded', 22, { deliveryMode: 'carrier_pickup' });
+    const pickupClause = clauses.find((c) => c.title === 'Ritiro');
+    expect(pickupClause).toBeDefined();
+    expect(pickupClause!.text).toContain('corriere');
+  });
+
+  it('dovrebbe generare clausola ritiro propria flotta per own_fleet', () => {
+    const clauses = getDefaultClauses('excluded', 22, { deliveryMode: 'own_fleet' });
+    const pickupClause = clauses.find((c) => c.title === 'Ritiro');
+    expect(pickupClause).toBeDefined();
+    expect(pickupClause!.text).toContain('nostra flotta');
+  });
+
+  it('dovrebbe generare clausola consegna al punto per client_dropoff', () => {
+    const clauses = getDefaultClauses('excluded', 22, { deliveryMode: 'client_dropoff' });
+    const consClause = clauses.find((c) => c.title === 'Consegna');
+    expect(consClause).toBeDefined();
+    expect(consClause!.text).toContain('punto/magazzino');
+  });
+
+  it('dovrebbe includere supplemento ritiro se specificato (carrier_pickup)', () => {
+    const clauses = getDefaultClauses('excluded', 22, {
+      deliveryMode: 'carrier_pickup',
+      pickupFee: 3.5,
+    });
+    const pickupClause = clauses.find((c) => c.title === 'Ritiro');
+    expect(pickupClause!.text).toContain('3.50');
+    expect(pickupClause!.text).toContain('supplemento');
+  });
+
+  it('dovrebbe indicare ritiro gratuito se pickupFee nullo (own_fleet)', () => {
+    const clauses = getDefaultClauses('excluded', 22, {
+      deliveryMode: 'own_fleet',
+      pickupFee: null,
+    });
+    const pickupClause = clauses.find((c) => c.title === 'Ritiro');
+    expect(pickupClause!.text).toContain('gratuito');
+  });
+
+  // --- Test Lavorazione Merce ---
+
+  it('dovrebbe NON includere clausola lavorazione se goodsNeedsProcessing=false', () => {
+    const clauses = getDefaultClauses('excluded', 22, { goodsNeedsProcessing: false });
+    const processingClause = clauses.find((c) => c.title === 'Lavorazione');
+    expect(processingClause).toBeUndefined();
+  });
+
+  it('dovrebbe includere clausola lavorazione con costo se specificato', () => {
+    const clauses = getDefaultClauses('excluded', 22, {
+      goodsNeedsProcessing: true,
+      processingFee: 1.5,
+    });
+    const processingClause = clauses.find((c) => c.title === 'Lavorazione');
+    expect(processingClause).toBeDefined();
+    expect(processingClause!.text).toContain('1.50');
+    expect(processingClause!.text).toContain('IVA');
+  });
+
+  it('dovrebbe indicare lavorazione inclusa se processingFee nullo', () => {
+    const clauses = getDefaultClauses('excluded', 22, {
+      goodsNeedsProcessing: true,
+      processingFee: null,
+    });
+    const processingClause = clauses.find((c) => c.title === 'Lavorazione');
+    expect(processingClause).toBeDefined();
+    expect(processingClause!.text).toContain('inclusa');
   });
 });
 

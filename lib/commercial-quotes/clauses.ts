@@ -5,7 +5,7 @@
  * Il reseller puo' aggiungere clausole custom oltre a queste.
  */
 
-import type { QuoteClause } from '@/types/commercial-quotes';
+import type { QuoteClause, DeliveryMode } from '@/types/commercial-quotes';
 
 /**
  * Ritorna le clausole standard per un preventivo commerciale.
@@ -20,6 +20,10 @@ export function getDefaultClauses(
     volumetricDivisor?: number;
     deliveryTimeDays?: string;
     deliveryTimeIslands?: string;
+    deliveryMode?: DeliveryMode;
+    pickupFee?: number | null;
+    goodsNeedsProcessing?: boolean;
+    processingFee?: number | null;
   }
 ): QuoteClause[] {
   const codFee = options?.codFee ?? 2.0;
@@ -27,23 +31,36 @@ export function getDefaultClauses(
   const volumetricDivisor = options?.volumetricDivisor ?? 5000;
   const deliveryTimeDays = options?.deliveryTimeDays ?? '24-48h';
   const deliveryTimeIslands = options?.deliveryTimeIslands ?? '48-72h';
+  const deliveryMode = options?.deliveryMode ?? 'carrier_pickup';
+  const pickupFee = options?.pickupFee ?? null;
+  const goodsNeedsProcessing = options?.goodsNeedsProcessing ?? false;
+  const processingFee = options?.processingFee ?? null;
 
   const vatText =
     vatMode === 'excluded'
       ? `Prezzi IVA esclusa (${vatRate}%)`
       : `Prezzi IVA inclusa (${vatRate}%)`;
 
-  return [
+  // Clausola ritiro dinamica in base al delivery mode
+  const pickupClause = buildPickupClause(deliveryMode, pickupFee);
+
+  // Clausola lavorazione (solo se attiva)
+  const processingClause = goodsNeedsProcessing ? buildProcessingClause(processingFee) : null;
+
+  const clauses: QuoteClause[] = [
     {
       title: 'IVA',
       text: vatText,
       type: 'standard',
     },
-    {
-      title: 'Ritiro',
-      text: 'Ritiro gratuito presso la sede del mittente',
-      type: 'standard',
-    },
+    pickupClause,
+  ];
+
+  if (processingClause) {
+    clauses.push(processingClause);
+  }
+
+  clauses.push(
     {
       title: 'Tempi di consegna',
       text: `Tempi di consegna: ${deliveryTimeDays} per Italia, ${deliveryTimeIslands} per isole`,
@@ -73,8 +90,10 @@ export function getDefaultClauses(
       title: 'Supplementi esclusi',
       text: 'Supplementi per ZTL, fermo deposito e giacenza non inclusi nel prezzo base',
       type: 'standard',
-    },
-  ];
+    }
+  );
+
+  return clauses;
 }
 
 /**
@@ -86,4 +105,49 @@ export function mergeWithCustomClauses(
   custom: QuoteClause[]
 ): QuoteClause[] {
   return [...defaults, ...custom];
+}
+
+/**
+ * Genera la clausola lavorazione merce.
+ */
+function buildProcessingClause(processingFee: number | null): QuoteClause {
+  const feeText =
+    processingFee && processingFee > 0
+      ? `Lavorazione merce (etichettatura, imballaggio): ${processingFee.toFixed(2)}\u20AC + IVA per spedizione`
+      : 'Lavorazione merce (etichettatura, imballaggio) inclusa nel servizio';
+  return { title: 'Lavorazione', text: feeText, type: 'standard' };
+}
+
+/**
+ * Genera la clausola ritiro dinamica in base alla modalita' consegna.
+ */
+function buildPickupClause(deliveryMode: DeliveryMode, pickupFee: number | null): QuoteClause {
+  switch (deliveryMode) {
+    case 'carrier_pickup': {
+      const feeText =
+        pickupFee && pickupFee > 0
+          ? `Ritiro a cura del corriere presso la sede del mittente (supplemento ${pickupFee.toFixed(2)}\u20AC + IVA)`
+          : 'Ritiro gratuito a cura del corriere presso la sede del mittente';
+      return { title: 'Ritiro', text: feeText, type: 'standard' };
+    }
+    case 'own_fleet': {
+      const feeText =
+        pickupFee && pickupFee > 0
+          ? `Ritiro con nostra flotta presso la sede del mittente (supplemento ${pickupFee.toFixed(2)}\u20AC + IVA)`
+          : 'Ritiro gratuito con nostra flotta presso la sede del mittente';
+      return { title: 'Ritiro', text: feeText, type: 'standard' };
+    }
+    case 'client_dropoff':
+      return {
+        title: 'Consegna',
+        text: 'Il cliente consegna la merce presso il nostro punto/magazzino',
+        type: 'standard',
+      };
+    default:
+      return {
+        title: 'Ritiro',
+        text: 'Ritiro gratuito presso la sede del mittente',
+        type: 'standard',
+      };
+  }
 }

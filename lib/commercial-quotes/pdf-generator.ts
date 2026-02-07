@@ -14,7 +14,12 @@
  * 7. Footer: contatti
  */
 
-import type { CommercialQuote } from '@/types/commercial-quotes';
+import type {
+  CommercialQuote,
+  DeliveryMode,
+  AdditionalCarrierSnapshot,
+  PriceMatrixSnapshot,
+} from '@/types/commercial-quotes';
 import type { OrganizationBranding } from '@/types/workspace';
 
 // Colori default SpedireSicuro
@@ -208,6 +213,132 @@ export async function generateCommercialQuotePDF(
   yPos = (doc as any).lastAutoTable.finalY + 8;
 
   // ============================================
+  // 4b. MODALITA' RITIRO (se presente nello snapshot)
+  // ============================================
+
+  const deliveryMode = matrix.delivery_mode || quote.delivery_mode || 'carrier_pickup';
+  const pickupFee = matrix.pickup_fee ?? quote.pickup_fee ?? null;
+  const pickupInfo = getPickupDisplayInfo(deliveryMode, pickupFee);
+
+  doc.setFillColor(240, 253, 244); // emerald-50
+  doc.setDrawColor(16, 185, 129); // emerald-500
+  doc.setLineWidth(0.5);
+
+  const pickupBoxHeight = 12;
+  doc.roundedRect(15, yPos, 180, pickupBoxHeight, 2, 2, 'F');
+  doc.line(15, yPos, 15, yPos + pickupBoxHeight);
+
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(5, 150, 105); // emerald-600
+  doc.text(pickupInfo.title, 20, yPos + 5);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.setTextColor(85, 85, 85);
+  doc.text(pickupInfo.description, 20, yPos + 10);
+
+  yPos += pickupBoxHeight + 6;
+
+  // ============================================
+  // 4c. LAVORAZIONE MERCE (se attiva)
+  // ============================================
+
+  const goodsNeedsProcessing =
+    matrix.goods_needs_processing || quote.goods_needs_processing || false;
+
+  if (goodsNeedsProcessing) {
+    const procFee = matrix.processing_fee ?? quote.processing_fee ?? null;
+    const procInfo = getProcessingDisplayInfo(procFee);
+
+    doc.setFillColor(254, 249, 195); // yellow-100
+    doc.setDrawColor(234, 179, 8); // yellow-500
+    doc.setLineWidth(0.5);
+
+    const procBoxHeight = 12;
+    doc.roundedRect(15, yPos, 180, procBoxHeight, 2, 2, 'F');
+    doc.line(15, yPos, 15, yPos + procBoxHeight);
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(161, 98, 7); // yellow-700
+    doc.text(procInfo.title, 20, yPos + 5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(85, 85, 85);
+    doc.text(procInfo.description, 20, yPos + 10);
+
+    yPos += procBoxHeight + 6;
+  }
+
+  // ============================================
+  // 4d. MATRICI ALTERNATIVE (multi-corriere)
+  // ============================================
+
+  const additionalCarriers = quote.additional_carriers as AdditionalCarrierSnapshot[] | null;
+  if (additionalCarriers && additionalCarriers.length > 0) {
+    for (let acIdx = 0; acIdx < additionalCarriers.length; acIdx++) {
+      const ac = additionalCarriers[acIdx];
+      const acMatrix = ac.price_matrix;
+
+      // Verifica spazio pagina
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 15;
+      }
+
+      // Titolo alternativa
+      doc.setFillColor(107, 114, 128); // gray-500
+      doc.roundedRect(15, yPos, 180, 10, 2, 2, 'F');
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(255, 255, 255);
+      doc.text(
+        `ALTERNATIVA ${String.fromCharCode(66 + acIdx)}: ${acMatrix.carrier_display_name}`,
+        105,
+        yPos + 7,
+        { align: 'center' }
+      );
+      yPos += 14;
+
+      // Tabella prezzi alternativa
+      const acTableHead = ['PESO', ...acMatrix.zones];
+      const acTableBody = acMatrix.weight_ranges.map((range, rowIdx) => {
+        const row = [range.label];
+        acMatrix.zones.forEach((_, colIdx) => {
+          const price = acMatrix.prices[rowIdx]?.[colIdx];
+          row.push(price ? `${price.toFixed(2)} \u20AC` : '-');
+        });
+        return row;
+      });
+
+      (doc as any).autoTable({
+        startY: yPos,
+        head: [acTableHead],
+        body: acTableBody,
+        theme: 'grid',
+        headStyles: {
+          fillColor: [107, 114, 128],
+          textColor: 255,
+          fontStyle: 'bold',
+          fontSize: 9,
+          halign: 'center',
+        },
+        bodyStyles: { fontSize: 9, halign: 'center' },
+        columnStyles: {
+          0: { fillColor: [245, 245, 245], fontStyle: 'bold', halign: 'left', cellWidth: 35 },
+        },
+        alternateRowStyles: { fillColor: [249, 249, 249] },
+        margin: { left: 15, right: 15 },
+        styles: { cellPadding: 2.5, lineColor: [221, 221, 221], lineWidth: 0.3 },
+      });
+
+      yPos = (doc as any).lastAutoTable.finalY + 8;
+    }
+  }
+
+  // ============================================
   // 5. PESO VOLUMETRICO
   // ============================================
 
@@ -371,5 +502,61 @@ async function fetchLogoAsBase64(url: string): Promise<string | null> {
     return dataUrl;
   } catch {
     return null;
+  }
+}
+
+/**
+ * Genera titolo e descrizione per la sezione lavorazione merce nel PDF.
+ */
+function getProcessingDisplayInfo(processingFee: number | null): {
+  title: string;
+  description: string;
+} {
+  if (processingFee && processingFee > 0) {
+    return {
+      title: 'LAVORAZIONE MERCE',
+      description: `Etichettatura e imballaggio a cura dei nostri operatori \u2014 ${processingFee.toFixed(2)}\u20AC + IVA per spedizione`,
+    };
+  }
+  return {
+    title: 'LAVORAZIONE MERCE',
+    description:
+      'Etichettatura e imballaggio a cura dei nostri operatori \u2014 Incluso nel servizio',
+  };
+}
+
+/**
+ * Genera titolo e descrizione per la sezione ritiro nel PDF.
+ */
+function getPickupDisplayInfo(
+  deliveryMode: DeliveryMode,
+  pickupFee: number | null
+): { title: string; description: string } {
+  const feeText =
+    pickupFee && pickupFee > 0
+      ? ` \u2014 Supplemento: ${pickupFee.toFixed(2)}\u20AC + IVA per ritiro`
+      : ' \u2014 Incluso nel prezzo';
+
+  switch (deliveryMode) {
+    case 'carrier_pickup':
+      return {
+        title: 'RITIRO A CURA DEL CORRIERE',
+        description: `Il corriere ritira la merce presso la sede del mittente${feeText}`,
+      };
+    case 'own_fleet':
+      return {
+        title: 'RITIRO CON NOSTRA FLOTTA',
+        description: `Ritiriamo la merce con la nostra flotta e la affidiamo al vettore${feeText}`,
+      };
+    case 'client_dropoff':
+      return {
+        title: 'CONSEGNA AL NOSTRO PUNTO',
+        description: 'Il cliente consegna la merce presso il nostro magazzino/punto di raccolta',
+      };
+    default:
+      return {
+        title: 'RITIRO',
+        description: `Ritiro presso la sede del mittente${feeText}`,
+      };
   }
 }

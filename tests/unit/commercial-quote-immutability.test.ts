@@ -103,6 +103,10 @@ describe("Immutabilita' snapshot", () => {
     carrier_display_name: 'GLS',
     vat_mode: 'excluded',
     vat_rate: 22,
+    pickup_fee: null,
+    delivery_mode: 'carrier_pickup',
+    goods_needs_processing: false,
+    processing_fee: null,
     generated_at: '2026-02-07T10:00:00.000Z',
   };
 

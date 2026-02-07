@@ -115,6 +115,10 @@ export async function createCommercialQuoteAction(
     const vatMode = input.vat_mode ?? 'excluded';
     const vatRate = input.vat_rate ?? 22;
     const validityDays = input.validity_days ?? 30;
+    const deliveryMode = input.delivery_mode ?? 'carrier_pickup';
+    const pickupFee = input.pickup_fee ?? null;
+    const goodsNeedsProcessing = input.goods_needs_processing ?? false;
+    const processingFee = input.processing_fee ?? null;
 
     // Genera carrier display name dal carrier_code
     const carrierDisplayName = formatCarrierDisplayName(input.carrier_code);
@@ -127,10 +131,61 @@ export async function createCommercialQuoteAction(
       vatMode,
       vatRate,
       carrierDisplayName,
+      deliveryMode,
+      pickupFee,
+      goodsNeedsProcessing,
+      processingFee,
     });
 
-    // Clausole: default + custom
-    const defaultClauses = getDefaultClauses(vatMode, vatRate);
+    // Costruisci matrici aggiuntive per confronto multi-corriere
+    let additionalCarriers = null;
+    if (input.additional_carrier_codes && input.additional_carrier_codes.length > 0) {
+      const additionalSnapshots = [];
+      for (const ac of input.additional_carrier_codes) {
+        // Trova price_list_id per questo corriere
+        const { data: acPlList } = await supabaseAdmin
+          .from('price_lists')
+          .select('id, metadata')
+          .eq('workspace_id', workspaceId)
+          .eq('status', 'active');
+
+        const acMatched = acPlList?.find(
+          (p: { id: string; metadata: Record<string, unknown> | null }) =>
+            (p.metadata as Record<string, unknown>)?.contract_code === ac.contract_code
+        );
+
+        if (acMatched) {
+          const acMatrix = await buildPriceMatrix({
+            priceListId: acMatched.id,
+            marginPercent: ac.margin_percent ?? marginPercent,
+            workspaceId,
+            vatMode,
+            vatRate,
+            carrierDisplayName: formatCarrierDisplayName(ac.carrier_code),
+            deliveryMode,
+            pickupFee,
+            goodsNeedsProcessing,
+            processingFee,
+          });
+          additionalSnapshots.push({
+            carrier_code: ac.carrier_code,
+            contract_code: ac.contract_code,
+            price_matrix: acMatrix,
+          });
+        }
+      }
+      if (additionalSnapshots.length > 0) {
+        additionalCarriers = additionalSnapshots;
+      }
+    }
+
+    // Clausole: default + custom (con delivery mode)
+    const defaultClauses = getDefaultClauses(vatMode, vatRate, {
+      deliveryMode,
+      pickupFee,
+      goodsNeedsProcessing,
+      processingFee,
+    });
     const clauses = input.clauses
       ? mergeWithCustomClauses(defaultClauses, input.clauses)
       : defaultClauses;
@@ -153,8 +208,13 @@ export async function createCommercialQuoteAction(
         price_list_id: priceListId,
         margin_percent: marginPercent,
         validity_days: validityDays,
+        delivery_mode: deliveryMode,
+        pickup_fee: pickupFee,
+        goods_needs_processing: goodsNeedsProcessing,
+        processing_fee: processingFee,
         revision: 1,
         price_matrix: priceMatrix,
+        additional_carriers: additionalCarriers,
         clauses,
         vat_mode: vatMode,
         vat_rate: vatRate,
@@ -186,6 +246,7 @@ export async function createCommercialQuoteAction(
         prospect_company: input.prospect_company,
         carrier_code: input.carrier_code,
         margin_percent: marginPercent,
+        delivery_mode: deliveryMode,
       },
     });
 
@@ -612,6 +673,13 @@ export async function createRevisionAction(
     const newRevision = (revisionCount || 1) + 1;
     const newMargin = input.margin_percent ?? parent.margin_percent;
     const newValidityDays = input.validity_days ?? parent.validity_days;
+    const newDeliveryMode = input.delivery_mode ?? parent.delivery_mode ?? 'carrier_pickup';
+    const newPickupFee =
+      input.pickup_fee !== undefined ? input.pickup_fee : (parent.pickup_fee ?? null);
+    const newGoodsNeedsProcessing =
+      input.goods_needs_processing ?? parent.goods_needs_processing ?? false;
+    const newProcessingFee =
+      input.processing_fee !== undefined ? input.processing_fee : (parent.processing_fee ?? null);
 
     // Ricalcola matrice se margine cambiato
     let newMatrix = parent.price_matrix;
@@ -629,11 +697,30 @@ export async function createRevisionAction(
         vatMode: parent.vat_mode || 'excluded',
         vatRate: parent.vat_rate || 22,
         carrierDisplayName,
+        deliveryMode: newDeliveryMode,
+        pickupFee: newPickupFee,
+        goodsNeedsProcessing: newGoodsNeedsProcessing,
+        processingFee: newProcessingFee,
       });
     }
 
-    // Clausole: usa quelle nuove o eredita dal parent
-    const clauses = input.clauses || parent.clauses;
+    // Clausole: ricalcola se delivery mode o processing cambia, altrimenti eredita
+    let clauses = input.clauses || parent.clauses;
+    const deliveryChanged = input.delivery_mode && input.delivery_mode !== parent.delivery_mode;
+    const processingChanged =
+      input.goods_needs_processing !== undefined &&
+      input.goods_needs_processing !== parent.goods_needs_processing;
+    if (deliveryChanged || processingChanged) {
+      const newDefaults = getDefaultClauses(parent.vat_mode || 'excluded', parent.vat_rate || 22, {
+        deliveryMode: newDeliveryMode,
+        pickupFee: newPickupFee,
+        goodsNeedsProcessing: newGoodsNeedsProcessing,
+        processingFee: newProcessingFee,
+      });
+      // Mantieni clausole custom, sostituisci le standard
+      const customClauses = (parent.clauses || []).filter((c: any) => c.type === 'custom');
+      clauses = mergeWithCustomClauses(newDefaults, customClauses);
+    }
 
     // INSERT nuova revisione
     const { data: revision, error: insertError } = await supabaseAdmin
@@ -653,6 +740,10 @@ export async function createRevisionAction(
         price_list_id: parent.price_list_id,
         margin_percent: newMargin,
         validity_days: newValidityDays,
+        delivery_mode: newDeliveryMode,
+        pickup_fee: newPickupFee,
+        goods_needs_processing: newGoodsNeedsProcessing,
+        processing_fee: newProcessingFee,
         revision: newRevision,
         parent_quote_id: rootId,
         revision_notes: input.revision_notes,

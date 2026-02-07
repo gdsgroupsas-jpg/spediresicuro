@@ -430,6 +430,7 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
     contractCode: string;
     carrierCode: string; // ✨ Carrier code unico (chiave)
     configId: string; // ✨ ID configurazione API
+    doesClientPickup: boolean; // ✨ Il corriere fa ritiro dal cliente finale?
   }>
 > {
   try {
@@ -626,7 +627,31 @@ export async function getAvailableCouriersForUser(userId: string): Promise<
         contractCode: data.carrierCode, // ✨ CORRETTO: contract_code completo e univoco (chiave di contract_mapping)
         carrierCode: data.carrierCode, // ✨ Alias per retrocompatibilità (stesso valore di contractCode)
         configId: data.configId, // ✨ ID configurazione API
+        doesClientPickup: false, // Default: arricchito sotto
       });
+    }
+
+    // 7. Arricchisci con does_client_pickup da supplier_price_list_config
+    if (result.length > 0) {
+      const contractCodes = result.map((r) => r.contractCode);
+      const { data: configs } = await supabaseAdmin
+        .from('supplier_price_list_config')
+        .select('contract_code, does_client_pickup')
+        .in('contract_code', contractCodes);
+
+      if (configs && configs.length > 0) {
+        const pickupMap = new Map<string, boolean>();
+        for (const cfg of configs) {
+          if (cfg.contract_code) {
+            pickupMap.set(cfg.contract_code, cfg.does_client_pickup ?? false);
+          }
+        }
+        for (const courier of result) {
+          if (pickupMap.has(courier.contractCode)) {
+            courier.doesClientPickup = pickupMap.get(courier.contractCode)!;
+          }
+        }
+      }
     }
 
     console.log(

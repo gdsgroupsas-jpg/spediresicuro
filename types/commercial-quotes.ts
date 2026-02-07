@@ -7,6 +7,37 @@
  */
 
 // ============================================
+// MODALITA' CONSEGNA / RITIRO
+// ============================================
+
+/**
+ * Come la merce arriva dal cliente al reseller/vettore.
+ *
+ * carrier_pickup: il vettore ritira direttamente dal cliente finale
+ * own_fleet:      il reseller ritira con la propria flotta e affida al vettore
+ * client_dropoff: il cliente scarica al point/magazzino del reseller
+ */
+export type DeliveryMode = 'carrier_pickup' | 'own_fleet' | 'client_dropoff';
+
+export const DELIVERY_MODES = [
+  {
+    value: 'carrier_pickup' as const,
+    label: 'Ritiro vettore',
+    description: 'Il corriere ritira dal cliente',
+  },
+  {
+    value: 'own_fleet' as const,
+    label: 'Ritiro con nostra flotta',
+    description: 'Ritiriamo noi e affidiamo al vettore',
+  },
+  {
+    value: 'client_dropoff' as const,
+    label: 'Consegna al punto',
+    description: 'Il cliente scarica al nostro magazzino/punto',
+  },
+] as const;
+
+// ============================================
 // STATO PIPELINE
 // ============================================
 
@@ -43,8 +74,30 @@ export interface PriceMatrixSnapshot {
   vat_mode: 'included' | 'excluded';
   /** Aliquota IVA */
   vat_rate: number;
+  /** Supplemento ritiro in EUR (null = gratuito/incluso) */
+  pickup_fee: number | null;
+  /** Modalita' consegna/ritiro */
+  delivery_mode: DeliveryMode;
+  /** Merce richiede lavorazione (etichettatura, imballaggio) */
+  goods_needs_processing: boolean;
+  /** Costo lavorazione per spedizione in EUR (null = incluso/gratuito) */
+  processing_fee: number | null;
   /** Timestamp generazione snapshot (ISO) */
   generated_at: string;
+}
+
+// ============================================
+// CONFRONTO MULTI-CORRIERE
+// ============================================
+
+/**
+ * Snapshot aggiuntivo per confronto multi-corriere.
+ * Il corriere primario e' in price_matrix, gli altri qui.
+ */
+export interface AdditionalCarrierSnapshot {
+  carrier_code: string;
+  contract_code: string;
+  price_matrix: PriceMatrixSnapshot;
 }
 
 // ============================================
@@ -82,6 +135,12 @@ export interface CommercialQuote {
   margin_percent: number | null;
   validity_days: number;
 
+  // Logistica inbound (Fase A)
+  delivery_mode: DeliveryMode;
+  pickup_fee: number | null; // Supplemento ritiro in EUR (null = gratuito)
+  goods_needs_processing: boolean; // Merce da lavorare (etichettatura, imballaggio, etc.)
+  processing_fee: number | null; // Costo lavorazione per spedizione in EUR (null = gratuito)
+
   // Revisioni
   revision: number;
   parent_quote_id: string | null;
@@ -89,6 +148,8 @@ export interface CommercialQuote {
 
   // Snapshot immutabile
   price_matrix: PriceMatrixSnapshot;
+  /** Matrici aggiuntive per confronto multi-corriere (opzionale) */
+  additional_carriers: AdditionalCarrierSnapshot[] | null;
   price_includes: string[] | null;
   clauses: QuoteClause[] | null;
 
@@ -163,6 +224,16 @@ export interface CreateCommercialQuoteInput {
   clauses?: QuoteClause[];
   vat_mode?: 'included' | 'excluded';
   vat_rate?: number;
+  delivery_mode?: DeliveryMode;
+  pickup_fee?: number;
+  goods_needs_processing?: boolean;
+  processing_fee?: number;
+  /** Corrieri aggiuntivi per confronto (opzionale) */
+  additional_carrier_codes?: Array<{
+    carrier_code: string;
+    contract_code: string;
+    margin_percent?: number;
+  }>;
 }
 
 export interface CreateRevisionInput {
@@ -171,6 +242,10 @@ export interface CreateRevisionInput {
   margin_percent?: number;
   validity_days?: number;
   clauses?: QuoteClause[];
+  delivery_mode?: DeliveryMode;
+  pickup_fee?: number;
+  goods_needs_processing?: boolean;
+  processing_fee?: number;
 }
 
 export interface ConvertQuoteInput {

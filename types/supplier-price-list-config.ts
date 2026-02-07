@@ -82,6 +82,9 @@ export interface SupplierPriceListConfig {
   contract_code?: string; // es. "gls-standard", "postedeliverybusiness-SDA---Express---H24+"
   courier_config_id?: string; // ID configurazione Spedisci.Online
 
+  // Capacita' operative
+  does_client_pickup: boolean; // Il corriere fa ritiro direttamente dal cliente finale? (default: false = solo magazzino reseller)
+
   // Configurazioni per sezione
   insurance_config: InsuranceConfig;
   cod_config: CODConfigRow[];
@@ -111,6 +114,7 @@ export interface UpsertSupplierPriceListConfigInput {
   carrier_code: string;
   contract_code?: string;
   courier_config_id?: string;
+  does_client_pickup?: boolean; // Il corriere fa ritiro dal cliente finale?
   insurance_config?: Partial<InsuranceConfig>;
   cod_config?: CODConfigRow[];
   accessory_services_config?: AccessoryServiceConfig[];

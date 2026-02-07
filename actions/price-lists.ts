@@ -2034,6 +2034,7 @@ export async function getAvailableCouriersForUserAction(): Promise<{
     courierName: string;
     providerId: string;
     contractCode: string;
+    doesClientPickup: boolean;
   }>;
   error?: string;
 }> {

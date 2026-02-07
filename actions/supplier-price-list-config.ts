@@ -88,6 +88,7 @@ export async function getSupplierPriceListConfig(priceListId: string): Promise<{
           carrier_code: carrierCode,
           contract_code: contractCode || undefined,
           courier_config_id: courierConfigId || undefined,
+          does_client_pickup: false,
           insurance_config: {
             max_value: 0,
             fixed_price: 0,
@@ -230,6 +231,7 @@ export async function upsertSupplierPriceListConfig(
       carrier_code: carrierCode,
       contract_code: contractCode || null,
       courier_config_id: courierConfigId || null,
+      does_client_pickup: input.does_client_pickup ?? false,
       notes: input.notes || null,
     };
 
@@ -285,6 +287,7 @@ export async function upsertSupplierPriceListConfig(
           carrier_code: configData.carrier_code,
           contract_code: configData.contract_code || null,
           courier_config_id: configData.courier_config_id || null,
+          does_client_pickup: configData.does_client_pickup,
           insurance_config: configData.insurance_config || undefined,
           cod_config: configData.cod_config || undefined,
           accessory_services_config: configData.accessory_services_config || undefined,
@@ -316,6 +319,7 @@ export async function upsertSupplierPriceListConfig(
           carrier_code: configData.carrier_code,
           contract_code: configData.contract_code || null,
           courier_config_id: configData.courier_config_id || null,
+          does_client_pickup: configData.does_client_pickup,
           insurance_config: configData.insurance_config || {},
           cod_config: configData.cod_config || [],
           accessory_services_config: configData.accessory_services_config || [],

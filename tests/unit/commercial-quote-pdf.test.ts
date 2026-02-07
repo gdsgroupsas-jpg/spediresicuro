@@ -69,6 +69,10 @@ const createMockQuote = (overrides?: Partial<CommercialQuote>): CommercialQuote 
   price_list_id: 'pl-123',
   margin_percent: 20,
   validity_days: 30,
+  delivery_mode: 'carrier_pickup',
+  pickup_fee: null,
+  goods_needs_processing: false,
+  processing_fee: null,
   revision: 1,
   parent_quote_id: null,
   revision_notes: null,
@@ -86,8 +90,13 @@ const createMockQuote = (overrides?: Partial<CommercialQuote>): CommercialQuote 
     carrier_display_name: 'GLS',
     vat_mode: 'excluded',
     vat_rate: 22,
+    pickup_fee: null,
+    delivery_mode: 'carrier_pickup',
+    goods_needs_processing: false,
+    processing_fee: null,
     generated_at: '2026-02-07T10:00:00.000Z',
   },
+  additional_carriers: null,
   price_includes: null,
   clauses: [
     { title: 'IVA', text: 'Prezzi IVA esclusa (22%)', type: 'standard' },
@@ -241,5 +250,64 @@ describe('generateCommercialQuotePDF', () => {
       (call: any) => typeof call[0] === 'string' && call[0].includes('SERVIZI AGGIUNTIVI')
     );
     expect(servicesCalls.length).toBe(1);
+  });
+
+  // --- Test Lavorazione Merce nel PDF ---
+
+  it('dovrebbe includere sezione LAVORAZIONE MERCE se goods_needs_processing=true', async () => {
+    await generateCommercialQuotePDF(
+      createMockQuote({
+        goods_needs_processing: true,
+        processing_fee: 1.5,
+        price_matrix: {
+          ...createMockQuote().price_matrix,
+          goods_needs_processing: true,
+          processing_fee: 1.5,
+        },
+      })
+    );
+    const processingCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('LAVORAZIONE')
+    );
+    expect(processingCalls.length).toBeGreaterThan(0);
+  });
+
+  it('dovrebbe NON includere sezione LAVORAZIONE MERCE se goods_needs_processing=false', async () => {
+    await generateCommercialQuotePDF(createMockQuote());
+    const processingCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('LAVORAZIONE MERCE')
+    );
+    expect(processingCalls.length).toBe(0);
+  });
+
+  // --- Test Multi-corriere nel PDF ---
+
+  it('dovrebbe generare PDF con corrieri aggiuntivi', async () => {
+    await generateCommercialQuotePDF(
+      createMockQuote({
+        additional_carriers: [
+          {
+            carrier_code: 'brt-BRT-3000',
+            contract_code: 'brt-BRT-3000',
+            price_matrix: {
+              ...createMockQuote().price_matrix,
+              carrier_display_name: 'BRT',
+            },
+          },
+        ],
+      })
+    );
+    // Deve chiamare autoTable almeno 2 volte (primario + alternativa)
+    expect(mockAutoTable.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('dovrebbe NON generare tabelle extra senza corrieri aggiuntivi', async () => {
+    vi.clearAllMocks();
+    mockOutput.mockReturnValue(new ArrayBuffer(100));
+    (mockDoc as any).lastAutoTable = { finalY: 150 };
+
+    await generateCommercialQuotePDF(createMockQuote({ additional_carriers: null }));
+    // Solo 1 autoTable per matrice primaria
+    expect(mockAutoTable.mock.calls.length).toBe(1);
   });
 });

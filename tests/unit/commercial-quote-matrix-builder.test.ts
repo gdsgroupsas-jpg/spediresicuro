@@ -289,4 +289,50 @@ describe('buildPriceMatrix', () => {
     expect(matrix.weight_ranges[0].label).toBe('0 - 5 kg');
     expect(matrix.weight_ranges[1].label).toBe('5 - 10 kg');
   });
+
+  // --- Nuovi campi Fase A2 ---
+
+  it('dovrebbe includere delivery_mode nello snapshot (default carrier_pickup)', async () => {
+    const matrix = await buildPriceMatrix(defaultParams);
+    expect(matrix.delivery_mode).toBe('carrier_pickup');
+  });
+
+  it('dovrebbe includere delivery_mode custom nello snapshot', async () => {
+    const matrix = await buildPriceMatrix({ ...defaultParams, deliveryMode: 'own_fleet' });
+    expect(matrix.delivery_mode).toBe('own_fleet');
+  });
+
+  it('dovrebbe includere pickup_fee nello snapshot (default null)', async () => {
+    const matrix = await buildPriceMatrix(defaultParams);
+    expect(matrix.pickup_fee).toBeNull();
+  });
+
+  it('dovrebbe includere pickup_fee custom nello snapshot', async () => {
+    const matrix = await buildPriceMatrix({ ...defaultParams, pickupFee: 3.5 });
+    expect(matrix.pickup_fee).toBe(3.5);
+  });
+
+  it('dovrebbe includere goods_needs_processing nello snapshot (default false)', async () => {
+    const matrix = await buildPriceMatrix(defaultParams);
+    expect(matrix.goods_needs_processing).toBe(false);
+  });
+
+  it('dovrebbe includere goods_needs_processing=true nello snapshot', async () => {
+    const matrix = await buildPriceMatrix({ ...defaultParams, goodsNeedsProcessing: true });
+    expect(matrix.goods_needs_processing).toBe(true);
+  });
+
+  it('dovrebbe includere processing_fee nello snapshot (default null)', async () => {
+    const matrix = await buildPriceMatrix(defaultParams);
+    expect(matrix.processing_fee).toBeNull();
+  });
+
+  it('dovrebbe includere processing_fee custom nello snapshot', async () => {
+    const matrix = await buildPriceMatrix({
+      ...defaultParams,
+      goodsNeedsProcessing: true,
+      processingFee: 1.5,
+    });
+    expect(matrix.processing_fee).toBe(1.5);
+  });
 });

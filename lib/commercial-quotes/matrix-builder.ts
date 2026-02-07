@@ -9,7 +9,11 @@
 
 import { supabaseAdmin } from '@/lib/db/client';
 import type { PriceListEntry } from '@/types/listini';
-import type { PriceMatrixSnapshot, PriceMatrixWeightRange } from '@/types/commercial-quotes';
+import type {
+  PriceMatrixSnapshot,
+  PriceMatrixWeightRange,
+  DeliveryMode,
+} from '@/types/commercial-quotes';
 
 // Zone standard italiane (ordine display nel PDF)
 const DEFAULT_ZONE_LABELS: Record<string, string> = {
@@ -30,6 +34,14 @@ export interface BuildPriceMatrixParams {
   carrierDisplayName: string;
   /** Tipo servizio da filtrare (default: 'standard') */
   serviceType?: string;
+  /** Modalita' ritiro/consegna (default: 'carrier_pickup') */
+  deliveryMode?: DeliveryMode;
+  /** Supplemento ritiro in EUR (null = gratuito) */
+  pickupFee?: number | null;
+  /** La merce richiede lavorazione (etichettatura, imballaggio) */
+  goodsNeedsProcessing?: boolean;
+  /** Costo lavorazione per spedizione in EUR (null = incluso) */
+  processingFee?: number | null;
 }
 
 /**
@@ -50,6 +62,10 @@ export async function buildPriceMatrix(
     vatMode = 'excluded',
     vatRate = 22,
     serviceType = 'standard',
+    deliveryMode = 'carrier_pickup',
+    pickupFee = null,
+    goodsNeedsProcessing = false,
+    processingFee = null,
   } = params;
 
   // 1. Carica tutte le entries del listino
@@ -164,6 +180,10 @@ export async function buildPriceMatrix(
     carrier_display_name: carrierDisplayName,
     vat_mode: vatMode,
     vat_rate: vatRate,
+    pickup_fee: pickupFee ?? null,
+    delivery_mode: deliveryMode,
+    goods_needs_processing: goodsNeedsProcessing,
+    processing_fee: processingFee ?? null,
     generated_at: new Date().toISOString(),
   };
 
