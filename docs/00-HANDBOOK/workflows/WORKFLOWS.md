@@ -30,14 +30,16 @@ Questa documentazione descrive i principali user flows di SpedireSicuro, dal for
 
 ## Quick Reference
 
-| Sezione               | Pagina                                  | Link                                             |
-| --------------------- | --------------------------------------- | ------------------------------------------------ |
-| Creazione Spedizione  | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Nuova Spedizione](#flow-1-creazione-spedizione) |
-| Gestione Wallet       | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Wallet](#flow-2-gestione-wallet)                |
-| Gestione Listini      | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Listini](#flow-3-gestione-listini)              |
-| Admin Dashboard       | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Admin](#flow-4-admin-dashboard)                 |
-| Contrassegni (COD)    | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [COD](#flow-5-gestione-contrassegni-cod)         |
-| Processo Operativo AI | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [AI Process](#flow-0-processo-operativo-ai)      |
+| Sezione               | Pagina                                  | Link                                                        |
+| --------------------- | --------------------------------------- | ----------------------------------------------------------- |
+| Creazione Spedizione  | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Nuova Spedizione](#flow-1-creazione-spedizione)            |
+| Gestione Wallet       | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Wallet](#flow-2-gestione-wallet)                           |
+| Gestione Listini      | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Listini](#flow-3-gestione-listini)                         |
+| Admin Dashboard       | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Admin](#flow-4-admin-dashboard)                            |
+| Contrassegni (COD)    | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [COD](#flow-5-gestione-contrassegni-cod)                    |
+| Prev. Commerciale     | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Preventivi](#flow-6-preventivatore-commerciale)            |
+| Anne CRM Intelligence | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [CRM Intelligence](#flow-7-anne-crm-intelligence-read-only) |
+| Processo Operativo AI | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [AI Process](#flow-0-processo-operativo-ai)                 |
 
 ## Content
 
@@ -698,6 +700,100 @@ renewExpiredQuoteAction(input)         // Rinnova scaduto
 
 ---
 
+### Flow 7: Anne CRM Intelligence (Read-Only)
+
+**Obiettivo:** Anne funziona come Sales Partner senior con accesso read-only alla pipeline CRM, fornendo insight commerciali, alert proattivi e suggerimenti d'azione basati su conoscenza settoriale avanzata.
+
+**Trigger:** Messaggio utente con intent CRM (es. "come va la pipeline?", "cosa devo fare oggi?", "trova prospect ecommerce")
+
+**Ruoli:** Admin (vede leads), Reseller (vede prospects del proprio workspace)
+
+**Architettura:**
+
+```text
+Messaggio utente
+    │
+    ▼
+supervisorRouter()
+    │
+    ├── detectSupportIntent()  → Support Worker (esistente)
+    ├── detectCrmIntent()      → CRM Worker (NUOVO)
+    ├── detectPricingIntent()  → Pricing Graph (esistente)
+    └── fallback              → Legacy Handler
+```
+
+**Steps:**
+
+1. **Proactive Context Injection**
+   - Al caricamento della chat, `buildContext()` inietta automaticamente un riepilogo pipeline nel system prompt
+   - Admin: pipeline lead (totali per stato, score medio, valore, entita' calde, alert)
+   - Reseller: pipeline prospect (totali per stato, preventivi in attesa)
+   - Anne menziona proattivamente lead caldi o alert senza che l'utente lo chieda
+
+2. **Intent Detection**
+   - `detectCrmIntent()` con ~30 keyword CRM e exclude list (evita collisioni con pricing/support)
+   - Pattern matching puro, no LLM — stesso approccio di pricing intent
+   - Keyword: pipeline, lead, prospect, conversione, score, azioni di oggi, win-back, ecc.
+   - Esclusioni: "quanto costa spedire" (pricing), "tracking" (support)
+
+3. **Sub-Intent Classification**
+   - Il CRM worker classifica internamente il sub-intent:
+
+   | Sub-intent            | Esempio messaggio                        |
+   | --------------------- | ---------------------------------------- |
+   | `pipeline_overview`   | "come va la pipeline?"                   |
+   | `entity_detail`       | "a che punto e' il lead Farmacia Rossi?" |
+   | `today_actions`       | "cosa devo fare oggi?"                   |
+   | `health_check`        | "ci sono problemi nel CRM?"              |
+   | `search`              | "trova prospect ecommerce"               |
+   | `conversion_analysis` | "qual e' il tasso di conversione?"       |
+
+4. **Data Fetch + Knowledge Enrichment**
+   - CRM Worker chiama `crm-data-service` per i dati (pipeline, entities, alerts, search)
+   - Arricchisce la risposta con `sales-knowledge.ts` (35 entry di conoscenza senior)
+   - Ogni risposta include il PERCHE' di ogni suggerimento, non solo il COSA
+   - Insight settoriale specifico per spedizioni (pharma, food, ecommerce, ecc.)
+
+5. **Risposta Intelligente**
+   - Formattata in markdown (bold, tabelle, liste)
+   - Include: dati pipeline, alert critici, suggerimenti d'azione, knowledge settoriale
+   - Se admin e trend in calo: suggerisce strategie correttive
+   - Se reseller con preventivi in scadenza: avvisa con priorita'
+
+**5 Tool CRM (Read-Only):**
+
+| Tool                    | Descrizione                            |
+| ----------------------- | -------------------------------------- |
+| `get_pipeline_summary`  | Panoramica pipeline con KPI            |
+| `get_entity_details`    | Dettaglio lead/prospect + timeline     |
+| `get_crm_health_alerts` | Alert: stale, hot, win-back, quote     |
+| `get_today_actions`     | Lista prioritizzata azioni giornaliere |
+| `search_crm_entities`   | Ricerca per nome/email/stato/settore   |
+
+**Knowledge Base (35 entry senior):**
+
+- 8 settori (ecommerce, pharma, food, artigianato, industria, logistica, fashion, generico)
+- 10 obiezioni (troppo caro, competitor, pensarci, volume, timing, email, contratto, decisore, disinteresse, qualita')
+- 5 timing (giorni/orari, follow-up, ciclo decisionale, stagionalita', urgenza)
+- 6 negoziazione (ancoraggio, volume, trial, concessioni, chiusura, multi-corriere)
+- 6 persuasione (social proof, loss aversion, urgenza reale, framing, reciprocita', scarsita')
+
+**RLS e Sicurezza:**
+
+- Admin: query su tabella `leads` (no filtro workspace)
+- Reseller: query su `reseller_prospects` filtrate per `workspace_id`
+- Tutte le query via `supabaseAdmin` con service role key (server-side only)
+- Nessuna azione di scrittura (Sprint S1 e' read-only)
+
+**Edge Cases:**
+
+- **Pipeline vuota:** Anne informa che non ci sono ancora lead/prospect e suggerisce come iniziare
+- **Errore CRM data service:** Fallthrough a legacy handler, nessun crash
+- **Workspace non trovato:** Query senza filtro workspace (restera' vuota per sicurezza)
+- **Sub-intent non riconosciuto:** Default a pipeline_overview
+
+---
+
 ## Common Issues
 
 | Issue                        | Soluzione                                                |
@@ -723,6 +819,7 @@ renewExpiredQuoteAction(input)         // Rinnova scaduto
 | 2026-02-01 | 1.1.0   | Added Flow 5: COD Management                                    | AI Agent |
 | 2026-02-02 | 1.2.0   | Unified Listini UI: 4→1 sidebar entry per role, tab-based pages | AI Agent |
 | 2026-02-07 | 1.3.0   | Added Flow 6: Preventivatore Commerciale (full lifecycle)       | AI Agent |
+| 2026-02-07 | 1.4.0   | Added Flow 7: Anne CRM Intelligence (read-only Sales Partner)   | AI Agent |
 
 ---
 

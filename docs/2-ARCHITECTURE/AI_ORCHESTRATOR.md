@@ -39,17 +39,18 @@ Questo documento descrive l'architettura dell'AI Orchestrator (Anne) basata su L
 
 #### Architettura Logica
 
-```
+```text
 User Input (messaggio)
     │
     ▼
 supervisorRouter()  ← Entry point UNICO (/api/ai/agent-chat)
     │
-    ├─── Intent Detection (pricing vs non-pricing)
-    ├─── OCR Pattern Detection
+    ├─── Support Intent Detection → Support Worker (gestito direttamente)
+    ├─── CRM Intent Detection → CRM Worker (gestito direttamente, Sprint S1)
+    ├─── Pricing/OCR Intent Detection → Pricing Graph (LangGraph)
     ├─── Booking Confirmation Detection
     │
-    ▼
+    ▼ (se pricing/OCR)
 supervisor.decideNextStep()  ← SINGLE DECISION POINT (funzione pura)
     │
     ├─── next_step: 'ocr_worker' → OCR Worker → arricchisce shipmentDraft
@@ -68,10 +69,13 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 #### Data Flow Pattern
 
 1. **Input Utente** → `supervisorRouter()` rileva intent/pattern
-2. **Supervisor Decision** → `decideNextStep()` (funzione pura) decide routing basato su stato
-3. **Worker Execution** → Worker arricchisce `AgentState` (merge non distruttivo in `shipmentDraft`)
-4. **Loop Back** → Torna a supervisor, valuta nuovo stato
-5. **Termination** → `next_step: 'END'` → Risposta al client o azione DB (booking)
+2. **Direct Workers** → Support e CRM intent gestiti direttamente (no LangGraph):
+   - Support intent → `supportWorker()` → risposta diretta
+   - CRM intent → `crmWorker()` → risposta con knowledge enrichment
+3. **Pricing/OCR** → `decideNextStep()` (funzione pura) decide routing basato su stato
+4. **Worker Execution** → Worker arricchisce `AgentState` (merge non distruttivo in `shipmentDraft`)
+5. **Loop Back** → Torna a supervisor, valuta nuovo stato
+6. **Termination** → `next_step: 'END'` → Risposta al client o azione DB (booking)
 
 ---
 
@@ -127,6 +131,21 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 - Prenota spedizioni (preflight + adapter)
 - Verifica credito wallet prima di booking
 
+**Support Worker** (`lib/agent/workers/support-worker.ts`)
+
+- Gestisce richieste di assistenza (tracking, giacenze, cancellazioni, rimborsi)
+- Invocato direttamente dal supervisor-router (non dal LangGraph)
+
+**CRM Worker** (`lib/agent/workers/crm-worker.ts`) — Sprint S1
+
+- Sales Partner read-only: accesso pipeline CRM con conoscenza commerciale senior
+- 6 sub-intent: pipeline_overview, entity_detail, today_actions, health_check, search, conversion_analysis
+- Arricchisce risposte con `sales-knowledge.ts` (35 entry settoriali)
+- Admin vede leads, Reseller vede prospects (RLS via workspace_id)
+- Invocato direttamente dal supervisor-router (non dal LangGraph)
+- Data layer: `lib/crm/crm-data-service.ts` (9 funzioni read-only)
+- 5 tool: get_pipeline_summary, get_entity_details, get_crm_health_alerts, get_today_actions, search_crm_entities
+
 ---
 
 ### State Management
@@ -150,8 +169,12 @@ interface AgentState {
     | 'address_worker'
     | 'pricing_worker'
     | 'booking_worker'
+    | 'support_worker'
+    | 'crm_worker'
     | 'legacy'
     | 'END';
+  crm_response?: { message: string; toolsUsed: string[] };
+  support_response?: { message: string; toolsUsed: string[] };
   clarification_request?: string;
   messages: Message[];
   // ... altri campi
@@ -350,12 +373,13 @@ graph.addConditionalEdges('supervisor', (state) => {
 
 ## Changelog
 
-| Date       | Version | Changes         | Author   |
-| ---------- | ------- | --------------- | -------- |
-| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
+| Date       | Version | Changes                                           | Author   |
+| ---------- | ------- | ------------------------------------------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version                                   | AI Agent |
+| 2026-02-07 | 1.1.0   | Added CRM Worker, Support Worker, updated routing | AI Agent |
 
 ---
 
-_Last Updated: 2026-01-12_  
+_Last Updated: 2026-02-07_  
 _Status: 🟢 Active_  
 _Maintainer: Team_

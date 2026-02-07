@@ -38,11 +38,16 @@ Feature Documentation:
 - docs/11-FEATURES/COMMERCIAL_QUOTES.md
 - docs/11-FEATURES/RESELLER_HIERARCHY.md
 
+AI Architecture:
+
+- docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md
+
 Milestones:
 
 - docs/milestones/MILESTONE-SHIPMENT-CORE-REFACTOR.md
 - docs/milestones/MILESTONE-COMMERCIAL-QUOTES-MVP-PHASE-A.md
 - docs/milestones/MILESTONE-COMMERCIAL-QUOTES-PHASES-BCD.md
+- docs/milestones/MILESTONE-CRM-INTELLIGENCE-S1.md
 
 Notes:
 
