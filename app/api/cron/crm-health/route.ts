@@ -28,6 +28,15 @@ import { sendEmail } from '@/lib/email/resend';
 
 export const dynamic = 'force-dynamic';
 
+/** Escape HTML per prevenire XSS nell'email */
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function POST(request: NextRequest) {
@@ -160,7 +169,7 @@ export async function POST(request: NextRequest) {
           const alertRows = wsAlerts
             .map(
               (a) =>
-                `<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;color:#334155;">${a.entityName}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;color:#64748b;">${a.message}</td></tr>`
+                `<tr><td style="padding:8px;border-bottom:1px solid #e2e8f0;color:#334155;">${escapeHtml(a.entityName)}</td><td style="padding:8px;border-bottom:1px solid #e2e8f0;color:#64748b;">${escapeHtml(a.message)}</td></tr>`
             )
             .join('');
 
@@ -171,7 +180,7 @@ export async function POST(request: NextRequest) {
               </div>
               <div style="background:#f8fafc;padding:24px;border:1px solid #e2e8f0;border-top:none;">
                 <p style="color:#334155;font-size:15px;margin-top:0;">
-                  Ciao ${user.name || 'Reseller'}, hai <strong>${wsAlerts.length}</strong> prospect che richiedono attenzione:
+                  Ciao ${escapeHtml(user.name || 'Reseller')}, hai <strong>${wsAlerts.length}</strong> prospect che richiedono attenzione:
                 </p>
                 <table style="width:100%;border-collapse:collapse;background:white;border-radius:8px;border:1px solid #e2e8f0;">
                   <thead>
