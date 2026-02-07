@@ -20,11 +20,18 @@ const FROM_EMAIL = 'SpedireSicuro <noreply@spediresicuro.it>';
 
 // ─── TYPES ───
 
+interface EmailAttachment {
+  filename: string;
+  content: Buffer;
+  contentType?: string;
+}
+
 interface SendEmailParams {
   to: string | string[];
   subject: string;
   html: string;
   replyTo?: string;
+  attachments?: EmailAttachment[];
 }
 
 interface ShipmentConfirmationParams {
@@ -56,7 +63,7 @@ interface ShipmentTrackingUpdateParams {
 
 // ─── CORE SEND ───
 
-export async function sendEmail({ to, subject, html, replyTo }: SendEmailParams) {
+export async function sendEmail({ to, subject, html, replyTo, attachments }: SendEmailParams) {
   if (!process.env.RESEND_API_KEY) {
     console.warn('⚠️ [EMAIL] RESEND_API_KEY not configured, skipping email');
     return { success: false, error: 'RESEND_API_KEY not configured' };
@@ -69,6 +76,7 @@ export async function sendEmail({ to, subject, html, replyTo }: SendEmailParams)
       subject,
       html,
       replyTo,
+      ...(attachments?.length ? { attachments } : {}),
     });
 
     if (error) {
@@ -623,6 +631,131 @@ export async function sendInvitationAcceptedEmail(params: InvitationAcceptedEmai
   return sendEmail({
     to,
     subject: `✅ ${acceptedByName} ha accettato l'invito su ${workspaceName}`,
+    html,
+  });
+}
+
+// ─── COMMERCIAL QUOTE TO PROSPECT ───
+
+interface QuoteToProspectEmailParams {
+  to: string;
+  prospectName: string;
+  resellerCompanyName: string;
+  quoteValidityDays: number;
+  pdfBuffer: Buffer;
+}
+
+export async function sendQuoteToProspectEmail(params: QuoteToProspectEmailParams) {
+  const { to, prospectName, resellerCompanyName, quoteValidityDays, pdfBuffer } = params;
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #1e40af, #3b82f6); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Preventivo Spedizioni</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #334155; font-size: 16px; margin-top: 0;">Gentile <strong>${prospectName}</strong>,</p>
+        <p style="color: #334155; font-size: 16px;">
+          In allegato trova il preventivo spedizioni preparato da <strong>${resellerCompanyName}</strong>.
+        </p>
+
+        <div style="background: white; border-radius: 8px; padding: 16px; margin: 20px 0; border: 1px solid #e2e8f0; text-align: center;">
+          <p style="color: #64748b; font-size: 14px; margin: 0 0 8px 0;">Validit&agrave; preventivo</p>
+          <p style="color: #1e40af; font-size: 24px; font-weight: 700; margin: 0;">${quoteValidityDays} giorni</p>
+        </div>
+
+        <p style="color: #334155; font-size: 14px;">
+          Il preventivo include le tariffe per le principali zone di destinazione e fasce di peso.
+          Per qualsiasi domanda, non esiti a contattarci.
+        </p>
+
+        <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 12px; margin: 16px 0;">
+          <p style="color: #0369a1; font-size: 13px; margin: 0;">
+            Il file PDF &egrave; in allegato a questa email.
+          </p>
+        </div>
+      </div>
+      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
+        ${resellerCompanyName} &mdash; Powered by SpedireSicuro
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Preventivo spedizioni — ${resellerCompanyName}`,
+    html,
+    attachments: [
+      {
+        filename: 'preventivo.pdf',
+        content: pdfBuffer,
+        contentType: 'application/pdf',
+      },
+    ],
+  });
+}
+
+// ─── QUOTE EXPIRY REMINDER (TO RESELLER) ───
+
+interface QuoteExpiryReminderEmailParams {
+  to: string;
+  resellerName: string;
+  prospectCompany: string;
+  expiresAt: string; // ISO string
+  dashboardUrl?: string;
+}
+
+export async function sendQuoteExpiryReminderEmail(params: QuoteExpiryReminderEmailParams) {
+  const {
+    to,
+    resellerName,
+    prospectCompany,
+    expiresAt,
+    dashboardUrl = 'https://spediresicuro.it/dashboard/reseller/preventivo',
+  } = params;
+
+  const expiryDate = new Date(expiresAt).toLocaleDateString('it-IT', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  });
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #d97706, #f59e0b); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Preventivo in Scadenza</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #334155; font-size: 16px; margin-top: 0;">Ciao <strong>${resellerName}</strong>,</p>
+        <p style="color: #334155; font-size: 16px;">
+          Il preventivo per <strong>${prospectCompany}</strong> &egrave; in scadenza.
+        </p>
+
+        <div style="background: #fffbeb; border: 1px solid #fcd34d; border-radius: 8px; padding: 16px; margin: 20px 0; text-align: center;">
+          <p style="color: #92400e; font-size: 14px; margin: 0 0 8px 0;">Scade il</p>
+          <p style="color: #d97706; font-size: 22px; font-weight: 700; margin: 0;">${expiryDate}</p>
+        </div>
+
+        <p style="color: #334155; font-size: 14px;">
+          Ti consigliamo di contattare il prospect per un follow-up, oppure di creare una nuova revisione
+          con condizioni aggiornate prima della scadenza.
+        </p>
+
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="${dashboardUrl}" style="display: inline-block; background: linear-gradient(135deg, #d97706, #f59e0b); color: white; font-weight: 600; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px;">
+            Vai al Preventivatore &rarr;
+          </a>
+        </div>
+      </div>
+      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
+        SpedireSicuro &mdash; Spedizioni semplici e sicure
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Preventivo in scadenza — ${prospectCompany}`,
     html,
   });
 }

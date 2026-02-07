@@ -17,8 +17,16 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { MatrixPreview } from './matrix-preview';
-import { getCommercialQuoteByIdAction } from '@/actions/commercial-quotes';
-import type { CommercialQuote, CommercialQuoteStatus } from '@/types/commercial-quotes';
+import { NegotiationTimeline } from './negotiation-timeline';
+import {
+  getCommercialQuoteByIdAction,
+  getQuoteNegotiationTimelineAction,
+} from '@/actions/commercial-quotes';
+import type {
+  CommercialQuote,
+  CommercialQuoteStatus,
+  NegotiationTimelineEntry,
+} from '@/types/commercial-quotes';
 import {
   Building2,
   Calendar,
@@ -28,7 +36,9 @@ import {
   GitBranch,
   Loader2,
   Mail,
+  MailCheck,
   Phone,
+  RefreshCw,
   Send,
   Tag,
   TrendingUp,
@@ -66,6 +76,7 @@ interface QuoteDetailDialogProps {
   onSend?: (quoteId: string) => void;
   onCreateRevision?: (quoteId: string) => void;
   onConvertQuote?: (quoteId: string) => void;
+  onRenewQuote?: (quoteId: string) => void;
 }
 
 export function QuoteDetailDialog({
@@ -75,14 +86,19 @@ export function QuoteDetailDialog({
   onSend,
   onCreateRevision,
   onConvertQuote,
+  onRenewQuote,
 }: QuoteDetailDialogProps) {
   const [quote, setQuote] = useState<CommercialQuote | null>(null);
   const [revisions, setRevisions] = useState<CommercialQuote[]>([]);
+  const [timeline, setTimeline] = useState<NegotiationTimelineEntry[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isTimelineLoading, setIsTimelineLoading] = useState(false);
 
   useEffect(() => {
     if (quoteId && open) {
       setIsLoading(true);
+      setIsTimelineLoading(true);
+
       getCommercialQuoteByIdAction(quoteId)
         .then((result) => {
           if (result.success && result.data) {
@@ -91,6 +107,14 @@ export function QuoteDetailDialog({
           }
         })
         .finally(() => setIsLoading(false));
+
+      getQuoteNegotiationTimelineAction(quoteId)
+        .then((result) => {
+          if (result.success && result.data) {
+            setTimeline(result.data);
+          }
+        })
+        .finally(() => setIsTimelineLoading(false));
     }
   }, [quoteId, open]);
 
@@ -227,7 +251,15 @@ export function QuoteDetailDialog({
                 </div>
               )}
 
-              {/* Timeline revisioni */}
+              {/* Indicatore email inviata */}
+              {quote.sent_at && quote.prospect_email && (
+                <div className="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg p-2.5 text-sm">
+                  <MailCheck className="h-4 w-4 text-blue-600" />
+                  <span className="text-blue-800">Email inviata a {quote.prospect_email}</span>
+                </div>
+              )}
+
+              {/* Timeline revisioni (compatto) */}
               {revisions.length > 1 && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
@@ -259,6 +291,16 @@ export function QuoteDetailDialog({
                   </div>
                 </div>
               )}
+
+              {/* Timeline negoziazione */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2 flex items-center gap-1">
+                  <Clock className="h-4 w-4" /> Timeline
+                </h3>
+                <div className="border rounded-lg p-4 max-h-64 overflow-y-auto">
+                  <NegotiationTimeline entries={timeline} isLoading={isTimelineLoading} />
+                </div>
+              </div>
 
               {/* Note risposta */}
               {quote.response_notes && (
@@ -328,6 +370,18 @@ export function QuoteDetailDialog({
                   >
                     <UserPlus className="h-4 w-4 mr-1" />
                     Converti in Cliente
+                  </Button>
+                )}
+                {quote.status === 'expired' && onRenewQuote && (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      onRenewQuote(quote.id);
+                      onOpenChange(false);
+                    }}
+                  >
+                    <RefreshCw className="h-4 w-4 mr-1" />
+                    Rinnova
                   </Button>
                 )}
               </div>

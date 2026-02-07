@@ -17,19 +17,23 @@ import {
   sendCommercialQuoteAction,
   updateQuoteStatusAction,
   deleteCommercialQuoteDraftAction,
+  renewExpiredQuoteAction,
 } from '@/actions/commercial-quotes';
+import { StatusChangeDialog } from './status-change-dialog';
 import type {
   CommercialQuote,
   CommercialQuoteStatus,
   QuotePipelineStats,
 } from '@/types/commercial-quotes';
 import {
+  AlertTriangle,
   CheckCircle2,
   Clock,
   Download,
   Eye,
   FileText,
   Loader2,
+  MessageSquare,
   MoreHorizontal,
   Pencil,
   RefreshCw,
@@ -74,6 +78,7 @@ interface QuotePipelineProps {
   onViewQuote?: (quoteId: string) => void;
   onCreateRevision?: (quoteId: string) => void;
   onConvertQuote?: (quoteId: string) => void;
+  onRenewQuote?: (quoteId: string) => void;
   refreshTrigger?: number;
 }
 
@@ -81,6 +86,7 @@ export function QuotePipeline({
   onViewQuote,
   onCreateRevision,
   onConvertQuote,
+  onRenewQuote,
   refreshTrigger = 0,
 }: QuotePipelineProps) {
   const [quotes, setQuotes] = useState<CommercialQuote[]>([]);
@@ -89,6 +95,11 @@ export function QuotePipeline({
   const [filterStatus, setFilterStatus] = useState<CommercialQuoteStatus | ''>('');
   const [searchQuery, setSearchQuery] = useState('');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  // Status change dialog state
+  const [statusDialogOpen, setStatusDialogOpen] = useState(false);
+  const [statusDialogTarget, setStatusDialogTarget] = useState<CommercialQuoteStatus | null>(null);
+  const [statusDialogQuoteId, setStatusDialogQuoteId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     setIsLoading(true);
@@ -136,15 +147,47 @@ export function QuotePipeline({
     }
   };
 
-  const handleStatusChange = async (quoteId: string, newStatus: CommercialQuoteStatus) => {
-    setActionLoading(quoteId);
+  const openStatusDialog = (quoteId: string, newStatus: CommercialQuoteStatus) => {
+    setStatusDialogQuoteId(quoteId);
+    setStatusDialogTarget(newStatus);
+    setStatusDialogOpen(true);
+  };
+
+  const handleStatusChangeConfirm = async (notes: string) => {
+    if (!statusDialogQuoteId || !statusDialogTarget) return;
+    setActionLoading(statusDialogQuoteId);
     try {
-      const result = await updateQuoteStatusAction(quoteId, newStatus);
+      const result = await updateQuoteStatusAction(
+        statusDialogQuoteId,
+        statusDialogTarget,
+        notes || undefined
+      );
       if (result.success) {
-        toast.success(`Stato aggiornato a "${STATUS_CONFIG[newStatus].label}"`);
+        toast.success(`Stato aggiornato a "${STATUS_CONFIG[statusDialogTarget].label}"`);
         loadData();
       } else {
         toast.error(result.error || 'Errore aggiornamento');
+      }
+    } catch {
+      toast.error('Errore imprevisto');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleRenew = async (quoteId: string) => {
+    if (onRenewQuote) {
+      onRenewQuote(quoteId);
+      return;
+    }
+    setActionLoading(quoteId);
+    try {
+      const result = await renewExpiredQuoteAction({ expired_quote_id: quoteId });
+      if (result.success) {
+        toast.success('Preventivo rinnovato come nuova bozza');
+        loadData();
+      } else {
+        toast.error(result.error || 'Errore rinnovo');
       }
     } catch {
       toast.error('Errore imprevisto');
@@ -182,6 +225,15 @@ export function QuotePipeline({
     if (allPrices.length === 0) return '-';
     const avg = allPrices.reduce((a, b) => a + b, 0) / allPrices.length;
     return formatCurrency(avg);
+  };
+
+  // Helper: giorni rimanenti alla scadenza
+  const getDaysLeft = (q: CommercialQuote): number | null => {
+    if (!q.expires_at) return null;
+    if (q.status !== 'sent' && q.status !== 'negotiating') return null;
+    const now = new Date();
+    const expires = new Date(q.expires_at);
+    return Math.ceil((expires.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   return (
@@ -328,6 +380,29 @@ export function QuotePipeline({
                         </td>
                         <td className="px-4 py-3 text-center">
                           <Badge variant={statusConfig.variant}>{statusConfig.label}</Badge>
+                          {(() => {
+                            const daysLeft = getDaysLeft(q);
+                            if (daysLeft === null) return null;
+                            if (daysLeft <= 0) {
+                              return (
+                                <div className="flex items-center justify-center gap-1 mt-1">
+                                  <AlertTriangle className="h-3 w-3 text-red-500" />
+                                  <span className="text-xs text-red-600 font-medium">Scaduto</span>
+                                </div>
+                              );
+                            }
+                            if (daysLeft <= 7) {
+                              return (
+                                <div className="flex items-center justify-center gap-1 mt-1">
+                                  <Clock className="h-3 w-3 text-amber-500" />
+                                  <span className="text-xs text-amber-600 font-medium">
+                                    Scade tra {daysLeft}g
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return null;
+                          })()}
                         </td>
                         <td className="px-4 py-3 text-center text-sm text-gray-500">
                           {formatDate(q.created_at)}
@@ -370,13 +445,26 @@ export function QuotePipeline({
                                   </Button>
                                 )}
 
+                                {/* In trattativa (solo sent) */}
+                                {q.status === 'sent' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => openStatusDialog(q.id, 'negotiating')}
+                                    title="In trattativa"
+                                    className="text-amber-600 hover:text-amber-700"
+                                  >
+                                    <MessageSquare className="h-4 w-4" />
+                                  </Button>
+                                )}
+
                                 {/* Accetta / Rifiuta (solo sent/negotiating) */}
                                 {(q.status === 'sent' || q.status === 'negotiating') && (
                                   <>
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleStatusChange(q.id, 'accepted')}
+                                      onClick={() => openStatusDialog(q.id, 'accepted')}
                                       title="Segna come accettato"
                                       className="text-green-600 hover:text-green-700"
                                     >
@@ -385,7 +473,7 @@ export function QuotePipeline({
                                     <Button
                                       variant="ghost"
                                       size="sm"
-                                      onClick={() => handleStatusChange(q.id, 'rejected')}
+                                      onClick={() => openStatusDialog(q.id, 'rejected')}
                                       title="Segna come rifiutato"
                                       className="text-red-600 hover:text-red-700"
                                     >
@@ -419,6 +507,19 @@ export function QuotePipeline({
                                   </Button>
                                 )}
 
+                                {/* Rinnova (solo expired) */}
+                                {q.status === 'expired' && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleRenew(q.id)}
+                                    title="Rinnova preventivo"
+                                    className="text-indigo-600 hover:text-indigo-700"
+                                  >
+                                    <RefreshCw className="h-4 w-4" />
+                                  </Button>
+                                )}
+
                                 {/* Elimina (solo draft) */}
                                 {q.status === 'draft' && (
                                   <Button
@@ -444,6 +545,14 @@ export function QuotePipeline({
           )}
         </CardContent>
       </Card>
+
+      {/* Status Change Dialog */}
+      <StatusChangeDialog
+        open={statusDialogOpen}
+        onOpenChange={setStatusDialogOpen}
+        targetStatus={statusDialogTarget}
+        onConfirm={handleStatusChangeConfirm}
+      />
     </div>
   );
 }

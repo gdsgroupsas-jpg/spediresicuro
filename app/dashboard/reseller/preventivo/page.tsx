@@ -18,8 +18,10 @@ import { ConvertDialog } from '@/components/commercial-quotes/convert-dialog';
 import {
   sendCommercialQuoteAction,
   getCommercialQuoteByIdAction,
+  renewExpiredQuoteAction,
 } from '@/actions/commercial-quotes';
-import { FileText, PlusCircle } from 'lucide-react';
+import { QuoteAnalytics } from '@/components/commercial-quotes/quote-analytics';
+import { BarChart3, FileText, PlusCircle } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -82,6 +84,16 @@ export default function PreventivoPage() {
     setConvertOpen(true);
   };
 
+  const handleRenewQuote = async (quoteId: string) => {
+    const result = await renewExpiredQuoteAction({ expired_quote_id: quoteId });
+    if (result.success) {
+      toast.success('Preventivo rinnovato come nuova bozza');
+      refresh();
+    } else {
+      toast.error(result.error || 'Errore rinnovo');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <DashboardNav
@@ -99,6 +111,10 @@ export default function PreventivoPage() {
               <PlusCircle className="h-4 w-4" />
               Nuovo Preventivo
             </TabsTrigger>
+            <TabsTrigger value="analytics" className="gap-1.5">
+              <BarChart3 className="h-4 w-4" />
+              Analisi
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="pipeline">
@@ -106,6 +122,7 @@ export default function PreventivoPage() {
               onViewQuote={handleViewQuote}
               onCreateRevision={handleCreateRevision}
               onConvertQuote={handleConvertQuote}
+              onRenewQuote={handleRenewQuote}
               refreshTrigger={refreshTrigger}
             />
           </TabsContent>
@@ -114,6 +131,10 @@ export default function PreventivoPage() {
             <div className="max-w-2xl mx-auto">
               <QuoteForm onQuoteCreated={handleQuoteCreated} />
             </div>
+          </TabsContent>
+
+          <TabsContent value="analytics">
+            <QuoteAnalytics refreshTrigger={refreshTrigger} />
           </TabsContent>
         </Tabs>
       </div>
@@ -126,6 +147,7 @@ export default function PreventivoPage() {
         onSend={handleSendQuote}
         onCreateRevision={handleCreateRevision}
         onConvertQuote={handleConvertQuote}
+        onRenewQuote={handleRenewQuote}
       />
 
       <ConvertDialog

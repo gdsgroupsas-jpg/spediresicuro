@@ -193,6 +193,8 @@ export type CommercialQuoteEventType =
   | 'accepted'
   | 'rejected'
   | 'expired'
+  | 'reminder_sent'
+  | 'renewed'
   | 'converted';
 
 export interface CommercialQuoteEvent {
@@ -291,3 +293,113 @@ export const PROSPECT_SECTORS = [
 ] as const;
 
 export type ProspectSector = (typeof PROSPECT_SECTORS)[number]['value'];
+
+// ============================================
+// ANALYTICS (Fase B)
+// ============================================
+
+/** KPI principali per dashboard analytics */
+export interface QuoteAnalyticsKPI {
+  conversion_rate: number;
+  average_margin_accepted: number;
+  average_days_to_close: number;
+  total_revenue_value: number;
+  total_quotes: number;
+  total_accepted: number;
+  total_rejected: number;
+}
+
+/** Dati per funnel di conversione */
+export interface QuoteConversionFunnel {
+  created: number;
+  sent: number;
+  negotiating: number;
+  accepted: number;
+  dropoff_created_to_sent: number;
+  dropoff_sent_to_accepted: number;
+}
+
+/** Singolo data point per analisi margine */
+export interface QuoteMarginDataPoint {
+  quote_id: string;
+  prospect_company: string;
+  original_margin: number;
+  final_margin: number;
+  delta: number;
+  accepted: boolean;
+}
+
+/** Analisi margine: confronto originale vs finale */
+export interface QuoteMarginAnalysis {
+  data_points: QuoteMarginDataPoint[];
+  average_original_margin: number;
+  average_final_margin: number;
+  average_delta: number;
+  avg_margin_accepted: number;
+  avg_margin_rejected: number;
+}
+
+/** Performance per corriere */
+export interface QuoteCarrierPerformance {
+  carrier_code: string;
+  carrier_display_name: string;
+  total_quotes: number;
+  accepted: number;
+  rejected: number;
+  acceptance_rate: number;
+  average_margin: number;
+}
+
+/** Performance per settore prospect */
+export interface QuoteSectorPerformance {
+  sector: string;
+  sector_label: string;
+  total_quotes: number;
+  accepted: number;
+  rejected: number;
+  acceptance_rate: number;
+  average_margin: number;
+}
+
+/** Punto nella timeline (per settimana) */
+export interface QuoteTimelinePoint {
+  period: string;
+  period_label: string;
+  created: number;
+  sent: number;
+  accepted: number;
+  rejected: number;
+}
+
+/** Risposta completa dell'analytics action */
+export interface QuoteAnalyticsData {
+  kpi: QuoteAnalyticsKPI;
+  funnel: QuoteConversionFunnel;
+  margin_analysis: QuoteMarginAnalysis;
+  carrier_performance: QuoteCarrierPerformance[];
+  sector_performance: QuoteSectorPerformance[];
+  timeline: QuoteTimelinePoint[];
+}
+
+// ============================================
+// NEGOZIAZIONE AVANZATA (Fase D)
+// ============================================
+
+/** Singola entry nella timeline negoziazione */
+export interface NegotiationTimelineEntry {
+  id: string;
+  event_type: CommercialQuoteEventType;
+  event_label: string;
+  event_data: Record<string, unknown> | null;
+  actor_name: string | null;
+  created_at: string;
+  notes: string | null;
+}
+
+/** Input per rinnovo preventivo scaduto */
+export interface RenewExpiredQuoteInput {
+  expired_quote_id: string;
+  new_validity_days?: number;
+  revision_notes?: string;
+  margin_percent?: number;
+}

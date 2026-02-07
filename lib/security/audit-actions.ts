@@ -111,6 +111,7 @@ export const AUDIT_ACTIONS = {
   COMMERCIAL_QUOTE_ACCEPTED: 'commercial_quote_accepted',
   COMMERCIAL_QUOTE_REJECTED: 'commercial_quote_rejected',
   COMMERCIAL_QUOTE_CONVERTED: 'commercial_quote_converted',
+  COMMERCIAL_QUOTE_EXPIRED: 'commercial_quote_expired',
 } as const;
 
 /**

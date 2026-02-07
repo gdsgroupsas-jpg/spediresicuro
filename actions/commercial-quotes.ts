@@ -21,13 +21,19 @@ import { buildPriceMatrix } from '@/lib/commercial-quotes/matrix-builder';
 import { getDefaultClauses, mergeWithCustomClauses } from '@/lib/commercial-quotes/clauses';
 import { generateCommercialQuotePDF } from '@/lib/commercial-quotes/pdf-generator';
 import { convertQuoteToClient } from '@/lib/commercial-quotes/conversion';
+import { computeAnalytics } from '@/lib/commercial-quotes/analytics';
+import { sendQuoteToProspectEmail, sendWelcomeEmail } from '@/lib/email/resend';
 import type {
   CommercialQuote,
   CreateCommercialQuoteInput,
   CreateRevisionInput,
   ConvertQuoteInput,
   QuotePipelineStats,
+  QuoteAnalyticsData,
   CommercialQuoteStatus,
+  NegotiationTimelineEntry,
+  RenewExpiredQuoteInput,
+  CommercialQuoteEventType,
 } from '@/types/commercial-quotes';
 
 // ============================================
@@ -534,6 +540,22 @@ export async function sendCommercialQuoteAction(
       },
     });
 
+    // Invio email al prospect (non-bloccante)
+    if (quote.prospect_email) {
+      try {
+        await sendQuoteToProspectEmail({
+          to: quote.prospect_email,
+          prospectName: quote.prospect_contact_name || quote.prospect_company,
+          resellerCompanyName: wsAuth.workspace.organization_name || 'SpedireSicuro',
+          quoteValidityDays: quote.validity_days,
+          pdfBuffer,
+        });
+      } catch (emailError: any) {
+        // Non-bloccante: log errore ma non fallisce l'azione
+        console.error('Errore invio email prospect:', emailError.message);
+      }
+    }
+
     return { success: true, data: { pdfUrl: storagePath } };
   } catch (error: any) {
     console.error('Errore sendCommercialQuoteAction:', error);
@@ -890,6 +912,19 @@ export async function convertQuoteToClientAction(
       },
     });
 
+    // Email benvenuto al nuovo cliente (non-bloccante)
+    try {
+      await sendWelcomeEmail({
+        to: input.client_email,
+        userName: input.client_name,
+        password: input.client_password,
+        createdBy: wsAuth.target.name || wsAuth.target.email || undefined,
+        companyName: wsAuth.workspace.organization_name || undefined,
+      });
+    } catch (emailError: any) {
+      console.error('Errore invio email benvenuto:', emailError.message);
+    }
+
     return { success: true, data: result };
   } catch (error: any) {
     console.error('Errore convertQuoteToClientAction:', error);
@@ -981,6 +1016,289 @@ export async function generateQuotePdfAction(
     return { success: true, data: { pdfBase64 } };
   } catch (error: any) {
     console.error('Errore generateQuotePdfAction:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+// ============================================
+// ANALYTICS
+// ============================================
+
+/**
+ * Calcola analytics completi per i preventivi commerciali del workspace.
+ * KPI, funnel, margini, performance corriere/settore, timeline.
+ */
+export async function getQuoteAnalyticsAction(): Promise<ActionResult<QuoteAnalyticsData>> {
+  try {
+    const wsAuth = await getWorkspaceAuth();
+    if (!wsAuth) return { success: false, error: 'Non autenticato' };
+
+    const workspaceId = wsAuth.workspace.id;
+
+    const { data: quotes, error } = await supabaseAdmin
+      .from('commercial_quotes')
+      .select('*')
+      .eq('workspace_id', workspaceId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Errore query analytics:', error);
+      return { success: false, error: error.message };
+    }
+
+    const analytics = computeAnalytics((quotes || []) as CommercialQuote[]);
+    return { success: true, data: analytics };
+  } catch (error: any) {
+    console.error('Errore getQuoteAnalyticsAction:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+// ============================================
+// NEGOTIATION TIMELINE
+// ============================================
+
+/** Etichette italiane per tipi evento */
+const EVENT_LABELS: Record<CommercialQuoteEventType, string> = {
+  created: 'Preventivo creato',
+  updated: 'Preventivo aggiornato',
+  sent: 'Inviato al prospect',
+  viewed: 'Visualizzato',
+  revised: 'Nuova revisione',
+  accepted: 'Accettato',
+  rejected: 'Rifiutato',
+  expired: 'Scaduto',
+  reminder_sent: 'Reminder inviato',
+  renewed: 'Rinnovato',
+  converted: 'Convertito in cliente',
+};
+
+/**
+ * Carica la timeline negoziazione completa per un preventivo.
+ * Include eventi di tutta la catena revisioni (root + figli).
+ */
+export async function getQuoteNegotiationTimelineAction(
+  quoteId: string
+): Promise<ActionResult<NegotiationTimelineEntry[]>> {
+  try {
+    const wsAuth = await getWorkspaceAuth();
+    if (!wsAuth) return { success: false, error: 'Non autenticato' };
+
+    const workspaceId = wsAuth.workspace.id;
+
+    // Carica quote per trovare root
+    const { data: quote, error: loadError } = await supabaseAdmin
+      .from('commercial_quotes')
+      .select('id, parent_quote_id, workspace_id')
+      .eq('id', quoteId)
+      .eq('workspace_id', workspaceId)
+      .single();
+
+    if (loadError || !quote) {
+      return { success: false, error: 'Preventivo non trovato' };
+    }
+
+    const rootId = quote.parent_quote_id || quote.id;
+
+    // Trova tutti gli ID della catena (root + revisioni)
+    const { data: chainQuotes } = await supabaseAdmin
+      .from('commercial_quotes')
+      .select('id')
+      .or(`id.eq.${rootId},parent_quote_id.eq.${rootId}`);
+
+    const chainIds = (chainQuotes || []).map((q) => q.id);
+
+    // Carica tutti gli eventi della catena
+    const { data: events, error: eventsError } = await supabaseAdmin
+      .from('commercial_quote_events')
+      .select('id, quote_id, event_type, event_data, actor_id, created_at')
+      .in('quote_id', chainIds)
+      .order('created_at', { ascending: true });
+
+    if (eventsError) {
+      return { success: false, error: eventsError.message };
+    }
+
+    // Carica nomi attori (batch)
+    const actorIds = [...new Set((events || []).map((e) => e.actor_id).filter(Boolean))];
+    let actorMap = new Map<string, string>();
+    if (actorIds.length > 0) {
+      const { data: users } = await supabaseAdmin
+        .from('users')
+        .select('id, full_name, email')
+        .in('id', actorIds);
+
+      for (const u of users || []) {
+        actorMap.set(u.id, u.full_name || u.email || 'Utente');
+      }
+    }
+
+    // Mappa a NegotiationTimelineEntry
+    const timeline: NegotiationTimelineEntry[] = (events || []).map((e) => ({
+      id: e.id,
+      event_type: e.event_type as CommercialQuoteEventType,
+      event_label: EVENT_LABELS[e.event_type as CommercialQuoteEventType] || e.event_type,
+      event_data: e.event_data,
+      actor_name: e.actor_id ? actorMap.get(e.actor_id) || null : null,
+      created_at: e.created_at,
+      notes: e.event_data?.notes || e.event_data?.revision_notes || null,
+    }));
+
+    return { success: true, data: timeline };
+  } catch (error: any) {
+    console.error('Errore getQuoteNegotiationTimelineAction:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+// ============================================
+// RENEW EXPIRED QUOTE
+// ============================================
+
+/**
+ * Rinnova un preventivo scaduto creando una nuova revisione draft.
+ * Il preventivo scaduto RESTA expired (storia preservata).
+ */
+export async function renewExpiredQuoteAction(
+  input: RenewExpiredQuoteInput
+): Promise<ActionResult<CommercialQuote>> {
+  try {
+    const wsAuth = await getWorkspaceAuth();
+    if (!wsAuth) return { success: false, error: 'Non autenticato' };
+
+    const userId = wsAuth.target.id;
+    const workspaceId = wsAuth.workspace.id;
+
+    // Carica quote scaduta
+    const { data: expired, error: loadError } = await supabaseAdmin
+      .from('commercial_quotes')
+      .select('*')
+      .eq('id', input.expired_quote_id)
+      .eq('workspace_id', workspaceId)
+      .single();
+
+    if (loadError || !expired) {
+      return { success: false, error: 'Preventivo non trovato' };
+    }
+
+    if (expired.status !== 'expired') {
+      return { success: false, error: 'Solo preventivi scaduti possono essere rinnovati' };
+    }
+
+    // Determina root e nuovo numero revisione
+    const rootId = expired.parent_quote_id || expired.id;
+    const { count: revisionCount } = await supabaseAdmin
+      .from('commercial_quotes')
+      .select('id', { count: 'exact', head: true })
+      .or(`id.eq.${rootId},parent_quote_id.eq.${rootId}`);
+
+    const newRevision = (revisionCount || 1) + 1;
+    const newMargin = input.margin_percent ?? expired.margin_percent;
+    const newValidityDays = input.new_validity_days ?? expired.validity_days;
+
+    // Ricalcola matrice se margine cambiato
+    let newMatrix = expired.price_matrix;
+    if (
+      input.margin_percent &&
+      input.margin_percent !== expired.margin_percent &&
+      expired.price_list_id
+    ) {
+      const carrierDisplayName =
+        expired.price_matrix?.carrier_display_name ||
+        formatCarrierDisplayName(expired.carrier_code);
+      newMatrix = await buildPriceMatrix({
+        priceListId: expired.price_list_id,
+        marginPercent: input.margin_percent,
+        workspaceId,
+        vatMode: expired.vat_mode || 'excluded',
+        vatRate: expired.vat_rate || 22,
+        carrierDisplayName,
+        deliveryMode: expired.delivery_mode || 'carrier_pickup',
+        pickupFee: expired.pickup_fee,
+        goodsNeedsProcessing: expired.goods_needs_processing || false,
+        processingFee: expired.processing_fee,
+      });
+    }
+
+    // INSERT nuova revisione come draft
+    const { data: renewal, error: insertError } = await supabaseAdmin
+      .from('commercial_quotes')
+      .insert({
+        workspace_id: workspaceId,
+        created_by: userId,
+        prospect_company: expired.prospect_company,
+        prospect_contact_name: expired.prospect_contact_name,
+        prospect_email: expired.prospect_email,
+        prospect_phone: expired.prospect_phone,
+        prospect_sector: expired.prospect_sector,
+        prospect_estimated_volume: expired.prospect_estimated_volume,
+        prospect_notes: expired.prospect_notes,
+        carrier_code: expired.carrier_code,
+        contract_code: expired.contract_code,
+        price_list_id: expired.price_list_id,
+        margin_percent: newMargin,
+        validity_days: newValidityDays,
+        delivery_mode: expired.delivery_mode,
+        pickup_fee: expired.pickup_fee,
+        goods_needs_processing: expired.goods_needs_processing,
+        processing_fee: expired.processing_fee,
+        revision: newRevision,
+        parent_quote_id: rootId,
+        revision_notes: input.revision_notes || 'Rinnovo da preventivo scaduto',
+        price_matrix: newMatrix,
+        clauses: expired.clauses,
+        vat_mode: expired.vat_mode,
+        vat_rate: expired.vat_rate,
+        original_margin_percent: expired.original_margin_percent || expired.margin_percent,
+        status: 'draft',
+      })
+      .select('*')
+      .single();
+
+    if (insertError || !renewal) {
+      return { success: false, error: `Errore rinnovo: ${insertError?.message}` };
+    }
+
+    // Evento 'renewed' sul preventivo scaduto
+    await supabaseAdmin.from('commercial_quote_events').insert({
+      quote_id: expired.id,
+      event_type: 'renewed',
+      event_data: {
+        new_quote_id: renewal.id,
+        new_revision: newRevision,
+        new_margin: newMargin,
+      },
+      actor_id: userId,
+    });
+
+    // Evento 'created' sulla nuova revisione
+    await supabaseAdmin.from('commercial_quote_events').insert({
+      quote_id: renewal.id,
+      event_type: 'created',
+      event_data: {
+        renewed_from: expired.id,
+        revision: newRevision,
+      },
+      actor_id: userId,
+    });
+
+    // Audit log
+    await writeAuditLog({
+      context: toAuditContext(wsAuth),
+      action: AUDIT_ACTIONS.COMMERCIAL_QUOTE_REVISED,
+      resourceType: 'commercial_quote',
+      resourceId: renewal.id,
+      metadata: {
+        parent_id: rootId,
+        renewed_from: expired.id,
+        revision: newRevision,
+        margin_percent: newMargin,
+      },
+    });
+
+    return { success: true, data: renewal as CommercialQuote };
+  } catch (error: any) {
+    console.error('Errore renewExpiredQuoteAction:', error);
     return { success: false, error: error.message || 'Errore sconosciuto' };
   }
 }
