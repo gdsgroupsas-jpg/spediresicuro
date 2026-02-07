@@ -112,9 +112,17 @@ export async function GET() {
       workspaces = await getUserWorkspaces(context.target.id);
     }
 
+    // Carica primary_workspace_id dell'utente per fallback client-side
+    const { data: userPref } = await supabaseAdmin
+      .from('users')
+      .select('primary_workspace_id')
+      .eq('id', context.target.id)
+      .single();
+
     return NextResponse.json({
       workspaces,
       count: workspaces.length,
+      primary_workspace_id: userPref?.primary_workspace_id || null,
     });
   } catch (error: any) {
     console.error('GET /api/workspaces/my error:', error);

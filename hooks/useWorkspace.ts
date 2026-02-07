@@ -115,18 +115,29 @@ export function useWorkspace(): UseWorkspaceReturn {
       const data = await response.json();
       setWorkspaces(data.workspaces || []);
 
-      // Se no workspace corrente, prova a caricare da storage/cookie
+      // Se no workspace corrente, seleziona con priorita':
+      // 1. localStorage (scelta recente utente)
+      // 2. primary_workspace_id dal DB (preferenza salvata server-side)
+      // 3. Primo workspace nella lista (fallback finale)
       if (!currentWorkspaceId) {
         const savedId = getSavedWorkspaceId();
+        const dbPrimaryId = data.primary_workspace_id || null;
 
         if (
           savedId &&
           data.workspaces?.some((w: UserWorkspaceInfo) => w.workspace_id === savedId)
         ) {
-          // Workspace salvato esiste ancora
+          // Priorita' 1: localStorage valido
           setCurrentWorkspaceId(savedId);
+        } else if (
+          dbPrimaryId &&
+          data.workspaces?.some((w: UserWorkspaceInfo) => w.workspace_id === dbPrimaryId)
+        ) {
+          // Priorita' 2: primary_workspace_id dal DB
+          setCurrentWorkspaceId(dbPrimaryId);
+          saveWorkspaceId(dbPrimaryId);
         } else if (data.workspaces?.length > 0) {
-          // Usa il primo workspace disponibile
+          // Priorita' 3: primo workspace disponibile
           setCurrentWorkspaceId(data.workspaces[0].workspace_id);
           saveWorkspaceId(data.workspaces[0].workspace_id);
         }
