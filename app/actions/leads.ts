@@ -177,18 +177,21 @@ export async function getLeads(
 
     const leads = (data || []) as Lead[];
 
-    // Calcola statistiche
+    // Stats globali: query separata senza filtri per avere numeri reali
+    const { data: allLeads } = await supabaseAdmin.from('leads').select('status, lead_score');
+
+    const all = (allLeads || []) as { status: string; lead_score: number | null }[];
     const stats: LeadStats = {
-      total: leads.length,
-      new: leads.filter((l) => l.status === 'new').length,
-      contacted: leads.filter((l) => l.status === 'contacted').length,
-      qualified: leads.filter((l) => l.status === 'qualified').length,
-      negotiation: leads.filter((l) => l.status === 'negotiation').length,
-      won: leads.filter((l) => l.status === 'won').length,
-      lost: leads.filter((l) => l.status === 'lost').length,
+      total: all.length,
+      new: all.filter((l) => l.status === 'new').length,
+      contacted: all.filter((l) => l.status === 'contacted').length,
+      qualified: all.filter((l) => l.status === 'qualified').length,
+      negotiation: all.filter((l) => l.status === 'negotiation').length,
+      won: all.filter((l) => l.status === 'won').length,
+      lost: all.filter((l) => l.status === 'lost').length,
       avgScore:
-        leads.length > 0
-          ? Math.round(leads.reduce((sum, l) => sum + (l.lead_score || 0), 0) / leads.length)
+        all.length > 0
+          ? Math.round(all.reduce((sum, l) => sum + (l.lead_score || 0), 0) / all.length)
           : 0,
     };
 
