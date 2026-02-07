@@ -101,6 +101,16 @@ export const AUDIT_ACTIONS = {
   // ============================================
   PRICE_LIST_ASSIGNED: 'price_list_assigned',
   PRICE_LIST_REVOKED: 'price_list_revoked',
+
+  // ============================================
+  // COMMERCIAL QUOTE OPERATIONS
+  // ============================================
+  COMMERCIAL_QUOTE_CREATED: 'commercial_quote_created',
+  COMMERCIAL_QUOTE_SENT: 'commercial_quote_sent',
+  COMMERCIAL_QUOTE_REVISED: 'commercial_quote_revised',
+  COMMERCIAL_QUOTE_ACCEPTED: 'commercial_quote_accepted',
+  COMMERCIAL_QUOTE_REJECTED: 'commercial_quote_rejected',
+  COMMERCIAL_QUOTE_CONVERTED: 'commercial_quote_converted',
 } as const;
 
 /**
