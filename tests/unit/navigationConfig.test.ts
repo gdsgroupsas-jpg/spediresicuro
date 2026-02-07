@@ -424,11 +424,19 @@ describe('navigationConfig - Reseller Team in Gestione Business', () => {
     expect(hasWorkspaceTeam).toBe(true);
   });
 
-  it('sezione Gestione Business deve avere 6 item totali per reseller', () => {
+  it('sezione Gestione Business deve avere 7 item totali per reseller', () => {
     const config = getNavigationForUser('user', { isReseller: true });
     const resellerSection = config.sections.find((s) => s.id === 'reseller');
 
-    expect(resellerSection?.items).toHaveLength(6);
+    expect(resellerSection?.items).toHaveLength(7);
+  });
+
+  it('reseller deve avere "I Miei Prospect" nella sezione Gestione Business', () => {
+    const config = getNavigationForUser('user', { isReseller: true });
+    const resellerSection = config.sections.find((s) => s.id === 'reseller');
+    const hasProspects = resellerSection?.items.some((i) => i.id === 'reseller-prospects');
+
+    expect(hasProspects).toBe(true);
   });
 
   it('user semplice (non-reseller) NON deve avere workspace-team in "Il Mio Account"', () => {

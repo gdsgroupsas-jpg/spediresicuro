@@ -41,6 +41,7 @@ import {
   Trash2,
   Headphones,
   Key,
+  UserPlus,
 } from 'lucide-react';
 
 /**
@@ -268,6 +269,13 @@ const resellerSection: NavSection = {
       href: '/dashboard/reseller/clienti',
       icon: Users,
       description: 'Gestisci clienti, listini e wallet',
+    },
+    {
+      id: 'reseller-prospects',
+      label: 'I Miei Prospect',
+      href: '/dashboard/prospects',
+      icon: UserPlus,
+      description: 'Pipeline vendite e gestione potenziali clienti',
     },
     {
       id: 'reseller-preventivo',

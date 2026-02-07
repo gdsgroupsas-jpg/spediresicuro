@@ -18,6 +18,11 @@ import { supabaseAdmin } from '@/lib/db/client';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-actions';
 import { buildPriceMatrix } from '@/lib/commercial-quotes/matrix-builder';
+import {
+  findProspectByContactInternal,
+  linkQuoteToProspectInternal,
+  updateProspectOnQuoteStatus,
+} from '@/actions/reseller-prospects';
 import { getDefaultClauses, mergeWithCustomClauses } from '@/lib/commercial-quotes/clauses';
 import { generateCommercialQuotePDF } from '@/lib/commercial-quotes/pdf-generator';
 import { convertQuoteToClient } from '@/lib/commercial-quotes/conversion';
@@ -255,6 +260,22 @@ export async function createCommercialQuoteAction(
         delivery_mode: deliveryMode,
       },
     });
+
+    // Auto-link con prospect esistente (non-bloccante)
+    try {
+      const matchedProspect = await findProspectByContactInternal(
+        workspaceId,
+        input.prospect_email?.trim().toLowerCase() || undefined,
+        input.prospect_company?.trim() || undefined
+      );
+      if (matchedProspect) {
+        await linkQuoteToProspectInternal(matchedProspect.id, quote.id, userId);
+        console.log(`[CRM] Auto-linked quote ${quote.id} to prospect ${matchedProspect.id}`);
+      }
+    } catch (linkErr) {
+      // Non-bloccante: log errore ma non fallisce la creazione
+      console.error('[CRM] Auto-link prospect error:', linkErr);
+    }
 
     return { success: true, data: quote as CommercialQuote };
   } catch (error: any) {
@@ -648,6 +669,15 @@ export async function updateQuoteStatusAction(
       });
     }
 
+    // Aggiorna prospect collegato se accepted/rejected (non-bloccante)
+    if (newStatus === 'accepted' || newStatus === 'rejected') {
+      try {
+        await updateProspectOnQuoteStatus(workspaceId, quoteId, newStatus, userId, notes);
+      } catch (prospectErr) {
+        console.error('[CRM] updateProspectOnQuoteStatus error:', prospectErr);
+      }
+    }
+
     return { success: true };
   } catch (error: any) {
     console.error('Errore updateQuoteStatusAction:', error);
@@ -911,6 +941,13 @@ export async function convertQuoteToClientAction(
         converted_price_list_id: result.priceListId,
       },
     });
+
+    // Aggiorna prospect collegato: won + converted (non-bloccante)
+    try {
+      await updateProspectOnQuoteStatus(workspaceId, input.quote_id, 'accepted', userId);
+    } catch (prospectErr) {
+      console.error('[CRM] updateProspectOnQuoteStatus (conversion) error:', prospectErr);
+    }
 
     // Email benvenuto al nuovo cliente (non-bloccante)
     try {
