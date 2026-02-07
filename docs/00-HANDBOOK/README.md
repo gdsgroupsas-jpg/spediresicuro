@@ -29,6 +29,21 @@ Start here:
 - docs/00-HANDBOOK/features/WORKSPACE_ADAPTIVE_UI.md
 - docs/00-HANDBOOK/index.json
 
+Feature Documentation:
+
+- docs/11-FEATURES/SHIPMENTS.md
+- docs/11-FEATURES/WALLET.md
+- docs/11-FEATURES/PRICE_LISTS.md
+- docs/11-FEATURES/COD_MANAGEMENT.md
+- docs/11-FEATURES/COMMERCIAL_QUOTES.md
+- docs/11-FEATURES/RESELLER_HIERARCHY.md
+
+Milestones:
+
+- docs/milestones/MILESTONE-SHIPMENT-CORE-REFACTOR.md
+- docs/milestones/MILESTONE-COMMERCIAL-QUOTES-MVP-PHASE-A.md
+- docs/milestones/MILESTONE-COMMERCIAL-QUOTES-PHASES-BCD.md
+
 Notes:
 
 - .cursor/rules is a junction that points here so IDE rules stay in sync.

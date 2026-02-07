@@ -577,6 +577,127 @@ GET  /api/cod/distinte/export  // Export Excel
 
 ---
 
+### Flow 6: Preventivatore Commerciale
+
+**Obiettivo:** Generare preventivi PDF brandizzati per nuovi clienti (prospect), gestire il ciclo di negoziazione, e convertire prospect in clienti operativi con listino personalizzato.
+
+**URL:** `/dashboard/reseller/preventivo`
+
+**Ruoli:** Reseller (admin, agent)
+
+**Steps:**
+
+1. **Creazione Preventivo (Tab "Nuovo Preventivo")**
+   - Compila dati prospect: azienda, contatto, email, telefono, settore, volume stimato
+   - Seleziona corriere (dal listino master workspace)
+   - Imposta margine %, validita' giorni, delivery mode
+   - Opzionale: processing fee, clausole custom
+   - Click "Crea Preventivo"
+   - **Backend:**
+     1. `createCommercialQuoteAction()` con `getWorkspaceAuth()`
+     2. `buildPriceMatrix()` costruisce matrice da listino attivo
+     3. Insert `commercial_quotes` con status `draft`
+     4. Insert evento `created` in `commercial_quote_events`
+     5. Audit log `commercial_quote_created`
+
+2. **Invio al Prospect (Pipeline → "Invia")**
+   - Dalla pipeline, click "Invia" su un preventivo draft
+   - **Backend:**
+     1. `sendCommercialQuoteAction(quoteId)`
+     2. Genera PDF con `generateQuotePdf()`
+     3. Upload PDF su Supabase Storage
+     4. Update status `draft → sent`, set `sent_at` e `expires_at`
+     5. Se `prospect_email`: invia email con PDF allegato (non-bloccante)
+     6. Insert evento `sent` + audit log
+
+3. **Gestione Pipeline (Tab "I Miei Preventivi")**
+   - Filtri: stato, ricerca testo
+   - Badge scadenza: "Scade tra Xg" (amber <=7gg), "Scaduto" (rosso <=0)
+   - Azioni per stato:
+     - **draft**: Visualizza, Invia
+     - **sent**: Visualizza, In Trattativa, Accetta, Rifiuta
+     - **negotiating**: Visualizza, Nuova Revisione, Accetta, Rifiuta
+     - **accepted**: Visualizza, Converti in Cliente
+     - **expired**: Visualizza, Rinnova
+
+4. **Cambio Stato con Note**
+   - Click "In Trattativa"/"Accetta"/"Rifiuta" → Dialog StatusChange
+   - Note obbligatorie per: `negotiating`, `rejected`
+   - Note opzionali per: `accepted`
+   - **Backend:**
+     1. `updateQuoteStatusAction(quoteId, status, notes)`
+     2. Validazione transizione ammessa
+     3. Insert evento con note + audit log
+
+5. **Dettaglio Preventivo (Dialog)**
+   - Dati prospect, matrice prezzi, clausole
+   - Indicatore email inviata
+   - Timeline revisioni (se multiple)
+   - Timeline negoziazione (eventi con date, attori, note)
+   - Bottoni azione contestuali allo stato
+
+6. **Nuova Revisione**
+   - Da preventivo sent/negotiating → "Nuova Revisione"
+   - **Backend:**
+     1. `createRevisionAction(quoteId, { margin_percent, clauses })`
+     2. Copia dati prospect, crea nuova revisione draft
+     3. Se margine diverso: ricalcola matrice
+     4. Insert evento `revised` su originale + `created` su nuova
+
+7. **Rinnovo Preventivo Scaduto**
+   - Da preventivo expired → "Rinnova"
+   - **Backend:**
+     1. `renewExpiredQuoteAction({ expired_quote_id, margin_percent?, validity_days? })`
+     2. Crea draft con stessi dati (prospect, corriere, clausole)
+     3. Insert evento `renewed` su scaduto + `created` su nuova
+
+8. **Conversione Prospect → Cliente**
+   - Da preventivo accepted → "Converti in Cliente"
+   - Dialog: email, nome, password, conferma
+   - **Backend:**
+     1. `convertQuoteToClientAction(quoteId, { client_email, client_name, client_password })`
+     2. Crea utente Supabase Auth
+     3. Insert record `users`
+     4. Crea listino personalizzato da matrice preventivo
+     5. Update preventivo: `converted_user_id`, evento `converted`
+     6. Invia email benvenuto (non-bloccante)
+
+9. **Analytics (Tab "Analisi")**
+   - KPI: tasso conversione, margine medio, giorni chiusura, valore convertito
+   - Grafici: funnel, margini, performance corriere/settore, timeline settimanale
+   - **Backend:** `getQuoteAnalyticsAction()` → `computeAnalytics()`
+
+**Server Actions:**
+
+```typescript
+createCommercialQuoteAction(input)     // Crea draft
+getCommercialQuotesAction(filters?)    // Lista con filtri
+getCommercialQuoteByIdAction(id)       // Dettaglio + revisioni
+sendCommercialQuoteAction(id)          // Invia (PDF + email)
+updateQuoteStatusAction(id, status)    // Cambia stato
+createRevisionAction(id, changes)      // Nuova revisione
+convertQuoteToClientAction(id, data)   // Prospect → cliente
+getQuoteAnalyticsAction()              // Dati analytics
+getQuoteNegotiationTimelineAction(id)  // Timeline eventi
+renewExpiredQuoteAction(input)         // Rinnova scaduto
+```
+
+**Automazioni:**
+
+- **Cron auto-scadenza** (`/api/cron/expire-quotes`, ogni 4h):
+  - Auto-expire preventivi con `expires_at < NOW()`
+  - Reminder email 5 giorni prima scadenza (deduplicato)
+
+**Edge Cases:**
+
+- **Prospect senza email:** Preventivo creabile ma email non inviata
+- **Listino corriere cambiato:** Matrice e' snapshot immutabile, non si aggiorna
+- **Revisione su preventivo inviato:** Crea nuova revisione, originale resta intatto
+- **Conversione doppia:** Check `converted_user_id` previene duplicati
+- **Email fallita:** Non blocca l'operazione, errore loggato silenziosamente
+
+---
+
 ## Common Issues
 
 | Issue                        | Soluzione                                                |
@@ -601,9 +722,10 @@ GET  /api/cod/distinte/export  // Export Excel
 | 2026-01-12 | 1.0.0   | Initial version                                                 | AI Agent |
 | 2026-02-01 | 1.1.0   | Added Flow 5: COD Management                                    | AI Agent |
 | 2026-02-02 | 1.2.0   | Unified Listini UI: 4→1 sidebar entry per role, tab-based pages | AI Agent |
+| 2026-02-07 | 1.3.0   | Added Flow 6: Preventivatore Commerciale (full lifecycle)       | AI Agent |
 
 ---
 
-_Last Updated: 2026-02-02_
+_Last Updated: 2026-02-07_
 _Status: 🟢 Active_
 _Maintainer: Dev Team_
