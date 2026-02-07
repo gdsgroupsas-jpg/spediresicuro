@@ -75,6 +75,7 @@ export interface AgentState {
     | 'explain_worker'
     | 'price_list_worker'
     | 'support_worker'
+    | 'crm_worker'
     | 'legacy'
     | 'END';
 
@@ -183,6 +184,17 @@ export interface AgentState {
    * Popolato quando Anne gestisce richieste di assistenza.
    */
   support_response?: {
+    message: string;
+    toolsUsed: string[];
+  };
+
+  // ===== CRM INTELLIGENCE (Sprint S1) =====
+
+  /**
+   * Risposta del CRM worker.
+   * Popolato quando Anne gestisce richieste CRM intelligence.
+   */
+  crm_response?: {
     message: string;
     toolsUsed: string[];
   };

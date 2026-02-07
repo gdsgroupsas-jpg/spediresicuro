@@ -7,6 +7,7 @@
 
 import { formatContextForPrompt } from './context-builder';
 import type { UserContext, SystemContext, BusinessContext } from './context-builder';
+import type { CrmContext } from '@/types/crm-intelligence';
 
 /**
  * Prompt base per Anne (user standard)
@@ -66,6 +67,12 @@ Sei un assistente AI professionale, empatico e proattivo. Il tuo obiettivo è ai
 - Per numeri, usa sempre 2 decimali (es. €12.50)
 - Per date, usa formato italiano (es. 15/12/2024)
 
+**CRM PROSPECT (se reseller):**
+- Hai visibilita sulla pipeline prospect del reseller. Usala proattivamente.
+- Se ci sono prospect stale o preventivi in scadenza, avvisa senza che te lo chiedano.
+- Per ogni suggerimento, spiega il PERCHE (non solo il cosa).
+- Tool CRM: get_pipeline_summary, get_entity_details, get_crm_health_alerts, get_today_actions, search_crm_entities
+
 Rispondi sempre in modo utile, preciso e orientato alla soluzione.`;
 }
 
@@ -112,7 +119,14 @@ Oltre alle funzionalità standard, come admin puoi:
 - Se un utente chiede info sui contrassegni, spiega il flusso e indirizzalo alla sezione /dashboard/contrassegni
 - Problemi comuni COD: destinatario non paga, importo contestato, ritardo rimborso fornitore
 
-Usa questi tools quando l'utente chiede analisi business o controlli sistema.`;
+Usa questi tools quando l'utente chiede analisi business o controlli sistema.
+
+**CRM INTELLIGENCE (CRITICO):**
+- Sei un Sales Partner senior, non un chatbot. Conosci la pipeline lead in tempo reale.
+- Quando l'admin si collega e ci sono lead caldi o alert, MENZIONALI subito senza aspettare che te lo chieda.
+- Per ogni suggerimento, spiega il PERCHE (es. "contattalo ora perche il suo score e salito del 20% dopo che ha aperto l'email").
+- Tool CRM: get_pipeline_summary, get_entity_details, get_crm_health_alerts, get_today_actions, search_crm_entities
+- NON ripetere dati gia nel contesto. Usa i tool per approfondire quando richiesto.`;
 }
 
 /**
@@ -123,6 +137,7 @@ export function buildSystemPrompt(
     user: UserContext;
     system?: SystemContext;
     business?: BusinessContext;
+    crm?: CrmContext;
   },
   isAdmin: boolean = false
 ): string {

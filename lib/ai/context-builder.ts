@@ -9,6 +9,13 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import {
+  getPipelineSummary,
+  getHotEntities,
+  getHealthAlerts,
+  getPendingQuotes,
+} from '@/lib/crm/crm-data-service';
+import type { CrmContext } from '@/types/crm-intelligence';
 
 export interface UserContext {
   userId: string;
@@ -43,11 +50,13 @@ export interface BusinessContext {
 export async function buildContext(
   userId: string,
   userRole: 'admin' | 'user',
-  userName: string
+  userName: string,
+  workspaceId?: string
 ): Promise<{
   user: UserContext;
   system?: SystemContext;
   business?: BusinessContext;
+  crm?: CrmContext;
 }> {
   const context: any = {
     user: {
@@ -200,6 +209,32 @@ export async function buildContext(
         };
       }
     }
+    // 3. CRM Context (per admin e reseller)
+    try {
+      const summary = await getPipelineSummary(userRole, workspaceId);
+      const hot = await getHotEntities(userRole, workspaceId, 3);
+      const alerts = await getHealthAlerts(userRole, workspaceId);
+
+      const crmCtx: CrmContext = {
+        entityType: userRole === 'admin' ? 'leads' : 'prospects',
+        pipelineSummary: summary,
+        hotCount: hot.length,
+        staleCount: alerts.filter((a) => a.type.includes('stale') || a.type.includes('cold'))
+          .length,
+        alertCount: alerts.length,
+        topActions: alerts.slice(0, 3).map((a) => a.message),
+      };
+
+      // Preventivi in attesa (solo reseller)
+      if (userRole !== 'admin' && workspaceId) {
+        const quotes = await getPendingQuotes(workspaceId);
+        crmCtx.pendingQuotesCount = quotes.length;
+      }
+
+      context.crm = crmCtx;
+    } catch (crmErr: any) {
+      console.warn('⚠️ [ContextBuilder] Errore CRM context (non critico):', crmErr?.message);
+    }
   } catch (error: any) {
     console.error('Errore costruzione contesto:', error);
     // Continua anche in caso di errore parziale
@@ -215,6 +250,7 @@ export function formatContextForPrompt(context: {
   user: UserContext;
   system?: SystemContext;
   business?: BusinessContext;
+  crm?: CrmContext;
 }): string {
   let prompt = `**CONTESTO UTENTE:**\n`;
   prompt += `- Nome: ${context.user.userName}\n`;
@@ -264,6 +300,33 @@ export function formatContextForPrompt(context: {
           prompt += `  ${i + 1}. [${e.severity}] ${e.message}\n`;
         });
       }
+    }
+  }
+
+  // CRM Pipeline Context
+  if (context.crm) {
+    const crm = context.crm;
+    const label = crm.entityType === 'leads' ? 'PIPELINE LEAD' : 'PIPELINE PROSPECT';
+    prompt += `\n**${label}:**\n`;
+
+    const statusEntries = Object.entries(crm.pipelineSummary.byStatus);
+    if (statusEntries.length > 0) {
+      const statusLine = statusEntries.map(([s, c]) => `${c} ${s}`).join(', ');
+      prompt += `- Totale: ${crm.pipelineSummary.total} (${statusLine})\n`;
+    }
+    prompt += `- Score medio: ${crm.pipelineSummary.avgScore} | Valore pipeline: €${crm.pipelineSummary.pipelineValue}\n`;
+
+    if (crm.hotCount > 0) {
+      prompt += `- ${crm.hotCount} entita calde (score>=70) che richiedono attenzione\n`;
+    }
+    if (crm.alertCount > 0) {
+      prompt += `- ${crm.alertCount} alert attivi\n`;
+      for (const action of crm.topActions) {
+        prompt += `  - ${action}\n`;
+      }
+    }
+    if (crm.pendingQuotesCount != null && crm.pendingQuotesCount > 0) {
+      prompt += `- ${crm.pendingQuotesCount} preventivi in attesa di risposta\n`;
     }
   }
 

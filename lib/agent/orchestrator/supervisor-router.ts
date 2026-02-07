@@ -24,9 +24,10 @@ import { decideNextStep, DecisionInput, SupervisorDecision } from './supervisor'
 import { createCheckpointer } from './checkpointer';
 import { agentSessionService } from '@/lib/services/agent-session';
 import { assertAgentState } from './type-guards';
-import { detectPricingIntent } from '@/lib/agent/intent-detector';
+import { detectPricingIntent, detectCrmIntent } from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { detectSupportIntent, supportWorker } from '@/lib/agent/workers/support-worker';
+import { crmWorker } from '@/lib/agent/workers/crm-worker';
 import { HumanMessage } from '@langchain/core/messages';
 import {
   logIntentDetected,
@@ -259,6 +260,60 @@ export async function supervisorRouter(
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('❌ [Supervisor Router] Errore support worker, fallback legacy:', errorMessage);
       // Fallthrough al legacy handler
+    }
+  }
+
+  // 1.6. CRM intent check (DOPO support, PRIMA di pricing)
+  const isCrmIntent = detectCrmIntent(message);
+  if (isCrmIntent) {
+    logger.log('📊 [Supervisor Router] Intent CRM rilevato, invoco crm worker');
+    intentDetected = 'crm';
+
+    // Typing indicator: ANNE analizza la pipeline
+    typing?.emit('working', 'Analizzo la pipeline commerciale...', 'crm').catch(() => {});
+
+    try {
+      const crmResult = await crmWorker(
+        {
+          message,
+          userId,
+          userRole:
+            actingContext.target.role === 'admin' || actingContext.target.role === 'superadmin'
+              ? 'admin'
+              : 'user',
+          // workspaceId derivato dal userId per reseller (il worker lo gestisce)
+        },
+        logger
+      );
+
+      supervisorDecision = 'end';
+      backendUsed = 'pricing_graph'; // "handled internally"
+      success = true;
+
+      return emitFinalTelemetryAndReturn({
+        decision: 'END',
+        clarificationRequest: crmResult.response,
+        agentState: {
+          messages: [new HumanMessage(message)],
+          userId,
+          userEmail,
+          shipmentData: {},
+          processingStatus: 'complete',
+          validationErrors: [],
+          confidenceScore: 100,
+          needsHumanReview: false,
+          crm_response: {
+            message: crmResult.response,
+            toolsUsed: crmResult.toolsUsed,
+          },
+        } as AgentState,
+        executionTimeMs: Date.now() - startTime,
+        source: 'supervisor_only',
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('❌ [Supervisor Router] Errore crm worker, fallback legacy:', errorMessage);
+      // Fallthrough al pricing/legacy handler
     }
   }
 

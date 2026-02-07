@@ -142,3 +142,77 @@ export async function detectPricingIntent(
   }
   return detectPricingIntentSimple(message);
 }
+
+// ============================================
+// CRM INTENT DETECTION
+// ============================================
+
+/**
+ * Keyword CRM — pipeline, lead, prospect, azioni commerciali
+ */
+const CRM_KEYWORDS = [
+  'pipeline',
+  'lead',
+  'prospect',
+  'contattare',
+  'funnel',
+  'chi devo',
+  'cosa devo fare oggi',
+  'azioni di oggi',
+  'azioni crm',
+  'quanti lead',
+  'quanti prospect',
+  'conversione',
+  'tasso conversione',
+  'caldo',
+  'freddo',
+  'stale',
+  'fermo',
+  'abbandonato',
+  'score',
+  'punteggio',
+  'salute crm',
+  'health crm',
+  'preventivo commerciale',
+  'win-back',
+  'riattiva',
+  'perso',
+  'negoziazione',
+  'qualificato',
+  'pipeline commerciale',
+  'come va la pipeline',
+  'situazione commerciale',
+  'come vanno i lead',
+  'come vanno i prospect',
+];
+
+/**
+ * Keyword di esclusione — evita collisioni con pricing e support
+ */
+const CRM_EXCLUDE_KEYWORDS = [
+  'preventivo spedizione',
+  'quanto costa spedire',
+  'traccia',
+  'tracking',
+  'dove si trova',
+  'il mio pacco',
+  'stato spedizione',
+  'giacenza',
+];
+
+/**
+ * Rileva intento CRM con pattern matching
+ *
+ * Usato dal supervisor-router DOPO il check support e PRIMA del check pricing.
+ */
+export function detectCrmIntent(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+
+  // Escludi se contiene keyword di pricing/support
+  if (CRM_EXCLUDE_KEYWORDS.some((kw) => lowerMessage.includes(kw))) {
+    return false;
+  }
+
+  // Controlla se contiene almeno una keyword CRM
+  return CRM_KEYWORDS.some((kw) => lowerMessage.includes(kw));
+}

@@ -340,6 +340,90 @@ export const ANNE_TOOLS: ToolDefinition[] = [
   // SUPPORT TOOLS - Assistenza AI-native con Anne
   // ═══════════════════════════════════════════════════════════════════════
   ...SUPPORT_TOOL_DEFINITIONS,
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // CRM TOOLS - Intelligence pipeline (Sprint S1, read-only)
+  // ═══════════════════════════════════════════════════════════════════════
+  {
+    name: 'get_pipeline_summary',
+    description:
+      'Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.',
+    parameters: {
+      type: 'object',
+      properties: {
+        period: {
+          type: 'string',
+          enum: ['all', 'month', 'quarter'],
+          description: 'Periodo di riferimento (default: all)',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'get_entity_details',
+    description:
+      'Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.',
+    parameters: {
+      type: 'object',
+      properties: {
+        entity_id: {
+          type: 'string',
+          description: 'UUID entita (opzionale se si usa search_name)',
+        },
+        search_name: {
+          type: 'string',
+          description: 'Nome azienda da cercare (ricerca parziale)',
+        },
+      },
+      required: [],
+    },
+  },
+  {
+    name: 'get_crm_health_alerts',
+    description:
+      'Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: 'get_today_actions',
+    description:
+      'Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: [],
+    },
+  },
+  {
+    name: 'search_crm_entities',
+    description:
+      'Cerca lead/prospect per nome, email, settore o stato. Utile per "trova tutti i prospect ecommerce" o "lead in negoziazione".',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Testo da cercare (nome azienda)',
+        },
+        status: {
+          type: 'string',
+          description:
+            'Filtro stato (new, contacted, qualified, negotiation, won, lost, quote_sent, negotiating)',
+        },
+        sector: {
+          type: 'string',
+          description:
+            'Filtro settore (ecommerce, food, pharma, artigianato, industria, logistica)',
+        },
+      },
+      required: [],
+    },
+  },
 ];
 
 /**
@@ -1090,6 +1174,59 @@ export async function executeTool(
       case 'diagnose_shipment_issue':
       case 'escalate_to_human': {
         return await executeSupportTool(toolCall, userId, userRole);
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // CRM TOOLS — Read-only (Sprint S1)
+      // ═══════════════════════════════════════════════════════════
+      case 'get_pipeline_summary': {
+        const { getPipelineSummary, getConversionMetrics } =
+          await import('@/lib/crm/crm-data-service');
+        const [summary, metrics] = await Promise.all([
+          getPipelineSummary(userRole, workspaceId),
+          getConversionMetrics(userRole, workspaceId),
+        ]);
+        return { success: true, result: { summary, metrics } };
+      }
+
+      case 'get_entity_details': {
+        const { getEntityDetail } = await import('@/lib/crm/crm-data-service');
+        const detail = await getEntityDetail(
+          userRole,
+          toolCall.arguments.entity_id,
+          toolCall.arguments.search_name,
+          workspaceId
+        );
+        if (!detail) {
+          return { success: false, result: null, error: 'Entita non trovata' };
+        }
+        return { success: true, result: detail };
+      }
+
+      case 'get_crm_health_alerts': {
+        const { getHealthAlerts } = await import('@/lib/crm/crm-data-service');
+        const alerts = await getHealthAlerts(userRole, workspaceId);
+        return { success: true, result: { alerts, count: alerts.length } };
+      }
+
+      case 'get_today_actions': {
+        const { getTodayActions } = await import('@/lib/crm/crm-data-service');
+        const actions = await getTodayActions(userRole, workspaceId);
+        return { success: true, result: { actions, count: actions.length } };
+      }
+
+      case 'search_crm_entities': {
+        const { searchEntities } = await import('@/lib/crm/crm-data-service');
+        const results = await searchEntities(
+          userRole,
+          toolCall.arguments.query || '',
+          {
+            status: toolCall.arguments.status,
+            sector: toolCall.arguments.sector,
+          },
+          workspaceId
+        );
+        return { success: true, result: { results, count: results.length } };
       }
 
       default:
