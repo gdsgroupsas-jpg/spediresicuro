@@ -18,6 +18,9 @@ import {
   convertLeadToReseller,
   getLeadEvents,
 } from '@/app/actions/leads';
+import { getLeadAnalytics } from '@/app/actions/crm-analytics';
+import type { CrmAnalyticsData } from '@/lib/crm/analytics';
+import CrmAnalyticsPanel from '@/components/crm-analytics-panel';
 import type {
   Lead,
   LeadStatus,
@@ -122,6 +125,20 @@ export default function AdminLeadsPage() {
   const [showTimeline, setShowTimeline] = useState<Lead | null>(null);
   const [timelineEvents, setTimelineEvents] = useState<LeadEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'analisi'>('pipeline');
+  const [analytics, setAnalytics] = useState<CrmAnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
+  // Caricamento lazy analytics: solo al click su tab "Analisi"
+  useEffect(() => {
+    if (activeTab === 'analisi' && !analytics) {
+      setAnalyticsLoading(true);
+      getLeadAnalytics().then((result) => {
+        if (result.success && result.data) setAnalytics(result.data);
+        setAnalyticsLoading(false);
+      });
+    }
+  }, [activeTab, analytics]);
 
   const loadLeads = useCallback(async () => {
     setIsLoading(true);
@@ -235,6 +252,30 @@ export default function AdminLeadsPage() {
         </div>
       </div>
 
+      {/* Tab Bar */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
+        <button
+          onClick={() => setActiveTab('pipeline')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'pipeline'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Pipeline
+        </button>
+        <button
+          onClick={() => setActiveTab('analisi')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'analisi'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Analisi
+        </button>
+      </div>
+
       {/* Error */}
       {error && (
         <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
@@ -242,225 +283,246 @@ export default function AdminLeadsPage() {
         </div>
       )}
 
-      {/* Action Bar */}
-      <div className="flex flex-col lg:flex-row gap-4 justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-        <div className="flex flex-wrap gap-3 items-center flex-1">
-          <div className="relative w-full lg:w-72">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cerca azienda, nome, email..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
+      {/* Tab: Pipeline */}
+      {activeTab === 'pipeline' && (
+        <>
+          {/* Action Bar */}
+          <div className="flex flex-col lg:flex-row gap-4 justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex flex-wrap gap-3 items-center flex-1">
+              <div className="relative w-full lg:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Cerca azienda, nome, email..."
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as LeadStatus | '')}
+                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="">Tutti gli stati</option>
+                {(Object.entries(LEAD_STATUS_LABELS) as [LeadStatus, string][]).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={sectorFilter}
+                onChange={(e) => setSectorFilter(e.target.value)}
+                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="">Tutti i settori</option>
+                {(Object.entries(LEAD_SECTOR_LABELS) as [LeadSector, string][]).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={sourceFilter}
+                onChange={(e) => setSourceFilter(e.target.value)}
+                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="">Tutte le fonti</option>
+                {(Object.entries(LEAD_SOURCE_LABELS) as [LeadSource, string][]).map(([k, v]) => (
+                  <option key={k} value={k}>
+                    {v}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={zoneFilter}
+                onChange={(e) => setZoneFilter(e.target.value)}
+                className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
+              >
+                <option value="">Tutte le zone</option>
+                {(Object.entries(GEOGRAPHIC_ZONE_LABELS) as [GeographicZone, string][]).map(
+                  ([k, v]) => (
+                    <option key={k} value={k}>
+                      {v}
+                    </option>
+                  )
+                )}
+              </select>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" /> Nuovo Lead
+            </button>
           </div>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as LeadStatus | '')}
-            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-          >
-            <option value="">Tutti gli stati</option>
-            {(Object.entries(LEAD_STATUS_LABELS) as [LeadStatus, string][]).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <select
-            value={sectorFilter}
-            onChange={(e) => setSectorFilter(e.target.value)}
-            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-          >
-            <option value="">Tutti i settori</option>
-            {(Object.entries(LEAD_SECTOR_LABELS) as [LeadSector, string][]).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <select
-            value={sourceFilter}
-            onChange={(e) => setSourceFilter(e.target.value)}
-            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-          >
-            <option value="">Tutte le fonti</option>
-            {(Object.entries(LEAD_SOURCE_LABELS) as [LeadSource, string][]).map(([k, v]) => (
-              <option key={k} value={k}>
-                {v}
-              </option>
-            ))}
-          </select>
-          <select
-            value={zoneFilter}
-            onChange={(e) => setZoneFilter(e.target.value)}
-            className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none"
-          >
-            <option value="">Tutte le zone</option>
-            {(Object.entries(GEOGRAPHIC_ZONE_LABELS) as [GeographicZone, string][]).map(
-              ([k, v]) => (
-                <option key={k} value={k}>
-                  {v}
-                </option>
-              )
-            )}
-          </select>
-        </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 whitespace-nowrap"
-        >
-          <Plus className="w-4 h-4" /> Nuovo Lead
-        </button>
-      </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {isLoading ? (
-          <div className="p-12 text-center text-gray-400">Caricamento leads...</div>
-        ) : leads.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">Nessun lead trovato.</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50/50 border-b border-gray-200 text-gray-500">
-                <tr>
-                  <th className="px-4 py-3 font-medium">Azienda / Contatto</th>
-                  <th className="px-4 py-3 font-medium">Contatti</th>
-                  <th className="px-4 py-3 font-medium">Score</th>
-                  <th className="px-4 py-3 font-medium">Stato</th>
-                  <th className="px-4 py-3 font-medium">Settore</th>
-                  <th className="px-4 py-3 font-medium">Fonte</th>
-                  <th className="px-4 py-3 font-medium">Volume</th>
-                  <th className="px-4 py-3 font-medium">Ultimo Contatto</th>
-                  <th className="px-4 py-3 font-medium text-right">Azioni</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {leads.map((lead) => {
-                  const score = lead.lead_score || 0;
-                  const scoreColor = getScoreColor(score);
-                  const scoreLabel = getScoreLabel(score);
-                  const canConvert = ['qualified', 'negotiation'].includes(lead.status);
-
-                  return (
-                    <tr key={lead.id} className="hover:bg-gray-50 transition-colors group">
-                      <td className="px-4 py-3">
-                        <button
-                          onClick={() => setShowTimeline(lead)}
-                          className="text-left hover:underline"
-                        >
-                          <div className="font-semibold text-gray-900">{lead.company_name}</div>
-                          <div className="text-gray-500 text-xs">
-                            {lead.contact_name || 'Nessun contatto'}
-                          </div>
-                        </button>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-col gap-0.5">
-                          {lead.email && (
-                            <a
-                              href={`mailto:${lead.email}`}
-                              className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 text-xs"
-                            >
-                              <Mail className="w-3 h-3" /> {lead.email}
-                            </a>
-                          )}
-                          {lead.phone && (
-                            <a
-                              href={`tel:${lead.phone}`}
-                              className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 text-xs"
-                            >
-                              <Phone className="w-3 h-3" /> {lead.phone}
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${SCORE_CSS[scoreColor] || SCORE_CSS.gray}`}
-                        >
-                          {score} — {scoreLabel}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <select
-                          value={lead.status}
-                          onChange={(e) => handleStatusChange(lead, e.target.value as LeadStatus)}
-                          className={`px-2 py-1 rounded-full text-xs font-semibold border-0 cursor-pointer outline-none ring-1 ring-inset ring-black/5 ${STATUS_CSS[lead.status]}`}
-                        >
-                          <option value={lead.status}>{LEAD_STATUS_LABELS[lead.status]}</option>
-                          {(LEAD_VALID_TRANSITIONS[lead.status] || []).map((s) => (
-                            <option key={s} value={s}>
-                              {LEAD_STATUS_LABELS[s]}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
-                        {lead.sector
-                          ? LEAD_SECTOR_LABELS[lead.sector as LeadSector] || lead.sector
-                          : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
-                        {lead.lead_source
-                          ? LEAD_SOURCE_LABELS[lead.lead_source as LeadSource] || lead.lead_source
-                          : lead.source || '-'}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-600">
-                        {lead.estimated_monthly_volume
-                          ? `${lead.estimated_monthly_volume}/mese`
-                          : '-'}
-                      </td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {lead.last_contact_at
-                          ? format(new Date(lead.last_contact_at), 'dd MMM yyyy', {
-                              locale: itLocale,
-                            })
-                          : 'Mai'}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => handleAddNote(lead)}
-                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                            title="Aggiungi nota"
-                          >
-                            <MessageSquare className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setShowTimeline(lead)}
-                            className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
-                            title="Timeline"
-                          >
-                            <Clock className="w-4 h-4" />
-                          </button>
-                          {canConvert && (
-                            <button
-                              onClick={() => setShowConvertModal(lead)}
-                              className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"
-                              title="Converti a Reseller"
-                            >
-                              <UserPlus className="w-4 h-4" />
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleDelete(lead.id)}
-                            className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                            title="Elimina"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
+          {/* Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {isLoading ? (
+              <div className="p-12 text-center text-gray-400">Caricamento leads...</div>
+            ) : leads.length === 0 ? (
+              <div className="p-12 text-center text-gray-400">Nessun lead trovato.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50/50 border-b border-gray-200 text-gray-500">
+                    <tr>
+                      <th className="px-4 py-3 font-medium">Azienda / Contatto</th>
+                      <th className="px-4 py-3 font-medium">Contatti</th>
+                      <th className="px-4 py-3 font-medium">Score</th>
+                      <th className="px-4 py-3 font-medium">Stato</th>
+                      <th className="px-4 py-3 font-medium">Settore</th>
+                      <th className="px-4 py-3 font-medium">Fonte</th>
+                      <th className="px-4 py-3 font-medium">Volume</th>
+                      <th className="px-4 py-3 font-medium">Ultimo Contatto</th>
+                      <th className="px-4 py-3 font-medium text-right">Azioni</th>
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {leads.map((lead) => {
+                      const score = lead.lead_score || 0;
+                      const scoreColor = getScoreColor(score);
+                      const scoreLabel = getScoreLabel(score);
+                      const canConvert = ['qualified', 'negotiation'].includes(lead.status);
+
+                      return (
+                        <tr key={lead.id} className="hover:bg-gray-50 transition-colors group">
+                          <td className="px-4 py-3">
+                            <button
+                              onClick={() => setShowTimeline(lead)}
+                              className="text-left hover:underline"
+                            >
+                              <div className="font-semibold text-gray-900">{lead.company_name}</div>
+                              <div className="text-gray-500 text-xs">
+                                {lead.contact_name || 'Nessun contatto'}
+                              </div>
+                            </button>
+                          </td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-col gap-0.5">
+                              {lead.email && (
+                                <a
+                                  href={`mailto:${lead.email}`}
+                                  className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 text-xs"
+                                >
+                                  <Mail className="w-3 h-3" /> {lead.email}
+                                </a>
+                              )}
+                              {lead.phone && (
+                                <a
+                                  href={`tel:${lead.phone}`}
+                                  className="flex items-center gap-1 text-gray-600 hover:text-indigo-600 text-xs"
+                                >
+                                  <Phone className="w-3 h-3" /> {lead.phone}
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <span
+                              className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${SCORE_CSS[scoreColor] || SCORE_CSS.gray}`}
+                            >
+                              {score} — {scoreLabel}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3">
+                            <select
+                              value={lead.status}
+                              onChange={(e) =>
+                                handleStatusChange(lead, e.target.value as LeadStatus)
+                              }
+                              className={`px-2 py-1 rounded-full text-xs font-semibold border-0 cursor-pointer outline-none ring-1 ring-inset ring-black/5 ${STATUS_CSS[lead.status]}`}
+                            >
+                              <option value={lead.status}>{LEAD_STATUS_LABELS[lead.status]}</option>
+                              {(LEAD_VALID_TRANSITIONS[lead.status] || []).map((s) => (
+                                <option key={s} value={s}>
+                                  {LEAD_STATUS_LABELS[s]}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600">
+                            {lead.sector
+                              ? LEAD_SECTOR_LABELS[lead.sector as LeadSector] || lead.sector
+                              : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600">
+                            {lead.lead_source
+                              ? LEAD_SOURCE_LABELS[lead.lead_source as LeadSource] ||
+                                lead.lead_source
+                              : lead.source || '-'}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-600">
+                            {lead.estimated_monthly_volume
+                              ? `${lead.estimated_monthly_volume}/mese`
+                              : '-'}
+                          </td>
+                          <td className="px-4 py-3 text-xs text-gray-500">
+                            {lead.last_contact_at
+                              ? format(new Date(lead.last_contact_at), 'dd MMM yyyy', {
+                                  locale: itLocale,
+                                })
+                              : 'Mai'}
+                          </td>
+                          <td className="px-4 py-3 text-right">
+                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleAddNote(lead)}
+                                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                                title="Aggiungi nota"
+                              >
+                                <MessageSquare className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => setShowTimeline(lead)}
+                                className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"
+                                title="Timeline"
+                              >
+                                <Clock className="w-4 h-4" />
+                              </button>
+                              {canConvert && (
+                                <button
+                                  onClick={() => setShowConvertModal(lead)}
+                                  className="p-1.5 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg"
+                                  title="Converti a Reseller"
+                                >
+                                  <UserPlus className="w-4 h-4" />
+                                </button>
+                              )}
+                              <button
+                                onClick={() => handleDelete(lead.id)}
+                                className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                                title="Elimina"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {/* Tab: Analisi */}
+      {activeTab === 'analisi' &&
+        (analyticsLoading ? (
+          <div className="p-12 text-center text-gray-400">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-3" />
+            <p>Caricamento analisi CRM...</p>
+          </div>
+        ) : analytics ? (
+          <CrmAnalyticsPanel data={analytics} variant="admin" />
+        ) : (
+          <div className="p-12 text-center text-gray-400">Errore caricamento analytics</div>
+        ))}
 
       {/* Modal Creazione Lead */}
       {showCreateModal && (

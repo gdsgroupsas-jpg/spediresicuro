@@ -15,6 +15,9 @@ import {
   deleteProspect,
   addProspectNote,
 } from '@/actions/reseller-prospects';
+import { getProspectAnalytics } from '@/app/actions/crm-analytics';
+import type { CrmAnalyticsData } from '@/lib/crm/analytics';
+import CrmAnalyticsPanel from '@/components/crm-analytics-panel';
 import type {
   ResellerProspect,
   ProspectStatus,
@@ -68,6 +71,20 @@ export default function ProspectsPage() {
   const [sectorFilter, setSectorFilter] = useState<ProspectSector | ''>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'analisi'>('pipeline');
+  const [analytics, setAnalytics] = useState<CrmAnalyticsData | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+
+  // Caricamento lazy analytics: solo al click su tab "Analisi"
+  useEffect(() => {
+    if (activeTab === 'analisi' && !analytics) {
+      setAnalyticsLoading(true);
+      getProspectAnalytics().then((result) => {
+        if (result.success && result.data) setAnalytics(result.data);
+        setAnalyticsLoading(false);
+      });
+    }
+  }, [activeTab, analytics]);
 
   const loadProspects = useCallback(async () => {
     setIsLoading(true);
@@ -197,177 +214,225 @@ export default function ProspectsPage() {
         )}
       </div>
 
-      {/* Action Bar */}
-      <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-        <div className="flex flex-col md:flex-row gap-3 flex-1">
-          {/* Search */}
-          <div className="relative w-full md:w-80">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Cerca azienda, nome o email..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-
-          {/* Filtro status */}
-          <div className="flex items-center gap-2">
-            <Filter className="w-4 h-4 text-gray-400" />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as ProspectStatus | '')}
-              className="py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
-            >
-              <option value="">Tutti gli stati</option>
-              {(Object.keys(STATUS_LABELS) as ProspectStatus[]).map((s) => (
-                <option key={s} value={s}>
-                  {STATUS_LABELS[s]}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Filtro settore */}
-          <select
-            value={sectorFilter}
-            onChange={(e) => setSectorFilter(e.target.value as ProspectSector | '')}
-            className="py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
-          >
-            <option value="">Tutti i settori</option>
-            {(Object.keys(SECTOR_LABELS) as ProspectSector[]).map((s) => (
-              <option key={s} value={s}>
-                {SECTOR_LABELS[s]}
-              </option>
-            ))}
-          </select>
-        </div>
-
+      {/* Tab Bar */}
+      <div className="flex gap-1 bg-gray-100 p-1 rounded-lg w-fit">
         <button
-          className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 whitespace-nowrap"
-          onClick={() => setShowCreateModal(true)}
+          type="button"
+          onClick={() => setActiveTab('pipeline')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            activeTab === 'pipeline'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
         >
-          <Plus className="w-4 h-4" /> Nuovo Prospect
+          Pipeline
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('analisi')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            activeTab === 'analisi'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Analisi
         </button>
       </div>
 
-      {/* Error */}
-      {error && (
-        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-          {error}
-        </div>
+      {activeTab === 'pipeline' && (
+        <>
+          {/* Action Bar */}
+          <div className="flex flex-col md:flex-row gap-4 justify-between bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+            <div className="flex flex-col md:flex-row gap-3 flex-1">
+              {/* Search */}
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Cerca azienda, nome o email..."
+                  className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                />
+              </div>
+
+              {/* Filtro status */}
+              <div className="flex items-center gap-2">
+                <Filter className="w-4 h-4 text-gray-400" />
+                <select
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value as ProspectStatus | '')}
+                  className="py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
+                >
+                  <option value="">Tutti gli stati</option>
+                  {(Object.keys(STATUS_LABELS) as ProspectStatus[]).map((s) => (
+                    <option key={s} value={s}>
+                      {STATUS_LABELS[s]}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Filtro settore */}
+              <select
+                value={sectorFilter}
+                onChange={(e) => setSectorFilter(e.target.value as ProspectSector | '')}
+                className="py-2 px-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none"
+              >
+                <option value="">Tutti i settori</option>
+                {(Object.keys(SECTOR_LABELS) as ProspectSector[]).map((s) => (
+                  <option key={s} value={s}>
+                    {SECTOR_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              className="flex items-center gap-2 px-5 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors shadow-lg shadow-indigo-200 whitespace-nowrap"
+              onClick={() => setShowCreateModal(true)}
+            >
+              <Plus className="w-4 h-4" /> Nuovo Prospect
+            </button>
+          </div>
+
+          {/* Error */}
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {/* Table */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            {isLoading ? (
+              <div className="p-12 text-center text-gray-400">Caricamento prospect...</div>
+            ) : prospects.length === 0 ? (
+              <div className="p-12 text-center text-gray-400">
+                <UserPlus className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                <p className="text-lg font-medium text-gray-500">Nessun prospect trovato</p>
+                <p className="text-sm mt-1">Crea il tuo primo prospect per iniziare la pipeline.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-gray-50/50 border-b border-gray-200 text-gray-500">
+                    <tr>
+                      <th className="px-6 py-4 font-medium">Azienda / Contatto</th>
+                      <th className="px-6 py-4 font-medium">Contatti</th>
+                      <th className="px-6 py-4 font-medium">Stato</th>
+                      <th className="px-6 py-4 font-medium">Score</th>
+                      <th className="px-6 py-4 font-medium">Settore</th>
+                      <th className="px-6 py-4 font-medium">Valore/mese</th>
+                      <th className="px-6 py-4 font-medium">Ultimo Contatto</th>
+                      <th className="px-6 py-4 font-medium text-right">Azioni</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {prospects.map((prospect) => {
+                      const scoreColor = getScoreColor(prospect.lead_score);
+                      return (
+                        <tr key={prospect.id} className="hover:bg-gray-50 transition-colors group">
+                          <td className="px-6 py-4">
+                            <div className="font-semibold text-gray-900">
+                              {prospect.company_name}
+                            </div>
+                            <div className="text-gray-500 text-xs">
+                              {prospect.contact_name || 'Nessun contatto'}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <div className="flex flex-col gap-1">
+                              {prospect.email && (
+                                <a
+                                  href={`mailto:${prospect.email}`}
+                                  className="flex items-center gap-1.5 text-gray-600 hover:text-indigo-600 text-xs"
+                                >
+                                  <Mail className="w-3 h-3" /> {prospect.email}
+                                </a>
+                              )}
+                              {prospect.phone && (
+                                <a
+                                  href={`tel:${prospect.phone}`}
+                                  className="flex items-center gap-1.5 text-gray-600 hover:text-indigo-600 text-xs"
+                                >
+                                  <Phone className="w-3 h-3" /> {prospect.phone}
+                                </a>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4">
+                            <select
+                              value={prospect.status}
+                              onChange={(e) =>
+                                handleStatusChange(prospect.id, e.target.value as ProspectStatus)
+                              }
+                              className={`px-2 py-1 rounded-full text-xs font-semibold border-0 cursor-pointer outline-none ring-1 ring-inset ring-black/5 ${STATUS_CSS[prospect.status]}`}
+                            >
+                              {(Object.keys(STATUS_LABELS) as ProspectStatus[]).map((s) => (
+                                <option key={s} value={s}>
+                                  {STATUS_LABELS[s]}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${SCORE_CSS[scoreColor] || SCORE_CSS.gray}`}
+                            >
+                              {prospect.lead_score}
+                              <span className="font-normal text-[10px]">
+                                {getScoreLabel(prospect.lead_score)}
+                              </span>
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600 text-xs">
+                            {prospect.sector
+                              ? SECTOR_LABELS[prospect.sector] || prospect.sector
+                              : '-'}
+                          </td>
+                          <td className="px-6 py-4 font-medium text-gray-700 text-xs">
+                            {formatCurrency(prospect.estimated_monthly_value)}
+                          </td>
+                          <td className="px-6 py-4 text-gray-500 text-xs">
+                            {formatDate(prospect.last_contact_at || prospect.created_at)}
+                          </td>
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <button
+                                onClick={() => handleDelete(prospect.id)}
+                                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                title="Elimina"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </>
       )}
 
-      {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-        {isLoading ? (
-          <div className="p-12 text-center text-gray-400">Caricamento prospect...</div>
-        ) : prospects.length === 0 ? (
-          <div className="p-12 text-center text-gray-400">
-            <UserPlus className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-            <p className="text-lg font-medium text-gray-500">Nessun prospect trovato</p>
-            <p className="text-sm mt-1">Crea il tuo primo prospect per iniziare la pipeline.</p>
+      {/* Tab Analisi */}
+      {activeTab === 'analisi' &&
+        (analyticsLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
           </div>
+        ) : analytics ? (
+          <CrmAnalyticsPanel data={analytics} variant="reseller" />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-gray-50/50 border-b border-gray-200 text-gray-500">
-                <tr>
-                  <th className="px-6 py-4 font-medium">Azienda / Contatto</th>
-                  <th className="px-6 py-4 font-medium">Contatti</th>
-                  <th className="px-6 py-4 font-medium">Stato</th>
-                  <th className="px-6 py-4 font-medium">Score</th>
-                  <th className="px-6 py-4 font-medium">Settore</th>
-                  <th className="px-6 py-4 font-medium">Valore/mese</th>
-                  <th className="px-6 py-4 font-medium">Ultimo Contatto</th>
-                  <th className="px-6 py-4 font-medium text-right">Azioni</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100">
-                {prospects.map((prospect) => {
-                  const scoreColor = getScoreColor(prospect.lead_score);
-                  return (
-                    <tr key={prospect.id} className="hover:bg-gray-50 transition-colors group">
-                      <td className="px-6 py-4">
-                        <div className="font-semibold text-gray-900">{prospect.company_name}</div>
-                        <div className="text-gray-500 text-xs">
-                          {prospect.contact_name || 'Nessun contatto'}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col gap-1">
-                          {prospect.email && (
-                            <a
-                              href={`mailto:${prospect.email}`}
-                              className="flex items-center gap-1.5 text-gray-600 hover:text-indigo-600 text-xs"
-                            >
-                              <Mail className="w-3 h-3" /> {prospect.email}
-                            </a>
-                          )}
-                          {prospect.phone && (
-                            <a
-                              href={`tel:${prospect.phone}`}
-                              className="flex items-center gap-1.5 text-gray-600 hover:text-indigo-600 text-xs"
-                            >
-                              <Phone className="w-3 h-3" /> {prospect.phone}
-                            </a>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <select
-                          value={prospect.status}
-                          onChange={(e) =>
-                            handleStatusChange(prospect.id, e.target.value as ProspectStatus)
-                          }
-                          className={`px-2 py-1 rounded-full text-xs font-semibold border-0 cursor-pointer outline-none ring-1 ring-inset ring-black/5 ${STATUS_CSS[prospect.status]}`}
-                        >
-                          {(Object.keys(STATUS_LABELS) as ProspectStatus[]).map((s) => (
-                            <option key={s} value={s}>
-                              {STATUS_LABELS[s]}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-bold border ${SCORE_CSS[scoreColor] || SCORE_CSS.gray}`}
-                        >
-                          {prospect.lead_score}
-                          <span className="font-normal text-[10px]">
-                            {getScoreLabel(prospect.lead_score)}
-                          </span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-gray-600 text-xs">
-                        {prospect.sector ? SECTOR_LABELS[prospect.sector] || prospect.sector : '-'}
-                      </td>
-                      <td className="px-6 py-4 font-medium text-gray-700 text-xs">
-                        {formatCurrency(prospect.estimated_monthly_value)}
-                      </td>
-                      <td className="px-6 py-4 text-gray-500 text-xs">
-                        {formatDate(prospect.last_contact_at || prospect.created_at)}
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button
-                            onClick={() => handleDelete(prospect.id)}
-                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                            title="Elimina"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
+            Impossibile caricare i dati analytics.
           </div>
-        )}
-      </div>
+        ))}
 
       {/* Modal Creazione */}
       {showCreateModal && (
