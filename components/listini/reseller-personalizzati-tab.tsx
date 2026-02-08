@@ -35,7 +35,7 @@ import { CreateCustomerPriceListDialog } from '@/components/listini/create-custo
 import { CloneSupplierPriceListDialog } from '@/components/listini/clone-supplier-price-list-dialog';
 import { ImportPriceListEntriesDialog } from '@/components/listini/import-price-list-entries-dialog';
 import { listPriceListsAction, deletePriceListAction } from '@/actions/price-lists';
-import { getSubUsers } from '@/actions/admin-reseller';
+import { getResellerClientsBasic } from '@/actions/reseller-clients';
 import { activateResellerPriceListAction } from '@/actions/reseller-price-lists';
 import { toast } from 'sonner';
 import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
@@ -66,15 +66,9 @@ export function ResellerPersonalizzatiTab({ userId }: ResellerPersonalizzatiTabP
   useEffect(() => {
     async function loadInitialData() {
       try {
-        const subUsersResult = await getSubUsers();
-        if (subUsersResult.success && subUsersResult.subUsers) {
-          setSubUsers(
-            subUsersResult.subUsers.map((u) => ({
-              id: u.id,
-              email: u.email,
-              name: u.name || undefined,
-            }))
-          );
+        const clientsResult = await getResellerClientsBasic();
+        if (clientsResult.success && clientsResult.clients) {
+          setSubUsers(clientsResult.clients);
         }
 
         await loadPriceLists();

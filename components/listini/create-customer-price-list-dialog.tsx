@@ -7,10 +7,8 @@
 
 'use client';
 
-import {
-  createCustomerPriceListAction,
-  getResellerSubUsersAction,
-} from '@/actions/customer-price-lists';
+import { createCustomerPriceListAction } from '@/actions/customer-price-lists';
+import { getResellerClientsBasic } from '@/actions/reseller-clients';
 import { Button } from '@/components/ui/button';
 import {
   Dialog,
@@ -57,9 +55,9 @@ export function CreateCustomerPriceListDialog({
   async function loadSubUsers() {
     setIsLoading(true);
     try {
-      const result = await getResellerSubUsersAction();
-      if (result.success && result.subUsers) {
-        setSubUsers(result.subUsers);
+      const result = await getResellerClientsBasic();
+      if (result.success && result.clients) {
+        setSubUsers(result.clients);
       } else {
         toast.error(result.error || 'Errore caricamento clienti');
       }

@@ -11,8 +11,8 @@ import { useState, useEffect } from 'react';
 import {
   resellerCloneSupplierPriceListAction,
   getResellerSupplierPriceListsAction,
-  getResellerSubUsersAction,
 } from '@/actions/reseller-price-lists';
+import { getResellerClientsBasic } from '@/actions/reseller-clients';
 import { listPriceListsAction } from '@/actions/price-lists';
 import { Button } from '@/components/ui/button';
 import {
@@ -93,12 +93,12 @@ export function CloneSupplierPriceListDialog({
         toast.error('Errore caricamento listini');
       }
 
-      // Carica sub-users
-      const subUsersResult = await getResellerSubUsersAction();
-      if (subUsersResult.success && subUsersResult.subUsers) {
-        setSubUsers(subUsersResult.subUsers);
+      // Carica clienti
+      const clientsResult = await getResellerClientsBasic();
+      if (clientsResult.success && clientsResult.clients) {
+        setSubUsers(clientsResult.clients);
       } else {
-        toast.error(subUsersResult.error || 'Errore caricamento clienti');
+        toast.error(clientsResult.error || 'Errore caricamento clienti');
       }
     } catch (error) {
       console.error('Errore caricamento dati:', error);

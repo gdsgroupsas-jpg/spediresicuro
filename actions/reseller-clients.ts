@@ -349,8 +349,102 @@ export async function getChildWorkspaces(): Promise<{
 }
 
 /**
- * Ottiene le statistiche aggregate dei clienti del reseller
+ * Versione leggera: restituisce solo id, email, name dei clienti del reseller.
+ * Usa la stessa logica Workspace V2 + fallback parent_id di getResellerClientsWithListino.
+ * Utile per select/dropdown nei form (listini personalizzati, clonazione, ecc.)
  */
+export async function getResellerClientsBasic(): Promise<{
+  success: boolean;
+  clients?: Array<{ id: string; email: string; name?: string }>;
+  error?: string;
+}> {
+  try {
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    const { data: currentUser, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, is_reseller, account_type, primary_workspace_id')
+      .eq('email', context.actor.email)
+      .single();
+
+    if (userError || !currentUser) {
+      return { success: false, error: 'Utente non trovato' };
+    }
+
+    if (!currentUser.is_reseller && currentUser.account_type !== 'superadmin') {
+      return { success: false, error: 'Non sei un reseller' };
+    }
+
+    // Strategia: workspace V2 (primaria) + fallback parent_id (legacy)
+    let clientIds: string[] = [];
+
+    if (currentUser.primary_workspace_id) {
+      const { data: childWorkspaces } = await supabaseAdmin
+        .from('workspaces')
+        .select('id')
+        .eq('parent_workspace_id', currentUser.primary_workspace_id)
+        .eq('status', 'active');
+
+      if (childWorkspaces && childWorkspaces.length > 0) {
+        const childWsIds = childWorkspaces.map((w) => w.id);
+        const { data: childMembers } = await supabaseAdmin
+          .from('workspace_members')
+          .select('user_id')
+          .in('workspace_id', childWsIds)
+          .eq('role', 'owner')
+          .eq('status', 'active');
+
+        if (childMembers) {
+          clientIds = childMembers.map((m) => m.user_id);
+        }
+      }
+    }
+
+    // Fallback legacy: parent_id
+    const { data: legacyClients } = await supabaseAdmin
+      .from('users')
+      .select('id')
+      .eq('parent_id', currentUser.id);
+
+    if (legacyClients) {
+      for (const lc of legacyClients) {
+        if (!clientIds.includes(lc.id)) {
+          clientIds.push(lc.id);
+        }
+      }
+    }
+
+    if (clientIds.length === 0) {
+      return { success: true, clients: [] };
+    }
+
+    const { data: clients, error: clientsError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, name')
+      .in('id', clientIds)
+      .order('name', { ascending: true });
+
+    if (clientsError) {
+      return { success: false, error: 'Errore caricamento clienti' };
+    }
+
+    return {
+      success: true,
+      clients: (clients || []).map((c) => ({
+        id: c.id,
+        email: c.email,
+        name: c.name || undefined,
+      })),
+    };
+  } catch (error: any) {
+    console.error('Errore getResellerClientsBasic:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
 export async function getResellerClientsStats(): Promise<{
   success: boolean;
   stats?: ClientsStatsResult;
