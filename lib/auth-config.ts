@@ -352,7 +352,6 @@ export const authOptions = {
       // Lista email autorizzate come superadmin (hardcoded per sicurezza)
       const AUTHORIZED_SUPERADMINS = [
         'sigorn@hotmail.it',
-        'gdsgroupsas@gmail.com',
         'admin@spediresicuro.it',
         'salvatore.squillante@gmail.com',
       ];
