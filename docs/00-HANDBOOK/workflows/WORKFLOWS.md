@@ -39,6 +39,7 @@ Questa documentazione descrive i principali user flows di SpedireSicuro, dal for
 | Contrassegni (COD)    | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [COD](#flow-5-gestione-contrassegni-cod)                      |
 | Prev. Commerciale     | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Preventivi](#flow-6-preventivatore-commerciale)              |
 | Anne CRM Intelligence | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [CRM Intelligence](#flow-7-anne-crm-intelligence-read--write) |
+| Outreach Multi-Canale | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Outreach](#flow-8-outreach-multi-canale)                     |
 | Processo Operativo AI | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [AI Process](#flow-0-processo-operativo-ai)                   |
 
 ## Content
@@ -805,6 +806,98 @@ supervisorRouter()
 
 ---
 
+### Flow 8: Outreach Multi-Canale
+
+**Obiettivo:** Anne gestisce sequenze outreach automatiche multi-canale (Email, WhatsApp, Telegram) per lead e prospect. Enrollment, invio, tracking, metriche — tutto via chat.
+
+**Trigger:** Messaggio utente con intent outreach (es. "iscrivi alla sequenza followup", "manda email a TechShop", "metriche outreach")
+
+**Ruoli:** Admin (gestisce lead), Reseller (gestisce prospect del proprio workspace)
+
+**Architettura:**
+
+```text
+Messaggio utente
+    |
+    v
+supervisorRouter()
+    |
+    +-- detectOutreachIntent()  --> Outreach Worker (diretto, no LangGraph)
+    |                                |
+    |                                +-- 10 sub-intent (vedi sotto)
+    |                                +-- Kill switch check (blocca invii, permette letture)
+    |
+    +-- Cron: /api/cron/outreach-executor (ogni 5 min)
+    |     |
+    |     +-- processOutreachQueue()
+    |           +-- 6 safety checks per enrollment
+    |
+    +-- Webhooks delivery tracking:
+          +-- /api/webhooks/resend-events (email)
+          +-- /api/webhooks/whatsapp (status events)
+```
+
+**Steps:**
+
+1. **Intent Detection**
+   - `detectOutreachIntent()` con 26 keyword + exclude list
+   - Rilevato DOPO CRM e PRIMA di pricing nel router
+   - Keyword: sequenza, outreach, invia email, manda whatsapp, template, canali, ecc.
+
+2. **Sub-Intent Classification**
+
+   | Sub-intent          | Esempio messaggio                    |
+   | ------------------- | ------------------------------------ |
+   | `enroll_entity`     | "iscrivi Farmacia Rossi al followup" |
+   | `cancel_enrollment` | "cancella sequenza per TechShop"     |
+   | `pause_enrollment`  | "metti in pausa sequenza"            |
+   | `resume_enrollment` | "riprendi sequenza"                  |
+   | `send_message`      | "manda email a Farmacia Rossi"       |
+   | `check_status`      | "stato outreach Farmacia Rossi"      |
+   | `manage_channels`   | "disabilita whatsapp"                |
+   | `list_templates`    | "mostra template email"              |
+   | `list_sequences`    | "quali sequenze ho?"                 |
+   | `outreach_metrics`  | "metriche outreach"                  |
+
+3. **Sequence Executor (Cron)**
+   - Ogni 5 minuti processa enrollment attivi con `next_execution_at <= NOW()`
+   - 6 safety checks per ogni invio:
+     1. Condizione step (no_reply, no_open, replied, opened, always)
+     2. Consenso GDPR (obbligatorio)
+     3. Canale abilitato per workspace
+     4. Rate limit giornaliero per workspace+canale
+     5. Cool-down 24h per entita'+canale
+     6. Provider configurato (env vars)
+   - Retry policy per provider (email: 2, whatsapp: 3, telegram: 0 — coda propria)
+   - Bounce dopo max retries superati
+
+4. **Delivery Tracking**
+   - Email: webhook Resend (Svix HMAC) → delivered, opened, bounced
+   - WhatsApp: status events → delivered, read, failed
+   - Progressione: sent -> delivered -> opened -> replied (no regressione)
+
+5. **Analytics**
+   - Metriche aggregate per workspace: totalSent, deliveryRate, openRate, replyRate
+   - Breakdown per canale (email, whatsapp, telegram)
+
+**Safety:**
+
+- Consent GDPR obbligatorio (0 invii senza consenso)
+- Kill switch globale: `OUTREACH_KILL_SWITCH=true` (env var, no deploy)
+- Pilot workspace: `OUTREACH_PILOT_WORKSPACES=ws-1,ws-2`
+- Idempotency: UNIQUE(sequence_id, entity_type, entity_id) in DB
+- Optimistic locking su enrollment update
+
+**Edge Cases:**
+
+- **Kill switch attivo:** Anne spiega sospensione, permette letture (status, metriche)
+- **Consenso mancante:** Skip con audit trail, Anne avvisa
+- **Rate limit raggiunto:** Non avanza enrollment, riprova al prossimo ciclo
+- **Canale non configurato:** Suggerisce attivazione
+- **Template non trovato:** Errore con execution record
+
+---
+
 ## Common Issues
 
 | Issue                        | Soluzione                                                |
@@ -832,6 +925,7 @@ supervisorRouter()
 | 2026-02-07 | 1.3.0   | Added Flow 6: Preventivatore Commerciale (full lifecycle)       | AI Agent |
 | 2026-02-07 | 1.4.0   | Added Flow 7: Anne CRM Intelligence (read-only Sales Partner)   | AI Agent |
 | 2026-02-08 | 1.5.0   | Flow 7: Added CRM write actions (S2) + security hardening       | AI Agent |
+| 2026-02-08 | 1.6.0   | Added Flow 8: Outreach Multi-Canale (Sprint S3)                 | AI Agent |
 
 ---
 

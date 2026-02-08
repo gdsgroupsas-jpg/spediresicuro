@@ -47,6 +47,7 @@ supervisorRouter()  ← Entry point UNICO (/api/ai/agent-chat)
     │
     ├─── Support Intent Detection → Support Worker (gestito direttamente)
     ├─── CRM Intent Detection → CRM Worker (gestito direttamente, Sprint S1)
+    ├─── Outreach Intent Detection → Outreach Worker (gestito direttamente, Sprint S3)
     ├─── Pricing/OCR Intent Detection → Pricing Graph (LangGraph)
     ├─── Booking Confirmation Detection
     │
@@ -69,9 +70,10 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 #### Data Flow Pattern
 
 1. **Input Utente** → `supervisorRouter()` rileva intent/pattern
-2. **Direct Workers** → Support e CRM intent gestiti direttamente (no LangGraph):
+2. **Direct Workers** → Support, CRM e Outreach intent gestiti direttamente (no LangGraph):
    - Support intent → `supportWorker()` → risposta diretta
    - CRM intent → `crmWorker()` → risposta con knowledge enrichment
+   - Outreach intent → `outreachWorker()` → gestione sequenze multi-canale
 3. **Pricing/OCR** → `decideNextStep()` (funzione pura) decide routing basato su stato
 4. **Worker Execution** → Worker arricchisce `AgentState` (merge non distruttivo in `shipmentDraft`)
 5. **Loop Back** → Torna a supervisor, valuta nuovo stato
@@ -149,6 +151,22 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 - 5 tool read: get_pipeline_summary, get_entity_details, get_crm_health_alerts, get_today_actions, search_crm_entities
 - 3 tool write: update_crm_status, add_crm_note, record_crm_contact
 
+**Outreach Worker** (`lib/agent/workers/outreach-worker.ts`) — Sprint S3
+
+- Motore outreach multi-canale (Email via Resend, WhatsApp via Meta Cloud API, Telegram)
+- 6 sub-intent: list_sequences, enroll_entity, send_message, check_status, manage_channels, list_templates + outreach_metrics
+- Sequenze DAG lineari con step condizionali (no_reply, no_open, replied, opened)
+- Cron executor ogni 5 min (`/api/cron/outreach-executor`) con batch 20 enrollment
+- Safety: GDPR consent pre-invio, rate limiting giornaliero, cool-down 24h, idempotency key
+- Kill switch globale via `OUTREACH_KILL_SWITCH` env var (blocca write, permette read)
+- Pilot rollout via `OUTREACH_PILOT_WORKSPACES` env var
+- Template engine Handlebars con variabili CRM (company_name, contact_name, sector, etc.)
+- Delivery tracking via webhook (Resend Svix + WhatsApp status events)
+- Structured JSON logging via `outreach-logger.ts`
+- Invocato direttamente dal supervisor-router (non dal LangGraph)
+- Data layer: `lib/outreach/outreach-data-service.ts`, `lib/outreach/enrollment-service.ts`
+- 3 tool: schedule_outreach, manage_outreach_channels, get_outreach_status
+
 ---
 
 ### State Management
@@ -174,10 +192,12 @@ interface AgentState {
     | 'booking_worker'
     | 'support_worker'
     | 'crm_worker'
+    | 'outreach_worker'
     | 'legacy'
     | 'END';
   crm_response?: { message: string; toolsUsed: string[] };
   support_response?: { message: string; toolsUsed: string[] };
+  outreach_response?: { message: string; toolsUsed: string[] };
   clarification_request?: string;
   messages: Message[];
   // ... altri campi
@@ -376,10 +396,11 @@ graph.addConditionalEdges('supervisor', (state) => {
 
 ## Changelog
 
-| Date       | Version | Changes                                           | Author   |
-| ---------- | ------- | ------------------------------------------------- | -------- |
-| 2026-01-12 | 1.0.0   | Initial version                                   | AI Agent |
-| 2026-02-07 | 1.1.0   | Added CRM Worker, Support Worker, updated routing | AI Agent |
+| Date       | Version | Changes                                                            | Author   |
+| ---------- | ------- | ------------------------------------------------------------------ | -------- |
+| 2026-01-12 | 1.0.0   | Initial version                                                    | AI Agent |
+| 2026-02-07 | 1.1.0   | Added CRM Worker, Support Worker, updated routing                  | AI Agent |
+| 2026-02-07 | 1.2.0   | Added Outreach Worker (Sprint S3), multi-channel sequences, safety | AI Agent |
 
 ---
 
