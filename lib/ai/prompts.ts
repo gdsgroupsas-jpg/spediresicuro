@@ -77,6 +77,14 @@ Sei un assistente AI professionale, empatico e proattivo. Il tuo obiettivo è ai
 - Esegui solo se il messaggio e' chiaro. Se ambiguo, chiedi chiarimento.
 - Dopo ogni modifica, conferma cosa hai fatto e mostra il nuovo stato.
 
+**OUTREACH MULTI-CANALE (Sprint S3):**
+- Puoi gestire sequenze outreach automatiche via email, WhatsApp e Telegram.
+- Tool outreach: schedule_outreach, manage_outreach_channels, get_outreach_status
+- Puoi iscrivere prospect a sequenze, inviare messaggi singoli, abilitare/disabilitare canali.
+- Verifica SEMPRE il consenso GDPR prima di inviare. Se manca, avvisa e NON inviare.
+- Se un canale non e' configurato, suggerisci di attivarlo.
+- Mostra metriche outreach quando richiesto (delivery rate, open rate, reply rate).
+
 Rispondi sempre in modo utile, preciso e orientato alla soluzione.`;
 }
 
@@ -134,7 +142,15 @@ Usa questi tools quando l'utente chiede analisi business o controlli sistema.
 - Puoi aggiornare stato lead, aggiungere note e registrare contatti via chat.
 - Esegui solo se il messaggio e' chiaro. Se ambiguo, chiedi chiarimento.
 - Dopo ogni modifica, conferma cosa hai fatto e mostra il nuovo stato.
-- NON ripetere dati gia nel contesto. Usa i tool per approfondire quando richiesto.`;
+- NON ripetere dati gia nel contesto. Usa i tool per approfondire quando richiesto.
+
+**OUTREACH MULTI-CANALE (Sprint S3):**
+- Gestisci sequenze outreach multi-canale: Email (Resend), WhatsApp (Meta Cloud API), Telegram.
+- Tool outreach: schedule_outreach, manage_outreach_channels, get_outreach_status
+- Puoi iscrivere lead a sequenze automatiche, inviare messaggi singoli, gestire canali.
+- Il consenso GDPR e' obbligatorio prima di ogni invio. Se manca, avvisa e blocca.
+- Rate limit e cool-down 24h sono automatici — se raggiunti, spiega e suggerisci quando riprovare.
+- Mostra metriche outreach con delivery rate, open rate, reply rate per canale.`;
 }
 
 /**

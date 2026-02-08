@@ -233,3 +233,64 @@ export function detectCrmIntent(message: string): boolean {
   // Controlla se contiene almeno una keyword CRM
   return CRM_KEYWORDS.some((kw) => lowerMessage.includes(kw));
 }
+
+// ============================================
+// OUTREACH INTENT DETECTION (Sprint S3c)
+// ============================================
+
+/**
+ * Keyword outreach — sequenze, invii, canali, template, campagne
+ */
+const OUTREACH_KEYWORDS = [
+  'sequenza',
+  'outreach',
+  'invia email',
+  'invia whatsapp',
+  'invia telegram',
+  'manda email',
+  'manda whatsapp',
+  'manda messaggio',
+  'manda telegram',
+  'followup automatico',
+  'follow-up automatico',
+  'campagna',
+  'enrollment',
+  'iscrivi alla sequenza',
+  'attiva sequenza',
+  'canali attivi',
+  'canali outreach',
+  'template outreach',
+  'template email',
+  'disabilita canale',
+  'abilita canale',
+  'metriche outreach',
+  'statistiche outreach',
+  'pausa sequenza',
+  'riprendi sequenza',
+  'cancella sequenza',
+  'stop sequenza',
+];
+
+/**
+ * Keyword di esclusione outreach
+ */
+const OUTREACH_EXCLUDE_KEYWORDS = [
+  'preventivo spedizione',
+  'quanto costa spedire',
+  'traccia',
+  'tracking',
+];
+
+/**
+ * Rileva intento outreach con pattern matching.
+ * Usato dal supervisor-router DOPO CRM e PRIMA di pricing.
+ */
+export function detectOutreachIntent(message: string): boolean {
+  const lowerMessage = message.toLowerCase();
+
+  if (OUTREACH_EXCLUDE_KEYWORDS.some((kw) => lowerMessage.includes(kw))) {
+    return false;
+  }
+
+  return OUTREACH_KEYWORDS.some((kw) => lowerMessage.includes(kw));
+}

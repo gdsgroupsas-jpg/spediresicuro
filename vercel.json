@@ -39,6 +39,10 @@
     {
       "path": "/api/cron/lead-scoring",
       "schedule": "0 */12 * * *"
+    },
+    {
+      "path": "/api/cron/outreach-executor",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

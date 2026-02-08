@@ -76,6 +76,7 @@ export interface AgentState {
     | 'price_list_worker'
     | 'support_worker'
     | 'crm_worker'
+    | 'outreach_worker'
     | 'legacy'
     | 'END';
 
@@ -195,6 +196,17 @@ export interface AgentState {
    * Popolato quando Anne gestisce richieste CRM intelligence.
    */
   crm_response?: {
+    message: string;
+    toolsUsed: string[];
+  };
+
+  // ===== OUTREACH MULTI-CANALE (Sprint S3) =====
+
+  /**
+   * Risposta dell'outreach worker.
+   * Popolato quando Anne gestisce richieste outreach (sequenze, invii, canali).
+   */
+  outreach_response?: {
     message: string;
     toolsUsed: string[];
   };

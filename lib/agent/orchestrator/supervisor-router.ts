@@ -24,10 +24,15 @@ import { decideNextStep, DecisionInput, SupervisorDecision } from './supervisor'
 import { createCheckpointer } from './checkpointer';
 import { agentSessionService } from '@/lib/services/agent-session';
 import { assertAgentState } from './type-guards';
-import { detectPricingIntent, detectCrmIntent } from '@/lib/agent/intent-detector';
+import {
+  detectPricingIntent,
+  detectCrmIntent,
+  detectOutreachIntent,
+} from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { detectSupportIntent, supportWorker } from '@/lib/agent/workers/support-worker';
 import { crmWorker } from '@/lib/agent/workers/crm-worker';
+import { outreachWorker } from '@/lib/agent/workers/outreach-worker';
 import { HumanMessage } from '@langchain/core/messages';
 import {
   logIntentDetected,
@@ -313,6 +318,60 @@ export async function supervisorRouter(
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('❌ [Supervisor Router] Errore crm worker, fallback legacy:', errorMessage);
+      // Fallthrough al pricing/legacy handler
+    }
+  }
+
+  // 1.7. Outreach intent check (DOPO CRM, PRIMA di pricing)
+  const isOutreachIntent = detectOutreachIntent(message);
+  if (isOutreachIntent) {
+    logger.log('📨 [Supervisor Router] Intent outreach rilevato, invoco outreach worker');
+    intentDetected = 'outreach' as IntentType;
+
+    // Typing indicator
+    typing?.emit('working', 'Gestisco la richiesta outreach...', 'outreach').catch(() => {});
+
+    try {
+      const outreachResult = await outreachWorker(
+        {
+          message,
+          userId,
+          userRole:
+            actingContext.target.role === 'admin' || actingContext.target.role === 'superadmin'
+              ? 'admin'
+              : 'user',
+          // workspaceId derivato dal userId per reseller (il worker lo gestisce)
+        },
+        logger
+      );
+
+      supervisorDecision = 'end';
+      backendUsed = 'pricing_graph'; // "handled internally"
+      success = true;
+
+      return emitFinalTelemetryAndReturn({
+        decision: 'END',
+        clarificationRequest: outreachResult.response,
+        agentState: {
+          messages: [new HumanMessage(message)],
+          userId,
+          userEmail,
+          shipmentData: {},
+          processingStatus: 'complete',
+          validationErrors: [],
+          confidenceScore: 100,
+          needsHumanReview: false,
+          outreach_response: {
+            message: outreachResult.response,
+            toolsUsed: outreachResult.toolsUsed,
+          },
+        } as AgentState,
+        executionTimeMs: Date.now() - startTime,
+        source: 'supervisor_only',
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error('❌ [Supervisor Router] Errore outreach worker, fallback legacy:', errorMessage);
       // Fallthrough al pricing/legacy handler
     }
   }

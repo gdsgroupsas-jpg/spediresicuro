@@ -29,6 +29,8 @@ import {
   markAsRead,
   type WhatsAppWebhookBody,
 } from '@/lib/services/whatsapp';
+import { updateExecutionDeliveryStatus } from '@/lib/outreach/delivery-tracker';
+import { outreachLogger } from '@/lib/outreach/outreach-logger';
 import {
   sendPricingToWhatsApp,
   sendTrackingToWhatsApp,
@@ -197,6 +199,9 @@ export async function POST(request: NextRequest) {
     await processIncomingMessage(msg.from, msg.name, msg.text, msg.messageId);
   }
 
+  // ─── Outreach Delivery Tracking: intercetta status events ───
+  await processWhatsAppStatusEvents(body);
+
   return NextResponse.json({ status: 'ok' });
 }
 
@@ -305,6 +310,78 @@ async function processIncomingMessage(
 
     await sendWhatsAppText(phone, 'Si e verificato un errore. Riprova tra qualche istante.').catch(
       () => {}
+    );
+  }
+}
+
+// ==================== OUTREACH DELIVERY TRACKING ====================
+
+/**
+ * Processa gli status events WhatsApp (sent/delivered/read/failed)
+ * e aggiorna outreach_executions via delivery tracker.
+ * Meta invia statuses nello stesso webhook body dei messaggi.
+ */
+async function processWhatsAppStatusEvents(body: WhatsAppWebhookBody): Promise<void> {
+  try {
+    for (const entry of body.entry || []) {
+      for (const change of entry.changes || []) {
+        const statuses = change.value?.statuses;
+        if (!statuses) continue;
+
+        for (const status of statuses) {
+          const providerMessageId = status.id;
+          const now = new Date().toISOString();
+
+          switch (status.status) {
+            case 'sent':
+              // Gia' tracciato al momento dell'invio — skip
+              break;
+
+            case 'delivered':
+              await updateExecutionDeliveryStatus(providerMessageId, 'delivered', {
+                deliveredAt: now,
+              });
+              outreachLogger.logDeliveryUpdate({
+                providerMessageId,
+                newStatus: 'delivered',
+                source: 'whatsapp',
+              });
+              break;
+
+            case 'read':
+              await updateExecutionDeliveryStatus(providerMessageId, 'opened', {
+                openedAt: now,
+              });
+              outreachLogger.logDeliveryUpdate({
+                providerMessageId,
+                newStatus: 'opened',
+                source: 'whatsapp',
+              });
+              break;
+
+            case 'failed': {
+              const errorMsg =
+                status.errors?.map((e) => `${e.code}: ${e.title}`).join('; ') ||
+                'Unknown WhatsApp error';
+              await updateExecutionDeliveryStatus(providerMessageId, 'failed', {
+                errorMessage: errorMsg,
+              });
+              outreachLogger.logDeliveryUpdate({
+                providerMessageId,
+                newStatus: 'failed',
+                source: 'whatsapp',
+              });
+              break;
+            }
+          }
+        }
+      }
+    }
+  } catch (err) {
+    // Non bloccare il webhook per errori di tracking
+    console.error(
+      '[WHATSAPP_WEBHOOK] Error processing status events:',
+      err instanceof Error ? err.message : 'Unknown'
     );
   }
 }
