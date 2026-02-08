@@ -218,13 +218,13 @@ describe('navigationConfig - Nested Sections', () => {
     expect(financeSubsection?.items).toHaveLength(7);
   });
 
-  it('should have admin-system subsection with 4 items', () => {
+  it('should have admin-system subsection with 5 items', () => {
     const config = getNavigationForUser('admin');
 
     const adminSection = config.sections.find((s) => s.id === 'admin');
     const systemSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-system');
 
-    expect(systemSubsection?.items).toHaveLength(4);
+    expect(systemSubsection?.items).toHaveLength(5);
   });
 });
 
@@ -424,11 +424,11 @@ describe('navigationConfig - Reseller Team in Gestione Business', () => {
     expect(hasWorkspaceTeam).toBe(true);
   });
 
-  it('sezione Gestione Business deve avere 7 item totali per reseller', () => {
+  it('sezione Gestione Business deve avere 8 item totali per reseller', () => {
     const config = getNavigationForUser('user', { isReseller: true });
     const resellerSection = config.sections.find((s) => s.id === 'reseller');
 
-    expect(resellerSection?.items).toHaveLength(7);
+    expect(resellerSection?.items).toHaveLength(8);
   });
 
   it('reseller deve avere "I Miei Prospect" nella sezione Gestione Business', () => {

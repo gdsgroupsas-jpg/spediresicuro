@@ -299,6 +299,13 @@ const resellerSection: NavSection = {
       description: 'Report per fatturazione ai clienti',
     },
     {
+      id: 'reseller-outreach',
+      label: 'Outreach',
+      href: '/dashboard/outreach',
+      icon: Mail,
+      description: 'Sequenze outreach e metriche invii',
+    },
+    {
       id: 'reseller-team',
       label: 'Il Mio Team',
       href: '/dashboard/workspace/team',
@@ -479,6 +486,13 @@ const adminSection: NavSection = {
           href: '/dashboard/admin/logs',
           icon: Activity,
           description: 'Visualizzazione eventi diagnostici e monitoring',
+        },
+        {
+          id: 'admin-outreach',
+          label: 'Outreach',
+          href: '/dashboard/admin/outreach',
+          icon: Mail,
+          description: 'Monitoraggio outreach multi-canale',
         },
       ],
     },

@@ -16,8 +16,11 @@ import {
   addProspectNote,
 } from '@/actions/reseller-prospects';
 import { getProspectAnalytics } from '@/app/actions/crm-analytics';
+import { getProspectHealthAlerts } from '@/app/actions/crm-health';
+import type { HealthAlertsSummary } from '@/app/actions/crm-health';
 import type { CrmAnalyticsData } from '@/lib/crm/analytics';
 import CrmAnalyticsPanel from '@/components/crm-analytics-panel';
+import CrmHealthAlerts from '@/components/crm-health-alerts';
 import type {
   ResellerProspect,
   ProspectStatus,
@@ -71,9 +74,11 @@ export default function ProspectsPage() {
   const [sectorFilter, setSectorFilter] = useState<ProspectSector | ''>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'analisi'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'analisi' | 'salute'>('pipeline');
   const [analytics, setAnalytics] = useState<CrmAnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [healthData, setHealthData] = useState<HealthAlertsSummary | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
 
   // Caricamento lazy analytics: solo al click su tab "Analisi"
   useEffect(() => {
@@ -85,6 +90,17 @@ export default function ProspectsPage() {
       });
     }
   }, [activeTab, analytics]);
+
+  // Caricamento lazy health alerts: solo al click su tab "Salute"
+  useEffect(() => {
+    if (activeTab === 'salute' && !healthData) {
+      setHealthLoading(true);
+      getProspectHealthAlerts().then((result) => {
+        if (result.success && result.data) setHealthData(result.data);
+        setHealthLoading(false);
+      });
+    }
+  }, [activeTab, healthData]);
 
   const loadProspects = useCallback(async () => {
     setIsLoading(true);
@@ -237,6 +253,22 @@ export default function ProspectsPage() {
           }`}
         >
           Analisi
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab('salute')}
+          className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
+            activeTab === 'salute'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          Salute
+          {healthData && healthData.totalCritical > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+              {healthData.totalCritical}
+            </span>
+          )}
         </button>
       </div>
 
@@ -431,6 +463,20 @@ export default function ProspectsPage() {
         ) : (
           <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
             Impossibile caricare i dati analytics.
+          </div>
+        ))}
+
+      {/* Tab Salute */}
+      {activeTab === 'salute' &&
+        (healthLoading ? (
+          <div className="flex items-center justify-center py-24">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600" />
+          </div>
+        ) : healthData ? (
+          <CrmHealthAlerts data={healthData} />
+        ) : (
+          <div className="bg-yellow-50 border border-yellow-200 text-yellow-700 px-4 py-3 rounded-lg">
+            Impossibile caricare gli alert di salute.
           </div>
         ))}
 

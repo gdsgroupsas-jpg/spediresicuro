@@ -19,8 +19,11 @@ import {
   getLeadEvents,
 } from '@/app/actions/leads';
 import { getLeadAnalytics } from '@/app/actions/crm-analytics';
+import { getCrmHealthAlerts } from '@/app/actions/crm-health';
+import type { HealthAlertsSummary } from '@/app/actions/crm-health';
 import type { CrmAnalyticsData } from '@/lib/crm/analytics';
 import CrmAnalyticsPanel from '@/components/crm-analytics-panel';
+import CrmHealthAlerts from '@/components/crm-health-alerts';
 import type {
   Lead,
   LeadStatus,
@@ -125,9 +128,11 @@ export default function AdminLeadsPage() {
   const [showTimeline, setShowTimeline] = useState<Lead | null>(null);
   const [timelineEvents, setTimelineEvents] = useState<LeadEvent[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'pipeline' | 'analisi'>('pipeline');
+  const [activeTab, setActiveTab] = useState<'pipeline' | 'analisi' | 'salute'>('pipeline');
   const [analytics, setAnalytics] = useState<CrmAnalyticsData | null>(null);
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [healthData, setHealthData] = useState<HealthAlertsSummary | null>(null);
+  const [healthLoading, setHealthLoading] = useState(false);
 
   // Caricamento lazy analytics: solo al click su tab "Analisi"
   useEffect(() => {
@@ -139,6 +144,17 @@ export default function AdminLeadsPage() {
       });
     }
   }, [activeTab, analytics]);
+
+  // Caricamento lazy health alerts: solo al click su tab "Salute"
+  useEffect(() => {
+    if (activeTab === 'salute' && !healthData) {
+      setHealthLoading(true);
+      getCrmHealthAlerts().then((result) => {
+        if (result.success && result.data) setHealthData(result.data);
+        setHealthLoading(false);
+      });
+    }
+  }, [activeTab, healthData]);
 
   const loadLeads = useCallback(async () => {
     setIsLoading(true);
@@ -273,6 +289,21 @@ export default function AdminLeadsPage() {
           }`}
         >
           Analisi
+        </button>
+        <button
+          onClick={() => setActiveTab('salute')}
+          className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+            activeTab === 'salute'
+              ? 'bg-white text-gray-900 shadow-sm'
+              : 'text-gray-600 hover:text-gray-900'
+          }`}
+        >
+          Salute
+          {healthData && healthData.totalCritical > 0 && (
+            <span className="ml-1.5 inline-flex items-center justify-center w-5 h-5 text-[10px] font-bold text-white bg-red-500 rounded-full">
+              {healthData.totalCritical}
+            </span>
+          )}
         </button>
       </div>
 
@@ -522,6 +553,19 @@ export default function AdminLeadsPage() {
           <CrmAnalyticsPanel data={analytics} variant="admin" />
         ) : (
           <div className="p-12 text-center text-gray-400">Errore caricamento analytics</div>
+        ))}
+
+      {/* Tab: Salute */}
+      {activeTab === 'salute' &&
+        (healthLoading ? (
+          <div className="p-12 text-center text-gray-400">
+            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mb-3" />
+            <p>Caricamento alert salute CRM...</p>
+          </div>
+        ) : healthData ? (
+          <CrmHealthAlerts data={healthData} />
+        ) : (
+          <div className="p-12 text-center text-gray-400">Errore caricamento alert</div>
         ))}
 
       {/* Modal Creazione Lead */}
