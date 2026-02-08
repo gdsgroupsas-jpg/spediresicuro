@@ -205,10 +205,10 @@ Iniettato automaticamente via `buildContext()` + `formatContextForPrompt()`:
 
 ## Prossimi Sprint
 
-| Sprint | Obiettivo                                       | Dipendenza |
-| ------ | ----------------------------------------------- | ---------- |
-| S2     | CRM Write Actions (aggiorna stato, note, score) | S1         |
-| S3     | Email + WhatsApp outreach automatico            | S2         |
+| Sprint | Obiettivo                                       | Dipendenza | Status                  |
+| ------ | ----------------------------------------------- | ---------- | ----------------------- |
+| S2     | CRM Write Actions (aggiorna stato, note, score) | S1         | COMPLETATO (2026-02-08) |
+| S3     | Email + WhatsApp outreach automatico            | S2         | Pianificato             |
 
 ## Changelog
 

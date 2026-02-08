@@ -136,15 +136,18 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 - Gestisce richieste di assistenza (tracking, giacenze, cancellazioni, rimborsi)
 - Invocato direttamente dal supervisor-router (non dal LangGraph)
 
-**CRM Worker** (`lib/agent/workers/crm-worker.ts`) — Sprint S1
+**CRM Worker** (`lib/agent/workers/crm-worker.ts`) — Sprint S1 + S2
 
-- Sales Partner read-only: accesso pipeline CRM con conoscenza commerciale senior
-- 6 sub-intent: pipeline_overview, entity_detail, today_actions, health_check, search, conversion_analysis
+- Sales Partner con accesso read + write alla pipeline CRM con conoscenza commerciale senior
+- 9 sub-intent: 6 read (pipeline_overview, entity_detail, today_actions, health_check, search, conversion_analysis) + 3 write (update_status, add_note, record_contact)
 - Arricchisce risposte con `sales-knowledge.ts` (35 entry settoriali)
 - Admin vede leads, Reseller vede prospects (RLS via workspace_id)
 - Invocato direttamente dal supervisor-router (non dal LangGraph)
-- Data layer: `lib/crm/crm-data-service.ts` (9 funzioni read-only)
-- 5 tool: get_pipeline_summary, get_entity_details, get_crm_health_alerts, get_today_actions, search_crm_entities
+- Data layer read: `lib/crm/crm-data-service.ts` (9 funzioni read-only)
+- Data layer write: `lib/crm/crm-write-service.ts` (3 funzioni: updateEntityStatus, addEntityNote, recordEntityContact)
+- Sicurezza write: workspace obbligatorio per reseller, optimistic locking, input sanitizzato, eventi best-effort
+- 5 tool read: get_pipeline_summary, get_entity_details, get_crm_health_alerts, get_today_actions, search_crm_entities
+- 3 tool write: update_crm_status, add_crm_note, record_crm_contact
 
 ---
 

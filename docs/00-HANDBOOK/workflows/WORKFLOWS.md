@@ -30,16 +30,16 @@ Questa documentazione descrive i principali user flows di SpedireSicuro, dal for
 
 ## Quick Reference
 
-| Sezione               | Pagina                                  | Link                                                        |
-| --------------------- | --------------------------------------- | ----------------------------------------------------------- |
-| Creazione Spedizione  | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Nuova Spedizione](#flow-1-creazione-spedizione)            |
-| Gestione Wallet       | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Wallet](#flow-2-gestione-wallet)                           |
-| Gestione Listini      | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Listini](#flow-3-gestione-listini)                         |
-| Admin Dashboard       | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Admin](#flow-4-admin-dashboard)                            |
-| Contrassegni (COD)    | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [COD](#flow-5-gestione-contrassegni-cod)                    |
-| Prev. Commerciale     | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Preventivi](#flow-6-preventivatore-commerciale)            |
-| Anne CRM Intelligence | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [CRM Intelligence](#flow-7-anne-crm-intelligence-read-only) |
-| Processo Operativo AI | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [AI Process](#flow-0-processo-operativo-ai)                 |
+| Sezione               | Pagina                                  | Link                                                          |
+| --------------------- | --------------------------------------- | ------------------------------------------------------------- |
+| Creazione Spedizione  | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Nuova Spedizione](#flow-1-creazione-spedizione)              |
+| Gestione Wallet       | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Wallet](#flow-2-gestione-wallet)                             |
+| Gestione Listini      | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Listini](#flow-3-gestione-listini)                           |
+| Admin Dashboard       | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Admin](#flow-4-admin-dashboard)                              |
+| Contrassegni (COD)    | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [COD](#flow-5-gestione-contrassegni-cod)                      |
+| Prev. Commerciale     | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [Preventivi](#flow-6-preventivatore-commerciale)              |
+| Anne CRM Intelligence | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [CRM Intelligence](#flow-7-anne-crm-intelligence-read--write) |
+| Processo Operativo AI | docs/00-HANDBOOK/workflows/WORKFLOWS.md | [AI Process](#flow-0-processo-operativo-ai)                   |
 
 ## Content
 
@@ -700,9 +700,9 @@ renewExpiredQuoteAction(input)         // Rinnova scaduto
 
 ---
 
-### Flow 7: Anne CRM Intelligence (Read-Only)
+### Flow 7: Anne CRM Intelligence (Read + Write)
 
-**Obiettivo:** Anne funziona come Sales Partner senior con accesso read-only alla pipeline CRM, fornendo insight commerciali, alert proattivi e suggerimenti d'azione basati su conoscenza settoriale avanzata.
+**Obiettivo:** Anne funziona come Sales Partner senior con accesso completo alla pipeline CRM: legge dati (S1), aggiorna stati, aggiunge note e registra contatti (S2). Fornisce insight commerciali, alert proattivi e suggerimenti d'azione basati su conoscenza settoriale avanzata.
 
 **Trigger:** Messaggio utente con intent CRM (es. "come va la pipeline?", "cosa devo fare oggi?", "trova prospect ecommerce")
 
@@ -739,14 +739,17 @@ supervisorRouter()
 3. **Sub-Intent Classification**
    - Il CRM worker classifica internamente il sub-intent:
 
-   | Sub-intent            | Esempio messaggio                        |
-   | --------------------- | ---------------------------------------- |
-   | `pipeline_overview`   | "come va la pipeline?"                   |
-   | `entity_detail`       | "a che punto e' il lead Farmacia Rossi?" |
-   | `today_actions`       | "cosa devo fare oggi?"                   |
-   | `health_check`        | "ci sono problemi nel CRM?"              |
-   | `search`              | "trova prospect ecommerce"               |
-   | `conversion_analysis` | "qual e' il tasso di conversione?"       |
+   | Sub-intent            | Tipo  | Esempio messaggio                        |
+   | --------------------- | ----- | ---------------------------------------- |
+   | `pipeline_overview`   | Read  | "come va la pipeline?"                   |
+   | `entity_detail`       | Read  | "a che punto e' il lead Farmacia Rossi?" |
+   | `today_actions`       | Read  | "cosa devo fare oggi?"                   |
+   | `health_check`        | Read  | "ci sono problemi nel CRM?"              |
+   | `search`              | Read  | "trova prospect ecommerce"               |
+   | `conversion_analysis` | Read  | "qual e' il tasso di conversione?"       |
+   | `update_status`       | Write | "segna Farmacia Rossi come contattata"   |
+   | `add_note`            | Write | "nota su TechShop: interessati a pallet" |
+   | `record_contact`      | Write | "ho chiamato Pizzeria Mario"             |
 
 4. **Data Fetch + Knowledge Enrichment**
    - CRM Worker chiama `crm-data-service` per i dati (pipeline, entities, alerts, search)
@@ -760,7 +763,7 @@ supervisorRouter()
    - Se admin e trend in calo: suggerisce strategie correttive
    - Se reseller con preventivi in scadenza: avvisa con priorita'
 
-**5 Tool CRM (Read-Only):**
+**5 Tool CRM Read (Sprint S1):**
 
 | Tool                    | Descrizione                            |
 | ----------------------- | -------------------------------------- |
@@ -769,6 +772,14 @@ supervisorRouter()
 | `get_crm_health_alerts` | Alert: stale, hot, win-back, quote     |
 | `get_today_actions`     | Lista prioritizzata azioni giornaliere |
 | `search_crm_entities`   | Ricerca per nome/email/stato/settore   |
+
+**3 Tool CRM Write (Sprint S2):**
+
+| Tool                 | Descrizione                                               |
+| -------------------- | --------------------------------------------------------- |
+| `update_crm_status`  | Aggiorna stato lead/prospect (valida transizioni)         |
+| `add_crm_note`       | Aggiunge nota con timestamp (sanitizzata)                 |
+| `record_crm_contact` | Registra contatto avvenuto (auto-avanza new -> contacted) |
 
 **Knowledge Base (35 entry senior):**
 
@@ -783,7 +794,7 @@ supervisorRouter()
 - Admin: query su tabella `leads` (no filtro workspace)
 - Reseller: query su `reseller_prospects` filtrate per `workspace_id`
 - Tutte le query via `supabaseAdmin` con service role key (server-side only)
-- Nessuna azione di scrittura (Sprint S1 e' read-only)
+- Write actions (S2): validazione transizioni, optimistic locking, input sanitizzato, workspace isolation obbligatoria
 
 **Edge Cases:**
 
@@ -820,6 +831,7 @@ supervisorRouter()
 | 2026-02-02 | 1.2.0   | Unified Listini UI: 4→1 sidebar entry per role, tab-based pages | AI Agent |
 | 2026-02-07 | 1.3.0   | Added Flow 6: Preventivatore Commerciale (full lifecycle)       | AI Agent |
 | 2026-02-07 | 1.4.0   | Added Flow 7: Anne CRM Intelligence (read-only Sales Partner)   | AI Agent |
+| 2026-02-08 | 1.5.0   | Flow 7: Added CRM write actions (S2) + security hardening       | AI Agent |
 
 ---
 

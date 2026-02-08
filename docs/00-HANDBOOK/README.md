@@ -48,6 +48,7 @@ Milestones:
 - docs/milestones/MILESTONE-COMMERCIAL-QUOTES-MVP-PHASE-A.md
 - docs/milestones/MILESTONE-COMMERCIAL-QUOTES-PHASES-BCD.md
 - docs/milestones/MILESTONE-CRM-INTELLIGENCE-S1.md
+- docs/milestones/MILESTONE-CRM-INTELLIGENCE-S2.md
 
 Notes:
 
