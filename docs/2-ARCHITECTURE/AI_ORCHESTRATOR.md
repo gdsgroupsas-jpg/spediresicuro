@@ -154,7 +154,7 @@ supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
 **Outreach Worker** (`lib/agent/workers/outreach-worker.ts`) — Sprint S3
 
 - Motore outreach multi-canale (Email via Resend, WhatsApp via Meta Cloud API, Telegram)
-- 6 sub-intent: list_sequences, enroll_entity, send_message, check_status, manage_channels, list_templates + outreach_metrics
+- 10 sub-intent: enroll_entity, cancel_enrollment, pause_enrollment, resume_enrollment, send_message, check_status, manage_channels, list_templates, list_sequences, outreach_metrics
 - Sequenze DAG lineari con step condizionali (no_reply, no_open, replied, opened)
 - Cron executor ogni 5 min (`/api/cron/outreach-executor`) con batch 20 enrollment
 - Safety: GDPR consent pre-invio, rate limiting giornaliero, cool-down 24h, idempotency key
@@ -386,10 +386,7 @@ graph.addConditionalEdges('supervisor', (state) => {
 
 ## Related Documentation
 
-- [10-AI-AGENT/OVERVIEW.md](../10-AI-AGENT/OVERVIEW.md) - Anne AI overview completo
-- [10-AI-AGENT/ARCHITECTURE.md](../10-AI-AGENT/ARCHITECTURE.md) - LangGraph architecture dettagliata
-- [10-AI-AGENT/WORKERS.md](../10-AI-AGENT/WORKERS.md) - Worker specifici
-- [MIGRATION_MEMORY.md](../../MIGRATION_MEMORY.md) - Single Source of Truth per migrazione Anne
+- [MIGRATION_MEMORY.md](../../MIGRATION_MEMORY.md) - Anne AI overview, architettura completa (Single Source of Truth)
 - [Backend Architecture](BACKEND.md) - API routes e Server Actions
 
 ---

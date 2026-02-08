@@ -63,8 +63,8 @@ SpedireSicuro e' un **Logistics Operating System** che supporta **3 modelli oper
 - **README.md** (questo file) - Costituzione del sistema
 - **MIGRATION_MEMORY.md** - Stato sviluppo attuale e architettura AI
 - **docs/MONEY_FLOWS.md** - Sistema wallet e flussi finanziari
-- **docs/ARCHITECTURE.md** - Deep dive tecnico
-- **docs/SECURITY.md** - Architettura sicurezza multi-tenant
+- **docs/2-ARCHITECTURE/OVERVIEW.md** - Deep dive tecnico
+- **docs/8-SECURITY/OVERVIEW.md** - Architettura sicurezza multi-tenant
 
 ### Cosa NON Fare
 
@@ -506,7 +506,11 @@ Il sistema ha **27 pagine dashboard**:
 - **[docs/2-ARCHITECTURE/OVERVIEW.md](docs/2-ARCHITECTURE/OVERVIEW.md)** - Overview architettura
 - **[docs/2-ARCHITECTURE/FRONTEND.md](docs/2-ARCHITECTURE/FRONTEND.md)** - Architettura frontend
 - **[docs/MONEY_FLOWS.md](docs/MONEY_FLOWS.md)** - Sistema wallet e flussi finanziari
-- **[docs/SECURITY.md](docs/SECURITY.md)** - Architettura sicurezza multi-tenant
+- **[docs/8-SECURITY/OVERVIEW.md](docs/8-SECURITY/OVERVIEW.md)** - Architettura sicurezza multi-tenant
+
+### Milestones
+
+- **[docs/milestones/MILESTONE-OUTREACH-S3.md](docs/milestones/MILESTONE-OUTREACH-S3.md)** - Sprint S3: Multi-Channel Outreach System
 
 ### Operativo
 
