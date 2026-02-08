@@ -5,7 +5,7 @@ audience: all
 owner: docs
 status: active
 source_of_truth: true
-updated: 2026-01-19
+updated: 2026-02-08
 ---
 
 # Documentation Hub
@@ -37,6 +37,8 @@ Feature Documentation:
 - docs/11-FEATURES/COD_MANAGEMENT.md
 - docs/11-FEATURES/COMMERCIAL_QUOTES.md
 - docs/11-FEATURES/RESELLER_HIERARCHY.md
+- docs/11-FEATURES/CRM_INTELLIGENCE.md
+- docs/11-FEATURES/OUTREACH_MULTI_CHANNEL.md
 
 AI Architecture:
 
