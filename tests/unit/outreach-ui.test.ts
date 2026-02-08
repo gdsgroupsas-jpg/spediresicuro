@@ -122,20 +122,18 @@ vi.mock('@/lib/outreach/outreach-analytics', () => ({
 }));
 
 vi.mock('@/lib/outreach/outreach-data-service', () => ({
-  getSequences: vi
-    .fn()
-    .mockResolvedValue([
-      {
-        id: 'seq-1',
-        name: 'Intro',
-        is_active: true,
-        trigger_on: 'manual',
-        target_statuses: [],
-        workspace_id: 'ws-test-1',
-        created_at: '2026-02-01',
-        updated_at: '2026-02-01',
-      },
-    ]),
+  getSequences: vi.fn().mockResolvedValue([
+    {
+      id: 'seq-1',
+      name: 'Intro',
+      is_active: true,
+      trigger_on: 'manual',
+      target_statuses: [],
+      workspace_id: 'ws-test-1',
+      created_at: '2026-02-01',
+      updated_at: '2026-02-01',
+    },
+  ]),
 }));
 
 // ============================================
