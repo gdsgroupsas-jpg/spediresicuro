@@ -10,9 +10,13 @@ import { supervisorRouter } from '@/lib/agent/orchestrator/supervisor-router';
 import { ActingContext } from '@/lib/safe-auth';
 
 // Mock dependencies
-vi.mock('@/lib/agent/intent-detector', () => ({
-  detectPricingIntent: vi.fn().mockResolvedValue(true),
-}));
+vi.mock('@/lib/agent/intent-detector', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/lib/agent/intent-detector')>();
+  return {
+    ...actual,
+    detectPricingIntent: vi.fn().mockResolvedValue(true),
+  };
+});
 
 vi.mock('@/lib/agent/orchestrator/supervisor', () => ({
   decideNextStep: vi.fn(),
