@@ -234,6 +234,7 @@ export interface CreateCommercialQuoteInput {
   additional_carrier_codes?: Array<{
     carrier_code: string;
     contract_code: string;
+    price_list_id?: string;
     margin_percent?: number;
   }>;
 }

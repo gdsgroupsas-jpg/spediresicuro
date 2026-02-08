@@ -27,6 +27,7 @@ interface CourierOption {
   courierName: string;
   contractCode: string;
   carrierCode: string;
+  priceListId: string;
   doesClientPickup: boolean;
 }
 
@@ -112,6 +113,7 @@ export function QuoteForm({ onQuoteCreated }: QuoteFormProps) {
               courierName: c.courierName,
               contractCode: c.contractCode,
               carrierCode: c.carrierCode,
+              priceListId: c.priceListId,
               doesClientPickup: c.doesClientPickup,
             }))
           );
@@ -154,6 +156,7 @@ export function QuoteForm({ onQuoteCreated }: QuoteFormProps) {
           return {
             carrier_code: acCourier?.carrierCode || ac.contractCode,
             contract_code: ac.contractCode,
+            price_list_id: acCourier?.priceListId,
             margin_percent: ac.marginPercent ? parseFloat(ac.marginPercent) : undefined,
           };
         });
@@ -168,6 +171,7 @@ export function QuoteForm({ onQuoteCreated }: QuoteFormProps) {
         prospect_notes: prospectNotes || undefined,
         carrier_code: courier.carrierCode,
         contract_code: courier.contractCode,
+        price_list_id: courier.priceListId,
         margin_percent: parseFloat(marginPercent) || 20,
         validity_days: parseInt(validityDays) || 30,
         vat_mode: vatMode,

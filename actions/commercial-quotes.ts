@@ -153,21 +153,25 @@ export async function createCommercialQuoteAction(
     if (input.additional_carrier_codes && input.additional_carrier_codes.length > 0) {
       const additionalSnapshots = [];
       for (const ac of input.additional_carrier_codes) {
-        // Trova price_list_id per questo corriere
-        const { data: acPlList } = await supabaseAdmin
-          .from('price_lists')
-          .select('id, metadata')
-          .eq('workspace_id', workspaceId)
-          .eq('status', 'active');
+        // Usa price_list_id diretto se fornito, altrimenti cerca per contract_code
+        let acPriceListId = ac.price_list_id;
+        if (!acPriceListId) {
+          const { data: acPlList } = await supabaseAdmin
+            .from('price_lists')
+            .select('id, metadata')
+            .eq('workspace_id', workspaceId)
+            .eq('status', 'active');
 
-        const acMatched = acPlList?.find(
-          (p: { id: string; metadata: Record<string, unknown> | null }) =>
-            (p.metadata as Record<string, unknown>)?.contract_code === ac.contract_code
-        );
+          const acMatched = acPlList?.find(
+            (p: { id: string; metadata: Record<string, unknown> | null }) =>
+              (p.metadata as Record<string, unknown>)?.contract_code === ac.contract_code
+          );
+          acPriceListId = acMatched?.id;
+        }
 
-        if (acMatched) {
+        if (acPriceListId) {
           const acMatrix = await buildPriceMatrix({
-            priceListId: acMatched.id,
+            priceListId: acPriceListId,
             marginPercent: ac.margin_percent ?? marginPercent,
             workspaceId,
             vatMode,
@@ -1346,8 +1350,8 @@ export async function renewExpiredQuoteAction(
 
 /**
  * Restituisce i corrieri disponibili per il preventivatore commerciale.
- * Basato sui price_lists attivi del workspace (NON sulle courier_configs dell'utente).
- * Ogni listino attivo con metadata.contract_code rappresenta un corriere disponibile.
+ * Basato sui price_lists attivi del workspace con LEFT JOIN su couriers.
+ * Ogni listino attivo = un corriere selezionabile (non richiede metadata.contract_code).
  */
 export async function getAvailableCarriersForQuotesAction(): Promise<
   ActionResult<
@@ -1366,10 +1370,10 @@ export async function getAvailableCarriersForQuotesAction(): Promise<
 
     const workspaceId = wsAuth.workspace.id;
 
-    // Carica tutti i listini attivi del workspace
+    // Query con LEFT JOIN su couriers per risolvere il nome corriere
     const { data: priceLists, error } = await supabaseAdmin
       .from('price_lists')
-      .select('id, name, metadata')
+      .select('id, name, metadata, source_metadata, courier_id, couriers(name)')
       .eq('workspace_id', workspaceId)
       .eq('status', 'active');
 
@@ -1381,7 +1385,7 @@ export async function getAvailableCarriersForQuotesAction(): Promise<
       return { success: true, data: [] };
     }
 
-    // Estrai corrieri dai listini con contract_code nel metadata
+    // Ogni listino attivo = un corriere selezionabile
     const carriers: Array<{
       contractCode: string;
       carrierCode: string;
@@ -1393,12 +1397,20 @@ export async function getAvailableCarriersForQuotesAction(): Promise<
     const contractCodes: string[] = [];
 
     for (const pl of priceLists) {
-      const metadata = pl.metadata as Record<string, unknown> | null;
-      const contractCode = metadata?.contract_code as string | undefined;
-      if (!contractCode) continue;
+      const metadata = (pl.metadata || {}) as Record<string, unknown>;
+      const sourceMeta = (pl.source_metadata || {}) as Record<string, unknown>;
 
-      const carrierCode = (metadata?.carrier_code as string) || contractCode;
-      const courierName = formatCarrierDisplayName(carrierCode);
+      // Risolvi contract_code: metadata -> source_metadata -> pl.id come fallback
+      const contractCode =
+        (metadata.contract_code as string) || (sourceMeta.contract_code as string) || pl.id;
+
+      // Risolvi carrier_code: metadata -> source_metadata -> contract_code
+      const carrierCode =
+        (metadata.carrier_code as string) || (sourceMeta.carrier_code as string) || contractCode;
+
+      // Risolvi nome display: couriers.name -> formatCarrierDisplayName -> pl.name
+      const courierJoin = pl.couriers as unknown as { name: string } | null;
+      const courierName = courierJoin?.name || formatCarrierDisplayName(carrierCode) || pl.name;
 
       carriers.push({
         contractCode,
@@ -1407,7 +1419,11 @@ export async function getAvailableCarriersForQuotesAction(): Promise<
         priceListId: pl.id,
         doesClientPickup: false,
       });
-      contractCodes.push(contractCode);
+
+      // Raccogli contract_code reali per lookup pickup
+      if (contractCode !== pl.id) {
+        contractCodes.push(contractCode);
+      }
     }
 
     // Arricchisci con does_client_pickup da supplier_price_list_config
