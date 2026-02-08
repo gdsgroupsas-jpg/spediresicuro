@@ -50,6 +50,7 @@ Milestones:
 - docs/milestones/MILESTONE-CRM-INTELLIGENCE-S1.md
 - docs/milestones/MILESTONE-CRM-INTELLIGENCE-S2.md
 - docs/milestones/MILESTONE-OUTREACH-S3.md
+- docs/milestones/MILESTONE-CRM-OUTREACH-UI-S4.md
 
 Notes:
 
