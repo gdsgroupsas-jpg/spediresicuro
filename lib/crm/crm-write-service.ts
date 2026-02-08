@@ -7,6 +7,13 @@
  * Accetta userId/role/workspaceId direttamente (no contesto HTTP/cookie).
  * Ogni operazione: valida → aggiorna → ricalcola score → crea evento timeline.
  *
+ * SICUREZZA:
+ * - Reseller DEVE passare workspaceId (fail-fast se mancante)
+ * - Filtro workspace_id su FETCH e UPDATE (defense-in-depth, non solo RLS)
+ * - Optimistic locking con updated_at per prevenire TOCTOU
+ * - Input sanitizzato (strip HTML tags)
+ * - Eventi best-effort con error handling (non blocca flusso principale)
+ *
  * @module lib/crm/crm-write-service
  */
 
@@ -46,6 +53,33 @@ export interface RecordContactParams {
   contactNote?: string;
   actorId: string;
   workspaceId?: string;
+}
+
+// ============================================
+// SICUREZZA HELPERS
+// ============================================
+
+/**
+ * Sanitizza input utente: rimuove tag HTML per prevenire XSS.
+ * I dati vanno nel DB come testo, ma se il frontend li renderizza
+ * come HTML senza escape, un tag <script> potrebbe eseguire codice.
+ */
+function sanitizeText(input: string): string {
+  return input.replace(/<[^>]*>/g, '').trim();
+}
+
+/**
+ * Valida che un reseller abbia workspaceId.
+ * Fail-fast: se role=user e workspaceId manca, blocca l'operazione.
+ */
+function validateWorkspaceRequired(
+  role: 'admin' | 'user',
+  workspaceId: string | undefined
+): string | null {
+  if (role === 'user' && !workspaceId) {
+    return 'Workspace non specificato. Operazione non autorizzata.';
+  }
+  return null;
 }
 
 // ============================================
@@ -104,6 +138,21 @@ function buildScoreInputFromProspect(prospect: Record<string, any>): LeadScoreIn
   };
 }
 
+/**
+ * Inserisce evento timeline best-effort.
+ * Non blocca il flusso principale se fallisce.
+ */
+async function insertEventSafe(eventsTable: string, data: Record<string, unknown>): Promise<void> {
+  try {
+    await supabaseAdmin.from(eventsTable).insert(data);
+  } catch (err) {
+    console.warn(
+      `[CRM Write] Evento non registrato (${data.event_type}):`,
+      err instanceof Error ? err.message : err
+    );
+  }
+}
+
 // ============================================
 // UPDATE STATUS
 // ============================================
@@ -111,6 +160,10 @@ function buildScoreInputFromProspect(prospect: Record<string, any>): LeadScoreIn
 /**
  * Aggiorna lo stato di un lead/prospect nella pipeline.
  * Valida la transizione, aggiorna, ricalcola score, crea evento.
+ *
+ * Sicurezza:
+ * - Reseller: workspaceId obbligatorio, filtrato in fetch E update
+ * - Optimistic locking con updated_at
  */
 export async function updateEntityStatus(params: UpdateStatusParams): Promise<CrmWriteResult> {
   const { role, entityId, newStatus, actorId, workspaceId, lostReason } = params;
@@ -119,10 +172,23 @@ export async function updateEntityStatus(params: UpdateStatusParams): Promise<Cr
   const eventsTable = isAdmin ? 'lead_events' : 'prospect_events';
   const fkColumn = isAdmin ? 'lead_id' : 'prospect_id';
 
-  // 1. Fetch entita' corrente
+  // Sicurezza: reseller DEVE avere workspaceId
+  const wsError = validateWorkspaceRequired(role, workspaceId);
+  if (wsError) {
+    return {
+      success: false,
+      entityId,
+      entityName: '',
+      action: 'status_update',
+      details: '',
+      error: wsError,
+    };
+  }
+
+  // 1. Fetch entita' corrente (con filtro workspace per reseller)
   let query = supabaseAdmin.from(table).select('*').eq('id', entityId);
-  if (!isAdmin && workspaceId) {
-    query = query.eq('workspace_id', workspaceId);
+  if (!isAdmin) {
+    query = query.eq('workspace_id', workspaceId!);
   }
   const { data: entity, error: fetchError } = await query.single();
 
@@ -174,7 +240,7 @@ export async function updateEntityStatus(params: UpdateStatusParams): Promise<Cr
   // 3. Prepara dati update
   const updateData: Record<string, unknown> = { status: newStatus };
   if (newStatus === 'lost' && lostReason) {
-    updateData.lost_reason = lostReason;
+    updateData.lost_reason = sanitizeText(lostReason);
   }
 
   // 4. Ricalcola score
@@ -185,11 +251,16 @@ export async function updateEntityStatus(params: UpdateStatusParams): Promise<Cr
   const newScore = calculateLeadScore(scoreInput);
   updateData.lead_score = newScore;
 
-  // 5. Esegui update
-  const { error: updateError } = await supabaseAdmin
+  // 5. Esegui update con optimistic locking (updated_at) + filtro workspace
+  let updateQuery = supabaseAdmin
     .from(table)
     .update(updateData)
-    .eq('id', entityId);
+    .eq('id', entityId)
+    .eq('updated_at', entity.updated_at);
+  if (!isAdmin) {
+    updateQuery = updateQuery.eq('workspace_id', workspaceId!);
+  }
+  const { error: updateError } = await updateQuery;
 
   if (updateError) {
     return {
@@ -202,15 +273,15 @@ export async function updateEntityStatus(params: UpdateStatusParams): Promise<Cr
     };
   }
 
-  // 6. Crea evento timeline
+  // 6. Crea evento timeline (best-effort)
   const eventType = getStatusChangeEventType(newStatus, isAdmin);
-  await supabaseAdmin.from(eventsTable).insert({
+  await insertEventSafe(eventsTable, {
     [fkColumn]: entityId,
     event_type: eventType,
     event_data: {
       from_status: currentStatus,
       to_status: newStatus,
-      lost_reason: newStatus === 'lost' ? lostReason : undefined,
+      ...(newStatus === 'lost' && lostReason ? { lost_reason: sanitizeText(lostReason) } : {}),
     },
     actor_id: actorId,
   });
@@ -218,7 +289,7 @@ export async function updateEntityStatus(params: UpdateStatusParams): Promise<Cr
   // Evento score changed se delta significativo
   const oldScore = entity.lead_score || 0;
   if (Math.abs(newScore - oldScore) >= 10) {
-    await supabaseAdmin.from(eventsTable).insert({
+    await insertEventSafe(eventsTable, {
       [fkColumn]: entityId,
       event_type: 'score_changed',
       event_data: { old_score: oldScore, new_score: newScore },
@@ -278,10 +349,29 @@ export async function addEntityNote(params: AddNoteParams): Promise<CrmWriteResu
   const eventsTable = isAdmin ? 'lead_events' : 'prospect_events';
   const fkColumn = isAdmin ? 'lead_id' : 'prospect_id';
 
-  // 1. Fetch entita' corrente
-  let query = supabaseAdmin.from(table).select('id, company_name, notes').eq('id', entityId);
-  if (!isAdmin && workspaceId) {
-    query = query.eq('workspace_id', workspaceId);
+  // Sicurezza: reseller DEVE avere workspaceId
+  const wsError = validateWorkspaceRequired(role, workspaceId);
+  if (wsError) {
+    return {
+      success: false,
+      entityId,
+      entityName: '',
+      action: 'note_added',
+      details: '',
+      error: wsError,
+    };
+  }
+
+  // Sanitizza input
+  const sanitizedNote = sanitizeText(note);
+
+  // 1. Fetch entita' corrente (con filtro workspace per reseller)
+  let query = supabaseAdmin
+    .from(table)
+    .select('id, company_name, notes, updated_at')
+    .eq('id', entityId);
+  if (!isAdmin) {
+    query = query.eq('workspace_id', workspaceId!);
   }
   const { data: entity, error: fetchError } = await query.single();
 
@@ -302,14 +392,19 @@ export async function addEntityNote(params: AddNoteParams): Promise<CrmWriteResu
   const timestamp = new Date().toISOString().slice(0, 16).replace('T', ' ');
   const existingNotes = entity.notes || '';
   const updatedNotes = existingNotes
-    ? `${existingNotes}\n\n[${timestamp}] ${note}`
-    : `[${timestamp}] ${note}`;
+    ? `${existingNotes}\n\n[${timestamp}] ${sanitizedNote}`
+    : `[${timestamp}] ${sanitizedNote}`;
 
-  // 3. Esegui update
-  const { error: updateError } = await supabaseAdmin
+  // 3. Esegui update con optimistic locking + filtro workspace
+  let updateQuery = supabaseAdmin
     .from(table)
     .update({ notes: updatedNotes })
-    .eq('id', entityId);
+    .eq('id', entityId)
+    .eq('updated_at', entity.updated_at);
+  if (!isAdmin) {
+    updateQuery = updateQuery.eq('workspace_id', workspaceId!);
+  }
+  const { error: updateError } = await updateQuery;
 
   if (updateError) {
     return {
@@ -322,11 +417,11 @@ export async function addEntityNote(params: AddNoteParams): Promise<CrmWriteResu
     };
   }
 
-  // 4. Crea evento
-  await supabaseAdmin.from(eventsTable).insert({
+  // 4. Crea evento (best-effort)
+  await insertEventSafe(eventsTable, {
     [fkColumn]: entityId,
     event_type: 'note_added',
-    event_data: { note_preview: note.slice(0, 100) },
+    event_data: { note_preview: sanitizedNote.slice(0, 100) },
     actor_id: actorId,
   });
 
@@ -335,7 +430,7 @@ export async function addEntityNote(params: AddNoteParams): Promise<CrmWriteResu
     entityId,
     entityName,
     action: 'note_added',
-    details: `Nota aggiunta: "${note.slice(0, 80)}${note.length > 80 ? '...' : ''}"`,
+    details: `Nota aggiunta: "${sanitizedNote.slice(0, 80)}${sanitizedNote.length > 80 ? '...' : ''}"`,
   };
 }
 
@@ -354,15 +449,31 @@ export async function recordEntityContact(params: RecordContactParams): Promise<
   const eventsTable = isAdmin ? 'lead_events' : 'prospect_events';
   const fkColumn = isAdmin ? 'lead_id' : 'prospect_id';
 
-  // 1. Fetch entita' corrente
+  // Sicurezza: reseller DEVE avere workspaceId
+  const wsError = validateWorkspaceRequired(role, workspaceId);
+  if (wsError) {
+    return {
+      success: false,
+      entityId,
+      entityName: '',
+      action: 'contact_recorded',
+      details: '',
+      error: wsError,
+    };
+  }
+
+  // Sanitizza input
+  const sanitizedContactNote = contactNote ? sanitizeText(contactNote) : undefined;
+
+  // 1. Fetch entita' corrente (con filtro workspace per reseller)
   let query = supabaseAdmin
     .from(table)
     .select(
-      'id, company_name, notes, status, lead_score, email, phone, sector, estimated_monthly_volume, email_open_count, last_contact_at, created_at, linked_quote_ids'
+      'id, company_name, notes, status, lead_score, email, phone, sector, estimated_monthly_volume, email_open_count, last_contact_at, created_at, linked_quote_ids, updated_at'
     )
     .eq('id', entityId);
-  if (!isAdmin && workspaceId) {
-    query = query.eq('workspace_id', workspaceId);
+  if (!isAdmin) {
+    query = query.eq('workspace_id', workspaceId!);
   }
   const { data: entity, error: fetchError } = await query.single();
 
@@ -393,12 +504,12 @@ export async function recordEntityContact(params: RecordContactParams): Promise<
   }
 
   // Aggiunge nota contatto se fornita
-  if (contactNote) {
+  if (sanitizedContactNote) {
     const timestamp = now.slice(0, 16).replace('T', ' ');
     const existingNotes = entity.notes || '';
     updateData.notes = existingNotes
-      ? `${existingNotes}\n\n[${timestamp}] Contatto: ${contactNote}`
-      : `[${timestamp}] Contatto: ${contactNote}`;
+      ? `${existingNotes}\n\n[${timestamp}] Contatto: ${sanitizedContactNote}`
+      : `[${timestamp}] Contatto: ${sanitizedContactNote}`;
   }
 
   // Ricalcola score
@@ -409,11 +520,16 @@ export async function recordEntityContact(params: RecordContactParams): Promise<
   const newScore = calculateLeadScore(scoreInput);
   updateData.lead_score = newScore;
 
-  // 3. Esegui update
-  const { error: updateError } = await supabaseAdmin
+  // 3. Esegui update con optimistic locking + filtro workspace
+  let updateQuery = supabaseAdmin
     .from(table)
     .update(updateData)
-    .eq('id', entityId);
+    .eq('id', entityId)
+    .eq('updated_at', entity.updated_at);
+  if (!isAdmin) {
+    updateQuery = updateQuery.eq('workspace_id', workspaceId!);
+  }
+  const { error: updateError } = await updateQuery;
 
   if (updateError) {
     return {
@@ -426,23 +542,23 @@ export async function recordEntityContact(params: RecordContactParams): Promise<
     };
   }
 
-  // 4. Crea evento contacted
-  await supabaseAdmin.from(eventsTable).insert({
+  // 4. Crea evento contacted (best-effort)
+  await insertEventSafe(eventsTable, {
     [fkColumn]: entityId,
     event_type: 'contacted',
     event_data: {
-      contact_note: contactNote?.slice(0, 200),
+      contact_note: sanitizedContactNote?.slice(0, 200),
       status_advanced: statusAdvanced,
     },
     actor_id: actorId,
   });
 
-  // Se nota contatto presente, crea anche evento note_added
-  if (contactNote) {
-    await supabaseAdmin.from(eventsTable).insert({
+  // Se nota contatto presente, crea anche evento note_added (best-effort)
+  if (sanitizedContactNote) {
+    await insertEventSafe(eventsTable, {
       [fkColumn]: entityId,
       event_type: 'note_added',
-      event_data: { note_preview: contactNote.slice(0, 100) },
+      event_data: { note_preview: sanitizedContactNote.slice(0, 100) },
       actor_id: actorId,
     });
   }

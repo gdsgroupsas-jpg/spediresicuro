@@ -5,6 +5,7 @@
  * - updateEntityStatus: transizioni valide/invalide, score, eventi, lost_reason
  * - addEntityNote: timestamp, append, eventi
  * - recordEntityContact: last_contact_at, auto-advance, nota contatto
+ * - Sicurezza: workspace obbligatorio, sanitizzazione, optimistic locking
  * - Errori: entita' inesistente, errore DB
  *
  * Usa mock Supabase per isolare la logica di business.
@@ -27,6 +28,26 @@ let mockSelectResult: { data: Record<string, unknown> | null; error: unknown } =
 };
 let mockUpdateResult: { error: unknown } = { error: null };
 
+/**
+ * Crea un chainable builder per update query.
+ * Supporta .eq() multipli in catena (per optimistic locking + workspace).
+ * L'ultimo .eq() o l'accesso diretto al builder risolve a mockUpdateResult.
+ */
+function createUpdateChain() {
+  const chain: Record<string, unknown> = {};
+  chain.eq = vi.fn(() => {
+    // Ritorna se stesso per supportare chaining
+    return chain;
+  });
+  // Supabase query builder puo' essere awaited come promise (restituisce il risultato)
+  // Simuliamo con .then() per supportare `const { error } = await updateQuery;`
+  chain.then = (resolve: (val: unknown) => void) => {
+    resolve(mockUpdateResult);
+    return chain;
+  };
+  return chain;
+}
+
 // Builder pattern che replica il Supabase query builder
 const mockQueryBuilder = {
   select: vi.fn().mockReturnThis(),
@@ -34,9 +55,7 @@ const mockQueryBuilder = {
   single: vi.fn(() => mockSelectResult),
   update: vi.fn((data: Record<string, unknown>) => {
     mockUpdateData.push(data);
-    return {
-      eq: vi.fn(() => mockUpdateResult),
-    };
+    return createUpdateChain();
   }),
   insert: vi.fn((data: Record<string, unknown>) => {
     mockInsertData.push(data);
@@ -73,6 +92,7 @@ import { VALID_TRANSITIONS } from '@/types/reseller-prospects';
 
 const ACTOR_ID = 'actor-123';
 const WORKSPACE_ID = 'ws-456';
+const UPDATED_AT = '2026-01-20T10:00:00.000Z';
 
 function makeLead(overrides: Record<string, unknown> = {}) {
   return {
@@ -89,6 +109,7 @@ function makeLead(overrides: Record<string, unknown> = {}) {
     created_at: '2026-01-15T10:00:00Z',
     linked_quote_ids: [],
     notes: '',
+    updated_at: UPDATED_AT,
     ...overrides,
   };
 }
@@ -109,6 +130,7 @@ function makeProspect(overrides: Record<string, unknown> = {}) {
     created_at: '2026-01-10T10:00:00Z',
     linked_quote_ids: ['q-1'],
     notes: 'Nota esistente',
+    updated_at: UPDATED_AT,
     ...overrides,
   };
 }
@@ -259,7 +281,7 @@ describe('updateEntityStatus', () => {
     expect(result.error).toContain('Errore aggiornamento');
   });
 
-  it('include lost_reason quando status = lost', async () => {
+  it('include lost_reason sanitizzata quando status = lost', async () => {
     const lead = makeLead({ status: 'new' });
     mockSelectResult = { data: lead, error: null };
 
@@ -268,11 +290,11 @@ describe('updateEntityStatus', () => {
       entityId: 'lead-1',
       newStatus: 'lost',
       actorId: ACTOR_ID,
-      lostReason: 'Prezzo troppo alto',
+      lostReason: 'Prezzo <b>troppo alto</b>',
     });
 
     expect(result.success).toBe(true);
-    // Verifica che l'update includa lost_reason
+    // Verifica che l'update includa lost_reason sanitizzata (senza HTML)
     expect(mockUpdateData.length).toBeGreaterThan(0);
     expect(mockUpdateData[0]).toHaveProperty('lost_reason', 'Prezzo troppo alto');
   });
@@ -327,6 +349,60 @@ describe('updateEntityStatus', () => {
     expect(scoreEvent).toBeDefined();
     expect((scoreEvent?.event_data as Record<string, unknown>)?.old_score).toBe(40);
     expect((scoreEvent?.event_data as Record<string, unknown>)?.new_score).toBe(65);
+  });
+
+  // --- Test sicurezza ---
+
+  it('rifiuta reseller senza workspaceId (C2)', async () => {
+    const result = await updateEntityStatus({
+      role: 'user',
+      entityId: 'prospect-1',
+      newStatus: 'quote_sent',
+      actorId: ACTOR_ID,
+      // workspaceId non passato
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Workspace non specificato');
+    // Non deve nemmeno fare fetch
+    expect(mockQueryBuilder.select).not.toHaveBeenCalled();
+  });
+
+  it('sanitizza lost_reason nel event_data (W1)', async () => {
+    const lead = makeLead({ status: 'new' });
+    mockSelectResult = { data: lead, error: null };
+
+    await updateEntityStatus({
+      role: 'admin',
+      entityId: 'lead-1',
+      newStatus: 'lost',
+      actorId: ACTOR_ID,
+      lostReason: '<script>alert("xss")</script>Troppo caro',
+    });
+
+    const lostEvent = mockInsertData.find((d) => d.event_type === 'lost');
+    expect(lostEvent).toBeDefined();
+    const eventData = lostEvent?.event_data as Record<string, unknown>;
+    expect(eventData.lost_reason).toBe('alert("xss")Troppo caro');
+    expect(eventData.lost_reason).not.toContain('<script>');
+  });
+
+  it('non include lost_reason in event_data se non fornita (W4)', async () => {
+    const lead = makeLead({ status: 'new' });
+    mockSelectResult = { data: lead, error: null };
+
+    await updateEntityStatus({
+      role: 'admin',
+      entityId: 'lead-1',
+      newStatus: 'lost',
+      actorId: ACTOR_ID,
+      // lostReason non passato
+    });
+
+    const lostEvent = mockInsertData.find((d) => d.event_type === 'lost');
+    expect(lostEvent).toBeDefined();
+    const eventData = lostEvent?.event_data as Record<string, unknown>;
+    expect(eventData).not.toHaveProperty('lost_reason');
   });
 });
 
@@ -438,6 +514,38 @@ describe('addEntityNote', () => {
 
     expect(result.success).toBe(true);
     expect(result.entityName).toBe('TechShop Srl');
+  });
+
+  // --- Test sicurezza ---
+
+  it('rifiuta reseller senza workspaceId (C2)', async () => {
+    const result = await addEntityNote({
+      role: 'user',
+      entityId: 'prospect-1',
+      note: 'Test',
+      actorId: ACTOR_ID,
+      // workspaceId non passato
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Workspace non specificato');
+  });
+
+  it('sanitizza tag HTML dalla nota (W1)', async () => {
+    const lead = makeLead({ notes: '' });
+    mockSelectResult = { data: lead, error: null };
+
+    await addEntityNote({
+      role: 'admin',
+      entityId: 'lead-1',
+      note: 'Nota con <img src=x onerror=alert(1)> tag',
+      actorId: ACTOR_ID,
+    });
+
+    const savedNotes = mockUpdateData[0].notes as string;
+    expect(savedNotes).not.toContain('<img');
+    expect(savedNotes).not.toContain('onerror');
+    expect(savedNotes).toContain('Nota con  tag');
   });
 });
 
@@ -612,6 +720,37 @@ describe('recordEntityContact', () => {
     expect(result.success).toBe(true);
     expect(result.details).toContain('Stato avanzato');
     expect(result.entityName).toBe('TechShop Srl');
+  });
+
+  // --- Test sicurezza ---
+
+  it('rifiuta reseller senza workspaceId (C2)', async () => {
+    const result = await recordEntityContact({
+      role: 'user',
+      entityId: 'prospect-1',
+      actorId: ACTOR_ID,
+      // workspaceId non passato
+    });
+
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Workspace non specificato');
+  });
+
+  it('sanitizza nota contatto da tag HTML (W1)', async () => {
+    const lead = makeLead({ status: 'contacted', notes: '' });
+    mockSelectResult = { data: lead, error: null };
+
+    await recordEntityContact({
+      role: 'admin',
+      entityId: 'lead-1',
+      contactNote: 'Chiamato <b>oggi</b> alle <script>16</script>',
+      actorId: ACTOR_ID,
+    });
+
+    const savedNotes = mockUpdateData[0].notes as string;
+    expect(savedNotes).not.toContain('<b>');
+    expect(savedNotes).not.toContain('<script>');
+    expect(savedNotes).toContain('Chiamato oggi alle 16');
   });
 });
 
