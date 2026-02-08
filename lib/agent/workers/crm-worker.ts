@@ -1,11 +1,13 @@
 /**
- * CRM Worker — Sprint S1 (Read-Only)
+ * CRM Worker — Sprint S1 + S2 (Read + Write)
  *
  * Worker per intelligence CRM. Anne legge la pipeline,
  * capisce il contesto, e suggerisce azioni intelligenti
  * arricchite dalla sales knowledge base.
  *
- * NON prende azioni sulla pipeline (Sprint S2).
+ * Sprint S2: Anne puo' aggiornare stato, aggiungere note,
+ * e registrare contatti via chat.
+ *
  * NON passa dal pricing graph — gestito direttamente dal supervisor-router.
  *
  * @module lib/agent/workers/crm-worker
@@ -23,6 +25,11 @@ import {
   getPendingQuotes,
 } from '@/lib/crm/crm-data-service';
 import { findRelevantKnowledge } from '@/lib/crm/sales-knowledge';
+import {
+  updateEntityStatus,
+  addEntityNote,
+  recordEntityContact,
+} from '@/lib/crm/crm-write-service';
 import type {
   CrmWorkerInput,
   CrmWorkerResult,
@@ -36,6 +43,27 @@ import { defaultLogger, type ILogger } from '../logger';
 // ============================================
 
 const SUB_INTENT_PATTERNS: { intent: CrmSubIntent; patterns: RegExp[] }[] = [
+  // Sprint S2 — Write sub-intent (PRIMA dei read per evitare match errati)
+  {
+    intent: 'update_status',
+    patterns: [
+      /(?:segna|metti|aggiorna|cambia|sposta)\s+(?:come |a |in |lo stato )/i,
+      /(?:passa|avanza)\s+(?:a |in )/i,
+    ],
+  },
+  {
+    intent: 'add_note',
+    patterns: [/(?:aggiungi|scrivi|salva|annota)\s+(?:una )?nota/i, /nota\s+(?:su|per|che)\s/i],
+  },
+  {
+    intent: 'record_contact',
+    patterns: [
+      /(?:ho |abbiamo )?contattato/i,
+      /(?:registra|segna)\s+(?:il )?contatto/i,
+      /(?:ho |abbiamo )?(?:chiamato|sentito|parlato)/i,
+    ],
+  },
+  // Sprint S1 — Read sub-intent
   {
     intent: 'today_actions',
     patterns: [
@@ -211,6 +239,37 @@ export async function crmWorker(
 
       case 'conversion_analysis':
         return await handleConversionAnalysis(userRole, workspaceId, entityLabel, toolsUsed);
+
+      // Sprint S2 — Write handlers
+      case 'update_status':
+        return await handleUpdateStatus(
+          message,
+          input.userId,
+          userRole,
+          workspaceId,
+          entityLabel,
+          toolsUsed
+        );
+
+      case 'add_note':
+        return await handleAddNote(
+          message,
+          input.userId,
+          userRole,
+          workspaceId,
+          entityLabel,
+          toolsUsed
+        );
+
+      case 'record_contact':
+        return await handleRecordContact(
+          message,
+          input.userId,
+          userRole,
+          workspaceId,
+          entityLabel,
+          toolsUsed
+        );
 
       default:
         return await handlePipelineOverview(userRole, workspaceId, entityLabel, toolsUsed);
@@ -589,6 +648,272 @@ async function handleConversionAnalysis(
   }
 
   return { response: lines.join('\n'), toolsUsed };
+}
+
+// ============================================
+// WRITE HANDLERS (Sprint S2)
+// ============================================
+
+/**
+ * Estrae lo status target dal messaggio
+ */
+function extractTargetStatus(message: string): string | undefined {
+  const lower = message.toLowerCase();
+  if (/contattat/i.test(lower)) return 'contacted';
+  if (/qualificat/i.test(lower)) return 'qualified';
+  if (/negoziazion/i.test(lower)) return 'negotiation';
+  if (/negotiating/i.test(lower)) return 'negotiating';
+  if (/vint|won\b/i.test(lower)) return 'won';
+  if (/pers|lost\b/i.test(lower)) return 'lost';
+  if (/preventivo inviat|quote.sent/i.test(lower)) return 'quote_sent';
+  return undefined;
+}
+
+/**
+ * Estrae il testo della nota dal messaggio
+ */
+function extractNoteText(message: string): string | undefined {
+  const patterns = [
+    /nota\s*(?:su\s+\S+\s*)?[:\-–]\s*(.+)/i,
+    /nota\s+che\s+(.+)/i,
+    /(?:aggiungi|scrivi|salva)\s+(?:la )?nota\s*[:\-–]?\s*(.+)/i,
+  ];
+  for (const p of patterns) {
+    const m = message.match(p);
+    if (m) {
+      // Prendi il primo gruppo catturato non-undefined
+      const text = m[1] || m[2];
+      if (text) return text.trim();
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Estrae il nome entita' anche con pattern write
+ * (estende extractEntityName con pattern aggiuntivi)
+ */
+function extractWriteEntityName(message: string): string | undefined {
+  // Prima prova i pattern specifici per write
+  const writePatterns = [
+    // "segna Farmacia Rossi come contattato"
+    /(?:segna|metti|aggiorna|cambia|sposta)\s+(?:il |la )?(?:lead |prospect )?["'\u201c]?([^"'\u201d]+?)["'\u201d]?\s+(?:come |a |in )/i,
+    // "passa TechShop a quote_sent"
+    /(?:passa|avanza)\s+(?:il |la )?(?:lead |prospect )?["'\u201c]?([^"'\u201d]+?)["'\u201d]?\s+(?:a |in )/i,
+    // "nota su Farmacia Rossi: testo"
+    /nota\s+su\s+["'\u201c]?([^"'\u201d:]+)/i,
+    // "ho contattato Farmacia Rossi"
+    /(?:ho |abbiamo )?(?:contattato|chiamato|sentito|parlato)\s+(?:con\s+)?(?:il |la )?(?:lead |prospect )?["'\u201c]?([^"'\u201d,?.!]+)/i,
+  ];
+
+  for (const pattern of writePatterns) {
+    const match = message.match(pattern);
+    if (match && match[1]) {
+      const name = match[1].trim();
+      if (name.length > 2 && !['la', 'il', 'lo', 'un', 'una'].includes(name.toLowerCase())) {
+        return name;
+      }
+    }
+  }
+
+  // Fallback al pattern originale
+  return extractEntityName(message);
+}
+
+async function handleUpdateStatus(
+  message: string,
+  userId: string,
+  userRole: 'admin' | 'user',
+  workspaceId: string | undefined,
+  entityLabel: string,
+  toolsUsed: string[]
+): Promise<CrmWorkerResult> {
+  toolsUsed.push('update_crm_status');
+
+  const entityName = extractWriteEntityName(message);
+  const targetStatus = extractTargetStatus(message);
+
+  if (!entityName) {
+    return {
+      response: `Quale ${entityLabel} vuoi aggiornare? Indica il nome dell'azienda.\nEsempio: "segna Farmacia Rossi come contattato"`,
+      toolsUsed,
+    };
+  }
+
+  if (!targetStatus) {
+    return {
+      response: `A quale stato vuoi portare **${entityName}**?\nStati disponibili: contattato, qualificato, negoziazione, vinto, perso`,
+      toolsUsed,
+    };
+  }
+
+  // Cerca entita' per ID
+  const detail = await getEntityDetail(userRole, undefined, entityName, workspaceId);
+  if (!detail) {
+    return {
+      response: `Non ho trovato ${entityLabel} con nome simile a "${entityName}".`,
+      toolsUsed,
+    };
+  }
+
+  const result = await updateEntityStatus({
+    role: userRole,
+    entityId: detail.id,
+    newStatus: targetStatus,
+    actorId: userId,
+    workspaceId,
+    lostReason: targetStatus === 'lost' ? extractLostReason(message) : undefined,
+  });
+
+  if (!result.success) {
+    return {
+      response: `Non posso aggiornare **${detail.companyName}**: ${result.error}`,
+      toolsUsed,
+    };
+  }
+
+  const lines = [`✅ **${result.entityName}** aggiornato a **${targetStatus}**`, result.details];
+  if (result.newScore != null) {
+    lines.push(`Score attuale: **${result.newScore}**`);
+  }
+
+  return { response: lines.join('\n'), toolsUsed };
+}
+
+async function handleAddNote(
+  message: string,
+  userId: string,
+  userRole: 'admin' | 'user',
+  workspaceId: string | undefined,
+  entityLabel: string,
+  toolsUsed: string[]
+): Promise<CrmWorkerResult> {
+  toolsUsed.push('add_crm_note');
+
+  const entityName = extractWriteEntityName(message);
+  const noteText = extractNoteText(message);
+
+  if (!entityName) {
+    return {
+      response: `A quale ${entityLabel} vuoi aggiungere la nota?\nEsempio: "nota su Farmacia Rossi: interessati a pallet"`,
+      toolsUsed,
+    };
+  }
+
+  if (!noteText) {
+    return {
+      response: `Cosa vuoi annotare per **${entityName}**?\nEsempio: "aggiungi nota su ${entityName}: testo della nota"`,
+      toolsUsed,
+    };
+  }
+
+  const detail = await getEntityDetail(userRole, undefined, entityName, workspaceId);
+  if (!detail) {
+    return {
+      response: `Non ho trovato ${entityLabel} con nome simile a "${entityName}".`,
+      toolsUsed,
+    };
+  }
+
+  const result = await addEntityNote({
+    role: userRole,
+    entityId: detail.id,
+    note: noteText,
+    actorId: userId,
+    workspaceId,
+  });
+
+  if (!result.success) {
+    return {
+      response: `Non posso aggiungere nota a **${detail.companyName}**: ${result.error}`,
+      toolsUsed,
+    };
+  }
+
+  return {
+    response: `✅ Nota aggiunta a **${result.entityName}**\n${result.details}`,
+    toolsUsed,
+  };
+}
+
+async function handleRecordContact(
+  message: string,
+  userId: string,
+  userRole: 'admin' | 'user',
+  workspaceId: string | undefined,
+  entityLabel: string,
+  toolsUsed: string[]
+): Promise<CrmWorkerResult> {
+  toolsUsed.push('record_crm_contact');
+
+  const entityName = extractWriteEntityName(message);
+
+  if (!entityName) {
+    return {
+      response: `Quale ${entityLabel} hai contattato?\nEsempio: "ho chiamato Farmacia Rossi"`,
+      toolsUsed,
+    };
+  }
+
+  const detail = await getEntityDetail(userRole, undefined, entityName, workspaceId);
+  if (!detail) {
+    return {
+      response: `Non ho trovato ${entityLabel} con nome simile a "${entityName}".`,
+      toolsUsed,
+    };
+  }
+
+  // Estrai eventuale nota dal messaggio
+  const contactNote = extractContactNote(message);
+
+  const result = await recordEntityContact({
+    role: userRole,
+    entityId: detail.id,
+    contactNote,
+    actorId: userId,
+    workspaceId,
+  });
+
+  if (!result.success) {
+    return {
+      response: `Non posso registrare contatto per **${detail.companyName}**: ${result.error}`,
+      toolsUsed,
+    };
+  }
+
+  const lines = [`✅ Contatto registrato per **${result.entityName}**`, result.details];
+  if (result.newScore != null) {
+    lines.push(`Score attuale: **${result.newScore}**`);
+  }
+
+  return { response: lines.join('\n'), toolsUsed };
+}
+
+/**
+ * Estrae la motivazione "perso" dal messaggio
+ */
+function extractLostReason(message: string): string | undefined {
+  const patterns = [/(?:motivo|perch[eè]|ragione)[:\s]+(.+)/i, /(?:per|causa)\s+(.+)/i];
+  for (const p of patterns) {
+    const m = message.match(p);
+    if (m?.[1]) return m[1].trim().slice(0, 200);
+  }
+  return undefined;
+}
+
+/**
+ * Estrae nota di contatto dal messaggio (dopo il nome entita')
+ */
+function extractContactNote(message: string): string | undefined {
+  const patterns = [
+    /(?:ho |abbiamo )?(?:contattato|chiamato|sentito|parlato)\s+(?:con\s+)?(?:il |la )?(?:lead |prospect )?\S+(?:\s+\S+)*?[,\-–:]\s*(.+)/i,
+    /(?:registra contatto)\s+(?:con\s+)?\S+(?:\s+\S+)*?[,\-–:]\s*(.+)/i,
+  ];
+  for (const p of patterns) {
+    const m = message.match(p);
+    if (m?.[1]) return m[1].trim();
+  }
+  return undefined;
 }
 
 // ============================================

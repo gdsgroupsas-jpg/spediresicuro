@@ -424,6 +424,83 @@ export const ANNE_TOOLS: ToolDefinition[] = [
       required: [],
     },
   },
+  // ═══════════════════════════════════════════════════════════════════
+  // CRM TOOLS — Write (Sprint S2)
+  // ═══════════════════════════════════════════════════════════════════
+  {
+    name: 'update_crm_status',
+    description:
+      'Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.',
+    parameters: {
+      type: 'object',
+      properties: {
+        entity_id: {
+          type: 'string',
+          description: 'ID del lead/prospect (se noto)',
+        },
+        entity_name: {
+          type: 'string',
+          description: 'Nome azienda del lead/prospect (cercato se entity_id non fornito)',
+        },
+        new_status: {
+          type: 'string',
+          description:
+            'Nuovo stato: contacted, qualified, negotiation, won, lost, quote_sent, negotiating',
+        },
+        lost_reason: {
+          type: 'string',
+          description: 'Motivazione perdita (solo se new_status=lost)',
+        },
+      },
+      required: ['new_status'],
+    },
+  },
+  {
+    name: 'add_crm_note',
+    description:
+      'Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.',
+    parameters: {
+      type: 'object',
+      properties: {
+        entity_id: {
+          type: 'string',
+          description: 'ID del lead/prospect (se noto)',
+        },
+        entity_name: {
+          type: 'string',
+          description: 'Nome azienda del lead/prospect (cercato se entity_id non fornito)',
+        },
+        note: {
+          type: 'string',
+          description: 'Testo della nota da aggiungere',
+        },
+      },
+      required: ['note'],
+    },
+  },
+  {
+    name: 'record_crm_contact',
+    description:
+      'Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.',
+    parameters: {
+      type: 'object',
+      properties: {
+        entity_id: {
+          type: 'string',
+          description: 'ID del lead/prospect (se noto)',
+        },
+        entity_name: {
+          type: 'string',
+          description: 'Nome azienda del lead/prospect (cercato se entity_id non fornito)',
+        },
+        contact_note: {
+          type: 'string',
+          description: 'Nota opzionale sul contatto avvenuto',
+        },
+      },
+      required: [],
+    },
+  },
 ];
 
 /**
@@ -1227,6 +1304,114 @@ export async function executeTool(
           workspaceId
         );
         return { success: true, result: { results, count: results.length } };
+      }
+
+      // ═══════════════════════════════════════════════════════════
+      // CRM TOOLS — Write (Sprint S2)
+      // ═══════════════════════════════════════════════════════════
+      case 'update_crm_status': {
+        const writeService = await import('@/lib/crm/crm-write-service');
+        // Risolvi entity_id da nome se necessario
+        let entityId = toolCall.arguments.entity_id;
+        if (!entityId && toolCall.arguments.entity_name) {
+          const { getEntityDetail } = await import('@/lib/crm/crm-data-service');
+          const detail = await getEntityDetail(
+            userRole,
+            undefined,
+            toolCall.arguments.entity_name,
+            workspaceId
+          );
+          if (!detail) {
+            return {
+              success: false,
+              result: null,
+              error: `Lead/prospect "${toolCall.arguments.entity_name}" non trovato`,
+            };
+          }
+          entityId = detail.id;
+        }
+        if (!entityId) {
+          return { success: false, result: null, error: 'Specificare entity_id o entity_name' };
+        }
+        const statusResult = await writeService.updateEntityStatus({
+          role: userRole,
+          entityId,
+          newStatus: toolCall.arguments.new_status,
+          actorId: userId,
+          workspaceId,
+          lostReason: toolCall.arguments.lost_reason,
+        });
+        return { success: statusResult.success, result: statusResult, error: statusResult.error };
+      }
+
+      case 'add_crm_note': {
+        const writeService = await import('@/lib/crm/crm-write-service');
+        let entityId = toolCall.arguments.entity_id;
+        if (!entityId && toolCall.arguments.entity_name) {
+          const { getEntityDetail } = await import('@/lib/crm/crm-data-service');
+          const detail = await getEntityDetail(
+            userRole,
+            undefined,
+            toolCall.arguments.entity_name,
+            workspaceId
+          );
+          if (!detail) {
+            return {
+              success: false,
+              result: null,
+              error: `Lead/prospect "${toolCall.arguments.entity_name}" non trovato`,
+            };
+          }
+          entityId = detail.id;
+        }
+        if (!entityId) {
+          return { success: false, result: null, error: 'Specificare entity_id o entity_name' };
+        }
+        const noteResult = await writeService.addEntityNote({
+          role: userRole,
+          entityId,
+          note: toolCall.arguments.note,
+          actorId: userId,
+          workspaceId,
+        });
+        return { success: noteResult.success, result: noteResult, error: noteResult.error };
+      }
+
+      case 'record_crm_contact': {
+        const writeService = await import('@/lib/crm/crm-write-service');
+        let entityId = toolCall.arguments.entity_id;
+        if (!entityId && toolCall.arguments.entity_name) {
+          const { getEntityDetail } = await import('@/lib/crm/crm-data-service');
+          const detail = await getEntityDetail(
+            userRole,
+            undefined,
+            toolCall.arguments.entity_name,
+            workspaceId
+          );
+          if (!detail) {
+            return {
+              success: false,
+              result: null,
+              error: `Lead/prospect "${toolCall.arguments.entity_name}" non trovato`,
+            };
+          }
+          entityId = detail.id;
+        }
+        if (!entityId) {
+          return { success: false, result: null, error: 'Specificare entity_id o entity_name' };
+        }
+        const contactResult = await writeService.recordEntityContact({
+          role: userRole,
+          entityId,
+          contactNote: toolCall.arguments.contact_note,
+          actorId: userId,
+          workspaceId,
+        });
+        return {
+          success: contactResult.success,
+          result: contactResult,
+          error: contactResult.error,
+        };
       }
 
       default:

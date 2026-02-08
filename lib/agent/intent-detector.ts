@@ -184,6 +184,23 @@ const CRM_KEYWORDS = [
   'situazione commerciale',
   'come vanno i lead',
   'come vanno i prospect',
+  // Sprint S2 — Write actions
+  'segna',
+  'aggiorna stato',
+  'cambia stato',
+  'sposta',
+  'aggiungi nota',
+  'scrivi nota',
+  'salva nota',
+  'ho chiamato',
+  'ho sentito',
+  'ho parlato',
+  'ho contattato',
+  'abbiamo contattato',
+  'registra contatto',
+  'avanza',
+  'metti come',
+  'segna come',
 ];
 
 /**

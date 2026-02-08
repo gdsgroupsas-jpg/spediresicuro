@@ -1,11 +1,12 @@
 /**
- * Tipi per CRM Intelligence — Sprint S1
+ * Tipi per CRM Intelligence — Sprint S1 + S2
  *
  * Definisce le interfacce per:
  * - CRM Context (iniettato nel system prompt di Anne)
  * - CRM Worker result (risposta del worker CRM)
  * - Today Actions (lista prioritizzata azioni giornaliere)
  * - Suggested Actions (suggerimenti con motivazione)
+ * - CRM Write Result (Sprint S2 — azioni di scrittura)
  *
  * @module types/crm-intelligence
  */
@@ -168,4 +169,23 @@ export type CrmSubIntent =
   | 'today_actions'
   | 'health_check'
   | 'search'
-  | 'conversion_analysis';
+  | 'conversion_analysis'
+  // Sprint S2 — Write
+  | 'update_status'
+  | 'add_note'
+  | 'record_contact';
+
+// ============================================
+// CRM WRITE RESULT (Sprint S2)
+// ============================================
+
+/** Risultato di un'operazione di scrittura CRM */
+export interface CrmWriteResult {
+  success: boolean;
+  entityId: string;
+  entityName: string;
+  action: 'status_update' | 'note_added' | 'contact_recorded';
+  details: string;
+  newScore?: number;
+  error?: string;
+}
