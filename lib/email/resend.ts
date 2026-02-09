@@ -245,7 +245,213 @@ export async function sendTrackingUpdate(params: ShipmentTrackingUpdateParams) {
   });
 }
 
-// ─── WELCOME EMAIL (Nuovo Account) ───
+// ─── PREMIUM WELCOME EMAIL (Ferrari-level onboarding) ───
+
+interface PremiumWelcomeEmailParams {
+  to: string;
+  userName?: string;
+  credentials?: { email: string; password: string }; // solo per client creati da reseller
+  resellerName?: string; // nome persona del reseller
+  resellerCompany?: string; // nome azienda reseller (branding)
+  loginUrl?: string;
+}
+
+/**
+ * Email di benvenuto PREMIUM — Design Stripe/Linear/Vercel inspired.
+ *
+ * Due varianti:
+ * 1. Self-registration: NO credenziali, CTA → "Completa il tuo profilo"
+ * 2. Reseller crea client: CON credenziali + branding reseller, CTA → "Accedi al tuo account"
+ *
+ * Se resellerCompany è presente → "Benvenuto su [NomeAzienda] powered by SpedireSicuro"
+ */
+export async function sendPremiumWelcomeEmail(params: PremiumWelcomeEmailParams) {
+  const {
+    to,
+    userName,
+    credentials,
+    resellerName,
+    resellerCompany,
+    loginUrl = 'https://spediresicuro.it/dashboard',
+  } = params;
+
+  // Sanitizzazione base (anti-XSS nei parametri stringa)
+  const esc = (s: string | undefined) =>
+    (s || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+  const safeName = esc(userName) || 'utente';
+  const safeResellerName = esc(resellerName);
+  const safeResellerCompany = esc(resellerCompany);
+  const safeEmail = esc(credentials?.email);
+  const safePassword = esc(credentials?.password);
+
+  // Branding
+  const brandName = safeResellerCompany || 'SpedireSicuro';
+  const headerTitle = safeResellerCompany
+    ? `Benvenuto su ${safeResellerCompany}`
+    : 'Benvenuto su SpedireSicuro';
+  const headerSubtitle = safeResellerCompany
+    ? 'powered by SpedireSicuro'
+    : 'La tua piattaforma di spedizioni';
+
+  // Subject line
+  const subject = safeResellerCompany
+    ? `Benvenuto su ${safeResellerCompany} — Il tuo account è pronto`
+    : 'Benvenuto su SpedireSicuro — Il tuo account è pronto';
+
+  // CTA
+  const ctaText = credentials ? 'Accedi al tuo account' : 'Completa il tuo profilo';
+  // Sanitizzazione URL: solo http/https, no javascript:, data:, etc.
+  const ctaUrl =
+    loginUrl && /^https?:\/\//i.test(loginUrl) ? loginUrl : 'https://spediresicuro.it/dashboard';
+
+  // Credenziali box (solo per reseller-created)
+  const credentialsSection = credentials
+    ? `
+        <div style="background: #fffbeb; border-left: 4px solid #f59e0b; border-radius: 0 12px 12px 0; padding: 20px; margin: 24px 0;">
+          <p style="color: #92400e; font-size: 13px; font-weight: 600; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Le tue credenziali di accesso</p>
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 6px 0; color: #78716c; font-size: 13px; width: 80px;">Email</td>
+              <td style="padding: 6px 0; color: #1c1917; font-weight: 600; font-size: 14px; font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;">${safeEmail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 6px 0; color: #78716c; font-size: 13px;">Password</td>
+              <td style="padding: 6px 0; color: #1c1917; font-weight: 600; font-size: 14px; font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;">${safePassword}</td>
+            </tr>
+          </table>
+          <p style="color: #b45309; font-size: 12px; margin: 12px 0 0 0;">Cambia la password al primo accesso per maggiore sicurezza.</p>
+        </div>
+    `
+    : '';
+
+  // Creato da (solo per reseller-created)
+  const createdBySection =
+    credentials && safeResellerName
+      ? `<p style="color: #64748b; font-size: 14px; margin: 0 0 24px 0;">Il tuo account è stato creato da <strong style="color: #334155;">${safeResellerName}</strong>.</p>`
+      : '';
+
+  const html = `
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>${subject}</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f8fafc; -webkit-font-smoothing: antialiased;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+
+    <!-- LOGO + HEADER -->
+    <div style="text-align: center; margin-bottom: 32px;">
+      <div style="display: inline-block; background: linear-gradient(135deg, #f97316, #ea580c); width: 48px; height: 48px; border-radius: 12px; line-height: 48px; font-size: 24px; color: white; font-weight: 700; text-align: center;">S</div>
+    </div>
+
+    <!-- MAIN CARD -->
+    <div style="background: #ffffff; border-radius: 16px; box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06); overflow: hidden;">
+
+      <!-- GRADIENT ACCENT BAR -->
+      <div style="height: 4px; background: linear-gradient(90deg, #f97316, #ea580c, #f97316);"></div>
+
+      <!-- CONTENT -->
+      <div style="padding: 40px 36px;">
+
+        <!-- TITLE -->
+        <h1 style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; font-size: 26px; font-weight: 700; margin: 0 0 4px 0; line-height: 1.3;">
+          ${headerTitle}
+        </h1>
+        <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #94a3b8; font-size: 14px; margin: 0 0 28px 0; font-weight: 400;">
+          ${headerSubtitle}
+        </p>
+
+        <!-- GREETING -->
+        <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; font-size: 16px; line-height: 1.6; margin: 0 0 8px 0;">
+          Ciao <strong style="color: #0f172a;">${safeName}</strong>,
+        </p>
+        <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #334155; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+          Il tuo account è pronto. Da oggi spedire è semplice, veloce e sotto il tuo controllo.
+        </p>
+
+        ${createdBySection}
+
+        ${credentialsSection}
+
+        <!-- 3 STEP ONBOARDING -->
+        <div style="margin: 28px 0;">
+          <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #64748b; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 16px 0;">
+            Inizia in 3 semplici passi
+          </p>
+
+          <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border-collapse: separate; border-spacing: 10px 0;">
+            <tr>
+              <!-- Step 1 -->
+              <td style="width: 33%; vertical-align: top; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 12px; text-align: center;">
+                <div style="display: inline-block; background: linear-gradient(135deg, #f97316, #ea580c); width: 32px; height: 32px; border-radius: 50%; line-height: 32px; color: white; font-size: 14px; font-weight: 700; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; text-align: center;">1</div>
+                <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; font-size: 14px; font-weight: 600; margin: 10px 0 4px 0;">Profilo</p>
+                <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #94a3b8; font-size: 12px; margin: 0;">Completa i tuoi dati — 2 minuti</p>
+              </td>
+
+              <!-- Step 2 -->
+              <td style="width: 33%; vertical-align: top; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 12px; text-align: center;">
+                <div style="display: inline-block; background: linear-gradient(135deg, #f97316, #ea580c); width: 32px; height: 32px; border-radius: 50%; line-height: 32px; color: white; font-size: 14px; font-weight: 700; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; text-align: center;">2</div>
+                <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; font-size: 14px; font-weight: 600; margin: 10px 0 4px 0;">Wallet</p>
+                <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #94a3b8; font-size: 12px; margin: 0;">Ricarica il saldo per spedire</p>
+              </td>
+
+              <!-- Step 3 -->
+              <td style="width: 33%; vertical-align: top; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px 12px; text-align: center;">
+                <div style="display: inline-block; background: linear-gradient(135deg, #f97316, #ea580c); width: 32px; height: 32px; border-radius: 50%; line-height: 32px; color: white; font-size: 14px; font-weight: 700; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; text-align: center;">3</div>
+                <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #0f172a; font-size: 14px; font-weight: 600; margin: 10px 0 4px 0;">Spedisci</p>
+                <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #94a3b8; font-size: 12px; margin: 0;">Crea la tua prima spedizione</p>
+              </td>
+            </tr>
+          </table>
+        </div>
+
+        <!-- CTA BUTTON -->
+        <div style="text-align: center; margin: 32px 0;">
+          <a href="${ctaUrl}" style="display: inline-block; background: linear-gradient(135deg, #f97316, #ea580c); color: #ffffff; font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-weight: 600; font-size: 16px; padding: 16px 40px; border-radius: 12px; text-decoration: none; box-shadow: 0 4px 16px rgba(249, 115, 22, 0.3); letter-spacing: 0.2px;">
+            ${ctaText} &rarr;
+          </a>
+        </div>
+
+        <!-- SOCIAL PROOF -->
+        <div style="text-align: center; margin: 24px 0 0 0; padding-top: 24px; border-top: 1px solid #f1f5f9;">
+          <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #94a3b8; font-size: 13px; font-style: italic; margin: 0;">
+            &ldquo;Ogni giorno oltre <strong style="color: #64748b;">500 aziende italiane</strong> spediscono con SpedireSicuro&rdquo;
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div style="text-align: center; padding: 28px 0 0 0;">
+      <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #94a3b8; font-size: 13px; margin: 0 0 4px 0;">
+        Hai bisogno di aiuto? <a href="mailto:assistenza@spediresicuro.it" style="color: #f97316; text-decoration: none; font-weight: 500;">assistenza@spediresicuro.it</a>
+      </p>
+      <p style="font-family: -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #cbd5e1; font-size: 12px; margin: 0;">
+        ${brandName} &mdash; Spedizioni semplici e sicure &copy; ${new Date().getFullYear()}
+      </p>
+    </div>
+
+  </div>
+</body>
+</html>
+  `;
+
+  return sendEmail({
+    to,
+    subject,
+    html,
+  });
+}
+
+// ─── WELCOME EMAIL (Legacy — usata come fallback) ───
 
 interface WelcomeEmailParams {
   to: string;

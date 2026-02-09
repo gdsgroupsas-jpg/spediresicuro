@@ -14,7 +14,7 @@ import { requireAuth } from '@/lib/api-middleware';
 import { ApiErrors, handleApiError } from '@/lib/api-responses';
 import type { DatiCliente } from '@/lib/database';
 import { supabaseAdmin } from '@/lib/db/client';
-import { sendWelcomeEmail } from '@/lib/email/resend';
+import { sendPremiumWelcomeEmail } from '@/lib/email/resend';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -346,16 +346,16 @@ export async function POST(request: NextRequest) {
     const resellerName = resellerInfo?.name || resellerInfo?.dati_cliente?.ragioneSociale;
     const resellerCompanyName = resellerInfo?.dati_cliente?.ragioneSociale;
 
-    // Invia email (non blocca se fallisce)
+    // Invia email premium (non blocca se fallisce)
     try {
-      await sendWelcomeEmail({
+      await sendPremiumWelcomeEmail({
         to: emailLower,
         userName: clientName,
-        password: finalPassword,
-        createdBy: resellerName,
-        companyName: resellerCompanyName,
+        credentials: { email: emailLower, password: finalPassword },
+        resellerName: resellerName || undefined,
+        resellerCompany: resellerCompanyName || undefined,
       });
-      console.log('✅ [RESELLER CLIENTS] Email di benvenuto inviata a:', emailLower);
+      console.log('✅ [RESELLER CLIENTS] Email premium di benvenuto inviata a:', emailLower);
     } catch (emailError) {
       console.error('⚠️ [RESELLER CLIENTS] Errore invio email benvenuto:', emailError);
       // Non blocchiamo, il cliente è stato creato

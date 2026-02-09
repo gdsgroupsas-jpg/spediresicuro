@@ -27,7 +27,7 @@ import { getDefaultClauses, mergeWithCustomClauses } from '@/lib/commercial-quot
 import { generateCommercialQuotePDF } from '@/lib/commercial-quotes/pdf-generator';
 import { convertQuoteToClient } from '@/lib/commercial-quotes/conversion';
 import { computeAnalytics } from '@/lib/commercial-quotes/analytics';
-import { sendQuoteToProspectEmail, sendWelcomeEmail } from '@/lib/email/resend';
+import { sendQuoteToProspectEmail, sendPremiumWelcomeEmail } from '@/lib/email/resend';
 import type {
   CommercialQuote,
   CreateCommercialQuoteInput,
@@ -953,14 +953,14 @@ export async function convertQuoteToClientAction(
       console.error('[CRM] updateProspectOnQuoteStatus (conversion) error:', prospectErr);
     }
 
-    // Email benvenuto al nuovo cliente (non-bloccante)
+    // Email premium benvenuto al nuovo cliente (non-bloccante)
     try {
-      await sendWelcomeEmail({
+      await sendPremiumWelcomeEmail({
         to: input.client_email,
         userName: input.client_name,
-        password: input.client_password,
-        createdBy: wsAuth.target.name || wsAuth.target.email || undefined,
-        companyName: wsAuth.workspace.organization_name || undefined,
+        credentials: { email: input.client_email, password: input.client_password },
+        resellerName: wsAuth.target.name || wsAuth.target.email || undefined,
+        resellerCompany: wsAuth.workspace.organization_name || undefined,
       });
     } catch (emailError: any) {
       console.error('Errore invio email benvenuto:', emailError.message);

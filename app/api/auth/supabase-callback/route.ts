@@ -7,6 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { sendPremiumWelcomeEmail } from '@/lib/email/resend';
 
 export async function POST(request: NextRequest) {
   try {
@@ -219,6 +220,39 @@ export async function POST(request: NextRequest) {
       if (datiCompletati) {
         redirectTo = '/dashboard';
       }
+    }
+
+    // ✉️ Invia welcome email premium SOLO per self-registration
+    // Condizioni per NON inviare:
+    // - Utente con parent_id (creato da reseller → riceve gia' email da reseller/clients)
+    // - Utente con parent_admin_id (creato da superadmin → riceve gia' email da super-admin.ts)
+    // - Utente creato da piu' di 5 minuti (ri-conferma, non prima registrazione)
+    try {
+      const { data: welcomeCheck } = await supabaseAdmin
+        .from('users')
+        .select('parent_id, parent_admin_id, created_at')
+        .eq('email', email)
+        .single();
+
+      const isCreatedByOther = welcomeCheck?.parent_id || welcomeCheck?.parent_admin_id;
+      const createdAt = welcomeCheck?.created_at ? new Date(welcomeCheck.created_at) : null;
+      const isNewUser = createdAt && Date.now() - createdAt.getTime() < 5 * 60 * 1000; // 5 minuti
+
+      if (!isCreatedByOther && isNewUser) {
+        const userName =
+          supabaseUser.user_metadata?.name ||
+          supabaseUser.user_metadata?.full_name ||
+          email.split('@')[0];
+        sendPremiumWelcomeEmail({
+          to: email,
+          userName,
+          loginUrl: `https://spediresicuro.it${redirectTo}`,
+        }).catch((err) => {
+          console.error('⚠️ [SUPABASE CALLBACK] Errore invio welcome email:', err);
+        });
+      }
+    } catch (emailErr) {
+      console.error('⚠️ [SUPABASE CALLBACK] Errore setup welcome email:', emailErr);
     }
 
     // ⚠️ IMPORTANTE: Restituisci token temporaneo e redirect

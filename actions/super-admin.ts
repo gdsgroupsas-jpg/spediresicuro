@@ -12,7 +12,7 @@
 
 import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/supabase';
-import { sendWelcomeEmail } from '@/lib/email/resend';
+import { sendPremiumWelcomeEmail } from '@/lib/email/resend';
 
 /**
  * Verifica se l'utente corrente è Super Admin
@@ -817,15 +817,14 @@ export async function createReseller(data: {
       await supabaseAdmin.from('users').update({ notes: data.notes }).eq('id', userId);
     }
 
-    // 8. Invia email di benvenuto con credenziali
+    // 8. Invia email premium di benvenuto con credenziali
     try {
-      await sendWelcomeEmail({
+      await sendPremiumWelcomeEmail({
         to: emailLower,
         userName: resellerName.trim(),
-        password: data.password,
-        createdBy: 'SpedireSicuro Admin',
+        credentials: { email: emailLower, password: data.password },
       });
-      console.log('✅ [CREATE RESELLER] Email di benvenuto inviata a:', emailLower);
+      console.log('✅ [CREATE RESELLER] Email premium di benvenuto inviata a:', emailLower);
     } catch (emailError) {
       console.error('⚠️ [CREATE RESELLER] Errore invio email benvenuto:', emailError);
       // Non blocchiamo, il reseller è stato creato
