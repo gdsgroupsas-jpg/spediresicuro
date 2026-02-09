@@ -416,9 +416,15 @@ RLS isolamento, sanitizzazione HTML 4-pass, webhook svix auth, rate limit fail-c
 
 Dettagli: `docs/00-HANDBOOK/features/WORKSPACE_EMAIL_INFRASTRUCTURE.md`
 
-### FASE 3: Posta Reseller UI — IN CORSO
+### FASE 3: Posta Reseller UI — COMPLETATA
 
-Inbox Gmail-style workspace-scoped per reseller.
+**Commit:** `46652eb` | **Completato:** 2026-02-09
+
+Inbox Gmail-style workspace-scoped per reseller: 3 API routes (emails CRUD, email detail,
+email addresses), pagina posta-workspace con compose/reply/forward/star/trash/search/pagination,
+navigation config aggiornata per reseller. 20 test unit per auth, isolamento, CRUD, navigation.
+
+Dettagli: `docs/00-HANDBOOK/features/POSTA_RESELLER_UI.md`
 
 ### FASE 4: Bacheca Broadcast — PROSSIMA
 
@@ -446,7 +452,7 @@ Gestione domini custom via Resend API (SPF, DKIM, MX).
 | 10. Workspace Hierarchy Hardening | ✅ Completato  | 2026-02-06 |
 | 11. Premium Welcome Email (F1)    | ✅ Completato  | 2026-02-09 |
 | 12. Workspace Email Infra (F2)    | ✅ Completato  | 2026-02-09 |
-| 13. Posta Reseller UI (F3)        | 🔄 In corso    | —          |
+| 13. Posta Reseller UI (F3)        | ✅ Completato  | 2026-02-09 |
 | 14. Bacheca Broadcast (F4)        | ⏳ Prossima    | —          |
 | 15. Dominio Custom Email (F5)     | 📋 Pianificata | —          |
 
