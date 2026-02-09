@@ -327,7 +327,7 @@ function trackingNotificationEmailHtml(
           ${carrier ? `<p style="color: #64748b; font-size: 13px; margin: 0;">Corriere: ${carrier}</p>` : ''}
         </div>
         <p style="color: #334155; font-size: 15px; line-height: 1.6;">${escapedMessage}</p>
-        <a href="https://spediresicuro.it/dashboard/spedizioni"
+        <a href="https://app.spediresicuro.it/dashboard/spedizioni"
            style="display: inline-block; margin-top: 16px; padding: 10px 24px; background: ${color}; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">
           Vai alla Dashboard
         </a>
