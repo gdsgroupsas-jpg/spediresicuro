@@ -33,6 +33,17 @@ import {
   X,
 } from 'lucide-react';
 
+// Fix #3: sanitizzazione client-side per difesa in profondità (defense-in-depth)
+// Il body_html è già sanitizzato server-side (4-pass) ma questo protegge da dati legacy/diretti
+function sanitizeHtmlClient(html: string): string {
+  const dangerousTags =
+    /<\s*\/?\s*(script|style|iframe|object|embed|form|input|textarea|button|link|meta|base|applet|svg|math)\b[^>]*>/gi;
+  let s = html.replace(dangerousTags, '');
+  s = s.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
+  s = s.replace(dangerousTags, ''); // secondo passaggio anti-recomposition
+  return s;
+}
+
 // ─── TYPES ───
 
 interface Announcement {
@@ -249,9 +260,11 @@ export default function BachecaPage() {
 
   const startEdit = (a: Announcement) => {
     setEditingId(a.id);
+    // Fix #9: usa body_text se disponibile, altrimenti strip HTML tags dal body_html
+    const plainBody = a.body_text || a.body_html?.replace(/<[^>]+>/g, '').trim() || '';
     setComposerData({
       title: a.title,
-      body: a.body_text || '',
+      body: plainBody,
       target: a.target,
       priority: a.priority,
       pinned: a.pinned,
@@ -293,6 +306,8 @@ export default function BachecaPage() {
     const now = new Date();
     const diffMs = now.getTime() - d.getTime();
     const diffMin = Math.floor(diffMs / 60000);
+    // Fix #8: mostra "Ora" per meno di 1 minuto, non "0m fa"
+    if (diffMin < 1) return 'Ora';
     if (diffMin < 60) return `${diffMin}m fa`;
     const diffH = Math.floor(diffMin / 60);
     if (diffH < 24) return `${diffH}h fa`;
@@ -491,7 +506,9 @@ export default function BachecaPage() {
                 {selectedAnnouncement.body_html ? (
                   <div
                     className="prose prose-sm max-w-none"
-                    dangerouslySetInnerHTML={{ __html: selectedAnnouncement.body_html }}
+                    dangerouslySetInnerHTML={{
+                      __html: sanitizeHtmlClient(selectedAnnouncement.body_html),
+                    }}
                   />
                 ) : (
                   <pre className="text-sm text-gray-700 whitespace-pre-wrap">

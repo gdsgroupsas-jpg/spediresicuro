@@ -39,18 +39,36 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Fix #4: traccia il ruolo per filtrare target per client
     const isSuperAdminUser = isSuperAdmin(context);
+    let accessRole = 'superadmin';
+
     if (!isSuperAdminUser) {
+      // Verifica membership diretta
       const { data: membership } = await supabaseAdmin
         .from('workspace_members')
-        .select('status')
+        .select('role, status')
         .eq('workspace_id', workspaceId)
         .eq('user_id', context.target.id)
         .eq('status', 'active')
         .single();
 
-      if (!membership) {
-        return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+      if (membership) {
+        accessRole = membership.role;
+      } else {
+        // Verifica accesso client via child workspace (query ottimizzata)
+        const { data: childMembership } = await supabaseAdmin
+          .from('workspace_members')
+          .select('role, workspace_id, workspaces!inner(parent_workspace_id)')
+          .eq('user_id', context.target.id)
+          .eq('status', 'active')
+          .eq('workspaces.parent_workspace_id', workspaceId);
+
+        if (childMembership && childMembership.length > 0) {
+          accessRole = 'client';
+        } else {
+          return NextResponse.json({ error: 'Access denied' }, { status: 403 });
+        }
       }
     }
 
@@ -66,24 +84,43 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Annuncio non trovato' }, { status: 404 });
     }
 
-    // Auto mark-read (append user_id se non già presente)
-    const readBy: string[] = data.read_by || [];
-    if (!readBy.includes(context.target.id)) {
-      await supabaseAdmin
-        .from('workspace_announcements')
-        .update({
-          read_by: [...readBy, context.target.id],
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', announcementId)
-        .eq('workspace_id', workspaceId);
+    // Fix #4: client può vedere solo annunci con target 'all' o 'clients'
+    if (accessRole === 'client' && !['all', 'clients'].includes(data.target)) {
+      return NextResponse.json({ error: 'Annuncio non trovato' }, { status: 404 });
     }
 
+    // Fix #2: Auto mark-read via RPC atomica (evita race condition read-modify-write)
+    // La RPC mark_announcement_read usa array_append atomico in SQL
+    const readBy: string[] = data.read_by || [];
+    const wasAlreadyRead = readBy.includes(context.target.id);
+
+    if (!wasAlreadyRead) {
+      // Usa RPC mark_announcement_read_admin (SECURITY DEFINER, accetta user_id esplicito)
+      // Fallback: update con array completo se RPC non disponibile
+      const { error: rpcError } = await supabaseAdmin.rpc('mark_announcement_read_admin', {
+        p_announcement_id: announcementId,
+        p_user_id: context.target.id,
+      });
+
+      if (rpcError) {
+        // Fallback: update diretto (meno sicuro per race condition, ma funzionale)
+        await supabaseAdmin
+          .from('workspace_announcements')
+          .update({
+            read_by: [...readBy, context.target.id],
+          })
+          .eq('id', announcementId)
+          .eq('workspace_id', workspaceId);
+      }
+    }
+
+    // Fix #1 + #10: strip read_by dalla risposta, read_count basato su dati certi
+    const { read_by: _, ...safeData } = data;
     return NextResponse.json({
       announcement: {
-        ...data,
+        ...safeData,
         is_read: true,
-        read_count: readBy.includes(context.target.id) ? readBy.length : readBy.length + 1,
+        read_count: wasAlreadyRead ? readBy.length : readBy.length + 1,
       },
     });
   } catch (err: any) {

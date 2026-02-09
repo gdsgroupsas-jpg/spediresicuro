@@ -46,18 +46,16 @@ async function verifyAnnouncementAccess(
   }
 
   // Verifica se è un client del reseller (child workspace)
+  // Fix #5: filtra direttamente per parent_workspace_id nella query, evita full scan
   const { data: childMembership } = await supabaseAdmin
     .from('workspace_members')
     .select('role, status, workspace_id, workspaces!inner(parent_workspace_id)')
     .eq('user_id', userId)
     .eq('status', 'active')
-    .not('workspaces.parent_workspace_id', 'is', null);
+    .eq('workspaces.parent_workspace_id', workspaceId);
 
   if (childMembership && childMembership.length > 0) {
-    const isChild = childMembership.some(
-      (m: any) => m.workspaces?.parent_workspace_id === workspaceId
-    );
-    if (isChild) return { allowed: true, role: 'client' };
+    return { allowed: true, role: 'client' };
   }
 
   return { allowed: false, reason: 'Non sei membro di questo workspace' };
@@ -89,8 +87,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
     const { searchParams } = new URL(request.url);
     const target = searchParams.get('target'); // all, team, clients
-    const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10), 100);
-    const offset = parseInt(searchParams.get('offset') || '0', 10);
+    // Fix #7: fallback sicuro per NaN
+    const parsedLimit = parseInt(searchParams.get('limit') || '50', 10);
+    const parsedOffset = parseInt(searchParams.get('offset') || '0', 10);
+    const limit = Math.min(Number.isNaN(parsedLimit) ? 50 : parsedLimit, 100);
+    const offset = Number.isNaN(parsedOffset) ? 0 : Math.max(0, parsedOffset);
 
     let query = supabaseAdmin
       .from('workspace_announcements')
@@ -117,12 +118,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Errore caricamento annunci' }, { status: 500 });
     }
 
-    // Aggiungi flag is_read per l'utente corrente
-    const announcements = (data || []).map((a: any) => ({
-      ...a,
-      is_read: (a.read_by || []).includes(context.target.id),
-      read_count: (a.read_by || []).length,
-    }));
+    // Calcola is_read e read_count, poi STRIP read_by dalla risposta (privacy: #1)
+    const announcements = (data || []).map((a: any) => {
+      const readBy: string[] = a.read_by || [];
+      const { read_by: _, ...rest } = a;
+      return {
+        ...rest,
+        is_read: readBy.includes(context.target.id),
+        read_count: readBy.length,
+      };
+    });
 
     return NextResponse.json({
       announcements,
@@ -164,6 +169,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json(
         { error: 'Solo owner e admin possono creare annunci' },
         { status: 403 }
+      );
+    }
+
+    // Fix #6: Rate limiting — max 20 annunci/ora per workspace
+    const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();
+    const { count: recentCount } = await supabaseAdmin
+      .from('workspace_announcements')
+      .select('id', { count: 'exact', head: true })
+      .eq('workspace_id', workspaceId)
+      .gte('created_at', oneHourAgo);
+
+    if ((recentCount ?? 0) >= 20) {
+      return NextResponse.json(
+        { error: 'Limite raggiunto: max 20 annunci/ora per workspace' },
+        { status: 429 }
       );
     }
 
