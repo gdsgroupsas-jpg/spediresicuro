@@ -26,6 +26,7 @@ Questo documento descrive l'architettura di sicurezza di SpedireSicuro, inclusi 
 | RLS Pattern              | docs/8-SECURITY/OVERVIEW.md        | [RLS](#rls-row-level-security-pattern)              |
 | Acting Context           | docs/8-SECURITY/AUTHORIZATION.md   | [Acting Context](../8-SECURITY/AUTHORIZATION.md)    |
 | Audit Logging            | docs/8-SECURITY/AUDIT_LOGGING.md   | [Audit](../8-SECURITY/AUDIT_LOGGING.md)             |
+| Rate Limiting            | docs/8-SECURITY/RATE_LIMITING.md   | [Rate Limiting](../8-SECURITY/RATE_LIMITING.md)     |
 | Data Protection          | docs/8-SECURITY/DATA_PROTECTION.md | [Data Protection](../8-SECURITY/DATA_PROTECTION.md) |
 
 ## Content
@@ -230,6 +231,7 @@ export async function getMyShipments() {
 
 - [Authorization](AUTHORIZATION.md) - Acting Context, RBAC
 - [Audit Logging](AUDIT_LOGGING.md) - Audit trail completo
+- [Rate Limiting](RATE_LIMITING.md) - Rate limiting distribuito (Upstash Redis)
 - [Data Protection](DATA_PROTECTION.md) - Encryption, secrets
 - [GDPR](GDPR.md) - Compliance GDPR
 - [Database Architecture](../2-ARCHITECTURE/DATABASE.md) - RLS tecnico
@@ -239,9 +241,10 @@ export async function getMyShipments() {
 
 ## Changelog
 
-| Date       | Version | Changes         | Author   |
-| ---------- | ------- | --------------- | -------- |
-| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
+| Date       | Version | Changes                            | Author   |
+| ---------- | ------- | ---------------------------------- | -------- |
+| 2026-01-12 | 1.0.0   | Initial version                    | AI Agent |
+| 2026-02-09 | 1.1.0   | Aggiunto riferimento Rate Limiting | AI Agent |
 
 ---
 
