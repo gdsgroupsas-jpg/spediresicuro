@@ -81,6 +81,8 @@ function mockFromTable(tableName: string, result: unknown) {
 
 import {
   validateDomainName,
+  validateEmailAddress,
+  validateDisplayName,
   registerCustomDomain,
   getWorkspaceCustomDomain,
   verifyCustomDomain,
@@ -122,6 +124,66 @@ describe('validateDomainName', () => {
   it('normalizza in lowercase', () => {
     expect(validateDomainName('GMAIL.COM')).toBe('Questo dominio non è consentito');
     expect(validateDomainName('Example.Com')).toBeNull();
+  });
+
+  it('rifiuta dominio troppo lungo', () => {
+    const longDomain = 'a'.repeat(250) + '.com';
+    expect(validateDomainName(longDomain)).toBe('Dominio troppo lungo (max 253 caratteri)');
+  });
+});
+
+describe('validateEmailAddress', () => {
+  it('accetta email valida', () => {
+    expect(validateEmailAddress('info@example.com')).toBeNull();
+    expect(validateEmailAddress('user.name@domain.it')).toBeNull();
+    expect(validateEmailAddress('admin+tag@logistica.co.uk')).toBeNull();
+  });
+
+  it('rifiuta email vuota', () => {
+    expect(validateEmailAddress('')).toBe('Indirizzo email obbligatorio');
+  });
+
+  it('rifiuta formato invalido', () => {
+    expect(validateEmailAddress('not-an-email')).toBe('Formato indirizzo email non valido');
+    expect(validateEmailAddress('@example.com')).toBe('Formato indirizzo email non valido');
+    expect(validateEmailAddress('user@')).toBe('Formato indirizzo email non valido');
+  });
+
+  it('rifiuta email troppo lunga', () => {
+    const longEmail = 'a'.repeat(250) + '@example.com';
+    expect(validateEmailAddress(longEmail)).toBe(
+      'Indirizzo email troppo lungo (max 254 caratteri)'
+    );
+  });
+});
+
+describe('validateDisplayName', () => {
+  it('accetta display name valido', () => {
+    expect(validateDisplayName('Logistica Milano')).toBeNull();
+    expect(validateDisplayName('Info')).toBeNull();
+    expect(validateDisplayName("L'Azienda S.r.l.")).toBeNull();
+    expect(validateDisplayName('Müller & Söhne')).toBeNull();
+  });
+
+  it('rifiuta display name vuoto', () => {
+    expect(validateDisplayName('')).toBe('Nome visualizzato obbligatorio');
+    expect(validateDisplayName('   ')).toBe('Nome visualizzato obbligatorio');
+  });
+
+  it('rifiuta caratteri pericolosi (header injection)', () => {
+    expect(validateDisplayName('Info <script>')).toBe(
+      'Nome visualizzato contiene caratteri non consentiti'
+    );
+    expect(validateDisplayName('Name\nBcc: evil@hacker.com')).toBe(
+      'Nome visualizzato contiene caratteri non consentiti'
+    );
+  });
+
+  it('rifiuta display name troppo lungo', () => {
+    const longName = 'A'.repeat(101);
+    expect(validateDisplayName(longName)).toBe(
+      'Nome visualizzato troppo lungo (max 100 caratteri)'
+    );
   });
 });
 
@@ -456,6 +518,28 @@ describe('addEmailAddressOnDomain', () => {
     const result = await addEmailAddressOnDomain(WORKSPACE_ID, 'info@example.com', 'Info');
     expect(result.success).toBe(false);
     expect(result.error).toContain('Nessun dominio');
+  });
+
+  it('rifiuta email invalida', async () => {
+    const result = await addEmailAddressOnDomain(WORKSPACE_ID, 'not-an-email', 'Info');
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('Formato indirizzo email non valido');
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('rifiuta display name con caratteri pericolosi', async () => {
+    const result = await addEmailAddressOnDomain(WORKSPACE_ID, 'info@example.com', 'Name <script>');
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('caratteri non consentiti');
+    expect(mockFrom).not.toHaveBeenCalled();
+  });
+
+  it('rifiuta display name troppo lungo', async () => {
+    const longName = 'A'.repeat(101);
+    const result = await addEmailAddressOnDomain(WORKSPACE_ID, 'info@example.com', longName);
+    expect(result.success).toBe(false);
+    expect(result.error).toContain('troppo lungo');
+    expect(mockFrom).not.toHaveBeenCalled();
   });
 });
 

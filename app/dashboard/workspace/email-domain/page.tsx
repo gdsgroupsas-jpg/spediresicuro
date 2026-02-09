@@ -13,7 +13,7 @@
 
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import DashboardNav from '@/components/dashboard-nav';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { Badge } from '@/components/ui/badge';
@@ -99,6 +99,12 @@ export default function EmailDomainPage() {
   const [removing, setRemoving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
 
+  // Cooldown (previene spam chiamate Resend API)
+  const COOLDOWN_MS = 30_000; // 30 secondi
+  const [verifyCooldown, setVerifyCooldown] = useState(false);
+  const [registerCooldown, setRegisterCooldown] = useState(false);
+  const cooldownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Clipboard
   const [copiedValue, setCopiedValue] = useState<string | null>(null);
 
@@ -138,7 +144,7 @@ export default function EmailDomainPage() {
   // ─── HANDLERS ───
 
   const handleRegister = async () => {
-    if (!workspaceId || !domainInput.trim()) return;
+    if (!workspaceId || !domainInput.trim() || registerCooldown) return;
     setRegistering(true);
     setError(null);
     try {
@@ -158,11 +164,14 @@ export default function EmailDomainPage() {
       setError('Errore comunicazione');
     } finally {
       setRegistering(false);
+      // Cooldown dopo registrazione (evita doppia registrazione accidentale)
+      setRegisterCooldown(true);
+      setTimeout(() => setRegisterCooldown(false), COOLDOWN_MS);
     }
   };
 
   const handleVerify = async () => {
-    if (!workspaceId) return;
+    if (!workspaceId || verifyCooldown) return;
     setVerifying(true);
     setError(null);
     try {
@@ -180,6 +189,10 @@ export default function EmailDomainPage() {
       setError('Errore comunicazione');
     } finally {
       setVerifying(false);
+      // Cooldown 30s tra verifiche (previene spam Resend API)
+      setVerifyCooldown(true);
+      if (cooldownTimerRef.current) clearTimeout(cooldownTimerRef.current);
+      cooldownTimerRef.current = setTimeout(() => setVerifyCooldown(false), COOLDOWN_MS);
     }
   };
 
@@ -366,11 +379,11 @@ export default function EmailDomainPage() {
                     />
                     <button
                       onClick={handleRegister}
-                      disabled={registering || !domainInput.trim()}
+                      disabled={registering || registerCooldown || !domainInput.trim()}
                       className="px-6 py-2 bg-orange-500 text-white rounded-lg text-sm font-medium hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                     >
                       {registering && <Loader2 className="w-4 h-4 animate-spin" />}
-                      Registra Dominio
+                      {registerCooldown ? 'Attendi...' : 'Registra Dominio'}
                     </button>
                   </div>
                 )}
@@ -487,7 +500,7 @@ export default function EmailDomainPage() {
                   {canManage && domain.status !== 'verified' && (
                     <button
                       onClick={handleVerify}
-                      disabled={verifying}
+                      disabled={verifying || verifyCooldown}
                       className="px-4 py-2 bg-blue-500 text-white rounded-lg text-sm font-medium hover:bg-blue-600 disabled:opacity-50 flex items-center gap-2"
                     >
                       {verifying ? (
@@ -495,7 +508,11 @@ export default function EmailDomainPage() {
                       ) : (
                         <RefreshCw className="w-4 h-4" />
                       )}
-                      {domain.status === 'failed' ? 'Riprova verifica' : 'Verifica DNS'}
+                      {verifyCooldown
+                        ? 'Attendi...'
+                        : domain.status === 'failed'
+                          ? 'Riprova verifica'
+                          : 'Verifica DNS'}
                     </button>
                   )}
 

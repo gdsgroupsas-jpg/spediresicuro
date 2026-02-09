@@ -125,6 +125,17 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'displayName obbligatorio' }, { status: 400 });
     }
 
+    // Lunghezza massima pre-check
+    if (body.emailAddress.trim().length > 254) {
+      return NextResponse.json({ error: 'Indirizzo email troppo lungo' }, { status: 400 });
+    }
+    if (body.displayName.trim().length > 100) {
+      return NextResponse.json(
+        { error: 'Nome visualizzato troppo lungo (max 100 caratteri)' },
+        { status: 400 }
+      );
+    }
+
     const result = await addEmailAddressOnDomain(
       workspaceId,
       body.emailAddress,

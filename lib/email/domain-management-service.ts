@@ -88,6 +88,21 @@ const BLOCKED_DOMAINS = [
   'aruba.it',
 ];
 
+/** Max lunghezza dominio RFC 1035 */
+const MAX_DOMAIN_LENGTH = 253;
+
+/** Regex email basica: local@domain, local non vuota e senza caratteri pericolosi */
+const EMAIL_REGEX = /^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+
+/** Caratteri consentiti nel display name (no control chars, no < > per header injection) */
+const DISPLAY_NAME_REGEX = /^[a-zA-Z0-9\u00C0-\u024F\s.,'&()\-]+$/;
+
+/** Max lunghezza display name */
+const MAX_DISPLAY_NAME_LENGTH = 100;
+
+/** Max lunghezza email address */
+const MAX_EMAIL_LENGTH = 254;
+
 /**
  * Valida formato dominio.
  * Ritorna null se valido, stringa errore se invalido.
@@ -99,12 +114,71 @@ export function validateDomainName(domain: string): string | null {
 
   const normalized = domain.trim().toLowerCase();
 
+  if (normalized.length > MAX_DOMAIN_LENGTH) {
+    return 'Dominio troppo lungo (max 253 caratteri)';
+  }
+
   if (!DOMAIN_REGEX.test(normalized)) {
     return 'Formato dominio non valido';
   }
 
   if (BLOCKED_DOMAINS.includes(normalized)) {
     return 'Questo dominio non è consentito';
+  }
+
+  return null;
+}
+
+/**
+ * Valida formato indirizzo email.
+ * Ritorna null se valido, stringa errore se invalido.
+ */
+export function validateEmailAddress(email: string): string | null {
+  if (!email || typeof email !== 'string') {
+    return 'Indirizzo email obbligatorio';
+  }
+
+  const normalized = email.trim().toLowerCase();
+
+  if (normalized.length > MAX_EMAIL_LENGTH) {
+    return 'Indirizzo email troppo lungo (max 254 caratteri)';
+  }
+
+  if (!EMAIL_REGEX.test(normalized)) {
+    return 'Formato indirizzo email non valido';
+  }
+
+  // Verifica local part non vuota
+  const localPart = normalized.split('@')[0];
+  if (!localPart || localPart.length === 0) {
+    return "La parte locale dell'indirizzo email non può essere vuota";
+  }
+
+  return null;
+}
+
+/**
+ * Valida display name per indirizzo email.
+ * Previene header injection e caratteri di controllo.
+ * Ritorna null se valido, stringa errore se invalido.
+ */
+export function validateDisplayName(displayName: string): string | null {
+  if (!displayName || typeof displayName !== 'string') {
+    return 'Nome visualizzato obbligatorio';
+  }
+
+  const trimmed = displayName.trim();
+
+  if (trimmed.length === 0) {
+    return 'Nome visualizzato obbligatorio';
+  }
+
+  if (trimmed.length > MAX_DISPLAY_NAME_LENGTH) {
+    return 'Nome visualizzato troppo lungo (max 100 caratteri)';
+  }
+
+  if (!DISPLAY_NAME_REGEX.test(trimmed)) {
+    return 'Nome visualizzato contiene caratteri non consentiti';
   }
 
   return null;
@@ -175,7 +249,13 @@ export async function registerCustomDomain(
       try {
         await resend.domains.remove(resendDomain.id);
       } catch {
-        console.error('[DOMAIN-MGMT] Cleanup Resend fallito dopo errore DB');
+        // Dominio orfano su Resend — log strutturato per monitoring/alerting
+        console.error('[DOMAIN-MGMT] ORPHAN_DOMAIN: cleanup Resend fallito', {
+          resend_domain_id: resendDomain.id,
+          domain_name: normalized,
+          workspace_id: workspaceId,
+          action: 'manual_cleanup_required',
+        });
       }
 
       if (dbError.message.includes('uq_domain_name')) {
@@ -341,6 +421,18 @@ export async function addEmailAddressOnDomain(
   displayName: string,
   isPrimary = false
 ): Promise<{ success: boolean; addressId?: string; error?: string }> {
+  // Validazione email
+  const emailError = validateEmailAddress(emailAddress);
+  if (emailError) {
+    return { success: false, error: emailError };
+  }
+
+  // Validazione display name (previene header injection)
+  const displayNameError = validateDisplayName(displayName);
+  if (displayNameError) {
+    return { success: false, error: displayNameError };
+  }
+
   // Verifica dominio custom
   const domain = await getWorkspaceCustomDomain(workspaceId);
   if (!domain) {

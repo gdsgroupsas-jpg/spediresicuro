@@ -252,6 +252,19 @@ describe('POST custom-domain', () => {
     const res = await POST(req as any, { params: Promise.resolve({ workspaceId: WORKSPACE_ID }) });
     expect(res.status).toBe(400);
   });
+
+  it('400 per dominio troppo lungo', async () => {
+    mockActiveMembership('owner');
+    const longDomain = 'a'.repeat(250) + '.com';
+    const req = createRequest(`http://localhost/api/workspaces/${WORKSPACE_ID}/custom-domain`, {
+      method: 'POST',
+      body: JSON.stringify({ domainName: longDomain }),
+    });
+    const res = await POST(req as any, { params: Promise.resolve({ workspaceId: WORKSPACE_ID }) });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain('troppo lungo');
+  });
 });
 
 // ============================================
@@ -391,6 +404,36 @@ describe('POST email-addresses', () => {
       params: Promise.resolve({ workspaceId: WORKSPACE_ID }),
     });
     expect(res.status).toBe(400);
+  });
+
+  it('400 per email troppo lunga', async () => {
+    mockActiveMembership('owner');
+    const longEmail = 'a'.repeat(250) + '@example.com';
+    const req = createRequest(`http://localhost/api/workspaces/${WORKSPACE_ID}/email-addresses`, {
+      method: 'POST',
+      body: JSON.stringify({ emailAddress: longEmail, displayName: 'Info' }),
+    });
+    const res = await ADDR_POST(req as any, {
+      params: Promise.resolve({ workspaceId: WORKSPACE_ID }),
+    });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain('troppo lungo');
+  });
+
+  it('400 per displayName troppo lungo', async () => {
+    mockActiveMembership('owner');
+    const longName = 'A'.repeat(101);
+    const req = createRequest(`http://localhost/api/workspaces/${WORKSPACE_ID}/email-addresses`, {
+      method: 'POST',
+      body: JSON.stringify({ emailAddress: 'info@example.com', displayName: longName }),
+    });
+    const res = await ADDR_POST(req as any, {
+      params: Promise.resolve({ workspaceId: WORKSPACE_ID }),
+    });
+    expect(res.status).toBe(400);
+    const data = await res.json();
+    expect(data.error).toContain('troppo lungo');
   });
 
   it('201 crea indirizzo con successo', async () => {

@@ -121,6 +121,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'domainName obbligatorio' }, { status: 400 });
     }
 
+    // Lunghezza massima pre-check (prima di arrivare al service)
+    if (body.domainName.trim().length > 253) {
+      return NextResponse.json(
+        { error: 'Dominio troppo lungo (max 253 caratteri)' },
+        { status: 400 }
+      );
+    }
+
     const result = await registerCustomDomain(workspaceId, body.domainName);
 
     if (!result.success) {
