@@ -725,9 +725,30 @@ export function getNavigationForUser(
     items: accountItems,
   });
 
-  // 7. COMUNICAZIONI (solo superadmin — email inbox)
+  // 7. COMUNICAZIONI (superadmin: Posta platform, reseller: Posta workspace)
   if (role === 'superadmin') {
     sections.push(communicationsSection);
+  } else if (isReseller) {
+    sections.push({
+      ...communicationsSection,
+      requiredRole: undefined,
+      items: [
+        {
+          id: 'mail-workspace',
+          label: 'Posta',
+          href: '/dashboard/posta-workspace',
+          icon: Mail,
+          description: 'Email inbox workspace',
+        },
+        {
+          id: 'rubrica',
+          label: 'Rubrica',
+          href: '/dashboard/rubrica',
+          icon: Contact,
+          description: 'Gestione contatti e rubrica',
+        },
+      ],
+    });
   }
 
   // 8. SEZIONI SUPPORTO (sempre alla fine, con filtro item per ruolo)
