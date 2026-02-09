@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
         member_status: 'active',
       };
     } else {
-      // Utente normale: verifica membership
+      // Utente normale: verifica membership diretta
       const { data: membership, error } = await supabaseAdmin
         .from('workspace_members')
         .select(
@@ -135,39 +135,107 @@ export async function POST(request: NextRequest) {
         .eq('status', 'active')
         .single();
 
-      if (error || !membership) {
-        return NextResponse.json(
-          { error: 'Access denied: not a member of this workspace' },
-          { status: 403 }
-        );
+      if (!error && membership) {
+        const workspace = membership.workspaces as any;
+        const org = workspace.organizations as any;
+
+        // Verifica workspace e org sono attivi
+        if (workspace.status !== 'active' || org.status !== 'active') {
+          return NextResponse.json(
+            { error: 'Workspace or organization is not active' },
+            { status: 403 }
+          );
+        }
+
+        workspaceInfo = {
+          workspace_id: workspace.id,
+          workspace_name: workspace.name,
+          workspace_slug: workspace.slug,
+          workspace_type: workspace.type as any,
+          workspace_depth: workspace.depth as any,
+          organization_id: org.id,
+          organization_name: org.name,
+          organization_slug: org.slug,
+          role: membership.role as any,
+          permissions: membership.permissions || [],
+          wallet_balance: Number(workspace.wallet_balance),
+          branding: org.branding || {},
+          member_status: 'active',
+        };
+      } else {
+        // Fallback: reseller accede a workspace figlio del proprio workspace
+        const { data: childWs } = await supabaseAdmin
+          .from('workspaces')
+          .select(
+            `
+            id,
+            name,
+            slug,
+            type,
+            depth,
+            organization_id,
+            wallet_balance,
+            status,
+            parent_workspace_id,
+            organizations!inner (
+              id,
+              name,
+              slug,
+              branding,
+              status
+            )
+          `
+          )
+          .eq('id', workspaceId)
+          .eq('status', 'active')
+          .single();
+
+        if (!childWs || !childWs.parent_workspace_id) {
+          return NextResponse.json(
+            { error: 'Access denied: not a member of this workspace' },
+            { status: 403 }
+          );
+        }
+
+        // Verifica che l'utente sia owner/admin del workspace parent
+        const { data: parentMembership } = await supabaseAdmin
+          .from('workspace_members')
+          .select('role')
+          .eq('workspace_id', childWs.parent_workspace_id)
+          .eq('user_id', context.target.id)
+          .eq('status', 'active')
+          .in('role', ['owner', 'admin'])
+          .single();
+
+        if (!parentMembership) {
+          return NextResponse.json(
+            { error: 'Access denied: not a member of this workspace' },
+            { status: 403 }
+          );
+        }
+
+        const org = (childWs as any).organizations as any;
+
+        if (org.status !== 'active') {
+          return NextResponse.json({ error: 'Organization is not active' }, { status: 403 });
+        }
+
+        workspaceInfo = {
+          workspace_id: childWs.id,
+          workspace_name: childWs.name,
+          workspace_slug: childWs.slug,
+          workspace_type: childWs.type as any,
+          workspace_depth: childWs.depth as any,
+          organization_id: org.id,
+          organization_name: org.name,
+          organization_slug: org.slug,
+          role: 'admin',
+          permissions: [],
+          wallet_balance: Number(childWs.wallet_balance),
+          branding: org.branding || {},
+          member_status: 'active',
+        };
       }
-
-      const workspace = membership.workspaces as any;
-      const org = workspace.organizations as any;
-
-      // Verifica workspace e org sono attivi
-      if (workspace.status !== 'active' || org.status !== 'active') {
-        return NextResponse.json(
-          { error: 'Workspace or organization is not active' },
-          { status: 403 }
-        );
-      }
-
-      workspaceInfo = {
-        workspace_id: workspace.id,
-        workspace_name: workspace.name,
-        workspace_slug: workspace.slug,
-        workspace_type: workspace.type as any,
-        workspace_depth: workspace.depth as any,
-        organization_id: org.id,
-        organization_name: org.name,
-        organization_slug: org.slug,
-        role: membership.role as any,
-        permissions: membership.permissions || [],
-        wallet_balance: Number(workspace.wallet_balance),
-        branding: org.branding || {},
-        member_status: 'active',
-      };
     }
 
     // 5. ATOMICITY: DB update PRIMA del cookie

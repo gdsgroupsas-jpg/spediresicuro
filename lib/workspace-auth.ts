@@ -299,7 +299,7 @@ async function getWorkspaceAccessInfo(
       };
     }
 
-    // Utente normale: verifica membership
+    // Utente normale: verifica membership diretta
     const { data: membership, error } = await supabaseAdmin
       .from('workspace_members')
       .select(
@@ -332,36 +332,105 @@ async function getWorkspaceAccessInfo(
       .eq('status', 'active')
       .single();
 
-    if (error || !membership) {
-      console.log('🔒 [WORKSPACE-AUTH] No membership found:', {
+    if (!error && membership) {
+      const workspace = membership.workspaces as any;
+      const org = workspace.organizations as any;
+
+      // Verifica workspace e org sono attivi
+      if (workspace.status !== 'active' || org.status !== 'active') {
+        console.log('🔒 [WORKSPACE-AUTH] Workspace or org not active');
+        return null;
+      }
+
+      return {
+        id: workspace.id,
+        name: workspace.name,
+        slug: workspace.slug,
+        type: workspace.type as WorkspaceType,
+        depth: workspace.depth as WorkspaceDepth,
+        organization_id: org.id,
+        organization_name: org.name,
+        organization_slug: org.slug,
+        wallet_balance: Number(workspace.wallet_balance),
+        role: membership.role as WorkspaceMemberRole,
+        permissions: (membership.permissions || []) as WorkspacePermission[],
+        branding: (org.branding || {}) as OrganizationBranding,
+      };
+    }
+
+    // Fallback: reseller accede a workspace figlio (parent e' un suo workspace)
+    const { data: childWs, error: childErr } = await supabaseAdmin
+      .from('workspaces')
+      .select(
+        `
+        id,
+        name,
+        slug,
+        type,
+        depth,
+        organization_id,
+        wallet_balance,
+        status,
+        parent_workspace_id,
+        organizations!inner (
+          id,
+          name,
+          slug,
+          branding,
+          status
+        )
+      `
+      )
+      .eq('id', workspaceId)
+      .eq('status', 'active')
+      .single();
+
+    if (childErr || !childWs || !childWs.parent_workspace_id) {
+      console.log('🔒 [WORKSPACE-AUTH] No membership and no parent workspace:', {
         workspaceId,
         userId,
-        error: error?.message,
       });
       return null;
     }
 
-    const workspace = membership.workspaces as any;
-    const org = workspace.organizations as any;
+    // Verifica che l'utente sia owner/admin del workspace parent
+    const { data: parentMembership } = await supabaseAdmin
+      .from('workspace_members')
+      .select('role')
+      .eq('workspace_id', childWs.parent_workspace_id)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .in('role', ['owner', 'admin'])
+      .single();
 
-    // Verifica workspace e org sono attivi
-    if (workspace.status !== 'active' || org.status !== 'active') {
-      console.log('🔒 [WORKSPACE-AUTH] Workspace or org not active');
+    if (!parentMembership) {
+      console.log('🔒 [WORKSPACE-AUTH] Not owner/admin of parent workspace:', {
+        workspaceId,
+        parentWorkspaceId: childWs.parent_workspace_id,
+        userId,
+      });
+      return null;
+    }
+
+    const org = (childWs as any).organizations as any;
+
+    if (org.status !== 'active') {
+      console.log('🔒 [WORKSPACE-AUTH] Org not active for child workspace');
       return null;
     }
 
     return {
-      id: workspace.id,
-      name: workspace.name,
-      slug: workspace.slug,
-      type: workspace.type as WorkspaceType,
-      depth: workspace.depth as WorkspaceDepth,
+      id: childWs.id,
+      name: childWs.name,
+      slug: childWs.slug,
+      type: childWs.type as WorkspaceType,
+      depth: childWs.depth as WorkspaceDepth,
       organization_id: org.id,
       organization_name: org.name,
       organization_slug: org.slug,
-      wallet_balance: Number(workspace.wallet_balance),
-      role: membership.role as WorkspaceMemberRole,
-      permissions: (membership.permissions || []) as WorkspacePermission[],
+      wallet_balance: Number(childWs.wallet_balance),
+      role: 'admin' as WorkspaceMemberRole, // Reseller ha accesso admin sui figli
+      permissions: [] as WorkspacePermission[],
       branding: (org.branding || {}) as OrganizationBranding,
     };
   } catch (error: any) {
