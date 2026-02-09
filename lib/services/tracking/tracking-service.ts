@@ -153,15 +153,45 @@ function parseItalianDate(dateStr: string): Date {
 const TRACKING_CONFIG = {
   // Cache TTL: how long before we consider cached tracking data stale (default: 30 minutes)
   CACHE_TTL_MS: parseInt(process.env.TRACKING_CACHE_TTL_MINUTES || '30', 10) * 60 * 1000,
-  // Sync max age: only sync shipments with tracking data older than this (default: 4 hours)
-  SYNC_MAX_AGE_MS: parseInt(process.env.TRACKING_SYNC_MAX_AGE_HOURS || '4', 10) * 60 * 60 * 1000,
-  // Sync batch limit: max shipments to sync per cron run (default: 100)
-  SYNC_BATCH_LIMIT: parseInt(process.env.TRACKING_SYNC_BATCH_LIMIT || '100', 10),
-  // Sync delay: delay between API calls for rate limiting (default: 500ms)
-  SYNC_DELAY_MS: parseInt(process.env.TRACKING_SYNC_DELAY_MS || '500', 10),
-  // Sync lookback: only sync shipments created within this period (default: 14 days)
-  SYNC_LOOKBACK_DAYS: parseInt(process.env.TRACKING_SYNC_LOOKBACK_DAYS || '14', 10),
+  // Sync max age: only sync shipments with tracking data older than this (default: 1 hour)
+  SYNC_MAX_AGE_MS: parseInt(process.env.TRACKING_SYNC_MAX_AGE_HOURS || '1', 10) * 60 * 60 * 1000,
+  // Sync batch limit: max shipments to sync per cron run (default: 300)
+  SYNC_BATCH_LIMIT: parseInt(process.env.TRACKING_SYNC_BATCH_LIMIT || '300', 10),
+  // Sync delay: delay between API calls per worker (default: 200ms)
+  SYNC_DELAY_MS: parseInt(process.env.TRACKING_SYNC_DELAY_MS || '200', 10),
+  // Sync lookback: only sync shipments created within this period (default: 30 days)
+  SYNC_LOOKBACK_DAYS: parseInt(process.env.TRACKING_SYNC_LOOKBACK_DAYS || '30', 10),
+  // Concorrenza: numero di worker paralleli per sync (default: 5)
+  SYNC_CONCURRENCY: parseInt(process.env.TRACKING_SYNC_CONCURRENCY || '5', 10),
+  // Max retry per errori transient (default: 2)
+  SYNC_MAX_RETRIES: parseInt(process.env.TRACKING_SYNC_MAX_RETRIES || '2', 10),
 };
+
+// Risultato dettagliato di un singolo sync
+interface ShipmentSyncResult {
+  shipmentId: string;
+  trackingNumber: string;
+  success: boolean;
+  eventsCount: number;
+  retries: number;
+  durationMs: number;
+  error?: string;
+  errorType?: 'permanent' | 'transient';
+}
+
+// Risultato aggregato con metriche
+export interface SyncMetrics {
+  synced: number;
+  errors: number;
+  skipped: number;
+  totalShipments: number;
+  totalEventsUpserted: number;
+  durationMs: number;
+  avgApiCallMs: number;
+  permanentErrors: number;
+  transientErrors: number;
+  retriesUsed: number;
+}
 
 export class TrackingService {
   private supabaseAdmin: SupabaseClient<Database>;
@@ -302,13 +332,14 @@ export class TrackingService {
   }
 
   /**
-   * Fetch tracking from Spedisci.Online API and cache in DB
+   * Fetch tracking from Spedisci.Online API and cache in DB.
+   * Ritorna il numero di eventi inseriti (0 se errore).
    */
   async fetchAndCacheTracking(
     shipmentId: string,
     trackingNumber: string,
     carrier?: string | null
-  ): Promise<void> {
+  ): Promise<{ eventsCount: number; errorType?: 'permanent' | 'transient' }> {
     try {
       // Call Spedisci.Online API
       const response = await fetch(
@@ -319,24 +350,27 @@ export class TrackingService {
             Authorization: `Bearer ${this.spedisciOnlineApiKey}`,
             'Content-Type': 'application/json',
           },
+          signal: AbortSignal.timeout(15_000), // 15s timeout per singola chiamata
         }
       );
 
       if (!response.ok) {
+        const status = response.status;
+        // Errori permanenti: non ritentare mai
+        const isPermanent = status === 404 || status === 400 || status === 403;
         console.error(
-          `Spedisci.Online tracking API error: ${response.status} ${response.statusText}`
+          `[TrackingService] API ${status} per ${trackingNumber} (${isPermanent ? 'permanent' : 'transient'})`
         );
-        return;
+        return { eventsCount: 0, errorType: isPermanent ? 'permanent' : 'transient' };
       }
 
       const data: SpedisciOnlineTrackingResponse = await response.json();
 
       if (!data.TrackingDettaglio || !Array.isArray(data.TrackingDettaglio)) {
-        console.error('Invalid tracking response format');
-        return;
+        return { eventsCount: 0, errorType: 'permanent' };
       }
 
-      // Transform and insert events
+      // Transform events
       const now = new Date().toISOString();
       const events: TrackingEventInsert[] = data.TrackingDettaglio.map((event) => {
         const eventDate = parseItalianDate(event.Data);
@@ -356,60 +390,69 @@ export class TrackingService {
         };
       });
 
-      // Upsert events using properly typed client
-      let upsertErrors = 0;
-      for (const event of events) {
-        const { error: upsertError } = await this.supabaseAdmin
-          .from('tracking_events')
-          .upsert(event, {
-            onConflict: 'shipment_id,event_date,status',
-            ignoreDuplicates: false,
-          });
-
-        if (upsertError) {
-          upsertErrors++;
-          console.error(
-            `[TrackingService] Error upserting tracking event for shipment ${shipmentId}:`,
-            upsertError.message
-          );
-        }
+      if (events.length === 0) {
+        return { eventsCount: 0 };
       }
 
-      if (upsertErrors > 0) {
-        console.warn(
-          `[TrackingService] ${upsertErrors}/${events.length} events failed to upsert for shipment ${shipmentId}`
+      // Batch upsert: tutti gli eventi in UNA sola chiamata DB
+      const { error: upsertError } = await this.supabaseAdmin
+        .from('tracking_events')
+        .upsert(events, {
+          onConflict: 'shipment_id,event_date,status',
+          ignoreDuplicates: true,
+        });
+
+      if (upsertError) {
+        console.error(
+          `[TrackingService] Batch upsert fallito per ${shipmentId}: ${upsertError.message}`
         );
+        return { eventsCount: 0, errorType: 'transient' };
       }
 
-      // The trigger will automatically update shipment tracking_status
-      console.log(`Cached ${events.length} tracking events for shipment ${shipmentId}`);
+      return { eventsCount: events.length };
     } catch (error) {
-      console.error('Error fetching tracking from Spedisci.Online:', error);
+      // Timeout o errori di rete → transient
+      const msg = error instanceof Error ? error.message : 'Unknown';
+      console.error(`[TrackingService] Fetch error per ${trackingNumber}: ${msg}`);
+      return { eventsCount: 0, errorType: 'transient' };
     }
   }
 
   /**
-   * Batch sync tracking for multiple shipments
-   * Used by cron job
+   * Batch sync tracking per spedizioni attive.
+   * Parallelismo controllato con pool di worker, retry per errori transient.
    */
   async syncActiveShipments(
     options: {
-      maxAge?: number; // Only sync if last update older than this (ms)
-      limit?: number; // Max shipments to sync
-      delayBetween?: number; // Delay between API calls (ms)
+      maxAge?: number;
+      limit?: number;
+      delayBetween?: number;
+      concurrency?: number;
     } = {}
-  ): Promise<{ synced: number; errors: number }> {
+  ): Promise<SyncMetrics> {
+    const startTime = Date.now();
     const {
       maxAge = TRACKING_CONFIG.SYNC_MAX_AGE_MS,
       limit = TRACKING_CONFIG.SYNC_BATCH_LIMIT,
       delayBetween = TRACKING_CONFIG.SYNC_DELAY_MS,
+      concurrency = TRACKING_CONFIG.SYNC_CONCURRENCY,
     } = options;
 
-    let synced = 0;
-    let errors = 0;
+    const metrics: SyncMetrics = {
+      synced: 0,
+      errors: 0,
+      skipped: 0,
+      totalShipments: 0,
+      totalEventsUpserted: 0,
+      durationMs: 0,
+      avgApiCallMs: 0,
+      permanentErrors: 0,
+      transientErrors: 0,
+      retriesUsed: 0,
+    };
 
     try {
-      // Get active shipments that need tracking update
+      // Query spedizioni attive che necessitano aggiornamento tracking
       const cutoffDate = new Date(Date.now() - maxAge).toISOString();
       const lookbackDate = new Date(
         Date.now() - TRACKING_CONFIG.SYNC_LOOKBACK_DAYS * 24 * 60 * 60 * 1000
@@ -421,44 +464,195 @@ export class TrackingService {
         .not('tracking_number', 'is', null)
         .not('tracking_status', 'eq', 'delivered')
         .not('tracking_status', 'eq', 'cancelled')
+        .not('tracking_status', 'eq', 'returned')
         .or(`tracking_last_update.is.null,tracking_last_update.lt.${cutoffDate}`)
         .gte('created_at', lookbackDate)
         .order('tracking_last_update', { ascending: true, nullsFirst: true })
         .limit(limit);
 
       if (error) {
-        console.error('Error fetching shipments for tracking sync:', error);
-        return { synced: 0, errors: 1 };
+        console.error('[TrackingSync] Errore query spedizioni:', error);
+        return { ...metrics, errors: 1, durationMs: Date.now() - startTime };
       }
 
       const shipments = shipmentsData || [];
-      console.log(`Syncing tracking for ${shipments.length} shipments`);
+      metrics.totalShipments = shipments.length;
+      console.log(
+        `[TrackingSync] Avvio sync per ${shipments.length} spedizioni (concurrency=${concurrency})`
+      );
 
-      for (const shipment of shipments) {
-        try {
-          // tracking_number is guaranteed non-null by the query filter
-          await this.fetchAndCacheTracking(
-            shipment.id,
-            shipment.tracking_number!,
-            shipment.carrier
-          );
-          synced++;
+      if (shipments.length === 0) {
+        metrics.durationMs = Date.now() - startTime;
+        return metrics;
+      }
 
-          // Rate limiting delay
+      // Pool di worker con concorrenza controllata
+      const results = await this.runWithConcurrency(
+        shipments.map((shipment) => () => this.syncSingleShipment(shipment, delayBetween)),
+        concurrency
+      );
+
+      // Aggrega risultati
+      const apiCallDurations: number[] = [];
+      for (const result of results) {
+        if (result.success) {
+          metrics.synced++;
+          metrics.totalEventsUpserted += result.eventsCount;
+        } else if (result.errorType === 'permanent') {
+          metrics.permanentErrors++;
+          metrics.errors++;
+        } else {
+          metrics.transientErrors++;
+          metrics.errors++;
+        }
+        metrics.retriesUsed += result.retries;
+        apiCallDurations.push(result.durationMs);
+      }
+
+      metrics.durationMs = Date.now() - startTime;
+      metrics.avgApiCallMs =
+        apiCallDurations.length > 0
+          ? Math.round(apiCallDurations.reduce((a, b) => a + b, 0) / apiCallDurations.length)
+          : 0;
+
+      // Log strutturato con metriche
+      console.log(
+        `[TrackingSync] Completato in ${metrics.durationMs}ms — ` +
+          `synced=${metrics.synced} errors=${metrics.errors} ` +
+          `(perm=${metrics.permanentErrors} trans=${metrics.transientErrors}) ` +
+          `events=${metrics.totalEventsUpserted} retries=${metrics.retriesUsed} ` +
+          `avgApi=${metrics.avgApiCallMs}ms`
+      );
+    } catch (error) {
+      console.error('[TrackingSync] Errore critico:', error);
+      metrics.errors++;
+      metrics.durationMs = Date.now() - startTime;
+    }
+
+    return metrics;
+  }
+
+  /**
+   * Sync singola spedizione con retry per errori transient.
+   */
+  private async syncSingleShipment(
+    shipment: { id: string; tracking_number: string | null; carrier: string | null },
+    delayBetween: number
+  ): Promise<ShipmentSyncResult> {
+    const callStart = Date.now();
+    let retries = 0;
+    const maxRetries = TRACKING_CONFIG.SYNC_MAX_RETRIES;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        const result = await this.fetchAndCacheTracking(
+          shipment.id,
+          shipment.tracking_number!,
+          shipment.carrier
+        );
+
+        // Errore permanente → non ritentare
+        if (result.errorType === 'permanent') {
+          return {
+            shipmentId: shipment.id,
+            trackingNumber: shipment.tracking_number!,
+            success: false,
+            eventsCount: 0,
+            retries,
+            durationMs: Date.now() - callStart,
+            errorType: 'permanent',
+          };
+        }
+
+        // Errore transient → retry con backoff
+        if (result.errorType === 'transient' && attempt < maxRetries) {
+          retries++;
+          const backoff = delayBetween * Math.pow(2, attempt);
+          await new Promise((resolve) => setTimeout(resolve, backoff));
+          continue;
+        }
+
+        // Successo o ultimo tentativo fallito
+        if (result.eventsCount > 0) {
+          // Rate limiting delay dopo successo
           if (delayBetween > 0) {
             await new Promise((resolve) => setTimeout(resolve, delayBetween));
           }
-        } catch (err) {
-          console.error(`Error syncing tracking for shipment ${shipment.id}:`, err);
-          errors++;
+          return {
+            shipmentId: shipment.id,
+            trackingNumber: shipment.tracking_number!,
+            success: true,
+            eventsCount: result.eventsCount,
+            retries,
+            durationMs: Date.now() - callStart,
+          };
         }
+
+        // eventsCount === 0 senza errore → nessun evento (OK, non e' un errore)
+        return {
+          shipmentId: shipment.id,
+          trackingNumber: shipment.tracking_number!,
+          success: !result.errorType,
+          eventsCount: 0,
+          retries,
+          durationMs: Date.now() - callStart,
+          errorType: result.errorType,
+        };
+      } catch (err) {
+        if (attempt < maxRetries) {
+          retries++;
+          const backoff = delayBetween * Math.pow(2, attempt);
+          await new Promise((resolve) => setTimeout(resolve, backoff));
+          continue;
+        }
+        return {
+          shipmentId: shipment.id,
+          trackingNumber: shipment.tracking_number!,
+          success: false,
+          eventsCount: 0,
+          retries,
+          durationMs: Date.now() - callStart,
+          error: err instanceof Error ? err.message : 'Unknown',
+          errorType: 'transient',
+        };
       }
-    } catch (error) {
-      console.error('Error in syncActiveShipments:', error);
-      errors++;
     }
 
-    return { synced, errors };
+    // Fallback (non dovrebbe mai arrivarci)
+    return {
+      shipmentId: shipment.id,
+      trackingNumber: shipment.tracking_number!,
+      success: false,
+      eventsCount: 0,
+      retries,
+      durationMs: Date.now() - callStart,
+      errorType: 'transient',
+    };
+  }
+
+  /**
+   * Esegue un array di task con concorrenza limitata.
+   * Come Promise.all() ma con max N task in parallelo.
+   */
+  private async runWithConcurrency<T>(
+    tasks: (() => Promise<T>)[],
+    concurrency: number
+  ): Promise<T[]> {
+    const results: T[] = [];
+    let index = 0;
+
+    async function worker() {
+      while (index < tasks.length) {
+        const currentIndex = index++;
+        results[currentIndex] = await tasks[currentIndex]();
+      }
+    }
+
+    // Lancia N worker in parallelo
+    const workers = Array.from({ length: Math.min(concurrency, tasks.length) }, () => worker());
+    await Promise.all(workers);
+
+    return results;
   }
 
   /**

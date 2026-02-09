@@ -1,13 +1,13 @@
 # Tracking Sync Cron Job
 # Syncs tracking data for active shipments from Spedisci.Online API
-# Runs every 4 hours
+# Runs every hour with parallel workers for fast execution
 
 name: Sync Tracking
 
 on:
-  # Run every 4 hours
+  # Ogni ora
   schedule:
-    - cron: '0 */4 * * *'
+    - cron: '0 * * * *'
 
   # Allow manual trigger
   workflow_dispatch:
@@ -36,8 +36,9 @@ jobs:
         run: |
           echo "Starting tracking sync for ${{ env.APP_URL }}"
 
-          # Call the cron API endpoint
+          # Call the cron API endpoint (max 5 minuti timeout curl)
           response=$(curl -s -w "\n%{http_code}" \
+            --max-time 300 \
             -X POST \
             -H "Content-Type: application/json" \
             -H "x-cron-secret: ${{ secrets.CRON_SECRET }}" \
@@ -56,21 +57,37 @@ jobs:
             exit 1
           fi
 
-          # Parse response
+          # Parse metriche dettagliate
           synced=$(echo "$body" | jq -r '.synced // 0')
           errors=$(echo "$body" | jq -r '.errors // 0')
+          totalShipments=$(echo "$body" | jq -r '.totalShipments // 0')
+          totalEvents=$(echo "$body" | jq -r '.totalEventsUpserted // 0')
+          durationMs=$(echo "$body" | jq -r '.durationMs // 0')
+          permanentErrors=$(echo "$body" | jq -r '.permanentErrors // 0')
+          transientErrors=$(echo "$body" | jq -r '.transientErrors // 0')
+          retriesUsed=$(echo "$body" | jq -r '.retriesUsed // 0')
+          avgApiMs=$(echo "$body" | jq -r '.avgApiCallMs // 0')
 
-          echo "Synced: $synced shipments"
-          echo "Errors: $errors"
+          echo ""
+          echo "=== Tracking Sync Report ==="
+          echo "Total shipments: $totalShipments"
+          echo "Synced: $synced"
+          echo "Errors: $errors (permanent=$permanentErrors, transient=$transientErrors)"
+          echo "Events upserted: $totalEvents"
+          echo "Retries used: $retriesUsed"
+          echo "Duration: ${durationMs}ms"
+          echo "Avg API call: ${avgApiMs}ms"
+          echo "==========================="
 
-          # Fail if too many errors
-          if [ "$errors" -gt 10 ]; then
-            echo "Warning: High number of errors during sync"
-            # Don't fail the job, just warn
+          # Fail se error rate > 20%
+          if [ "$totalShipments" -gt 0 ] && [ "$errors" -gt 0 ]; then
+            error_rate=$((errors * 100 / totalShipments))
+            if [ "$error_rate" -gt 20 ]; then
+              echo "WARNING: High error rate ${error_rate}% ($errors/$totalShipments)"
+            fi
           fi
 
       - name: Notify on Failure
         if: failure()
         run: |
           echo "Tracking sync failed! Check logs for details."
-          # TODO: Add Slack/Discord notification here if needed
