@@ -30,6 +30,7 @@ interface SendEmailParams {
   to: string | string[];
   subject: string;
   html: string;
+  from?: string; // Mittente custom (default: SpedireSicuro noreply)
   replyTo?: string;
   attachments?: EmailAttachment[];
 }
@@ -63,7 +64,14 @@ interface ShipmentTrackingUpdateParams {
 
 // ─── CORE SEND ───
 
-export async function sendEmail({ to, subject, html, replyTo, attachments }: SendEmailParams) {
+export async function sendEmail({
+  to,
+  subject,
+  html,
+  from,
+  replyTo,
+  attachments,
+}: SendEmailParams) {
   if (!process.env.RESEND_API_KEY) {
     console.warn('⚠️ [EMAIL] RESEND_API_KEY not configured, skipping email');
     return { success: false, error: 'RESEND_API_KEY not configured' };
@@ -71,7 +79,7 @@ export async function sendEmail({ to, subject, html, replyTo, attachments }: Sen
 
   try {
     const { data, error } = await getResend().emails.send({
-      from: FROM_EMAIL,
+      from: from || FROM_EMAIL,
       to: Array.isArray(to) ? to : [to],
       subject,
       html,
