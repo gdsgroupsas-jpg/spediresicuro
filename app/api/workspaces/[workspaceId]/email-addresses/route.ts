@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { isValidUUID } from '@/lib/workspace-constants';
+import { rateLimit } from '@/lib/security/rate-limit';
 import { addEmailAddressOnDomain, removeEmailAddress } from '@/lib/email/domain-management-service';
 
 export const dynamic = 'force-dynamic';
@@ -78,6 +79,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
+    const rl = await rateLimit('email-addr-list', context.target.id, {
+      limit: 30,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
+    }
+
     const { data, error } = await supabaseAdmin
       .from('workspace_email_addresses')
       .select('id, workspace_id, email_address, display_name, is_primary, is_verified')
@@ -115,6 +124,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const access = await verifyMembership(context.target.id, workspaceId, isSuperAdminUser, true);
     if (!access.allowed) {
       return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    const rl = await rateLimit('email-addr-create', context.target.id, {
+      limit: 10,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
     }
 
     const body = await request.json().catch(() => null);
@@ -173,6 +190,14 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     const access = await verifyMembership(context.target.id, workspaceId, isSuperAdminUser, true);
     if (!access.allowed) {
       return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    const rl = await rateLimit('email-addr-remove', context.target.id, {
+      limit: 10,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
     }
 
     const { searchParams } = new URL(request.url);

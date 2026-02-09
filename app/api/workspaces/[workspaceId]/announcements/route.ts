@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { isValidUUID } from '@/lib/workspace-constants';
+import { rateLimit } from '@/lib/security/rate-limit';
 import { sanitizeEmailHtml } from '@/lib/email/workspace-email-service';
 
 export const dynamic = 'force-dynamic';
@@ -83,6 +84,14 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     );
     if (!access.allowed) {
       return NextResponse.json({ error: access.reason || 'Access denied' }, { status: 403 });
+    }
+
+    const rl = await rateLimit('announcements-list', context.target.id, {
+      limit: 60,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -172,15 +181,12 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    // Fix #6: Rate limiting — max 20 annunci/ora per workspace
-    const oneHourAgo = new Date(Date.now() - 3600_000).toISOString();
-    const { count: recentCount } = await supabaseAdmin
-      .from('workspace_announcements')
-      .select('id', { count: 'exact', head: true })
-      .eq('workspace_id', workspaceId)
-      .gte('created_at', oneHourAgo);
-
-    if ((recentCount ?? 0) >= 20) {
+    // Rate limiting distribuito — max 20 annunci/ora per workspace
+    const rl = await rateLimit('announcements-create', `ws:${workspaceId}`, {
+      limit: 20,
+      windowSeconds: 3600,
+    });
+    if (!rl.allowed) {
       return NextResponse.json(
         { error: 'Limite raggiunto: max 20 annunci/ora per workspace' },
         { status: 429 }

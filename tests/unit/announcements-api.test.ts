@@ -47,6 +47,18 @@ vi.mock('@/lib/email/workspace-email-service', () => ({
   sanitizeEmailHtml: (html: string) => html.replace(/<script[^>]*>.*?<\/script>/gi, ''),
 }));
 
+// Mock rate limiting — default: permetti tutto
+const mockRateLimit = vi.fn().mockResolvedValue({
+  allowed: true,
+  remaining: 99,
+  resetAt: Date.now() + 60000,
+  source: 'memory' as const,
+});
+
+vi.mock('@/lib/security/rate-limit', () => ({
+  rateLimit: (...args: unknown[]) => mockRateLimit(...args),
+}));
+
 // ─── FIXTURES ───
 
 const WORKSPACE_ID = '11111111-1111-1111-1111-111111111111';
@@ -718,44 +730,14 @@ describe('Security Hardening: GET lista', () => {
 });
 
 describe('Security Hardening: POST rate limit', () => {
-  it('Fix #6: ritorna 429 se superato limite 20 annunci/ora', async () => {
-    // Mock membership + rate limit check
-    mockFrom.mockImplementation((table: string) => {
-      if (table === 'workspace_members') {
-        return {
-          select: () => ({
-            eq: () => ({
-              eq: () => ({
-                single: () =>
-                  Promise.resolve({
-                    data: { role: 'owner', status: 'active' },
-                    error: null,
-                  }),
-                not: () => Promise.resolve({ data: [], error: null }),
-              }),
-            }),
-          }),
-        };
-      }
-      if (table === 'workspace_announcements') {
-        return {
-          select: () => ({
-            eq: () => ({
-              gte: () => Promise.resolve({ count: 25, error: null }),
-              eq: () => ({
-                single: () => Promise.resolve({ data: null, error: null }),
-                range: () => Promise.resolve({ data: [], error: null, count: 0 }),
-              }),
-              order: () => ({
-                order: () => ({
-                  range: () => Promise.resolve({ data: [], error: null, count: 0 }),
-                }),
-              }),
-            }),
-          }),
-        };
-      }
-      return {};
+  it('Fix #6: ritorna 429 se rate limit distribuito bloccato', async () => {
+    mockMembership('owner');
+    // Mock rateLimit per ritornare blocked
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 3600000,
+      source: 'redis' as const,
     });
 
     const { POST } = await import('@/app/api/workspaces/[workspaceId]/announcements/route');
@@ -773,6 +755,94 @@ describe('Security Hardening: POST rate limit', () => {
     expect(res.status).toBe(429);
     const body = await res.json();
     expect(body.error).toContain('Limite');
+  });
+
+  it('GET lista 429 se rate limit esaurito', async () => {
+    mockMembership('owner');
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+
+    const { GET } = await import('@/app/api/workspaces/[workspaceId]/announcements/route');
+    const req = createRequest(`http://localhost/api/workspaces/${WORKSPACE_ID}/announcements`);
+    const res = await GET(req as any, { params: Promise.resolve({ workspaceId: WORKSPACE_ID }) });
+
+    expect(res.status).toBe(429);
+    const body = await res.json();
+    expect(body.error).toContain('Troppe richieste');
+  });
+});
+
+describe('Rate Limiting: [announcementId] routes', () => {
+  it('GET dettaglio 429 se rate limit esaurito', async () => {
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+
+    const { GET } =
+      await import('@/app/api/workspaces/[workspaceId]/announcements/[announcementId]/route');
+    const req = createRequest(
+      `http://localhost/api/workspaces/${WORKSPACE_ID}/announcements/${ANNOUNCEMENT_ID}`
+    );
+    const res = await GET(req as any, {
+      params: Promise.resolve({ workspaceId: WORKSPACE_ID, announcementId: ANNOUNCEMENT_ID }),
+    });
+
+    expect(res.status).toBe(429);
+  });
+
+  it('PATCH 429 se rate limit esaurito', async () => {
+    mockMembership('owner');
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+
+    const { PATCH } =
+      await import('@/app/api/workspaces/[workspaceId]/announcements/[announcementId]/route');
+    const req = createRequest(
+      `http://localhost/api/workspaces/${WORKSPACE_ID}/announcements/${ANNOUNCEMENT_ID}`,
+      {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: 'New Title' }),
+      }
+    );
+    const res = await PATCH(req as any, {
+      params: Promise.resolve({ workspaceId: WORKSPACE_ID, announcementId: ANNOUNCEMENT_ID }),
+    });
+
+    expect(res.status).toBe(429);
+  });
+
+  it('DELETE 429 se rate limit esaurito', async () => {
+    mockMembership('owner');
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+
+    const { DELETE } =
+      await import('@/app/api/workspaces/[workspaceId]/announcements/[announcementId]/route');
+    const req = createRequest(
+      `http://localhost/api/workspaces/${WORKSPACE_ID}/announcements/${ANNOUNCEMENT_ID}`,
+      { method: 'DELETE' }
+    );
+    const res = await DELETE(req as any, {
+      params: Promise.resolve({ workspaceId: WORKSPACE_ID, announcementId: ANNOUNCEMENT_ID }),
+    });
+
+    expect(res.status).toBe(429);
   });
 });
 

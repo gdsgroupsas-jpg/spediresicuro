@@ -38,6 +38,18 @@ vi.mock('@/lib/workspace-constants', () => ({
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(v),
 }));
 
+// Mock rate limiting — default: permetti tutto
+const mockRateLimit = vi.fn().mockResolvedValue({
+  allowed: true,
+  remaining: 99,
+  resetAt: Date.now() + 60000,
+  source: 'memory' as const,
+});
+
+vi.mock('@/lib/security/rate-limit', () => ({
+  rateLimit: (...args: unknown[]) => mockRateLimit(...args),
+}));
+
 // Mock domain management service
 const mockGetWorkspaceCustomDomain = vi.fn();
 const mockRegisterCustomDomain = vi.fn();
@@ -498,6 +510,135 @@ describe('DELETE email-addresses', () => {
     expect(res.status).toBe(200);
     const data = await res.json();
     expect(data.success).toBe(true);
+  });
+});
+
+// ============================================
+// Navigation
+// ============================================
+
+// ============================================
+// Rate Limiting 429 Tests
+// ============================================
+
+describe('Rate Limiting: custom-domain routes', () => {
+  it('GET 429 quando rate limit esaurito', async () => {
+    mockActiveMembership('viewer');
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+    const req = createRequest(`http://localhost/api/workspaces/${WORKSPACE_ID}/custom-domain`);
+    const res = await GET(req as any, { params: Promise.resolve({ workspaceId: WORKSPACE_ID }) });
+    expect(res.status).toBe(429);
+    const data = await res.json();
+    expect(data.error).toContain('Troppe richieste');
+  });
+
+  it('POST 429 quando rate limit esaurito', async () => {
+    mockActiveMembership('owner');
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+    const req = createRequest(`http://localhost/api/workspaces/${WORKSPACE_ID}/custom-domain`, {
+      method: 'POST',
+      body: JSON.stringify({ domainName: 'example.com' }),
+    });
+    const res = await POST(req as any, { params: Promise.resolve({ workspaceId: WORKSPACE_ID }) });
+    expect(res.status).toBe(429);
+  });
+
+  it('DELETE 429 quando rate limit esaurito', async () => {
+    mockActiveMembership('owner');
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+    const req = createRequest(`http://localhost/api/workspaces/${WORKSPACE_ID}/custom-domain`, {
+      method: 'DELETE',
+    });
+    const res = await DELETE(req as any, {
+      params: Promise.resolve({ workspaceId: WORKSPACE_ID }),
+    });
+    expect(res.status).toBe(429);
+  });
+
+  it('VERIFY POST 429 quando rate limit esaurito', async () => {
+    mockActiveMembership('owner');
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+    const req = createRequest(
+      `http://localhost/api/workspaces/${WORKSPACE_ID}/custom-domain/verify`,
+      { method: 'POST' }
+    );
+    const res = await VERIFY_POST(req as any, {
+      params: Promise.resolve({ workspaceId: WORKSPACE_ID }),
+    });
+    expect(res.status).toBe(429);
+  });
+});
+
+describe('Rate Limiting: email-addresses routes', () => {
+  it('GET 429 quando rate limit esaurito', async () => {
+    mockActiveMembership('viewer');
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+    const req = createRequest(`http://localhost/api/workspaces/${WORKSPACE_ID}/email-addresses`);
+    const res = await ADDR_GET(req as any, {
+      params: Promise.resolve({ workspaceId: WORKSPACE_ID }),
+    });
+    expect(res.status).toBe(429);
+  });
+
+  it('POST 429 quando rate limit esaurito', async () => {
+    mockActiveMembership('owner');
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+    const req = createRequest(`http://localhost/api/workspaces/${WORKSPACE_ID}/email-addresses`, {
+      method: 'POST',
+      body: JSON.stringify({ emailAddress: 'info@example.com', displayName: 'Info' }),
+    });
+    const res = await ADDR_POST(req as any, {
+      params: Promise.resolve({ workspaceId: WORKSPACE_ID }),
+    });
+    expect(res.status).toBe(429);
+  });
+
+  it('DELETE 429 quando rate limit esaurito', async () => {
+    mockActiveMembership('owner');
+    mockRateLimit.mockResolvedValueOnce({
+      allowed: false,
+      remaining: 0,
+      resetAt: Date.now() + 60000,
+      source: 'redis' as const,
+    });
+    const req = createRequest(
+      `http://localhost/api/workspaces/${WORKSPACE_ID}/email-addresses?addressId=${ADDRESS_ID}`,
+      { method: 'DELETE' }
+    );
+    const res = await ADDR_DELETE(req as any, {
+      params: Promise.resolve({ workspaceId: WORKSPACE_ID }),
+    });
+    expect(res.status).toBe(429);
   });
 });
 

@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { isValidUUID } from '@/lib/workspace-constants';
+import { rateLimit } from '@/lib/security/rate-limit';
 import { sanitizeEmailHtml } from '@/lib/email/workspace-email-service';
 
 export const dynamic = 'force-dynamic';
@@ -37,6 +38,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
     const context = await getSafeAuth();
     if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const rl = await rateLimit('announcements-read', context.target.id, {
+      limit: 60,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
     }
 
     // Fix #4: traccia il ruolo per filtrare target per client
@@ -166,6 +175,14 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       }
     }
 
+    const rl = await rateLimit('announcements-update', context.target.id, {
+      limit: 20,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
+    }
+
     const body = await request.json();
     const updates: Record<string, any> = {};
 
@@ -264,6 +281,14 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
           { status: 403 }
         );
       }
+    }
+
+    const rl = await rateLimit('announcements-delete', context.target.id, {
+      limit: 10,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
     }
 
     // Verifica esistenza + workspace isolation

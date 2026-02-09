@@ -14,6 +14,7 @@
 
 import { supabaseAdmin } from '@/lib/db/client';
 import { sendEmail } from '@/lib/email/resend';
+import { rateLimit } from '@/lib/security/rate-limit';
 
 // ─── TYPES ───
 
@@ -138,27 +139,30 @@ export async function validateSenderAddress(
 
 // ─── RATE LIMITING ───
 
-// Contatore fallimenti rate limit consecutivi (in-memory, per processo)
-let rateLimitFailCount = 0;
-const RATE_LIMIT_FAIL_THRESHOLD = 3;
-
 /**
- * Controlla se il workspace ha superato il rate limit giornaliero.
- * FIX #8: Fail-closed dopo 3 errori DB consecutivi.
+ * Controlla rate limit per invio email workspace.
+ *
+ * Due livelli:
+ * 1. Rate limit distribuito (Upstash Redis) — anti-burst, funziona su serverless
+ * 2. Daily limit da DB (outreach_channel_config) — business rule esatta
  */
 async function checkRateLimit(
   workspaceId: string
 ): Promise<{ allowed: boolean; remaining?: number; error?: string }> {
-  // Se troppi fallimenti consecutivi → blocca (fail-closed)
-  if (rateLimitFailCount >= RATE_LIMIT_FAIL_THRESHOLD) {
+  // Livello 1: Rate limit distribuito anti-burst (10 email/minuto per workspace)
+  const rl = await rateLimit('workspace-email-send', `ws:${workspaceId}`, {
+    limit: 10,
+    windowSeconds: 60,
+  });
+  if (!rl.allowed) {
     return {
       allowed: false,
       remaining: 0,
-      error: 'Rate limit non verificabile, invio temporaneamente bloccato',
+      error: 'Troppe email inviate, riprova tra poco',
     };
   }
 
-  // Leggi configurazione rate limit per workspace
+  // Livello 2: Daily limit da configurazione workspace
   const { data: config } = await supabaseAdmin
     .from('outreach_channel_config')
     .select('daily_limit')
@@ -166,10 +170,8 @@ async function checkRateLimit(
     .eq('channel', 'email')
     .single();
 
-  // Se non c'è config, usa default (100 email/giorno, coerente con Resend free)
   const dailyLimit = config?.daily_limit || 100;
 
-  // Conta email inviate oggi per il workspace
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
@@ -182,25 +184,14 @@ async function checkRateLimit(
     .gte('created_at', today.toISOString());
 
   if (error) {
-    rateLimitFailCount++;
-    console.error(
-      `❌ [WORKSPACE-EMAIL] Errore conteggio rate limit (${rateLimitFailCount}/${RATE_LIMIT_FAIL_THRESHOLD}):`,
-      error.message
-    );
-    // FIX #8: Fail-closed se soglia raggiunta
-    if (rateLimitFailCount >= RATE_LIMIT_FAIL_THRESHOLD) {
-      return {
-        allowed: false,
-        remaining: 0,
-        error: 'Rate limit non verificabile, invio temporaneamente bloccato',
-      };
-    }
-    // Sotto soglia: permetti ma logga
-    return { allowed: true, remaining: dailyLimit };
+    console.error('❌ [WORKSPACE-EMAIL] Errore conteggio rate limit:', error.message);
+    // Fail-closed: se non possiamo verificare il limite, blocchiamo
+    return {
+      allowed: false,
+      remaining: 0,
+      error: 'Rate limit non verificabile, invio temporaneamente bloccato',
+    };
   }
-
-  // Reset contatore su successo
-  rateLimitFailCount = 0;
 
   const sent = count || 0;
   const remaining = dailyLimit - sent;

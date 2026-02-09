@@ -16,6 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { isValidUUID } from '@/lib/workspace-constants';
+import { rateLimit } from '@/lib/security/rate-limit';
 import {
   getWorkspaceCustomDomain,
   registerCustomDomain,
@@ -82,6 +83,14 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
+    const rl = await rateLimit('custom-domain-info', context.target.id, {
+      limit: 30,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
+    }
+
     const domain = await getWorkspaceCustomDomain(workspaceId);
 
     if (!domain) {
@@ -114,6 +123,14 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     const access = await verifyMembership(context.target.id, workspaceId, isSuperAdminUser, true);
     if (!access.allowed) {
       return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    const rl = await rateLimit('custom-domain-register', context.target.id, {
+      limit: 3,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
     }
 
     const body = await request.json().catch(() => null);
@@ -161,6 +178,14 @@ export async function DELETE(_request: NextRequest, { params }: RouteParams) {
     const access = await verifyMembership(context.target.id, workspaceId, isSuperAdminUser, true);
     if (!access.allowed) {
       return NextResponse.json({ error: access.error }, { status: access.status });
+    }
+
+    const rl = await rateLimit('custom-domain-remove', context.target.id, {
+      limit: 3,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
     }
 
     const result = await removeCustomDomain(workspaceId);

@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { isValidUUID } from '@/lib/workspace-constants';
+import { rateLimit } from '@/lib/security/rate-limit';
 import { verifyCustomDomain } from '@/lib/email/domain-management-service';
 
 export const dynamic = 'force-dynamic';
@@ -55,6 +56,14 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
           { status: 403 }
         );
       }
+    }
+
+    const rl = await rateLimit('custom-domain-verify', context.target.id, {
+      limit: 5,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: 'Troppe richieste. Riprova tra poco.' }, { status: 429 });
     }
 
     const result = await verifyCustomDomain(workspaceId);

@@ -39,6 +39,18 @@ vi.mock('@/lib/db/client', () => ({
   },
 }));
 
+// Mock rate limiting distribuito — default: permetti tutto
+const mockRateLimit = vi.fn().mockResolvedValue({
+  allowed: true,
+  remaining: 99,
+  resetAt: Date.now() + 60000,
+  source: 'memory' as const,
+});
+
+vi.mock('@/lib/security/rate-limit', () => ({
+  rateLimit: (...args: unknown[]) => mockRateLimit(...args),
+}));
+
 // ─── IMPORT AFTER MOCKS ───
 
 import {
