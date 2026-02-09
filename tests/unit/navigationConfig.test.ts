@@ -428,7 +428,7 @@ describe('navigationConfig - Reseller Team in Gestione Business', () => {
     const config = getNavigationForUser('user', { isReseller: true });
     const resellerSection = config.sections.find((s) => s.id === 'reseller');
 
-    expect(resellerSection?.items).toHaveLength(8);
+    expect(resellerSection?.items).toHaveLength(9);
   });
 
   it('reseller deve avere "I Miei Prospect" nella sezione Gestione Business', () => {

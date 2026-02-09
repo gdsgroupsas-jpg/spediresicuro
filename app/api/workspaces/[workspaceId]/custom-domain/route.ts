@@ -1,22 +1,26 @@
 /**
- * API: Workspace Email Addresses
+ * API: Workspace Custom Domain
  *
- * GET    /api/workspaces/[workspaceId]/email-addresses — Lista indirizzi email
- * POST   /api/workspaces/[workspaceId]/email-addresses — Crea indirizzo su dominio custom
- * DELETE /api/workspaces/[workspaceId]/email-addresses?addressId=xxx — Rimuove indirizzo
+ * GET    /api/workspaces/[workspaceId]/custom-domain — Info dominio + DNS + status
+ * POST   /api/workspaces/[workspaceId]/custom-domain — Registra dominio
+ * DELETE /api/workspaces/[workspaceId]/custom-domain — Rimuove dominio
  *
  * Sicurezza:
  * - Auth obbligatoria + membership attiva
  * - GET: qualsiasi membro
  * - POST/DELETE: solo owner
- * - Solo indirizzi del workspace (filtro server-side)
+ * - SuperAdmin bypass membership
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { isValidUUID } from '@/lib/workspace-constants';
-import { addEmailAddressOnDomain, removeEmailAddress } from '@/lib/email/domain-management-service';
+import {
+  getWorkspaceCustomDomain,
+  registerCustomDomain,
+  removeCustomDomain,
+} from '@/lib/email/domain-management-service';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,8 +35,8 @@ async function verifyMembership(
   workspaceId: string,
   isSuperAdminUser: boolean,
   requireOwner = false
-): Promise<{ allowed: boolean; error?: string; status?: number }> {
-  if (isSuperAdminUser) return { allowed: true };
+): Promise<{ allowed: boolean; role?: string; error?: string; status?: number }> {
+  if (isSuperAdminUser) return { allowed: true, role: 'superadmin' };
 
   const { data: membership } = await supabaseAdmin
     .from('workspace_members')
@@ -54,7 +58,7 @@ async function verifyMembership(
     };
   }
 
-  return { allowed: true };
+  return { allowed: true, role: membership.role };
 }
 
 // ─── GET ───
@@ -78,20 +82,15 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('workspace_email_addresses')
-      .select('id, workspace_id, email_address, display_name, is_primary, is_verified')
-      .eq('workspace_id', workspaceId)
-      .order('is_primary', { ascending: false });
+    const domain = await getWorkspaceCustomDomain(workspaceId);
 
-    if (error) {
-      console.error('[WS-EMAIL-ADDR] Error:', error.message);
-      return NextResponse.json({ error: 'Errore caricamento indirizzi' }, { status: 500 });
+    if (!domain) {
+      return NextResponse.json({ domain: null });
     }
 
-    return NextResponse.json({ addresses: data || [] });
+    return NextResponse.json({ domain });
   } catch (err: unknown) {
-    console.error('[WS-EMAIL-ADDR] GET Error:', err);
+    console.error('[CUSTOM-DOMAIN] GET Error:', err);
     return NextResponse.json({ error: 'Errore interno' }, { status: 500 });
   }
 }
@@ -118,34 +117,26 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json().catch(() => null);
-    if (!body?.emailAddress || typeof body.emailAddress !== 'string') {
-      return NextResponse.json({ error: 'emailAddress obbligatorio' }, { status: 400 });
-    }
-    if (!body?.displayName || typeof body.displayName !== 'string') {
-      return NextResponse.json({ error: 'displayName obbligatorio' }, { status: 400 });
+    if (!body?.domainName || typeof body.domainName !== 'string') {
+      return NextResponse.json({ error: 'domainName obbligatorio' }, { status: 400 });
     }
 
-    const result = await addEmailAddressOnDomain(
-      workspaceId,
-      body.emailAddress,
-      body.displayName,
-      body.isPrimary === true
-    );
+    const result = await registerCustomDomain(workspaceId, body.domainName);
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
     }
 
-    return NextResponse.json({ addressId: result.addressId }, { status: 201 });
+    return NextResponse.json({ domain: result.domain }, { status: 201 });
   } catch (err: unknown) {
-    console.error('[WS-EMAIL-ADDR] POST Error:', err);
+    console.error('[CUSTOM-DOMAIN] POST Error:', err);
     return NextResponse.json({ error: 'Errore interno' }, { status: 500 });
   }
 }
 
 // ─── DELETE ───
 
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
     const { workspaceId } = await params;
 
@@ -164,14 +155,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: access.error }, { status: access.status });
     }
 
-    const { searchParams } = new URL(request.url);
-    const addressId = searchParams.get('addressId');
-
-    if (!addressId || !isValidUUID(addressId)) {
-      return NextResponse.json({ error: 'addressId valido obbligatorio' }, { status: 400 });
-    }
-
-    const result = await removeEmailAddress(workspaceId, addressId);
+    const result = await removeCustomDomain(workspaceId);
 
     if (!result.success) {
       return NextResponse.json({ error: result.error }, { status: 400 });
@@ -179,7 +163,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {
-    console.error('[WS-EMAIL-ADDR] DELETE Error:', err);
+    console.error('[CUSTOM-DOMAIN] DELETE Error:', err);
     return NextResponse.json({ error: 'Errore interno' }, { status: 500 });
   }
 }

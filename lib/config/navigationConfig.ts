@@ -43,6 +43,7 @@ import {
   Key,
   UserPlus,
   Megaphone,
+  Globe,
 } from 'lucide-react';
 
 /**
@@ -326,6 +327,13 @@ const resellerSection: NavSection = {
       href: '/dashboard/workspace/settings',
       icon: Settings,
       description: 'Configurazione e panoramica workspace',
+    },
+    {
+      id: 'email-domain',
+      label: 'Dominio Email',
+      href: '/dashboard/workspace/email-domain',
+      icon: Globe,
+      description: 'Configura dominio email personalizzato',
     },
   ],
 };
