@@ -615,9 +615,45 @@ export function getNavigationForUser(
     isReseller?: boolean;
     hasTeam?: boolean;
     accountType?: string;
+    workspaceType?: 'platform' | 'reseller' | 'client';
   } = {}
 ): NavigationConfig {
-  const { isReseller = false, hasTeam = false, accountType } = features;
+  const { isReseller = false, hasTeam = false, accountType, workspaceType } = features;
+
+  // Azioni principali (AI Assistant - sempre visibile)
+  const mainActions: NavItem[] = [
+    {
+      id: 'ai-assistant',
+      label: 'Anne AI',
+      href: '#ai-assistant',
+      icon: Bot,
+      variant: 'ai',
+      description: 'Assistente virtuale intelligente',
+    },
+  ];
+
+  // Se siamo in un workspace client, mostra solo voci operative
+  // Il reseller opera come se fosse il client stesso
+  if (workspaceType === 'client') {
+    return {
+      mainActions,
+      dashboardItem,
+      sections: [
+        logisticsSection,
+        returnsSection,
+        {
+          ...accountSection,
+          items: accountSection.items.filter((item) =>
+            ['wallet', 'profile', 'settings', 'courier-config'].includes(item.id)
+          ),
+        },
+        {
+          ...supportSection,
+          items: supportSection.items.filter((item) => item.id === 'manual'),
+        },
+      ],
+    };
+  }
 
   // Filtra le sezioni in base ai permessi e ruolo
   // 🎯 ORDINE ENTERPRISE-GRADE (priority-first):
@@ -699,18 +735,6 @@ export function getNavigationForUser(
     ...supportSection,
     items: supportSection.items.filter((item) => !item.roles || item.roles.includes(role)),
   });
-
-  // Azioni principali (AI Assistant - sempre visibile)
-  const mainActions: NavItem[] = [
-    {
-      id: 'ai-assistant',
-      label: 'Anne AI',
-      href: '#ai-assistant',
-      icon: Bot,
-      variant: 'ai',
-      description: 'Assistente virtuale intelligente',
-    },
-  ];
 
   return {
     mainActions,

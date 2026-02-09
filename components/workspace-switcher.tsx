@@ -14,8 +14,8 @@
  * @module components/workspace-switcher
  */
 
-import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check, Building2, Users, User, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from 'react';
+import { ChevronDown, Check, Building2, Users, User, Loader2, ArrowLeft } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import type { UserWorkspaceInfo, WorkspaceType } from '@/types/workspace';
@@ -91,6 +91,32 @@ export default function WorkspaceSwitcher({ compact = false, className }: Worksp
   const [isSwitching, setIsSwitching] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
+  // Raggruppamento: workspace proprio (owner) vs workspace clienti (admin via parent)
+  const { myWorkspaces, clientWorkspaces, ownerWorkspace } = useMemo(() => {
+    const my: UserWorkspaceInfo[] = [];
+    const clients: UserWorkspaceInfo[] = [];
+    let owner: UserWorkspaceInfo | null = null;
+
+    for (const ws of workspaces) {
+      // Workspace dove l'utente è owner = il proprio workspace
+      if (ws.role === 'owner') {
+        my.push(ws);
+        // Il workspace "principale" del reseller è di tipo reseller/platform con role=owner
+        if (!owner || (ws.workspace_type !== 'client' && owner.workspace_type === 'client')) {
+          owner = ws;
+        }
+      } else {
+        // Workspace dove ha accesso admin (child workspace dei client)
+        clients.push(ws);
+      }
+    }
+
+    return { myWorkspaces: my, clientWorkspaces: clients, ownerWorkspace: owner };
+  }, [workspaces]);
+
+  // Il reseller sta operando in un workspace client?
+  const isInClientWorkspace = workspace?.workspace_type === 'client' && workspace?.role !== 'owner';
+
   // Chiudi dropdown quando si clicca fuori
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -135,6 +161,20 @@ export default function WorkspaceSwitcher({ compact = false, className }: Worksp
     setIsSwitching(true);
     try {
       const success = await switchWorkspace(ws.workspace_id);
+      if (success) {
+        setIsOpen(false);
+      }
+    } finally {
+      setIsSwitching(false);
+    }
+  };
+
+  // Torna al workspace proprio (owner) del reseller
+  const handleBackToMyWorkspace = async () => {
+    if (!ownerWorkspace || ownerWorkspace.workspace_id === workspace?.workspace_id) return;
+    setIsSwitching(true);
+    try {
+      const success = await switchWorkspace(ownerWorkspace.workspace_id);
       if (success) {
         setIsOpen(false);
       }
@@ -189,14 +229,24 @@ export default function WorkspaceSwitcher({ compact = false, className }: Worksp
         className={cn(
           'w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors',
           'hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-1',
-          isOpen && 'bg-gray-100'
+          isOpen && 'bg-gray-100',
+          isInClientWorkspace && 'bg-green-50 border border-green-200'
         )}
       >
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-100 to-amber-100 flex items-center justify-center">
+        <div
+          className={cn(
+            'w-8 h-8 rounded-lg flex items-center justify-center',
+            isInClientWorkspace
+              ? 'bg-gradient-to-br from-green-100 to-emerald-100'
+              : 'bg-gradient-to-br from-orange-100 to-amber-100'
+          )}
+        >
           {isSwitching ? (
             <Loader2 className="w-4 h-4 animate-spin text-orange-600" />
           ) : (
-            <Icon className="w-4 h-4 text-orange-600" />
+            <Icon
+              className={cn('w-4 h-4', isInClientWorkspace ? 'text-green-600' : 'text-orange-600')}
+            />
           )}
         </div>
 
@@ -206,9 +256,15 @@ export default function WorkspaceSwitcher({ compact = false, className }: Worksp
               <p className="text-sm font-medium text-gray-900 truncate">
                 {workspace?.workspace_name || 'Seleziona Workspace'}
               </p>
-              <p className="text-xs text-gray-500 truncate">
-                {workspace?.organization_name || 'Nessun workspace'}
-              </p>
+              {isInClientWorkspace ? (
+                <p className="text-[11px] text-green-600 font-medium truncate">
+                  Operando come cliente
+                </p>
+              ) : (
+                <p className="text-xs text-gray-500 truncate">
+                  {workspace?.organization_name || 'Nessun workspace'}
+                </p>
+              )}
             </div>
             <ChevronDown
               className={cn(
@@ -220,71 +276,62 @@ export default function WorkspaceSwitcher({ compact = false, className }: Worksp
         )}
       </button>
 
-      {/* Dropdown Menu */}
+      {/* Bottone rapido "Torna al mio workspace" quando si è in un client */}
+      {isInClientWorkspace && ownerWorkspace && !compact && (
+        <button
+          type="button"
+          onClick={handleBackToMyWorkspace}
+          disabled={isSwitching}
+          className="w-full flex items-center gap-2 px-3 py-1.5 mt-1 rounded-lg text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 transition-colors"
+        >
+          <ArrowLeft className="w-3 h-3" />
+          <span className="truncate">Torna a {ownerWorkspace.workspace_name}</span>
+        </button>
+      )}
+
+      {/* Dropdown Menu - si apre verso il basso (switcher in cima alla sidebar) */}
       {isOpen && (
-        <div className="absolute bottom-full left-0 right-0 mb-1 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
-          <div className="py-1 max-h-64 overflow-y-auto">
-            {/* Header */}
-            <div className="px-3 py-2 border-b border-gray-100">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
-                I tuoi Workspace
-              </p>
-            </div>
+        <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-lg shadow-lg border border-gray-200 overflow-hidden z-50">
+          <div className="py-1 max-h-72 overflow-y-auto">
+            {/* Gruppo: Il mio workspace */}
+            {myWorkspaces.length > 0 && (
+              <>
+                <div className="px-3 py-2 border-b border-gray-100">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                    Il mio workspace
+                  </p>
+                </div>
+                {myWorkspaces.map((ws) => (
+                  <WorkspaceItem
+                    key={ws.workspace_id}
+                    ws={ws}
+                    isActive={ws.workspace_id === workspace?.workspace_id}
+                    isSwitching={isSwitching}
+                    onSwitch={handleSwitch}
+                  />
+                ))}
+              </>
+            )}
 
-            {/* Workspace List */}
-            {workspaces.map((ws) => {
-              const WsIcon = getWorkspaceIcon(ws.workspace_type);
-              const isActive = ws.workspace_id === workspace?.workspace_id;
-
-              return (
-                <button
-                  key={ws.workspace_id}
-                  onClick={() => handleSwitch(ws)}
-                  disabled={isSwitching}
-                  className={cn(
-                    'w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left',
-                    isActive ? 'bg-orange-50' : 'hover:bg-gray-50',
-                    isSwitching && 'opacity-50 cursor-not-allowed'
-                  )}
-                >
-                  {/* Icon */}
-                  <div
-                    className={cn(
-                      'w-8 h-8 rounded-lg flex items-center justify-center',
-                      isActive ? 'bg-gradient-to-br from-orange-500 to-amber-600' : 'bg-gray-100'
-                    )}
-                  >
-                    <WsIcon className={cn('w-4 h-4', isActive ? 'text-white' : 'text-gray-600')} />
-                  </div>
-
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p
-                        className={cn(
-                          'text-sm font-medium truncate',
-                          isActive ? 'text-orange-700' : 'text-gray-900'
-                        )}
-                      >
-                        {ws.workspace_name}
-                      </p>
-                      <span
-                        className={cn(
-                          'text-[10px] px-1.5 py-0.5 rounded font-medium',
-                          getWorkspaceTypeColor(ws.workspace_type, ws.owner_account_type)
-                        )}
-                      >
-                        {getWorkspaceTypeLabel(ws.workspace_type, ws.owner_account_type)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-gray-500 truncate">{ws.organization_name}</p>
-                  </div>
-
-                  {/* Check */}
-                  {isActive && <Check className="w-4 h-4 text-orange-600 flex-shrink-0" />}
-                </button>
-              );
-            })}
+            {/* Gruppo: Workspace clienti */}
+            {clientWorkspaces.length > 0 && (
+              <>
+                <div className="px-3 py-2 border-b border-gray-100 border-t">
+                  <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">
+                    Workspace clienti
+                  </p>
+                </div>
+                {clientWorkspaces.map((ws) => (
+                  <WorkspaceItem
+                    key={ws.workspace_id}
+                    ws={ws}
+                    isActive={ws.workspace_id === workspace?.workspace_id}
+                    isSwitching={isSwitching}
+                    onSwitch={handleSwitch}
+                  />
+                ))}
+              </>
+            )}
           </div>
 
           {/* Footer - Wallet Balance */}
@@ -311,5 +358,69 @@ export default function WorkspaceSwitcher({ compact = false, className }: Worksp
         </div>
       )}
     </div>
+  );
+}
+
+// ============================================
+// WORKSPACE ITEM (sotto-componente per lista)
+// ============================================
+
+interface WorkspaceItemProps {
+  ws: UserWorkspaceInfo;
+  isActive: boolean;
+  isSwitching: boolean;
+  onSwitch: (ws: UserWorkspaceInfo) => void;
+}
+
+function WorkspaceItem({ ws, isActive, isSwitching, onSwitch }: WorkspaceItemProps) {
+  const WsIcon = getWorkspaceIcon(ws.workspace_type);
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSwitch(ws)}
+      disabled={isSwitching}
+      className={cn(
+        'w-full flex items-center gap-3 px-3 py-2.5 transition-colors text-left',
+        isActive ? 'bg-orange-50' : 'hover:bg-gray-50',
+        isSwitching && 'opacity-50 cursor-not-allowed'
+      )}
+    >
+      {/* Icon */}
+      <div
+        className={cn(
+          'w-8 h-8 rounded-lg flex items-center justify-center',
+          isActive ? 'bg-gradient-to-br from-orange-500 to-amber-600' : 'bg-gray-100'
+        )}
+      >
+        <WsIcon className={cn('w-4 h-4', isActive ? 'text-white' : 'text-gray-600')} />
+      </div>
+
+      {/* Info */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p
+            className={cn(
+              'text-sm font-medium truncate',
+              isActive ? 'text-orange-700' : 'text-gray-900'
+            )}
+          >
+            {ws.workspace_name}
+          </p>
+          <span
+            className={cn(
+              'text-[10px] px-1.5 py-0.5 rounded font-medium shrink-0',
+              getWorkspaceTypeColor(ws.workspace_type, ws.owner_account_type)
+            )}
+          >
+            {getWorkspaceTypeLabel(ws.workspace_type, ws.owner_account_type)}
+          </span>
+        </div>
+        <p className="text-xs text-gray-500 truncate">{ws.organization_name}</p>
+      </div>
+
+      {/* Check */}
+      {isActive && <Check className="w-4 h-4 text-orange-600 flex-shrink-0" />}
+    </button>
   );
 }

@@ -510,7 +510,7 @@ export async function manageSubUserWallet(
       };
     }
 
-    // 3. Verifica che il Sub-User appartenga al Reseller corrente
+    // 3. Verifica che il Sub-User appartenga al Reseller (workspace V2 + legacy parent_id)
     const { data: subUser, error: userError } = await supabaseAdmin
       .from('users')
       .select('id, email, name, wallet_balance, parent_id')
@@ -524,8 +524,35 @@ export async function manageSubUserWallet(
       };
     }
 
-    // Verifica che il Sub-User appartenga al Reseller
-    if (subUser.parent_id !== resellerCheck.userId) {
+    // Check 1: Legacy parent_id
+    let isOwner = subUser.parent_id === resellerCheck.userId;
+
+    // Check 2: Workspace V2 (se legacy fallisce)
+    if (!isOwner) {
+      const { data: resellerUser } = await supabaseAdmin
+        .from('users')
+        .select('primary_workspace_id')
+        .eq('id', resellerCheck.userId)
+        .single();
+
+      if (resellerUser?.primary_workspace_id) {
+        // Trova workspace del sub-user che ha parent = workspace del reseller
+        const { data: subUserWs } = await supabaseAdmin
+          .from('workspace_members')
+          .select('workspace_id, workspaces!inner(parent_workspace_id)')
+          .eq('user_id', subUserId)
+          .eq('status', 'active')
+          .eq('role', 'owner');
+
+        if (subUserWs) {
+          isOwner = subUserWs.some(
+            (m: any) => m.workspaces?.parent_workspace_id === resellerUser.primary_workspace_id
+          );
+        }
+      }
+    }
+
+    if (!isOwner) {
       return {
         success: false,
         error:

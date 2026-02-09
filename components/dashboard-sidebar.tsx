@@ -38,7 +38,7 @@ export default function DashboardSidebar() {
   const giacenzeCount = useGiacenzeCount();
 
   // UI adattiva per workspace type (nasconde Listini per client)
-  const { showPriceListMenu, isClient: isClientWorkspace } = useWorkspaceUI();
+  const { showPriceListMenu, isClient: isClientWorkspace, workspaceType } = useWorkspaceUI();
 
   // 🆕 LocalStorage keys
   const STORAGE_KEYS = {
@@ -90,8 +90,9 @@ export default function DashboardSidebar() {
     return getNavigationForUser(userRole, {
       isReseller: effectiveIsReseller,
       accountType: accountType || undefined,
+      workspaceType: workspaceType || undefined,
     });
-  }, [userRole, isReseller, accountType, isClientWorkspace]);
+  }, [userRole, isReseller, accountType, isClientWorkspace, workspaceType]);
 
   // 🆕 Flatten all navigable items for keyboard navigation
   const allNavigableItems = useMemo(() => {
@@ -279,6 +280,13 @@ export default function DashboardSidebar() {
           )}
         </div>
       </div>
+
+      {/* Workspace Switcher - Prominente in cima (pattern Slack/Linear) */}
+      {session && (
+        <div className="px-3 pt-3 pb-2 border-b border-gray-200">
+          <WorkspaceSwitcher />
+        </div>
+      )}
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-3 py-4 space-y-1">
@@ -521,14 +529,9 @@ export default function DashboardSidebar() {
         })}
       </div>
 
-      {/* Footer - Workspace Switcher + User Profile */}
+      {/* Footer - User Profile */}
       {session && (
         <div className="border-t border-gray-200 bg-gray-50">
-          {/* Workspace Switcher */}
-          <div className="px-3 pt-3 pb-2 border-b border-gray-200">
-            <WorkspaceSwitcher />
-          </div>
-
           {/* User Profile */}
           <div className="p-3 space-y-1">
             <Link
