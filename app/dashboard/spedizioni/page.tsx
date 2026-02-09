@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -44,7 +44,9 @@ import { useRealtimeShipments } from '@/hooks/useRealtimeShipments';
 import { featureFlags } from '@/lib/config/feature-flags';
 import { useProfileCompletion } from '@/lib/hooks/use-profile-completion';
 import dynamic from 'next/dynamic';
-import { TrackingModal } from '@/components/tracking';
+import { TrackingModal, TrackingToast } from '@/components/tracking';
+import { toast } from 'sonner';
+import { vibrateDevice } from '@/hooks/useRealtimeShipments';
 
 // Carica lo scanner solo quando serve (dynamic import per performance)
 const ReturnScanner = dynamic(() => import('@/components/ReturnScanner'), {
@@ -471,6 +473,48 @@ export default function ListaSpedizioniPage() {
     },
     onUpdate: (shipment: any) => {
       console.log('📝 [Real-Time] Spedizione aggiornata:', shipment);
+
+      // Rileva cambio tracking_status per mostrare toast
+      const oldShipment = spedizioni.find(
+        (s) => s.id === shipment.id || (s as any).tracking === shipment.tracking_number
+      );
+      const oldStatus = (oldShipment as any)?.tracking_status;
+      const newStatus = shipment.tracking_status;
+
+      if (oldStatus && newStatus && oldStatus !== newStatus) {
+        // Vibrazione differenziata per stato
+        if (newStatus === 'delivered') {
+          vibrateDevice([100, 50, 100, 50, 200]); // Pattern celebrativo
+        } else if (newStatus === 'in_giacenza' || newStatus === 'exception') {
+          vibrateDevice([300, 100, 300]); // Pattern urgente
+        } else if (newStatus === 'out_for_delivery') {
+          vibrateDevice([100, 50, 100]); // Pattern informativo
+        }
+
+        // Segnala al NotificationBell di fare refetch
+        window.dispatchEvent(new CustomEvent('tracking-notification'));
+
+        // Toast ricco con TrackingToast
+        toast.custom(
+          (t) => (
+            <TrackingToast
+              trackingNumber={shipment.tracking_number || ''}
+              status={newStatus}
+              carrier={shipment.carrier}
+              onViewDetails={() => {
+                toast.dismiss(t);
+                handleTrack(shipment.id, shipment.tracking_number, shipment.carrier);
+              }}
+              onDismiss={() => toast.dismiss(t)}
+            />
+          ),
+          {
+            duration: newStatus === 'in_giacenza' || newStatus === 'exception' ? Infinity : 8000,
+            position: 'top-right',
+          }
+        );
+      }
+
       // Aggiorna spedizione esistente nella lista
       setSpedizioni((prev) =>
         prev.map((s) =>

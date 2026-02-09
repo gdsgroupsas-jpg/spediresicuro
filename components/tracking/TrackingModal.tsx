@@ -1,3 +1,14 @@
+/**
+ * TrackingModal — Modal live per tracking spedizioni
+ *
+ * Features:
+ * - Tracking data real-time via Supabase Realtime (webhook → DB → Realtime → UI)
+ * - Timeline animata con transizioni fluide
+ * - Barra progresso lifecycle (Creato → Consegnato)
+ * - Indicatore "LIVE" pulsante quando connesso
+ * - Refresh manuale, copia tracking, link corriere
+ */
+
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
@@ -14,8 +25,11 @@ import {
   Copy,
   Loader2,
   Archive,
+  Radio,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useRealtimeTracking, type RealtimeTrackingEvent } from '@/hooks/useRealtimeTracking';
+import { TrackingProgressBar } from './TrackingProgressBar';
 
 // Types
 interface TrackingEvent {
@@ -49,7 +63,7 @@ export interface TrackingModalProps {
 
 // Status icon mapping
 const STATUS_ICONS: Record<string, React.ReactNode> = {
-  delivered: <CheckCircle2 className="w-5 h-5 text-green-500" />,
+  delivered: <CheckCircle2 className="w-5 h-5 text-emerald-500" />,
   in_transit: <Truck className="w-5 h-5 text-blue-500" />,
   out_for_delivery: <Truck className="w-5 h-5 text-orange-500" />,
   at_destination: <MapPin className="w-5 h-5 text-purple-500" />,
@@ -63,9 +77,9 @@ const STATUS_ICONS: Record<string, React.ReactNode> = {
   unknown: <Clock className="w-5 h-5 text-gray-400" />,
 };
 
-// Status colors for timeline
+// Status colors per timeline
 const STATUS_COLORS: Record<string, string> = {
-  delivered: 'bg-green-500',
+  delivered: 'bg-emerald-500',
   in_transit: 'bg-blue-500',
   out_for_delivery: 'bg-orange-500',
   at_destination: 'bg-purple-500',
@@ -79,7 +93,7 @@ const STATUS_COLORS: Record<string, string> = {
   unknown: 'bg-gray-300',
 };
 
-// Status labels in Italian
+// Status labels in italiano
 const STATUS_LABELS: Record<string, string> = {
   delivered: 'Consegnato',
   in_transit: 'In Transito',
@@ -96,16 +110,6 @@ const STATUS_LABELS: Record<string, string> = {
   error: 'Errore',
 };
 
-/**
- * TrackingModal - Modal for displaying shipment tracking information
- *
- * Features:
- * - Real-time tracking data from API
- * - Beautiful timeline visualization
- * - Refresh button to force update
- * - Direct links to carrier websites
- * - Copy tracking number
- */
 export function TrackingModal({
   open,
   onOpenChange,
@@ -118,7 +122,49 @@ export function TrackingModal({
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [newEventFlash, setNewEventFlash] = useState<string | null>(null);
   const closeButtonRef = useRef<HTMLButtonElement>(null);
+
+  // Real-time tracking: nuovi eventi appaiono live
+  const { isConnected } = useRealtimeTracking({
+    shipmentId,
+    enabled: open,
+    onNewEvent: (event: RealtimeTrackingEvent) => {
+      // Aggiungi l'evento in cima alla lista senza re-fetch
+      setTrackingData((prev) => {
+        if (!prev) return prev;
+
+        const newEvent: TrackingEvent = {
+          id: event.id,
+          event_date: event.event_date,
+          status: event.status,
+          status_normalized: event.status_normalized,
+          location: event.location,
+        };
+
+        // Evita duplicati
+        const exists = prev.events.some(
+          (e) => e.event_date === newEvent.event_date && e.status === newEvent.status
+        );
+        if (exists) return prev;
+
+        const updatedEvents = [newEvent, ...prev.events];
+
+        return {
+          ...prev,
+          events: updatedEvents,
+          current_status: newEvent.status,
+          current_status_normalized: newEvent.status_normalized,
+          is_delivered: newEvent.status_normalized === 'delivered',
+          last_update: new Date().toISOString(),
+        };
+      });
+
+      // Flash animazione per il nuovo evento
+      setNewEventFlash(event.id);
+      setTimeout(() => setNewEventFlash(null), 2000);
+    },
+  });
 
   // Fetch tracking data
   const fetchTracking = useCallback(
@@ -144,7 +190,6 @@ export function TrackingModal({
         setTrackingData(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Errore sconosciuto');
-        console.error('Error fetching tracking:', err);
       } finally {
         setLoading(false);
         setRefreshing(false);
@@ -245,8 +290,8 @@ export function TrackingModal({
           <div className="flex items-center gap-3">
             <div
               className={cn(
-                'w-10 h-10 rounded-full flex items-center justify-center',
-                isDelivered ? 'bg-green-100' : 'bg-blue-100'
+                'w-10 h-10 rounded-full flex items-center justify-center transition-colors duration-500',
+                isDelivered ? 'bg-emerald-100' : 'bg-blue-100'
               )}
             >
               {STATUS_ICONS[currentStatus] || STATUS_ICONS.unknown}
@@ -255,9 +300,18 @@ export function TrackingModal({
               <h2 id="tracking-modal-title" className="text-lg font-bold text-gray-900">
                 Tracking Spedizione
               </h2>
-              <p className="text-sm text-gray-500">
-                {STATUS_LABELS[currentStatus] || 'Caricamento...'}
-              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-sm text-gray-500">
+                  {STATUS_LABELS[currentStatus] || 'Caricamento...'}
+                </p>
+                {/* Indicatore LIVE */}
+                {isConnected && (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-600 text-[10px] font-bold uppercase tracking-wider">
+                    <Radio className="w-2.5 h-2.5 animate-pulse" />
+                    Live
+                  </span>
+                )}
+              </div>
             </div>
           </div>
 
@@ -269,9 +323,10 @@ export function TrackingModal({
               className={cn(
                 'p-2 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100',
                 'transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500',
-                refreshing && 'animate-spin'
+                refreshing && 'animate-spin',
+                isConnected && 'opacity-50'
               )}
-              title="Aggiorna tracking"
+              title={isConnected ? 'Aggiornamento automatico attivo' : 'Aggiorna tracking'}
             >
               <RefreshCw className="w-5 h-5" />
             </button>
@@ -291,6 +346,13 @@ export function TrackingModal({
           </div>
         </div>
 
+        {/* Progress Bar */}
+        {trackingData && !loading && (
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/50">
+            <TrackingProgressBar currentStatus={currentStatus} compact />
+          </div>
+        )}
+
         {/* Tracking Number */}
         <div className="px-4 py-3 bg-gray-50 border-b border-gray-200">
           <div className="flex items-center justify-between">
@@ -305,9 +367,9 @@ export function TrackingModal({
                 <button
                   onClick={handleCopy}
                   className={cn(
-                    'p-2 rounded-lg transition-colors',
+                    'p-2 rounded-lg transition-all duration-200',
                     copied
-                      ? 'bg-green-100 text-green-600'
+                      ? 'bg-emerald-100 text-emerald-600 scale-110'
                       : 'bg-gray-200 text-gray-600 hover:bg-gray-300'
                   )}
                   title={copied ? 'Copiato!' : 'Copia'}
@@ -361,57 +423,72 @@ export function TrackingModal({
 
                 {/* Events */}
                 <div className="space-y-4">
-                  {events.map((event, index) => (
-                    <div key={event.id || index} className="relative flex gap-4">
-                      {/* Timeline dot */}
+                  {events.map((event, index) => {
+                    const isNew = event.id === newEventFlash;
+                    return (
                       <div
+                        key={event.id || `${event.event_date}-${event.status}`}
                         className={cn(
-                          'relative z-10 w-8 h-8 rounded-full flex items-center justify-center',
-                          index === 0 ? 'bg-white ring-4 ring-white' : 'bg-white'
+                          'relative flex gap-4 transition-all duration-500',
+                          isNew && 'animate-in slide-in-from-top-2 fade-in-0 duration-500'
                         )}
                       >
+                        {/* Timeline dot */}
                         <div
                           className={cn(
-                            'w-3 h-3 rounded-full',
-                            index === 0
-                              ? STATUS_COLORS[event.status_normalized] || STATUS_COLORS.unknown
-                              : 'bg-gray-300'
-                          )}
-                        />
-                      </div>
-
-                      {/* Event content */}
-                      <div className="flex-1 pb-4">
-                        <div
-                          className={cn(
-                            'p-3 rounded-lg',
-                            index === 0 ? 'bg-blue-50 border border-blue-100' : 'bg-gray-50'
+                            'relative z-10 w-8 h-8 rounded-full flex items-center justify-center bg-white',
+                            index === 0 && 'ring-4 ring-white'
                           )}
                         >
-                          <p
+                          <div
                             className={cn(
-                              'font-medium',
-                              index === 0 ? 'text-blue-900' : 'text-gray-700'
+                              'rounded-full transition-all duration-500',
+                              index === 0
+                                ? cn(
+                                    'w-3 h-3',
+                                    STATUS_COLORS[event.status_normalized] || STATUS_COLORS.unknown,
+                                    isNew && 'w-4 h-4 ring-4 ring-blue-200'
+                                  )
+                                : 'w-3 h-3 bg-gray-300'
+                            )}
+                          />
+                        </div>
+
+                        {/* Event content */}
+                        <div className="flex-1 pb-4">
+                          <div
+                            className={cn(
+                              'p-3 rounded-lg transition-all duration-500',
+                              index === 0 ? 'bg-blue-50 border border-blue-100' : 'bg-gray-50',
+                              isNew &&
+                                'ring-2 ring-blue-300 bg-blue-50 shadow-md shadow-blue-500/10'
                             )}
                           >
-                            {event.status}
-                          </p>
-                          <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
-                            <span>{formatDate(event.event_date)}</span>
-                            {event.location && (
-                              <>
-                                <span>•</span>
-                                <span className="flex items-center gap-1">
-                                  <MapPin className="w-3 h-3" />
-                                  {event.location}
-                                </span>
-                              </>
-                            )}
+                            <p
+                              className={cn(
+                                'font-medium',
+                                index === 0 ? 'text-blue-900' : 'text-gray-700'
+                              )}
+                            >
+                              {event.status}
+                            </p>
+                            <div className="flex items-center gap-4 mt-1 text-sm text-gray-500">
+                              <span>{formatDate(event.event_date)}</span>
+                              {event.location && (
+                                <>
+                                  <span>•</span>
+                                  <span className="flex items-center gap-1">
+                                    <MapPin className="w-3 h-3" />
+                                    {event.location}
+                                  </span>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             </div>
@@ -456,14 +533,19 @@ export function TrackingModal({
           </div>
         )}
 
-        {/* Last Update */}
-        {trackingData?.last_update && (
-          <div className="px-4 py-2 bg-gray-100 text-center">
-            <p className="text-xs text-gray-500">
-              Ultimo aggiornamento: {formatDate(trackingData.last_update)}
-            </p>
-          </div>
-        )}
+        {/* Last Update + Live indicator */}
+        <div className="px-4 py-2 bg-gray-100 text-center flex items-center justify-center gap-2">
+          {isConnected && (
+            <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          )}
+          <p className="text-xs text-gray-500">
+            {isConnected
+              ? 'Aggiornamento automatico attivo'
+              : trackingData?.last_update
+                ? `Ultimo aggiornamento: ${formatDate(trackingData.last_update)}`
+                : ''}
+          </p>
+        </div>
       </div>
     </div>
   );
