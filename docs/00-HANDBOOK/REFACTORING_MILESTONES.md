@@ -396,20 +396,59 @@ switcher usa `owner_account_type` per mostrare "Admin" quando l'owner e admin/su
 
 ---
 
+## Email & Communication Platform
+
+### FASE 1: Premium Welcome Email ✅
+
+**Commit:** `6659b7e` | **Completato:** 2026-02-09
+
+Email di benvenuto premium "Ferrari-level" con design Stripe/Linear/Vercel.
+Due varianti: self-registration (no credenziali) e reseller-created (con credenziali + branding).
+Sanitizzazione XSS su tutti i parametri, subject dinamico, 36 test.
+
+### FASE 2: Workspace Email Infrastructure ✅
+
+**Commit:** `d7014c9` | **Completato:** 2026-02-09
+
+Infrastruttura completa email workspace-scoped: 3 tabelle DB, 3 RPC SECURITY DEFINER,
+RLS isolamento, sanitizzazione HTML 4-pass, webhook svix auth, rate limit fail-closed.
+17 fix sicurezza post-review. 61 test (31 unit + 30 security).
+
+Dettagli: `docs/00-HANDBOOK/features/WORKSPACE_EMAIL_INFRASTRUCTURE.md`
+
+### FASE 3: Posta Reseller UI — IN CORSO
+
+Inbox Gmail-style workspace-scoped per reseller.
+
+### FASE 4: Bacheca Broadcast — PROSSIMA
+
+Sistema annunci per comunicazione reseller → team/clienti.
+
+### FASE 5: Dominio Email Custom — PIANIFICATA
+
+Gestione domini custom via Resend API (SPF, DKIM, MX).
+
+---
+
 ## Tracking
 
-| Milestone                         | Status        | Completato |
-| --------------------------------- | ------------- | ---------- |
-| 1. VAT Consolidation              | ✅ Completato | 2026-02-05 |
-| 2. Pricing Decomposition          | ✅ Completato | 2026-02-05 |
-| 3. Workspace Integration          | ✅ Completato | 2026-02-05 |
-| 4. Unified Logging                | ✅ Completato | 2026-02-05 |
-| 5. Cache Unification              | ✅ Completato | 2026-02-05 |
-| 6. Security Hardening             | ✅ Completato | 2026-02-06 |
-| 7. Wallet Refund Accounting       | ✅ Completato | 2026-02-06 |
-| 8. Reseller Team Navigation       | ✅ Completato | 2026-02-06 |
-| 9. WelcomeGate Onboarding         | ✅ Completato | 2026-02-06 |
-| 10. Workspace Hierarchy Hardening | ✅ Completato | 2026-02-06 |
+| Milestone                         | Status         | Completato |
+| --------------------------------- | -------------- | ---------- |
+| 1. VAT Consolidation              | ✅ Completato  | 2026-02-05 |
+| 2. Pricing Decomposition          | ✅ Completato  | 2026-02-05 |
+| 3. Workspace Integration          | ✅ Completato  | 2026-02-05 |
+| 4. Unified Logging                | ✅ Completato  | 2026-02-05 |
+| 5. Cache Unification              | ✅ Completato  | 2026-02-05 |
+| 6. Security Hardening             | ✅ Completato  | 2026-02-06 |
+| 7. Wallet Refund Accounting       | ✅ Completato  | 2026-02-06 |
+| 8. Reseller Team Navigation       | ✅ Completato  | 2026-02-06 |
+| 9. WelcomeGate Onboarding         | ✅ Completato  | 2026-02-06 |
+| 10. Workspace Hierarchy Hardening | ✅ Completato  | 2026-02-06 |
+| 11. Premium Welcome Email (F1)    | ✅ Completato  | 2026-02-09 |
+| 12. Workspace Email Infra (F2)    | ✅ Completato  | 2026-02-09 |
+| 13. Posta Reseller UI (F3)        | 🔄 In corso    | —          |
+| 14. Bacheca Broadcast (F4)        | ⏳ Prossima    | —          |
+| 15. Dominio Custom Email (F5)     | 📋 Pianificata | —          |
 
 ---
 
