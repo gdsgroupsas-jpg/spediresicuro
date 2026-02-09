@@ -42,6 +42,7 @@ import {
   Headphones,
   Key,
   UserPlus,
+  Megaphone,
 } from 'lucide-react';
 
 /**
@@ -208,6 +209,13 @@ const communicationsSection: NavSection = {
       href: '/dashboard/posta',
       icon: Mail,
       description: 'Email inbox e invio @spediresicuro.it',
+    },
+    {
+      id: 'bacheca',
+      label: 'Bacheca',
+      href: '/dashboard/bacheca',
+      icon: Megaphone,
+      description: 'Annunci broadcast per team e clienti',
     },
     {
       id: 'rubrica',
@@ -739,6 +747,13 @@ export function getNavigationForUser(
           href: '/dashboard/posta-workspace',
           icon: Mail,
           description: 'Email inbox workspace',
+        },
+        {
+          id: 'bacheca',
+          label: 'Bacheca',
+          href: '/dashboard/bacheca',
+          icon: Megaphone,
+          description: 'Annunci per team e clienti',
         },
         {
           id: 'rubrica',
