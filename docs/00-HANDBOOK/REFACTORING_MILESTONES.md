@@ -426,9 +426,16 @@ navigation config aggiornata per reseller. 20 test unit per auth, isolamento, CR
 
 Dettagli: `docs/00-HANDBOOK/features/POSTA_RESELLER_UI.md`
 
-### FASE 4: Bacheca Broadcast — PROSSIMA
+### FASE 4: Bacheca Broadcast — COMPLETATA
 
-Sistema annunci per comunicazione reseller → team/clienti.
+**Commit:** `954d171` | **Completato:** 2026-02-09
+
+Board annunci workspace-scoped: 2 API routes (announcements CRUD, announcement detail),
+pagina bacheca con composer (target/priority/pin), filtri (tutti/team/clienti), dettaglio
+con read tracking, role-based access (owner/admin creano, tutti leggono).
+Clienti del reseller accedono via parent_workspace_id. Sanitizzazione HTML, 23 test unit.
+
+Dettagli: `docs/00-HANDBOOK/features/BACHECA_BROADCAST.md`
 
 ### FASE 5: Dominio Email Custom — PIANIFICATA
 
@@ -453,7 +460,7 @@ Gestione domini custom via Resend API (SPF, DKIM, MX).
 | 11. Premium Welcome Email (F1)    | ✅ Completato  | 2026-02-09 |
 | 12. Workspace Email Infra (F2)    | ✅ Completato  | 2026-02-09 |
 | 13. Posta Reseller UI (F3)        | ✅ Completato  | 2026-02-09 |
-| 14. Bacheca Broadcast (F4)        | ⏳ Prossima    | —          |
+| 14. Bacheca Broadcast (F4)        | ✅ Completato  | 2026-02-09 |
 | 15. Dominio Custom Email (F5)     | 📋 Pianificata | —          |
 
 ---
