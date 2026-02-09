@@ -6,7 +6,7 @@ owner: engineering
 status: active
 source_of_truth: true
 created: 2026-02-05
-updated: 2026-02-05
+updated: 2026-02-09
 ---
 
 # Workspace Adaptive UI & Team Management
@@ -199,13 +199,59 @@ File: `app/dashboard/team/page.tsx`
 
 ### UI Components
 
+- `components/workspace-switcher.tsx` - Workspace switcher dropdown
 - `app/dashboard/spedizioni/page.tsx` - Colonna e filtro workspace
 - `app/dashboard/team/page.tsx` - Bottone elimina
-- `components/dashboard-sidebar.tsx` - Menu nascosti per client
+- `components/dashboard-sidebar.tsx` - Menu nascosti per client + switcher integration
 
 ### Actions
 
 - `actions/admin.ts` - `deleteSubAdmin()` function
+
+---
+
+## Workspace Switcher
+
+### Overview
+
+Componente dropdown ispirato a Slack/Linear per switchare tra workspace. Il reseller puo navigare nei workspace dei propri clienti per operare per loro conto.
+
+**File:** `components/workspace-switcher.tsx`
+
+### Funzionalita
+
+| Funzione            | Descrizione                                                     |
+| ------------------- | --------------------------------------------------------------- |
+| Switch workspace    | Dropdown con lista workspace accessibili                        |
+| Raggruppamento      | "Il mio workspace" vs "Workspace clienti"                       |
+| Badge tipo          | Platform (viola), Reseller (blu), Client (verde), Admin (rosso) |
+| Indicatore contesto | Bordo verde + "Operando come cliente" quando in child workspace |
+| Torna indietro      | Bottone rapido "Torna a [mio workspace]" quando in child        |
+| Saldo wallet        | Footer dropdown mostra saldo wallet del workspace corrente      |
+| Compact mode        | Prop `compact` per mostrare solo icona (sidebar collassata)     |
+| Keyboard            | Chiudi con Escape, click outside                                |
+
+### Sicurezza
+
+- Lo switch avviene via API server-side (verifica membership)
+- Cookie httpOnly impostato dal server
+- Il client mostra solo workspace a cui l'utente ha accesso
+
+### UX Reseller → Client
+
+Quando un reseller entra in un workspace client:
+
+1. Icona switcher diventa verde (da arancione)
+2. Subtitle cambia in "Operando come cliente"
+3. Appare bottone "Torna a [nome workspace reseller]"
+4. Bordo verde intorno allo switcher
+5. Tutta la dashboard mostra i dati del workspace client
+
+### Integrazione Sidebar
+
+**File:** `components/dashboard-sidebar.tsx`
+
+Lo switcher e posizionato in cima alla sidebar, sopra la navigazione. La sidebar adatta i menu in base al workspace corrente tramite `useWorkspaceUI()`.
 
 ---
 
@@ -216,11 +262,13 @@ Questa implementazione segue i pattern di:
 1. **Stripe Connect Dashboard** - UI differenziata per platform/connected accounts
 2. **Shopify Partner Dashboard** - Gestione multi-store con viste adattive
 3. **HubSpot Partner Portal** - Gerarchia agency/client con permessi granulari
+4. **Slack/Linear** - Workspace switcher UX
 
 ---
 
 ## Changelog
 
-| Data       | Versione | Descrizione                               |
-| ---------- | -------- | ----------------------------------------- |
-| 2026-02-05 | 1.0.0    | Adaptive UI + Delete sub-admin + Ordering |
+| Data       | Versione | Descrizione                                       |
+| ---------- | -------- | ------------------------------------------------- |
+| 2026-02-09 | 1.1.0    | Workspace Switcher + reseller child workspace nav |
+| 2026-02-05 | 1.0.0    | Adaptive UI + Delete sub-admin + Ordering         |

@@ -19,9 +19,10 @@ Documentazione completa dei webhook gestiti da SpedireSicuro per integrazioni es
 
 ## Quick Reference
 
-| Provider | Endpoint              | Eventi         | Documentazione                      |
-| -------- | --------------------- | -------------- | ----------------------------------- |
-| Stripe   | `/api/stripe/webhook` | Payment events | [Stripe Webhooks](#stripe-webhooks) |
+| Provider        | Endpoint                       | Eventi          | Documentazione                                       |
+| --------------- | ------------------------------ | --------------- | ---------------------------------------------------- |
+| Stripe          | `/api/stripe/webhook`          | Payment events  | [Stripe Webhooks](#stripe-webhooks)                  |
+| Spedisci.Online | `/api/webhooks/spediscionline` | Tracking events | [Spedisci.Online Webhooks](#spediscionline-webhooks) |
 
 ---
 
@@ -225,22 +226,173 @@ stripe trigger checkout.session.completed
 
 ---
 
+## Spedisci.Online Webhooks
+
+### Endpoint
+
+**POST** `/api/webhooks/spediscionline`
+
+> **Nota:** Richiede abbonamento Spedisci.Online con supporto webhook (24 EUR/mese). Il cron sync orario resta come fallback.
+
+### Security
+
+**Kill Switch:**
+
+```typescript
+// Disabilita webhook senza deploy: SPEDISCI_WEBHOOK_ENABLED=false
+if (process.env.SPEDISCI_WEBHOOK_ENABLED !== 'true') {
+  return NextResponse.json({ status: 'disabled' });
+}
+```
+
+**Verifica Firma HMAC-SHA256:**
+
+- Header richiesti: `Webhook-Timestamp`, `Webhook-Signature`
+- Secret: `SPEDISCI_WEBHOOK_SECRET` (env var)
+- Formato firma: `t=<timestamp>,v1=<hmac_sha256_hex>`
+- Payload firmato: `"{timestamp}.{rawBody}"`
+- Confronto timing-safe (previene timing attacks)
+- Finestra 5 minuti anti-replay
+
+**Deduplicazione:**
+
+- Cache in-memory con TTL 5 minuti
+- Chiave: `{event}:{tracking_number}:{timestamp}`
+- Previene processing duplicati da retry del provider
+
+**Risposta:** Sempre 200 OK (anche su errore interno) per evitare retry infiniti.
+
+---
+
+### Eventi Gestiti
+
+#### `tracking.updated`
+
+Cambio stato di una spedizione in transito.
+
+**Payload:**
+
+```typescript
+{
+  event: 'tracking.updated',
+  timestamp: 1733678400,
+  data: {
+    tracking_number: 'ABC123456',
+    carrier: 'GLS',
+    status: 'In transito',
+    status_description: 'Partita dalla sede di Milano',
+    last_update: '2026-02-09T10:30:00Z',
+    events: [
+      {
+        timestamp: '2026-02-09T10:30:00Z',
+        status: 'In transito',
+        location: 'Milano',
+        description: 'Partita dalla sede'
+      }
+    ]
+  }
+}
+```
+
+**Actions:**
+
+1. Verifica firma HMAC-SHA256
+2. Deduplicazione in-memory
+3. Lookup spedizione per `tracking_number` in `shipments`
+4. Upsert eventi in `tracking_events` (constraint UNIQUE previene duplicati DB)
+5. Trigger PostgreSQL aggiorna automaticamente `shipments.tracking_status`
+6. Supabase Realtime broadcast → UI si aggiorna live
+7. Dispatch notifiche (async, non-bloccante)
+
+#### `tracking.delivered`
+
+Spedizione consegnata al destinatario.
+
+**Actions aggiuntive:**
+
+- Notifica `shipment_delivered` (in-app + push)
+- Trigger DB imposta `shipments.delivered_at`
+
+#### `tracking.exception`
+
+Problema con la spedizione (giacenza, mancata consegna).
+
+**Actions aggiuntive:**
+
+- Notifica `giacenza_detected` o `delivery_failed` (in-app + push + email)
+- Trigger DB crea `shipment_holds` per giacenze
+- Notifica anche il reseller parent (se child workspace)
+
+#### `shipment.created`
+
+Nuova spedizione creata su Spedisci.Online. Nessuna notifica generata.
+
+---
+
+### Flow Completo
+
+```text
+1. Spedisci.Online rileva cambio stato → Push webhook
+   ↓
+2. POST /api/webhooks/spediscionline
+   ↓
+3. Kill switch check (SPEDISCI_WEBHOOK_ENABLED)
+   ↓
+4. Leggi raw body (PRIMA del JSON parse, per HMAC)
+   ↓
+5. Verifica firma HMAC-SHA256 (timing-safe)
+   ↓
+6. Deduplicazione in-memory (5 min TTL)
+   ↓
+7. JSON parse + validazione payload
+   ↓
+8. Lookup shipment per tracking_number
+   ↓
+9. Upsert eventi in tracking_events (batch)
+   ↓
+10. Trigger PostgreSQL → aggiorna shipments + shipment_holds
+    ↓
+11. Supabase Realtime → UI live update
+    ↓
+12. Dispatch notifiche (async, fire-and-forget)
+    ↓
+13. Response 200 OK
+```
+
+---
+
+### Env Vars
+
+| Variabile                  | Descrizione                  | Obbligatoria |
+| -------------------------- | ---------------------------- | ------------ |
+| `SPEDISCI_WEBHOOK_ENABLED` | Kill switch (`true`/`false`) | Si           |
+| `SPEDISCI_WEBHOOK_SECRET`  | Shared secret per HMAC       | Si           |
+
+---
+
+### Testing
+
+```bash
+# Simula webhook con curl
+curl -X POST https://www.spediresicuro.it/api/webhooks/spediscionline \
+  -H "Content-Type: application/json" \
+  -H "Webhook-Timestamp: $(date +%s)" \
+  -H "Webhook-Signature: t=$(date +%s),v1=<computed_hmac>" \
+  -d '{"event":"tracking.updated","timestamp":1733678400,"data":{"tracking_number":"TEST123","carrier":"GLS","status":"In transito","events":[]}}'
+```
+
+**Vedi:** [Tracking Real-Time](../11-FEATURES/TRACKING.md) per documentazione completa del sistema tracking.
+
+---
+
 ## Courier Webhooks (Future)
-
-### Planned Integrations
-
-**Spedisci.Online:**
-
-- Tracking updates
-- Label generation status
-- Delivery confirmations
 
 **Poste Italiane:**
 
 - Tracking events
 - Delivery notifications
 
-**Note:** Attualmente non implementati. Tracking viene fatto via polling.
+**Note:** Non ancora implementati.
 
 ---
 
@@ -321,18 +473,21 @@ await writeAuditLog({
 - [Overview](OVERVIEW.md) - Panoramica API
 - [REST API](REST_API.md) - Endpoints REST
 - [Wallet Feature](../11-FEATURES/WALLET.md) - Wallet top-up flow
+- [Tracking Real-Time](../11-FEATURES/TRACKING.md) - Sistema tracking completo
+- [Notifications](../11-FEATURES/NOTIFICATIONS.md) - Notifiche intelligenti tracking
 - [Security](../8-SECURITY/OVERVIEW.md) - Webhook security
 
 ---
 
 ## Changelog
 
-| Date       | Version | Changes         | Author   |
-| ---------- | ------- | --------------- | -------- |
-| 2026-01-12 | 1.0.0   | Initial version | Dev Team |
+| Date       | Version | Changes                                   | Author   |
+| ---------- | ------- | ----------------------------------------- | -------- |
+| 2026-02-09 | 2.0.0   | Aggiunto Spedisci.Online tracking webhook | Dev Team |
+| 2026-01-12 | 1.0.0   | Initial version (Stripe)                  | Dev Team |
 
 ---
 
-_Last Updated: 2026-01-12_  
+_Last Updated: 2026-02-09_  
 _Status: 🟢 Active_  
 _Maintainer: Dev Team_
