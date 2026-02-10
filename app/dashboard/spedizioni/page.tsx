@@ -836,6 +836,16 @@ export default function ListaSpedizioniPage() {
     }
   };
 
+  // Download etichette bulk (selezionate)
+  const handleBulkDownloadLDV = async () => {
+    if (selectedShipments.size === 0) return;
+    const ids = Array.from(selectedShipments);
+    for (const id of ids) {
+      await handleDownloadLDV(id, 'pdf');
+    }
+    toast.success(`${ids.length} etichette scaricate`);
+  };
+
   // Modifica ordine importato
   const handleEditImported = (id: string) => {
     router.push(`/dashboard/spedizioni/${id}?edit=true&imported=true`);
@@ -1161,15 +1171,25 @@ export default function ListaSpedizioniPage() {
                 Importa Ordini
               </button>
 
-              {/* Pulsante Cancella Selezionate */}
+              {/* Azioni bulk selezionate */}
               {selectedShipments.size > 0 && (
-                <button
-                  onClick={handleDeleteSelected}
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Cancella ({selectedShipments.size})
-                </button>
+                <>
+                  <button
+                    type="button"
+                    onClick={handleBulkDownloadLDV}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all"
+                  >
+                    <Download className="w-4 h-4" />
+                    Etichette ({selectedShipments.size})
+                  </button>
+                  <button
+                    onClick={handleDeleteSelected}
+                    className="inline-flex items-center gap-2 px-4 py-2.5 bg-red-600 text-white font-medium rounded-lg shadow-sm hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 transition-all"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    Cancella ({selectedShipments.size})
+                  </button>
+                </>
               )}
 
               {filteredSpedizioni.length > 0 && (
@@ -1669,14 +1689,14 @@ export default function ListaSpedizioniPage() {
                     {showWorkspaceColumn && (
                       <th
                         scope="col"
-                        className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                       >
                         Workspace
                       </th>
                     )}
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Tracking
                     </th>
@@ -1688,19 +1708,19 @@ export default function ListaSpedizioniPage() {
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Tipo
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="hidden md:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Peso
                     </th>
                     <th
                       scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                      className="hidden lg:table-cell px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
                     >
                       Data
                     </th>
@@ -1760,7 +1780,7 @@ export default function ListaSpedizioniPage() {
                         </div>
                       </td>
                       {showWorkspaceColumn && (
-                        <td className="px-6 py-4 whitespace-nowrap">
+                        <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap">
                           {spedizione.workspaces ? (
                             <div className="flex items-center gap-2">
                               <span
@@ -1780,7 +1800,7 @@ export default function ListaSpedizioniPage() {
                           )}
                         </td>
                       )}
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap">
                         {spedizione.tracking ? (
                           <button
                             onClick={(e) => {
@@ -1804,17 +1824,17 @@ export default function ListaSpedizioniPage() {
                           />
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-900 capitalize">
                           {spedizione.tipoSpedizione || 'standard'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="hidden md:table-cell px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-900">
                           {spedizione.peso ? `${spedizione.peso} kg` : '—'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="hidden lg:table-cell px-6 py-4 whitespace-nowrap">
                         <span className="text-sm text-gray-500">
                           {formatDate(spedizione.createdAt)}
                         </span>

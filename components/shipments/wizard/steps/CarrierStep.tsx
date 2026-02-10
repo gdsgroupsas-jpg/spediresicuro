@@ -1,7 +1,16 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Truck, RefreshCw, Clock, Package, Star, AlertCircle, Check } from 'lucide-react';
+import {
+  Truck,
+  RefreshCw,
+  Clock,
+  Package,
+  Star,
+  AlertCircle,
+  Check,
+  TrendingUp,
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useShipmentWizard, type CarrierData } from '../ShipmentWizardContext';
 import { cn } from '@/lib/utils';
@@ -34,6 +43,8 @@ export function CarrierStep() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
+  // Reliability score per corriere (carrier_code → score 0-100)
+  const [reliability, setReliability] = useState<Record<string, number>>({});
 
   // Calcola il peso totale (usando nomi italiani dal context)
   const totalWeight = data.packages.reduce((sum, pkg) => sum + pkg.peso, 0);
@@ -115,6 +126,26 @@ export function CarrierStep() {
       });
 
       setQuotes(mappedQuotes);
+
+      // Fetch reliability score in parallelo (non bloccante)
+      if (data.destinatario.citta && data.destinatario.provincia) {
+        fetch(
+          `/api/corrieri/reliability?citta=${encodeURIComponent(data.destinatario.citta)}&provincia=${encodeURIComponent(data.destinatario.provincia)}`
+        )
+          .then((res) => (res.ok ? res.json() : null))
+          .then((result) => {
+            if (result?.success && Array.isArray(result.data)) {
+              const scores: Record<string, number> = {};
+              result.data.forEach((perf: { corriere: string; reliabilityScore: number }) => {
+                scores[perf.corriere.toUpperCase()] = perf.reliabilityScore;
+              });
+              setReliability(scores);
+            }
+          })
+          .catch(() => {
+            /* Silenzioso: reliability e' un nice-to-have */
+          });
+      }
 
       // Se c'è già una selezione precedente, verificala
       if (data.carrier?.carrierCode) {
@@ -287,7 +318,7 @@ export function CarrierStep() {
 
                   {/* Carrier Info */}
                   <div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-semibold text-gray-900">{quote.carrier}</span>
                       {quote.recommended && (
                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-xs font-medium">
@@ -295,6 +326,22 @@ export function CarrierStep() {
                           Consigliato
                         </span>
                       )}
+                      {reliability[quote.carrierCode] !== undefined &&
+                        reliability[quote.carrierCode] > 0 && (
+                          <span
+                            className={cn(
+                              'inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium',
+                              reliability[quote.carrierCode] >= 80
+                                ? 'bg-emerald-100 text-emerald-700'
+                                : reliability[quote.carrierCode] >= 60
+                                  ? 'bg-amber-100 text-amber-700'
+                                  : 'bg-red-100 text-red-700'
+                            )}
+                          >
+                            <TrendingUp className="w-3 h-3" />
+                            {reliability[quote.carrierCode]}% zona
+                          </span>
+                        )}
                     </div>
                     <p className="text-sm text-gray-600">{quote.service}</p>
                   </div>

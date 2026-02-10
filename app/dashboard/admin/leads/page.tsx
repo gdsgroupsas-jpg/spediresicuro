@@ -409,13 +409,15 @@ export default function AdminLeadsPage() {
                   <thead className="bg-gray-50/50 border-b border-gray-200 text-gray-500">
                     <tr>
                       <th className="px-4 py-3 font-medium">Azienda / Contatto</th>
-                      <th className="px-4 py-3 font-medium">Contatti</th>
+                      <th className="hidden md:table-cell px-4 py-3 font-medium">Contatti</th>
                       <th className="px-4 py-3 font-medium">Score</th>
                       <th className="px-4 py-3 font-medium">Stato</th>
-                      <th className="px-4 py-3 font-medium">Settore</th>
-                      <th className="px-4 py-3 font-medium">Fonte</th>
-                      <th className="px-4 py-3 font-medium">Volume</th>
-                      <th className="px-4 py-3 font-medium">Ultimo Contatto</th>
+                      <th className="hidden lg:table-cell px-4 py-3 font-medium">Settore</th>
+                      <th className="hidden lg:table-cell px-4 py-3 font-medium">Fonte</th>
+                      <th className="hidden md:table-cell px-4 py-3 font-medium">Volume</th>
+                      <th className="hidden lg:table-cell px-4 py-3 font-medium">
+                        Ultimo Contatto
+                      </th>
                       <th className="px-4 py-3 font-medium text-right">Azioni</th>
                     </tr>
                   </thead>
@@ -439,7 +441,7 @@ export default function AdminLeadsPage() {
                               </div>
                             </button>
                           </td>
-                          <td className="px-4 py-3">
+                          <td className="hidden md:table-cell px-4 py-3">
                             <div className="flex flex-col gap-0.5">
                               {lead.email && (
                                 <a
@@ -482,23 +484,23 @@ export default function AdminLeadsPage() {
                               ))}
                             </select>
                           </td>
-                          <td className="px-4 py-3 text-xs text-gray-600">
+                          <td className="hidden lg:table-cell px-4 py-3 text-xs text-gray-600">
                             {lead.sector
                               ? LEAD_SECTOR_LABELS[lead.sector as LeadSector] || lead.sector
                               : '-'}
                           </td>
-                          <td className="px-4 py-3 text-xs text-gray-600">
+                          <td className="hidden lg:table-cell px-4 py-3 text-xs text-gray-600">
                             {lead.lead_source
                               ? LEAD_SOURCE_LABELS[lead.lead_source as LeadSource] ||
                                 lead.lead_source
                               : lead.source || '-'}
                           </td>
-                          <td className="px-4 py-3 text-xs text-gray-600">
+                          <td className="hidden md:table-cell px-4 py-3 text-xs text-gray-600">
                             {lead.estimated_monthly_volume
                               ? `${lead.estimated_monthly_volume}/mese`
                               : '-'}
                           </td>
-                          <td className="px-4 py-3 text-xs text-gray-500">
+                          <td className="hidden lg:table-cell px-4 py-3 text-xs text-gray-500">
                             {lead.last_contact_at
                               ? format(new Date(lead.last_contact_at), 'dd MMM yyyy', {
                                   locale: itLocale,
@@ -506,7 +508,7 @@ export default function AdminLeadsPage() {
                               : 'Mai'}
                           </td>
                           <td className="px-4 py-3 text-right">
-                            <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex justify-end gap-1 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => handleAddNote(lead)}
                                 className="p-1.5 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg"

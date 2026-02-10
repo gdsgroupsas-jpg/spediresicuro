@@ -411,18 +411,18 @@ export default function AdminBonificiPage() {
                   <table className="w-full text-left text-sm">
                     <thead className="bg-gray-50/50 text-gray-500 font-medium border-b border-gray-100">
                       <tr>
-                        <th className="px-6 py-4">Data</th>
+                        <th className="hidden md:table-cell px-6 py-4">Data</th>
                         <th className="px-6 py-4">Utente</th>
                         <th className="px-6 py-4">Importo</th>
                         <th className="px-6 py-4">Stato</th>
-                        <th className="px-6 py-4">AI Conf</th>
+                        <th className="hidden md:table-cell px-6 py-4">AI Conf</th>
                         <th className="px-6 py-4 text-right">Azioni</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
                       {requests.map((request) => (
                         <tr key={request.id} className="hover:bg-gray-50 group transition-colors">
-                          <td className="px-6 py-4 text-gray-900">
+                          <td className="hidden md:table-cell px-6 py-4 text-gray-900">
                             {formatDate(request.created_at)}
                           </td>
                           <td className="px-6 py-4">
@@ -447,13 +447,13 @@ export default function AdminBonificiPage() {
                               )}
                           </td>
                           <td className="px-6 py-4">{getStatusBadge(request.status)}</td>
-                          <td className="px-6 py-4 text-gray-600">
+                          <td className="hidden md:table-cell px-6 py-4 text-gray-600">
                             {request.ai_confidence !== null
                               ? `${Math.round(request.ai_confidence * 100)}%`
                               : '-'}
                           </td>
                           <td className="px-6 py-4 text-right">
-                            <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <div className="flex justify-end gap-2 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                               <Button
                                 onClick={() => handleViewDetails(request.id)}
                                 variant="outline"
