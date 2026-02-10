@@ -40,8 +40,10 @@ import {
   Sparkles,
   Crown,
   Users,
+  AlertTriangle,
 } from 'lucide-react';
 import { PilotModal } from '@/components/ai/pilot/pilot-modal';
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 
 interface BreadcrumbItem {
   label: string;
@@ -73,6 +75,25 @@ export default function DashboardNav({
   const [accountType, setAccountType] = useState<string | null>(null);
   const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [isSwitchingBack, setIsSwitchingBack] = useState(false);
+
+  // Workspace context: rileva se si sta operando in workspace altrui
+  const { workspace, workspaces, switchWorkspace } = useWorkspaceContext();
+  const isInForeignWorkspace =
+    workspace?.role !== 'owner' && workspace?.workspace_type !== undefined;
+  const ownerWorkspace = workspaces.find(
+    (ws) => ws.role === 'owner' && ws.workspace_type !== 'client'
+  );
+
+  const handleBackToOwnerWorkspace = async () => {
+    if (!ownerWorkspace || isSwitchingBack) return;
+    setIsSwitchingBack(true);
+    try {
+      await switchWorkspace(ownerWorkspace.workspace_id);
+    } finally {
+      setIsSwitchingBack(false);
+    }
+  };
 
   // Detect scroll per sticky navbar
   useEffect(() => {
@@ -149,6 +170,29 @@ export default function DashboardNav({
             : 'bg-white/90 backdrop-blur-sm border-b border-gray-100'
         }`}
       >
+        {/* Banner sicurezza: workspace altrui */}
+        {isInForeignWorkspace && (
+          <div className="bg-amber-50 border-b-2 border-amber-400 px-4 py-2 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span className="text-sm font-semibold text-amber-800 truncate">
+                Stai operando nel workspace:{' '}
+                <span className="font-bold">{workspace?.workspace_name}</span>
+              </span>
+            </div>
+            {ownerWorkspace && (
+              <button
+                type="button"
+                onClick={handleBackToOwnerWorkspace}
+                disabled={isSwitchingBack}
+                className="shrink-0 px-3 py-1 text-xs font-semibold text-amber-800 bg-amber-200 hover:bg-amber-300 rounded-md transition-colors disabled:opacity-50"
+              >
+                {isSwitchingBack ? 'Uscita...' : 'Torna al mio workspace'}
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="max-w-full px-4 py-2.5">
           {/* Breadcrumbs compatti */}
           <nav className="flex items-center gap-2 text-xs mb-3">
