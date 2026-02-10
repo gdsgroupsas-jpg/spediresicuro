@@ -17,21 +17,11 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import PageHeader from '@/components/page-header';
 import UserFeaturesList from '@/components/features/user-features-list';
-import {
-  Shield,
-  ArrowRight,
-  AlertCircle,
-  Building2,
-  Users,
-  User,
-  Wallet,
-  ChevronRight,
-} from 'lucide-react';
+import { Shield, ArrowRight, AlertCircle, Building2, Wallet, ChevronRight } from 'lucide-react';
 import { useProfileCompletion } from '@/lib/hooks/use-profile-completion';
 import { WelcomeGate } from '@/components/invite/welcome-gate';
 import { WELCOME_SEEN_KEY } from '@/lib/welcome-gate-helpers';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
-import { getInitials } from '@/lib/utils';
 import WorkspaceSwitcher from '@/components/workspace-switcher';
 
 // Interfaccia per le statistiche
@@ -194,7 +184,7 @@ export default function DashboardPage() {
   const [margine, setMargine] = useState(15);
 
   // Workspace context
-  const { workspace, workspaces } = useWorkspaceContext();
+  const { workspace } = useWorkspaceContext();
 
   // WelcomeGate: primo accesso in assoluto
   const [showWelcome, setShowWelcome] = useState(false);
@@ -471,52 +461,21 @@ export default function DashboardPage() {
                 <WorkspaceSwitcher />
               </div>
 
-              {/* Destra: Metriche rapide */}
-              <div className="flex items-center gap-6 shrink-0">
-                {/* Wallet */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
-                    <Wallet className="w-4 h-4 text-emerald-600" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">
-                      Saldo
-                    </p>
-                    <p className="text-sm font-bold text-gray-900 tabular-nums">
-                      {new Intl.NumberFormat('it-IT', {
-                        style: 'currency',
-                        currency: 'EUR',
-                      }).format(workspace.wallet_balance)}
-                    </p>
-                  </div>
+              {/* Destra: Saldo wallet */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                  <Wallet className="w-4 h-4 text-emerald-600" />
                 </div>
-
-                {/* Workspace totali */}
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
-                    <Users className="w-4 h-4 text-blue-600" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">
-                      Workspace
-                    </p>
-                    <p className="text-sm font-bold text-gray-900 tabular-nums">
-                      {workspaces.length}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Protezione attiva */}
-                <div className="hidden md:flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
-                    <Shield className="w-4 h-4 text-green-600" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">
-                      Sistema
-                    </p>
-                    <p className="text-sm font-semibold text-green-600">Protetto</p>
-                  </div>
+                <div>
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">
+                    Saldo
+                  </p>
+                  <p className="text-sm font-bold text-gray-900 tabular-nums">
+                    {new Intl.NumberFormat('it-IT', {
+                      style: 'currency',
+                      currency: 'EUR',
+                    }).format(workspace.wallet_balance)}
+                  </p>
                 </div>
               </div>
             </div>

@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { Package, LogOut, ChevronDown, ChevronRight, Shield } from 'lucide-react';
+import { Package, LogOut, ChevronDown, ChevronRight } from 'lucide-react';
 import {
   getNavigationForUser,
   isNavItemActive,
@@ -28,7 +28,6 @@ import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { useGiacenzeCount } from '@/hooks/useGiacenzeCount';
 import { useWorkspaceUI } from '@/hooks/useWorkspaceUI';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
-import WorkspaceSwitcher from '@/components/workspace-switcher';
 
 export default function DashboardSidebar() {
   const pathname = usePathname();
@@ -305,10 +304,36 @@ export default function DashboardSidebar() {
         </div>
       </div>
 
-      {/* Workspace Switcher - Prominente in cima (pattern Slack/Linear) */}
-      {session && (
+      {/* Workspace attivo - Indicatore compatto (switch nella context bar del dashboard) */}
+      {session && currentWorkspace && (
         <div className="px-3 pt-3 pb-2 border-b border-gray-200">
-          <WorkspaceSwitcher />
+          <div className="flex items-center gap-2.5 px-2 py-1.5">
+            <div
+              className={cn(
+                'w-7 h-7 rounded-md flex items-center justify-center text-[11px] font-bold text-white shrink-0',
+                currentWorkspace.workspace_type === 'platform'
+                  ? 'bg-violet-600'
+                  : currentWorkspace.workspace_type === 'reseller'
+                    ? 'bg-blue-600'
+                    : 'bg-emerald-600'
+              )}
+            >
+              {currentWorkspace.workspace_name
+                ?.split(' ')
+                .map((w) => w[0])
+                .join('')
+                .toUpperCase()
+                .slice(0, 2)}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-gray-900 truncate">
+                {currentWorkspace.workspace_name}
+              </p>
+              <p className="text-[10px] text-gray-500 truncate">
+                {currentWorkspace.organization_name}
+              </p>
+            </div>
+          </div>
         </div>
       )}
 
@@ -551,20 +576,6 @@ export default function DashboardSidebar() {
             </div>
           );
         })}
-      </div>
-
-      {/* Doctor AI Status - Indicatore compatto */}
-      <div className="px-3 py-2 border-t border-gray-200">
-        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-green-50/60">
-          <div className="relative shrink-0">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-ping absolute" />
-            <div className="w-2 h-2 bg-green-500 rounded-full relative" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-[11px] font-semibold text-gray-700">Doctor AI</p>
-          </div>
-          <Shield className="w-3.5 h-3.5 text-green-600 shrink-0" />
-        </div>
       </div>
 
       {/* Footer - User Profile */}
