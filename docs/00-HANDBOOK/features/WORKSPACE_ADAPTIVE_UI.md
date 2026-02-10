@@ -183,8 +183,9 @@ File: `app/dashboard/team/page.tsx`
 | `tests/unit/delete-subadmin.test.ts`                       | Eliminazione sub-admin | 5       |
 | `tests/unit/workspace-superadmin-ordering.test.ts`         | Ordinamento workspace  | 5       |
 | `tests/integration/workspace-hierarchy-visibility.test.ts` | Visibilita gerarchica  | 13      |
+| `tests/unit/workspace-safety-banner.test.ts`               | Safety banner logica   | 12      |
 
-**Totale:** 43 test dedicati
+**Totale:** 55 test dedicati
 
 ---
 
@@ -247,6 +248,25 @@ Quando un reseller entra in un workspace client:
 4. Bordo verde intorno allo switcher
 5. Tutta la dashboard mostra i dati del workspace client
 
+### Safety Indicators (Workspace Altrui)
+
+Quando superadmin o reseller opera in un workspace non proprio, il sistema attiva **3 indicatori visivi impossibili da ignorare** per evitare operazioni accidentali:
+
+| Indicatore              | Posizione                    | Descrizione                                                              |
+| ----------------------- | ---------------------------- | ------------------------------------------------------------------------ |
+| Banner amber sticky     | Sopra i breadcrumbs (navbar) | "Stai operando nel workspace: [nome]" + bottone "Torna al mio workspace" |
+| Bordo sidebar 4px amber | Bordo destro sidebar         | Da `border-r border-gray-200` a `border-r-4 border-amber-400`            |
+| Header sidebar amber    | Intestazione sidebar (logo)  | Sfondo amber + testo "WS: [nome workspace]" al posto di "Super Admin"    |
+
+**Logica di rilevamento** (usata in `dashboard-nav.tsx` e `dashboard-sidebar.tsx`):
+
+```typescript
+const isInForeignWorkspace = workspace?.role !== 'owner' && workspace?.workspace_type !== undefined;
+```
+
+**File:** `components/dashboard-nav.tsx`, `components/dashboard-sidebar.tsx`
+**Test:** `tests/unit/workspace-safety-banner.test.ts` (12 test)
+
 ### Integrazione Sidebar
 
 **File:** `components/dashboard-sidebar.tsx`
@@ -268,7 +288,8 @@ Questa implementazione segue i pattern di:
 
 ## Changelog
 
-| Data       | Versione | Descrizione                                       |
-| ---------- | -------- | ------------------------------------------------- |
-| 2026-02-09 | 1.1.0    | Workspace Switcher + reseller child workspace nav |
-| 2026-02-05 | 1.0.0    | Adaptive UI + Delete sub-admin + Ordering         |
+| Data       | Versione | Descrizione                                            |
+| ---------- | -------- | ------------------------------------------------------ |
+| 2026-02-10 | 1.2.0    | Safety indicators: banner, bordo sidebar, header amber |
+| 2026-02-09 | 1.1.0    | Workspace Switcher + reseller child workspace nav      |
+| 2026-02-05 | 1.0.0    | Adaptive UI + Delete sub-admin + Ordering              |
