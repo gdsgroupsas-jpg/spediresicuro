@@ -47,6 +47,7 @@ This folder is the single entry point for rules, workflows, documentation maps, 
 - docs/00-HANDBOOK/features/POSTA_RESELLER_UI.md
 - docs/00-HANDBOOK/features/BACHECA_BROADCAST.md
 - docs/00-HANDBOOK/features/WMS_MVP.md
+- docs/00-HANDBOOK/features/UX_AUDIT_SPRINTS.md
 
 ## Feature Documentation
 
