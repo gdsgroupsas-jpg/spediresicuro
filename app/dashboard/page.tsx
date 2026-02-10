@@ -32,6 +32,7 @@ import { WelcomeGate } from '@/components/invite/welcome-gate';
 import { WELCOME_SEEN_KEY } from '@/lib/welcome-gate-helpers';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import { getInitials } from '@/lib/utils';
+import WorkspaceSwitcher from '@/components/workspace-switcher';
 
 // Interfaccia per le statistiche
 interface Stats {
@@ -460,52 +461,18 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Workspace Context Bar */}
+      {/* Workspace Context Bar — interattiva con switch */}
       {workspace && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 mb-8 relative z-10">
           <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-xl p-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-700">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              {/* Sinistra: Workspace attivo */}
-              <div className="flex items-center gap-4">
-                <div
-                  className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white ${
-                    workspace.workspace_type === 'platform'
-                      ? 'bg-violet-600'
-                      : workspace.workspace_type === 'reseller'
-                        ? 'bg-blue-600'
-                        : 'bg-emerald-600'
-                  }`}
-                >
-                  {getInitials(workspace.workspace_name)}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <p className="text-sm font-bold text-gray-900">{workspace.workspace_name}</p>
-                    <span
-                      className={`text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ring-1 ${
-                        workspace.workspace_type === 'platform'
-                          ? 'bg-violet-50 text-violet-700 ring-violet-200'
-                          : workspace.workspace_type === 'reseller'
-                            ? 'bg-blue-50 text-blue-700 ring-blue-200'
-                            : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
-                      }`}
-                    >
-                      {workspace.workspace_type === 'platform'
-                        ? 'Platform'
-                        : workspace.workspace_type === 'reseller'
-                          ? 'Reseller'
-                          : 'Client'}
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium capitalize">
-                      {workspace.role}
-                    </span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-0.5">{workspace.organization_name}</p>
-                </div>
+              {/* Sinistra: Workspace switcher interattivo */}
+              <div className="flex-1 min-w-0">
+                <WorkspaceSwitcher />
               </div>
 
               {/* Destra: Metriche rapide */}
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-6 shrink-0">
                 {/* Wallet */}
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
