@@ -136,22 +136,49 @@ const QuoteAnalytics = dynamic(
 
 ---
 
-## Sprint 4 — "Eccellenza" (pianificato)
+## Sprint 4 — "Solidità"
 
-**Tema:** Miglioramenti continui, polish, performance monitoring
+**Commit:** `37f0135`
+**Tema:** Revenue-critical fixes, data integrity, supporto visibile
+
+### Modifiche
+
+| Task                    | Descrizione                                                                          | File principali                                                                            |
+| ----------------------- | ------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| Tracking pubblico       | API endpoint pubblico + pagina tracking reale (rimosso tutto mock data)              | `api/public-tracking/[trackingNumber]/route.ts` (nuovo), `app/track/[trackingId]/page.tsx` |
+| Salva Bozza             | localStorage auto-save (10s interval, 24h expiry) + bottone manuale                  | `QuickModeForm.tsx`                                                                        |
+| Cleanup debug logs      | Rimossi 37 console.log/warn/error di debug dal form spedizione                       | `QuickModeForm.tsx`                                                                        |
+| Wallet pre-check wizard | Banner rosso (≤ 0€) / amber (< 10€) con CTA "Ricarica" nella pagina nuova spedizione | `QuickModeForm.tsx`                                                                        |
+| Link supporto sidebar   | Link "Supporto" con icona HelpCircle nel footer della sidebar                        | `components/dashboard-sidebar.tsx`                                                         |
+
+### Dettagli tecnici
+
+**Tracking pubblico:** Nuovo endpoint `GET /api/public-tracking/[trackingNumber]` senza autenticazione. Usa `getTrackingService().getTrackingByNumber()` esistente. Restituisce solo dati sicuri (no user_id, no prezzo, no raw_data). La pagina `/track/[trackingId]` è stata completamente riscritta: rimossi mock data, CountdownTimer, UpsellCard; aggiunto supporto per tutti gli status normalizzati (delivered, out_for_delivery, in_transit, at_destination, exception, in_giacenza, created, pending_pickup, returned, cancelled); gestione errori con retry button.
+
+**Salva Bozza:** Pattern localStorage con `saveDraft()` / `handleSaveDraft()`. Auto-save ogni 10 secondi quando `isFormDirty`. Restore al mount solo campi destinatario + pacco (mittente viene dal predefinito). Expiry 24h. Cleanup automatico dopo submit riuscito.
+
+**Wallet pre-check:** Usa `useUser()` da `UserContext` per `wallet_balance`. Banner puramente informativo — il backend fa il vero check (HTTP 402 con `INSUFFICIENT_CREDIT`). Defense in depth.
+
+### Test
+
+- Tutti i 2596 unit test verdi
+- Build clean (0 errori)
 
 ---
 
 ## Componenti riusabili creati/migliorati
 
-| Componente                         | File                                          | Sprint |
-| ---------------------------------- | --------------------------------------------- | ------ |
-| `useUnsavedChanges`                | `hooks/useUnsavedChanges.ts`                  | S1     |
-| `UserContext` / `useUser`          | `contexts/UserContext.tsx`                    | S1     |
-| `StatsCardsSkeleton`               | `components/shared/data-table-skeleton.tsx`   | S2     |
-| `DataTableSkeleton`                | `components/shared/data-table-skeleton.tsx`   | S2     |
-| `EmptyState`                       | `components/shared/empty-state.tsx`           | S2     |
-| `ConfirmActionDialog` (focus trap) | `components/shared/confirm-action-dialog.tsx` | S2     |
-| `Dialog` (focus trap)              | `components/ui/dialog.tsx`                    | S2     |
-| Wallet depletion banner            | `app/dashboard/page.tsx` (inline)             | S3     |
-| Carrier reliability badge          | `CarrierStep.tsx` (inline)                    | S3     |
+| Componente                         | File                                            | Sprint |
+| ---------------------------------- | ----------------------------------------------- | ------ |
+| `useUnsavedChanges`                | `hooks/useUnsavedChanges.ts`                    | S1     |
+| `UserContext` / `useUser`          | `contexts/UserContext.tsx`                      | S1     |
+| `StatsCardsSkeleton`               | `components/shared/data-table-skeleton.tsx`     | S2     |
+| `DataTableSkeleton`                | `components/shared/data-table-skeleton.tsx`     | S2     |
+| `EmptyState`                       | `components/shared/empty-state.tsx`             | S2     |
+| `ConfirmActionDialog` (focus trap) | `components/shared/confirm-action-dialog.tsx`   | S2     |
+| `Dialog` (focus trap)              | `components/ui/dialog.tsx`                      | S2     |
+| Wallet depletion banner            | `app/dashboard/page.tsx` (inline)               | S3     |
+| Carrier reliability badge          | `CarrierStep.tsx` (inline)                      | S3     |
+| Public tracking API                | `api/public-tracking/[trackingNumber]/route.ts` | S4     |
+| Draft save/restore                 | `QuickModeForm.tsx` (inline)                    | S4     |
+| Wallet pre-check banner            | `QuickModeForm.tsx` (inline)                    | S4     |
