@@ -94,16 +94,45 @@ const QuoteAnalytics = dynamic(
 
 ---
 
-## Sprint 3 — "Differenziarsi" (pianificato)
+## Sprint 3 — "Differenziarsi"
 
+**Commit:** `b543147`
 **Tema:** Intelligence, prevenzione, responsive, bulk ops
 
-| Task                     | Descrizione                                 |
-| ------------------------ | ------------------------------------------- |
-| Carrier intelligence     | Suggerimenti corriere basati su storico     |
-| Wallet depletion warning | Avviso quando saldo wallet si sta esaurendo |
-| Responsive tables        | Tabelle fruibili su mobile                  |
-| Bulk operations          | Operazioni massive su spedizioni            |
+### Modifiche
+
+| Task                     | Descrizione                                                                     | File principali                                                          |
+| ------------------------ | ------------------------------------------------------------------------------- | ------------------------------------------------------------------------ |
+| Wallet depletion warning | Banner amber (< 10€) / rosso (≤ 0€) con CTA "Ricarica"                          | `app/dashboard/page.tsx`                                                 |
+| Responsive tables        | `hidden md:table-cell` / `hidden lg:table-cell` su colonne secondarie           | `spedizioni/page.tsx`, `admin/leads/page.tsx`, `admin/bonifici/page.tsx` |
+| Touch-friendly actions   | Azioni righe sempre visibili su mobile (`md:opacity-0 md:group-hover:...`)      | `admin/leads/page.tsx`, `admin/bonifici/page.tsx`                        |
+| Bulk label download      | Bottone "Etichette (N)" per download LDV bulk delle selezionate                 | `app/dashboard/spedizioni/page.tsx`                                      |
+| Carrier intelligence     | Fetch `/api/corrieri/reliability` + badge "X% zona" con colore per affidabilita | `components/shipments/wizard/steps/CarrierStep.tsx`                      |
+
+### Dettagli tecnici
+
+**Wallet warning:** Usa `workspace.wallet_balance` da `useWorkspaceContext()`. Soglie:
+
+- `< 10€` → banner amber con importo rimasto
+- `≤ 0€` → banner rosso "Saldo esaurito — non puoi creare nuove spedizioni"
+- CTA link a `/dashboard/wallet`
+
+**Responsive tables:** Pattern `hidden md:table-cell` per nascondere colonne su mobile:
+
+- Spedizioni: nasconde Tracking, Tipo, Peso, Data, Workspace su small/medium
+- Leads: nasconde Contatti, Settore, Fonte, Volume, Ultimo Contatto
+- Bonifici: nasconde Data, AI Conf
+
+**Carrier intelligence:** Fetch non-bloccante della reliability score dopo il caricamento dei preventivi. Badge con 3 livelli di colore:
+
+- ≥ 80% → verde emerald
+- ≥ 60% → amber
+- < 60% → rosso
+
+### Test
+
+- Tutti i 2596 unit test verdi
+- Build clean (0 errori)
 
 ---
 
@@ -124,3 +153,5 @@ const QuoteAnalytics = dynamic(
 | `EmptyState`                       | `components/shared/empty-state.tsx`           | S2     |
 | `ConfirmActionDialog` (focus trap) | `components/shared/confirm-action-dialog.tsx` | S2     |
 | `Dialog` (focus trap)              | `components/ui/dialog.tsx`                    | S2     |
+| Wallet depletion banner            | `app/dashboard/page.tsx` (inline)             | S3     |
+| Carrier reliability badge          | `CarrierStep.tsx` (inline)                    | S3     |
