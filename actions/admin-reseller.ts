@@ -217,7 +217,8 @@ export async function createSubUser(data: {
           name: data.name.trim(),
           role: 'user',
           account_type: 'user',
-          parent_id: resellerCheck.userId, // Collegamento al Reseller creatore
+          parent_id: resellerCheck.userId, // Collegamento al Reseller creatore (legacy)
+          parent_reseller_id: resellerCheck.userId, // Collegamento al Reseller (usato da listini)
           is_reseller: false,
           wallet_balance: 0.0,
           company_name: data.companyName || null,

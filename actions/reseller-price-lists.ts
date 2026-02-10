@@ -239,21 +239,36 @@ export async function getResellerSubUsersAction(): Promise<{
       };
     }
 
-    // Recupera sub-users (utenti con parent_reseller_id = user.id)
-    const { data: subUsers, error } = await supabaseAdmin
+    // Recupera sub-users: supporta sia parent_reseller_id (nuovo) che parent_id (legacy)
+    const { data: subUsersNew } = await supabaseAdmin
       .from('users')
-      .select('id, email, name')
+      .select('id, email, name, created_at')
       .eq('parent_reseller_id', user.id)
       .order('created_at', { ascending: false });
 
-    if (error) {
-      console.error('Errore recupero sub-users:', error);
-      return { success: false, error: error.message };
+    const { data: subUsersLegacy } = await supabaseAdmin
+      .from('users')
+      .select('id, email, name, created_at')
+      .eq('parent_id', user.id)
+      .order('created_at', { ascending: false });
+
+    // Unisci e deduplica per id, mantieni ordine per data
+    const mergedMap = new Map<
+      string,
+      { id: string; email: string; name: string; created_at: string }
+    >();
+    for (const su of [...(subUsersNew || []), ...(subUsersLegacy || [])]) {
+      if (!mergedMap.has(su.id)) {
+        mergedMap.set(su.id, su);
+      }
     }
+    const subUsers = Array.from(mergedMap.values()).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
 
     return {
       success: true,
-      subUsers: subUsers || [],
+      subUsers,
     };
   } catch (error: any) {
     console.error('Errore getResellerSubUsersAction:', error);

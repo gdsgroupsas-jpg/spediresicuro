@@ -56,10 +56,11 @@ export async function createCustomerPriceListAction(data: {
     }
 
     // Verifica che il cliente assegnato esista e sia sub-user del reseller (se reseller)
+    // Supporta sia parent_reseller_id (nuovo) che parent_id (legacy)
     if (isReseller) {
       const { data: assignedUser } = await supabaseAdmin
         .from('users')
-        .select('id, parent_reseller_id')
+        .select('id, parent_reseller_id, parent_id')
         .eq('id', data.assigned_to_user_id)
         .single();
 
@@ -67,8 +68,10 @@ export async function createCustomerPriceListAction(data: {
         return { success: false, error: 'Cliente non trovato' };
       }
 
-      // Verifica che sia sub-user del reseller corrente
-      if (assignedUser.parent_reseller_id !== user.id) {
+      // Verifica che sia sub-user del reseller corrente (parent_reseller_id o parent_id)
+      const isSubUser =
+        assignedUser.parent_reseller_id === user.id || assignedUser.parent_id === user.id;
+      if (!isSubUser) {
         return {
           success: false,
           error: 'Non puoi assegnare listini a clienti che non sono tuoi sub-users',
@@ -144,20 +147,29 @@ export async function getResellerSubUsersAction(): Promise<{
       };
     }
 
-    // Recupera sub-users (utenti con parent_reseller_id = user.id)
-    const { data: subUsers, error } = await supabaseAdmin
+    // Recupera sub-users: supporta sia parent_reseller_id (nuovo) che parent_id (legacy)
+    const { data: subUsersNew } = await supabaseAdmin
       .from('users')
       .select('id, email, name')
       .eq('parent_reseller_id', user.id);
 
-    if (error) {
-      console.error('Errore recupero sub-users:', error);
-      return { success: false, error: error.message };
+    const { data: subUsersLegacy } = await supabaseAdmin
+      .from('users')
+      .select('id, email, name')
+      .eq('parent_id', user.id);
+
+    // Unisci e deduplica per id
+    const mergedMap = new Map<string, { id: string; email: string; name: string }>();
+    for (const su of [...(subUsersNew || []), ...(subUsersLegacy || [])]) {
+      if (!mergedMap.has(su.id)) {
+        mergedMap.set(su.id, su);
+      }
     }
+    const subUsers = Array.from(mergedMap.values());
 
     return {
       success: true,
-      subUsers: subUsers || [],
+      subUsers,
     };
   } catch (error: any) {
     console.error('Errore getResellerSubUsersAction:', error);
@@ -312,15 +324,27 @@ export async function assignCustomerPriceListToMultipleUsersAction(
       };
     }
 
-    // Verifica che tutti i sub-users appartengano al reseller (se reseller)
+    // Verifica che tutti i sub-users appartengano al reseller (parent_reseller_id o parent_id)
     if (isReseller) {
-      const { data: subUsers } = await supabaseAdmin
+      const { data: subUsersNew } = await supabaseAdmin
         .from('users')
         .select('id')
         .in('id', userIds)
         .eq('parent_reseller_id', user.id);
 
-      if (!subUsers || subUsers.length !== userIds.length) {
+      const { data: subUsersLegacy } = await supabaseAdmin
+        .from('users')
+        .select('id')
+        .in('id', userIds)
+        .eq('parent_id', user.id);
+
+      // Unisci e deduplica
+      const validIds = new Set([
+        ...(subUsersNew || []).map((s) => s.id),
+        ...(subUsersLegacy || []).map((s) => s.id),
+      ]);
+
+      if (validIds.size !== userIds.length) {
         return {
           success: false,
           error: 'Alcuni utenti selezionati non sono tuoi sub-users',

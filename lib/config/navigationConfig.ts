@@ -44,6 +44,8 @@ import {
   UserPlus,
   Megaphone,
   Globe,
+  Warehouse,
+  ClipboardList,
 } from 'lucide-react';
 
 /**
@@ -623,6 +625,48 @@ const byocSection: NavSection = {
 };
 
 /**
+ * WMS (Warehouse Management) - Solo per reseller e admin/superadmin
+ * Gestione prodotti, magazzini, giacenze, ordini fornitore
+ */
+const wmsSection: NavSection = {
+  id: 'wms',
+  label: 'Magazzino (WMS)',
+  collapsible: true,
+  defaultExpanded: true,
+  requiredFeature: 'reseller',
+  items: [
+    {
+      id: 'wms-dashboard',
+      label: 'Panoramica WMS',
+      href: '/dashboard/wms',
+      icon: Warehouse,
+      description: 'Dashboard magazzino, KPI e sotto-scorta',
+    },
+    {
+      id: 'wms-prodotti',
+      label: 'Prodotti',
+      href: '/dashboard/wms/prodotti',
+      icon: Package,
+      description: 'Catalogo prodotti e SKU',
+    },
+    {
+      id: 'wms-magazzini',
+      label: 'Magazzini & Giacenze',
+      href: '/dashboard/wms/magazzini',
+      icon: Archive,
+      description: 'Magazzini, giacenze e movimenti stock',
+    },
+    {
+      id: 'wms-ordini',
+      label: 'Ordini Fornitore',
+      href: '/dashboard/wms/ordini-fornitore',
+      icon: ClipboardList,
+      description: 'Ordini acquisto e ricezione merce',
+    },
+  ],
+};
+
+/**
  * Filtra le sezioni in base al ruolo utente e feature flags
  */
 export function getNavigationForUser(
@@ -715,6 +759,11 @@ export function getNavigationForUser(
   // Reseller section (rinominata "Gestione Business")
   if (isReseller) {
     sections.push(resellerSection);
+  }
+
+  // WMS section (reseller + admin/superadmin)
+  if (isReseller || role === 'admin' || role === 'superadmin') {
+    sections.push(wmsSection);
   }
 
   // 6. SEZIONI PERSONALI (tutti gli utenti)

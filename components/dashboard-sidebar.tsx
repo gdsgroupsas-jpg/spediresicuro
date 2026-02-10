@@ -27,6 +27,7 @@ import { cn } from '@/lib/utils';
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { useGiacenzeCount } from '@/hooks/useGiacenzeCount';
 import { useWorkspaceUI } from '@/hooks/useWorkspaceUI';
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import WorkspaceSwitcher from '@/components/workspace-switcher';
 
 export default function DashboardSidebar() {
@@ -39,6 +40,11 @@ export default function DashboardSidebar() {
 
   // UI adattiva per workspace type (nasconde Listini per client)
   const { showPriceListMenu, isClient: isClientWorkspace, workspaceType } = useWorkspaceUI();
+
+  // Rileva se si sta operando in workspace altrui (safety indicator)
+  const { workspace: currentWorkspace } = useWorkspaceContext();
+  const isInForeignWorkspace =
+    currentWorkspace?.role !== 'owner' && currentWorkspace?.workspace_type !== undefined;
 
   // 🆕 LocalStorage keys
   const STORAGE_KEYS = {
@@ -261,21 +267,39 @@ export default function DashboardSidebar() {
 
   return (
     <div
-      className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white border-r border-gray-200 z-50"
+      className={cn(
+        'hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 bg-white z-50',
+        isInForeignWorkspace ? 'border-r-4 border-amber-400' : 'border-r border-gray-200'
+      )}
       data-keyboard-nav
       role="navigation"
       aria-label="Main navigation"
     >
-      {/* Header - Logo e Brand */}
-      <div className="flex items-center gap-3 px-6 py-4 border-b border-gray-200">
-        <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center">
+      {/* Header - Logo e Brand (amber se in workspace altrui) */}
+      <div
+        className={cn(
+          'flex items-center gap-3 px-6 py-4 border-b',
+          isInForeignWorkspace ? 'bg-amber-50 border-amber-300' : 'border-gray-200'
+        )}
+      >
+        <div
+          className={cn(
+            'w-8 h-8 rounded-lg flex items-center justify-center',
+            isInForeignWorkspace ? 'bg-amber-400' : 'bg-gradient-to-br from-orange-500 to-amber-600'
+          )}
+        >
           <Package className="w-5 h-5 text-white" />
         </div>
         <div className="flex-1 min-w-0">
           <h1 className="text-base font-semibold text-gray-900 truncate">SpediRe Sicuro</h1>
-          {isSuperAdmin && (
+          {isSuperAdmin && !isInForeignWorkspace && (
             <p className="text-[10px] text-red-600 font-medium uppercase tracking-wide">
               Super Admin
+            </p>
+          )}
+          {isInForeignWorkspace && (
+            <p className="text-[10px] text-amber-700 font-bold uppercase tracking-wide truncate">
+              WS: {currentWorkspace?.workspace_name}
             </p>
           )}
         </div>

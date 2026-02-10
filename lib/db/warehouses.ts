@@ -1,257 +1,187 @@
 /**
  * Database Functions: Warehouses & Inventory
  *
- * Gestione magazzini, inventory e movimenti
+ * Gestione magazzini, inventory e movimenti — isolato per workspace
+ * Usa supabaseAdmin (service role) perche' chiamato da API routes dopo auth
  */
 
-import { supabase } from './client';
-import type { Warehouse, Inventory, WarehouseMovement } from '@/types/warehouse';
+import { supabaseAdmin } from './client';
+import type { Warehouse, Inventory, WarehouseMovement, StockUpdateInput } from '@/types/warehouse';
 
-/**
- * Lista tutti i magazzini
- */
-export async function listWarehouses() {
-  const { data, error } = await supabase
+// ─── WAREHOUSES ───
+
+export async function listWarehouses(workspaceId: string) {
+  const { data, error } = await supabaseAdmin
     .from('warehouses')
     .select('*')
+    .eq('workspace_id', workspaceId)
     .eq('active', true)
     .order('name');
 
   if (error) {
-    console.error('Error listing warehouses:', error);
+    console.error('[WMS] Error listing warehouses:', error.message);
     throw new Error(`Errore recupero magazzini: ${error.message}`);
   }
 
   return data as Warehouse[];
 }
 
-/**
- * Ottieni magazzino per ID
- */
-export async function getWarehouseById(id: string): Promise<Warehouse | null> {
-  const { data, error } = await supabase.from('warehouses').select('*').eq('id', id).single();
+export async function getWarehouseById(workspaceId: string, id: string): Promise<Warehouse | null> {
+  const { data, error } = await supabaseAdmin
+    .from('warehouses')
+    .select('*')
+    .eq('id', id)
+    .eq('workspace_id', workspaceId)
+    .single();
 
   if (error) {
     if (error.code === 'PGRST116') return null;
-    console.error('Error fetching warehouse:', error);
     throw new Error(`Errore recupero magazzino: ${error.message}`);
   }
 
   return data as Warehouse;
 }
 
-/**
- * Ottieni inventory per prodotto in un magazzino
- */
+// ─── INVENTORY ───
+
 export async function getInventory(
+  workspaceId: string,
   productId: string,
   warehouseId: string
 ): Promise<Inventory | null> {
-  const { data, error } = await supabase
+  const { data, error } = await supabaseAdmin
     .from('inventory')
     .select('*')
+    .eq('workspace_id', workspaceId)
     .eq('product_id', productId)
     .eq('warehouse_id', warehouseId)
     .single();
 
   if (error) {
     if (error.code === 'PGRST116') return null;
-    console.error('Error fetching inventory:', error);
     return null;
   }
 
   return data as Inventory;
 }
 
-/**
- * Aggiorna stock prodotto in magazzino
- */
+export async function listInventory(
+  workspaceId: string,
+  warehouseId?: string,
+  options?: { search?: string; lowStockOnly?: boolean; limit?: number; offset?: number }
+) {
+  const limit = options?.limit || 50;
+  const offset = options?.offset || 0;
+
+  // Per low-stock, usa la view SQL che filtra lato DB (quantity_available <= reorder_point)
+  // Evita il caricamento dell'intero dataset in memoria
+  const tableName = options?.lowStockOnly ? 'inventory_low_stock' : 'inventory';
+
+  let query = supabaseAdmin
+    .from(tableName)
+    .select('*, product:products(*), warehouse:warehouses(*)', { count: 'exact' })
+    .eq('workspace_id', workspaceId);
+
+  if (warehouseId) {
+    query = query.eq('warehouse_id', warehouseId);
+  }
+
+  // Tiebreaker 'id' per paginazione stabile su dataset grandi
+  query = query
+    .order('quantity_available', { ascending: true })
+    .order('id', { ascending: true })
+    .range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error('[WMS] Error listing inventory:', error.message);
+    throw new Error(`Errore recupero inventario: ${error.message}`);
+  }
+
+  return { inventory: data || [], total: count || 0 };
+}
+
+// ─── STOCK UPDATE ───
+
 export async function updateStock(
-  productId: string,
-  warehouseId: string,
-  quantityDelta: number,
-  movementType: 'inbound' | 'outbound' | 'adjustment',
-  userId: string,
-  options?: {
-    reference_type?: string;
-    reference_id?: string;
-    notes?: string;
-  }
+  workspaceId: string,
+  input: StockUpdateInput,
+  userId: string
 ): Promise<void> {
-  // Ottieni inventory corrente
-  let inventory = await getInventory(productId, warehouseId);
+  // Operazione atomica: stock update + movimento in una singola transazione SQL
+  // Se il movimento fallisce, lo stock viene rollbackato automaticamente
+  const { data: newQty, error } = await supabaseAdmin.rpc('wms_update_stock_with_movement', {
+    p_workspace_id: workspaceId,
+    p_product_id: input.product_id,
+    p_warehouse_id: input.warehouse_id,
+    p_delta: input.quantity,
+    p_movement_type: input.type,
+    p_created_by: userId,
+    p_notes: input.notes || null,
+    p_reference_type: input.reference_type || null,
+    p_reference_id: input.reference_id || null,
+  });
 
-  if (!inventory) {
-    // Crea inventory se non esiste
-    const { data, error: createError } = await supabase
-      .from('inventory')
-      .insert({
-        product_id: productId,
-        warehouse_id: warehouseId,
-        quantity_available: 0,
-        quantity_reserved: 0,
-      })
-      .select()
-      .single();
-
-    if (createError) {
-      throw new Error(`Errore creazione inventory: ${createError.message}`);
+  if (error) {
+    // Cross-workspace violation dal trigger SQL
+    if (error.message.includes('non appartiene al workspace')) {
+      throw new Error(error.message);
     }
-
-    inventory = data as Inventory;
+    throw new Error(`Errore aggiornamento stock: ${error.message}`);
   }
 
-  // Aggiorna quantità
-  const newQuantity = inventory.quantity_available + quantityDelta;
-
-  if (newQuantity < 0) {
+  if (newQty === -1) {
     throw new Error('Stock insufficiente');
   }
-
-  const { error: updateError } = await supabase
-    .from('inventory')
-    .update({ quantity_available: newQuantity })
-    .eq('product_id', productId)
-    .eq('warehouse_id', warehouseId);
-
-  if (updateError) {
-    throw new Error(`Errore aggiornamento stock: ${updateError.message}`);
-  }
-
-  // Registra movimento
-  await recordWarehouseMovement({
-    product_id: productId,
-    warehouse_id: warehouseId,
-    type: movementType,
-    quantity: quantityDelta,
-    created_by: userId,
-    reference_type: options?.reference_type,
-    reference_id: options?.reference_id,
-    notes: options?.notes,
-  });
 }
 
-/**
- * Riserva stock per ordine
- */
-export async function reserveStock(
-  productId: string,
-  warehouseId: string,
-  quantity: number,
-  userId: string,
-  shipmentId?: string
-): Promise<void> {
-  const inventory = await getInventory(productId, warehouseId);
-
-  if (!inventory || inventory.quantity_available < quantity) {
-    throw new Error('Stock insufficiente per la prenotazione');
-  }
-
-  const newAvailable = inventory.quantity_available - quantity;
-  const newReserved = inventory.quantity_reserved + quantity;
-
-  const { error } = await supabase
-    .from('inventory')
-    .update({
-      quantity_available: newAvailable,
-      quantity_reserved: newReserved,
-    })
-    .eq('product_id', productId)
-    .eq('warehouse_id', warehouseId);
-
-  if (error) {
-    throw new Error(`Errore riserva stock: ${error.message}`);
-  }
-
-  // Registra movimento
-  await recordWarehouseMovement({
-    product_id: productId,
-    warehouse_id: warehouseId,
-    type: 'reservation',
-    quantity: -quantity,
-    created_by: userId,
-    shipment_id: shipmentId,
-    reference_type: 'shipment',
-    reference_id: shipmentId,
-    notes: 'Riserva stock per spedizione',
-  });
-}
-
-/**
- * Rilascia riserva stock
- */
-export async function releaseStock(
-  productId: string,
-  warehouseId: string,
-  quantity: number,
-  userId: string,
-  shipmentId?: string
-): Promise<void> {
-  const inventory = await getInventory(productId, warehouseId);
-
-  if (!inventory || inventory.quantity_reserved < quantity) {
-    throw new Error('Quantità riservata insufficiente');
-  }
-
-  const newAvailable = inventory.quantity_available + quantity;
-  const newReserved = inventory.quantity_reserved - quantity;
-
-  const { error } = await supabase
-    .from('inventory')
-    .update({
-      quantity_available: newAvailable,
-      quantity_reserved: newReserved,
-    })
-    .eq('product_id', productId)
-    .eq('warehouse_id', warehouseId);
-
-  if (error) {
-    throw new Error(`Errore rilascio riserva: ${error.message}`);
-  }
-
-  // Registra movimento
-  await recordWarehouseMovement({
-    product_id: productId,
-    warehouse_id: warehouseId,
-    type: 'release',
-    quantity: quantity,
-    created_by: userId,
-    shipment_id: shipmentId,
-    reference_type: 'shipment',
-    reference_id: shipmentId,
-    notes: 'Rilascio riserva stock',
-  });
-}
-
-/**
- * Registra movimento magazzino
- */
-async function recordWarehouseMovement(movement: Partial<WarehouseMovement>): Promise<void> {
-  const { error } = await supabase.from('warehouse_movements').insert(movement);
-
-  if (error) {
-    console.error('Error recording warehouse movement:', error);
-    // Non blocchiamo l'operazione, solo log
-  }
-}
-
-/**
- * Ottieni movimenti magazzino
- */
 export async function getWarehouseMovements(
-  productId?: string,
-  warehouseId?: string,
-  limit: number = 100
+  workspaceId: string,
+  options?: {
+    productId?: string;
+    warehouseId?: string;
+    limit?: number;
+    offset?: number;
+  }
 ) {
-  let query = supabase
+  let query = supabaseAdmin
     .from('warehouse_movements')
-    .select('*, product:products(*), warehouse:warehouses(*)')
-    .order('movement_date', { ascending: false })
-    .limit(limit);
+    .select('*, product:products(id, sku, name), warehouse:warehouses(id, code, name)', {
+      count: 'exact',
+    })
+    .eq('workspace_id', workspaceId)
+    .order('movement_date', { ascending: false });
 
-  if (productId) {
-    query = query.eq('product_id', productId);
+  if (options?.productId) {
+    query = query.eq('product_id', options.productId);
   }
+
+  if (options?.warehouseId) {
+    query = query.eq('warehouse_id', options.warehouseId);
+  }
+
+  const limit = options?.limit || 50;
+  const offset = options?.offset || 0;
+  query = query.range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error('[WMS] Error fetching movements:', error.message);
+    return { movements: [], total: 0 };
+  }
+
+  return { movements: data || [], total: count || 0 };
+}
+
+// ─── STOCK VALUE ───
+
+export async function getStockValue(workspaceId: string, warehouseId?: string) {
+  let query = supabaseAdmin
+    .from('inventory')
+    .select('quantity_available, product:products(cost_price, sale_price)')
+    .eq('workspace_id', workspaceId);
 
   if (warehouseId) {
     query = query.eq('warehouse_id', warehouseId);
@@ -260,58 +190,36 @@ export async function getWarehouseMovements(
   const { data, error } = await query;
 
   if (error) {
-    console.error('Error fetching warehouse movements:', error);
-    return [];
-  }
-
-  return data || [];
-}
-
-/**
- * Ottieni prodotti sotto soglia di riordino
- */
-export async function getLowStockProducts() {
-  const { data, error } = await supabase
-    .from('inventory')
-    .select('*, product:products(*), warehouse:warehouses(*)')
-    .lt('quantity_available', 'reorder_point')
-    .gt('reorder_point', 0)
-    .order('quantity_available');
-
-  if (error) {
-    console.error('Error fetching low stock products:', error);
-    return [];
-  }
-
-  return data || [];
-}
-
-/**
- * Valore totale stock
- */
-export async function getStockValue(warehouseId?: string) {
-  let query = supabase
-    .from('inventory')
-    .select('quantity_available, product:products(cost_price, sale_price)');
-
-  if (warehouseId) {
-    query = query.eq('warehouse_id', warehouseId);
-  }
-
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error calculating stock value:', error);
+    console.error('[WMS] Error calculating stock value:', error.message);
     return { cost_value: 0, retail_value: 0 };
   }
 
-  const cost_value = data.reduce((sum, inv: any) => {
+  const cost_value = (data || []).reduce((sum: number, inv: any) => {
     return sum + inv.quantity_available * (inv.product?.cost_price || 0);
   }, 0);
 
-  const retail_value = data.reduce((sum, inv: any) => {
+  const retail_value = (data || []).reduce((sum: number, inv: any) => {
     return sum + inv.quantity_available * (inv.product?.sale_price || 0);
   }, 0);
 
   return { cost_value, retail_value };
+}
+
+// ─── LOW STOCK ───
+
+export async function getLowStockProducts(workspaceId: string) {
+  // Usa la view inventory_low_stock: filtro DB-side (quantity_available <= reorder_point)
+  const { data, error } = await supabaseAdmin
+    .from('inventory_low_stock')
+    .select('*, product:products(*), warehouse:warehouses(*)')
+    .eq('workspace_id', workspaceId)
+    .order('quantity_available', { ascending: true })
+    .order('id', { ascending: true });
+
+  if (error) {
+    console.error('[WMS] Error fetching low stock:', error.message);
+    return [];
+  }
+
+  return data || [];
 }
