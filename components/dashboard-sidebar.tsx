@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { Package, LogOut, ChevronDown, ChevronRight } from 'lucide-react';
+import { Package, LogOut, ChevronDown, ChevronRight, HelpCircle } from 'lucide-react';
 import {
   getNavigationForUser,
   isNavItemActive,
@@ -603,6 +603,14 @@ export default function DashboardSidebar() {
                   {isReseller && <span className="text-[10px]">💼</span>}
                 </div>
               </div>
+            </Link>
+
+            <Link
+              href="/contatti"
+              className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-500 hover:bg-white hover:text-gray-900 transition-colors"
+            >
+              <HelpCircle className="w-4 h-4" />
+              <span>Supporto</span>
             </Link>
 
             <button

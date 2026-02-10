@@ -28,6 +28,7 @@ import {
   Sparkles,
   Truck,
   User,
+  Wallet,
   X,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
@@ -38,6 +39,10 @@ import { SuccessModal, ErrorDialog } from '@/components/feedback';
 import { useEnterpriseFeedbackUX } from '@/hooks/useEnterpriseFeedbackUX';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { formatError } from '@/lib/errors';
+import { useUser } from '@/contexts/UserContext';
+import { toast } from 'sonner';
+
+const DRAFT_STORAGE_KEY = 'shipment_draft';
 
 interface FormData {
   // Mittente
@@ -238,6 +243,8 @@ function RouteVisualizer({
 
 export function QuickModeForm() {
   const router = useRouter();
+  const { user } = useUser();
+  const walletBalance = user?.wallet_balance ?? null;
 
   // Enterprise Feedback UX feature flag
   const { isEnabled: useEnterpriseFeedback } = useEnterpriseFeedbackUX();
@@ -328,6 +335,80 @@ export function QuickModeForm() {
   // ✨ FIX: Counter per forzare re-mount del preventivatore dopo reset form
   const [formResetCounter, setFormResetCounter] = useState(0);
 
+  // Salva bozza in localStorage (auto-save ogni 10 secondi se form dirty)
+  const saveDraft = useCallback(() => {
+    try {
+      const draftData = {
+        formData,
+        savedAt: new Date().toISOString(),
+      };
+      localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draftData));
+    } catch {
+      // localStorage pieno o non disponibile
+    }
+  }, [formData]);
+
+  const handleSaveDraft = useCallback(() => {
+    saveDraft();
+    toast.success('Bozza salvata');
+  }, [saveDraft]);
+
+  // Ripristina bozza al mount (solo campi destinatario + pacco, mittente viene dal predefinito)
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(DRAFT_STORAGE_KEY);
+      if (!stored) return;
+      const draft = JSON.parse(stored);
+      // Solo se meno di 24h fa
+      if (draft.savedAt && Date.now() - new Date(draft.savedAt).getTime() < 86400000) {
+        const d = draft.formData;
+        if (d && (d.destinatarioNome || d.peso)) {
+          setFormData((prev) => ({
+            ...prev,
+            destinatarioNome: d.destinatarioNome || prev.destinatarioNome,
+            destinatarioIndirizzo: d.destinatarioIndirizzo || prev.destinatarioIndirizzo,
+            destinatarioCitta: d.destinatarioCitta || prev.destinatarioCitta,
+            destinatarioProvincia: d.destinatarioProvincia || prev.destinatarioProvincia,
+            destinatarioCap: d.destinatarioCap || prev.destinatarioCap,
+            destinatarioTelefono: d.destinatarioTelefono || prev.destinatarioTelefono,
+            destinatarioEmail: d.destinatarioEmail || prev.destinatarioEmail,
+            peso: d.peso || prev.peso,
+            lunghezza: d.lunghezza || prev.lunghezza,
+            larghezza: d.larghezza || prev.larghezza,
+            altezza: d.altezza || prev.altezza,
+            tipoSpedizione: d.tipoSpedizione || prev.tipoSpedizione,
+            note: d.note || prev.note,
+            contrassegnoAmount: d.contrassegnoAmount || prev.contrassegnoAmount,
+          }));
+          toast.info('Bozza precedente ripristinata');
+        }
+      } else {
+        // Bozza scaduta, rimuovi
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      }
+    } catch {
+      // JSON parse error o localStorage non disponibile
+    }
+  }, []);
+
+  // Auto-save ogni 10 secondi se form dirty
+  useEffect(() => {
+    if (!isFormDirty) return;
+    const interval = setInterval(saveDraft, 10000);
+    return () => clearInterval(interval);
+  }, [isFormDirty, saveDraft]);
+
+  // Pulisci bozza dopo submit riuscito
+  useEffect(() => {
+    if (submitSuccess) {
+      try {
+        localStorage.removeItem(DRAFT_STORAGE_KEY);
+      } catch {
+        // no-op
+      }
+    }
+  }, [submitSuccess]);
+
   // ✨ Layout sempre ottimizzato per tabella (40/60)
 
   // Persist source mode and allow query-based default (e.g., ?ai=1 or ?mode=ai)
@@ -366,26 +447,11 @@ export function QuickModeForm() {
     async function loadAvailableCouriers() {
       try {
         setCouriersLoading(true);
-        console.log('🔄 [FORM] Caricamento corrieri disponibili...');
         const response = await fetch('/api/couriers/available');
-        console.log('📥 [FORM] Risposta API corrieri:', {
-          status: response.status,
-          ok: response.ok,
-        });
         if (response.ok) {
           const data = await response.json();
-          console.log('📋 [FORM] Corrieri ricevuti:', {
-            total: data.total,
-            couriers: data.couriers?.length || 0,
-            details: data.couriers?.map((c: any) => ({
-              displayName: c.displayName,
-              courierName: c.courierName,
-              contractCode: c.contractCode,
-            })),
-          });
           if (data.couriers && data.couriers.length > 0) {
             setAvailableCouriers(data.couriers);
-            console.log(`✅ [FORM] ${data.couriers.length} corrieri caricati e impostati`);
             // ⚠️ NON auto-selezionare! L'utente DEVE cliccare sul preventivatore
             // Se il corriere già selezionato non è più disponibile, resetta a vuoto
             const displayNames = data.couriers.map((c: { displayName: string }) => c.displayName);
@@ -395,21 +461,13 @@ export function QuickModeForm() {
             }));
           } else {
             // Fallback: nessun corriere configurato, mostra default
-            console.warn("⚠️ [FORM] Nessun corriere configurato per l'utente, usando default");
             setAvailableCouriers([{ displayName: 'GLS', courierName: 'Gls' }]);
           }
         } else {
-          const errorText = await response.text();
-          console.error('❌ [FORM] Errore caricamento corrieri:', {
-            status: response.status,
-            statusText: response.statusText,
-            body: errorText,
-          });
           // Fallback in caso di errore
           setAvailableCouriers([{ displayName: 'GLS', courierName: 'Gls' }]);
         }
-      } catch (error) {
-        console.error('❌ [FORM] Errore caricamento corrieri disponibili:', error);
+      } catch {
         // Fallback in caso di errore
         setAvailableCouriers([{ displayName: 'GLS', courierName: 'Gls' }]);
       } finally {
@@ -447,8 +505,7 @@ export function QuickModeForm() {
             }));
           }
         }
-      } catch (error) {
-        console.error('Errore caricamento mittente predefinito:', error);
+      } catch {
         // Non bloccare, continua con form vuoto
       }
     }
@@ -529,29 +586,23 @@ export function QuickModeForm() {
 
   // Handler per campi mittente
   const handleMittenteCittaChange = (city: string) => {
-    console.log('🔍 [HANDLER] handleMittenteCittaChange:', city);
     setFormData((prev) => ({ ...prev, mittenteCitta: city }));
   };
   const handleMittenteProvinciaChange = (province: string) => {
-    console.log('🔍 [HANDLER] handleMittenteProvinciaChange:', province);
     setFormData((prev) => ({ ...prev, mittenteProvincia: province }));
   };
   const handleMittenteCapChange = (cap: string) => {
-    console.log('🔍 [HANDLER] handleMittenteCapChange:', cap);
     setFormData((prev) => ({ ...prev, mittenteCap: cap }));
   };
 
   // Handler per campi destinatario
   const handleDestinatarioCittaChange = (city: string) => {
-    console.log('🔍 [HANDLER] handleDestinatarioCittaChange:', city);
     setFormData((prev) => ({ ...prev, destinatarioCitta: city }));
   };
   const handleDestinatarioProvinciaChange = (province: string) => {
-    console.log('🔍 [HANDLER] handleDestinatarioProvinciaChange:', province);
     setFormData((prev) => ({ ...prev, destinatarioProvincia: province }));
   };
   const handleDestinatarioCapChange = (cap: string) => {
-    console.log('🔍 [HANDLER] handleDestinatarioCapChange:', cap);
     setFormData((prev) => ({ ...prev, destinatarioCap: cap }));
   };
 
@@ -602,8 +653,6 @@ export function QuickModeForm() {
 
       return newData;
     });
-
-    console.log('Agent Data applied:', data);
   };
 
   // Handler errori OCR
@@ -617,7 +666,6 @@ export function QuickModeForm() {
 
     // ⚠️ DOUBLE-SUBMIT PROTECTION: Blocca se già in corso o appena completato
     if (isSubmitting || submitCompleted) {
-      console.warn('⚠️ [FORM] Submit già in corso o completato, ignoro click duplicato');
       return;
     }
 
@@ -646,19 +694,6 @@ export function QuickModeForm() {
 
     if (validationErrors.length > 0) {
       setSubmitError(validationErrors.join(' '));
-      console.error('❌ [FORM] Validazione fallita:', validationErrors);
-      console.error('❌ [FORM] State corrente:', {
-        mittente: {
-          citta: formData.mittenteCitta,
-          provincia: formData.mittenteProvincia,
-          cap: formData.mittenteCap,
-        },
-        destinatario: {
-          citta: formData.destinatarioCitta,
-          provincia: formData.destinatarioProvincia,
-          cap: formData.destinatarioCap,
-        },
-      });
       return; // ⚠️ BLOCCA SUBMIT
     }
 
@@ -696,14 +731,9 @@ export function QuickModeForm() {
         const extracted = extractProvinceAndCap(formData.mittenteCitta);
         if (extracted.province) {
           mittenteProvincia = extracted.province;
-          console.warn(
-            '⚠️ [FORM] Provincia mittente estratta da stringa formattata:',
-            extracted.province
-          );
         }
         if (extracted.cap && !mittenteCap) {
           mittenteCap = extracted.cap;
-          console.warn('⚠️ [FORM] CAP mittente estratto da stringa formattata:', extracted.cap);
         }
       }
 
@@ -712,26 +742,11 @@ export function QuickModeForm() {
         const extracted = extractProvinceAndCap(formData.destinatarioCitta);
         if (extracted.province) {
           destinatarioProvincia = extracted.province;
-          console.warn(
-            '⚠️ [FORM] Provincia destinatario estratta da stringa formattata:',
-            extracted.province
-          );
         }
         if (extracted.cap && !destinatarioCap) {
           destinatarioCap = extracted.cap;
-          console.warn('⚠️ [FORM] CAP destinatario estratto da stringa formattata:', extracted.cap);
         }
       }
-
-      // ⚠️ LOG DEBUG COMPLETO: Verifica state PRIMA del mapping
-      console.log('🔍 [FORM] State formData COMPLETO:', {
-        mittenteCitta: formData.mittenteCitta,
-        mittenteProvincia: formData.mittenteProvincia,
-        mittenteCap: formData.mittenteCap,
-        destinatarioCitta: formData.destinatarioCitta,
-        destinatarioProvincia: formData.destinatarioProvincia,
-        destinatarioCap: formData.destinatarioCap,
-      });
 
       // ⚠️ RIMUOVI UNDEFINED: Filtra campi con undefined per evitare che arrivino all'API
       const cleanFormData = Object.fromEntries(
@@ -775,52 +790,6 @@ export function QuickModeForm() {
           }),
       };
 
-      // ⚠️ LOG CRITICO: Verifica payload PRIMA dell'invio (incluso valori undefined)
-      console.log('🔍 [FORM] selectedQuoteExactPrice prima invio:', selectedQuoteExactPrice);
-      console.log('📋 [FORM] Payload COMPLETO spedizione (prima invio):', payload);
-      console.log('💰 [FORM] final_price nel payload:', payload.final_price || 'MANCANTE');
-      console.log('💰 [FORM] base_price nel payload:', payload.base_price || 'MANCANTE');
-
-      console.log('📋 [FORM] Payload indirizzo strutturato:', {
-        mittente: {
-          città: payload.mittenteCitta,
-          provincia: payload.mittenteProvincia,
-          cap: payload.mittenteCap,
-          _tipi: {
-            città: typeof payload.mittenteCitta,
-            provincia: typeof payload.mittenteProvincia,
-            cap: typeof payload.mittenteCap,
-          },
-        },
-        destinatario: {
-          città: payload.destinatarioCitta,
-          provincia: payload.destinatarioProvincia,
-          cap: payload.destinatarioCap,
-          _tipi: {
-            città: typeof payload.destinatarioCitta,
-            provincia: typeof payload.destinatarioProvincia,
-            cap: typeof payload.destinatarioCap,
-          },
-        },
-      });
-
-      // ✨ DEBUG: Log payload prima dell'invio
-      console.log('📤 [FORM] Invio richiesta creazione spedizione:', {
-        payload_keys: Object.keys(payload),
-        corriere: (payload as any).corriere || formData.corriere,
-        peso: (payload as any).peso || formData.peso,
-        mittente: {
-          nome: (payload as any).mittenteNome || formData.mittenteNome,
-          provincia: (payload as any).mittenteProvincia || mittenteProvincia,
-          cap: (payload as any).mittenteCap || mittenteCap,
-        },
-        destinatario: {
-          nome: (payload as any).destinatarioNome || formData.destinatarioNome,
-          provincia: (payload as any).destinatarioProvincia || destinatarioProvincia,
-          cap: (payload as any).destinatarioCap || destinatarioCap,
-        },
-      });
-
       // ✨ ENTERPRISE: Usa nuovo endpoint con idempotency
       const response = await fetch('/api/shipments/create', {
         method: 'POST',
@@ -828,15 +797,8 @@ export function QuickModeForm() {
         body: JSON.stringify(payload),
       });
 
-      console.log('📥 [FORM] Risposta API:', {
-        status: response.status,
-        statusText: response.statusText,
-        ok: response.ok,
-      });
-
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ message: 'Errore sconosciuto' }));
-        console.error('❌ [FORM] Errore API:', errorData);
         // Gestisci errore idempotency (409 = richiesta duplicata)
         if (response.status === 409) {
           throw new Error(errorData.message || 'Operazione già in corso. Attendi qualche secondo.');
@@ -845,16 +807,6 @@ export function QuickModeForm() {
       }
 
       const result = await response.json();
-      console.log('📦 [CLIENT] Risultato API shipments/create:', result);
-      console.log('📦 [CLIENT] Shipment:', result.shipment);
-      console.log('📦 [CLIENT] Tracking:', result.shipment?.tracking_number);
-      console.log('📦 [CLIENT] Idempotent replay:', result.idempotent_replay);
-      console.log('📦 [CLIENT] Success:', result.success);
-
-      // Notifica se è un replay idempotente (spedizione già creata)
-      if (result.idempotent_replay) {
-        console.log('ℹ️ [CLIENT] Spedizione già esistente (idempotent replay)');
-      }
 
       // Legacy state (sempre settato per compatibilità)
       setSubmitSuccess(true);
@@ -892,25 +844,16 @@ export function QuickModeForm() {
 
         // Piccolo delay per assicurarsi che il download parta dopo il rendering
         setTimeout(() => {
-          // DEBUG: Stampa l'intero risultato per capire cosa torna dal backend
-          console.log('📦 [FRONTEND] Risultato creazione spedizione:', result);
-
           // ✨ ENTERPRISE: Verifica etichetta dal nuovo endpoint
           // Il nuovo endpoint mette label_data in result.shipment.label_data
           const labelData = result.shipment?.label_data;
-          console.log('🔍 [CLIENT] Verifica Label:', {
-            'result.shipment?.label_data': labelData ? 'presente' : 'assente',
-            'labelData length': labelData?.length,
-          });
 
           if (labelData) {
             // Verifica se è un URL o base64
             if (labelData.startsWith('http://') || labelData.startsWith('https://')) {
-              console.log('📄 Apertura etichetta URL:', labelData);
               window.open(labelData, '_blank');
             } else {
               // È base64, scarica come PDF
-              console.log('📄 [CLIENT] label_data base64 ricevuto, scarico PDF...');
               try {
                 // Decodifica base64 e crea blob
                 const base64Data = labelData;
@@ -936,10 +879,7 @@ export function QuickModeForm() {
 
                 // Cleanup
                 setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
-
-                console.log('✅ [CLIENT] PDF etichetta scaricato con successo:', filename);
               } catch (pdfError) {
-                console.error('❌ [CLIENT] Errore decodifica PDF:', pdfError);
                 // Fallback al ticket interno
                 if (spedizioneData) {
                   const pdfDoc = generateShipmentPDF(spedizioneWithDate);
@@ -951,8 +891,6 @@ export function QuickModeForm() {
             }
           } else {
             // FALLBACK: Genera Ticket interno se non c'è etichetta reale
-            console.log('⚠️ Nessuna etichetta API, genero Ticket interno');
-
             // ⚠️ MOSTRA ERRORE ALL'UTENTE - MESSAGGIO MIGLIORATO
             const errorMsg = result.error || result.message;
 
@@ -1005,8 +943,7 @@ export function QuickModeForm() {
               };
             }
           }
-        } catch (error) {
-          console.error('Errore caricamento mittente predefinito:', error);
+        } catch {
           // Usa i dati attuali come fallback
         }
 
@@ -1048,21 +985,16 @@ export function QuickModeForm() {
         // Questo assicura che se i corrieri sono cambiati (es. dopo configurazione),
         // vengono mostrati correttamente nella nuova spedizione
         try {
-          console.log('🔄 [FORM] Ricaricamento corrieri dopo reset form...');
           const couriersResponse = await fetch('/api/couriers/available', {
-            cache: 'no-store', // Forza fetch fresco
+            cache: 'no-store',
           });
           if (couriersResponse.ok) {
             const couriersData = await couriersResponse.json();
             if (couriersData.couriers && couriersData.couriers.length > 0) {
               setAvailableCouriers(couriersData.couriers);
-              console.log(
-                `✅ [FORM] ${couriersData.couriers.length} corrieri ricaricati dopo reset`
-              );
             }
           }
-        } catch (error) {
-          console.error('❌ [FORM] Errore ricaricamento corrieri:', error);
+        } catch {
           // Non bloccare, continua con corrieri esistenti
         }
 
@@ -1115,6 +1047,44 @@ export function QuickModeForm() {
           subtitle="Compila i dati per creare una nuova spedizione"
           showBackButton={true}
         />
+
+        {/* Wallet pre-check: avviso se saldo basso o esaurito */}
+        {walletBalance !== null && walletBalance <= 0 && (
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+            <Wallet className="h-5 w-5 shrink-0 text-red-600" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-800">
+                Saldo esaurito — non puoi creare nuove spedizioni
+              </p>
+              <p className="text-xs text-red-600 mt-0.5">Ricarica il wallet per continuare.</p>
+            </div>
+            <a
+              href="/dashboard/wallet"
+              className="shrink-0 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-red-700 transition-colors"
+            >
+              Ricarica
+            </a>
+          </div>
+        )}
+        {walletBalance !== null && walletBalance > 0 && walletBalance < 10 && (
+          <div className="mb-4 flex items-center gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <Wallet className="h-5 w-5 shrink-0 text-amber-600" />
+            <div className="flex-1">
+              <p className="text-sm font-medium text-amber-800">
+                Saldo basso: €{walletBalance.toFixed(2)} rimasti
+              </p>
+              <p className="text-xs text-amber-600 mt-0.5">
+                Potresti non avere credito sufficiente per completare la spedizione.
+              </p>
+            </div>
+            <a
+              href="/dashboard/wallet"
+              className="shrink-0 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-amber-600 transition-colors"
+            >
+              Ricarica
+            </a>
+          </div>
+        )}
 
         {/* ✨ Layout ottimizzato: 65/35 (form 65%, preventivatore 35%) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -1671,14 +1641,6 @@ export function QuickModeForm() {
                           finalPrice, // ✨ FIX: Prezzo finale dal comparatore (include servizi accessori)
                           supplierPrice // ✨ ENTERPRISE: Costo fornitore reale dal listino
                         ) => {
-                          console.log('✅ [FORM] Corriere confermato dal preventivatore:', {
-                            courierName,
-                            contractCode,
-                            accessoryService,
-                            configId, // ✨ Salva configId per usarlo nella creazione
-                            finalPrice, // ✨ FIX: Prezzo finale ricevuto dal comparatore
-                            supplierPrice, // ✨ ENTERPRISE: Costo fornitore reale
-                          });
                           setFormData((prev) => ({
                             ...prev,
                             corriere: courierName,
@@ -1688,18 +1650,7 @@ export function QuickModeForm() {
                           setSelectedConfigId(configId);
 
                           // ✨ FIX: Usa prezzo finale dal comparatore (già calcolato con servizi accessori)
-                          console.log('🔍 [FORM] finalPrice ricevuto dal comparatore:', finalPrice);
-                          console.log(
-                            '🔍 [FORM] supplierPrice ricevuto dal comparatore:',
-                            supplierPrice
-                          );
                           if (finalPrice && finalPrice > 0) {
-                            console.log(
-                              '✅ [FORM] Settando selectedQuoteExactPrice con finalPrice:',
-                              finalPrice,
-                              'e supplierPrice:',
-                              supplierPrice
-                            );
                             setSelectedQuoteExactPrice({
                               courierName,
                               price: finalPrice,
@@ -1707,9 +1658,6 @@ export function QuickModeForm() {
                               supplierPrice, // ✨ ENTERPRISE: Costo fornitore reale
                             });
                           } else {
-                            console.warn(
-                              '⚠️ [FORM] finalPrice mancante o 0, cerco in courierQuotes'
-                            );
                             // ✨ FALLBACK: Cerca quote in courierQuotes solo se finalPrice manca
                             const selectedQuote = courierQuotes.get(
                               `${courierName}::${contractCode}`
@@ -1841,6 +1789,7 @@ export function QuickModeForm() {
                     <div className="grid grid-cols-2 gap-3">
                       <button
                         type="button"
+                        onClick={handleSaveDraft}
                         className="px-4 py-3 border-2 border-gray-300 rounded-xl hover:bg-gray-100 hover:border-gray-400 transition-all flex items-center justify-center gap-2 text-sm font-medium text-gray-900 bg-white"
                       >
                         <Save className="w-4 h-4" />

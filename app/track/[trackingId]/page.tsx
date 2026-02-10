@@ -2,9 +2,9 @@
  * Branded Tracking Page - SpedireSicuro
  *
  * Pagina di tracking per clienti finali con:
+ * - Dati reali da API /api/public-tracking/[trackingNumber]
+ * - Fallback a "non trovata" se tracking non esiste
  * - Design ottimizzato per conversioni (CRO)
- * - Upsell integrato
- * - Neuromarketing principles
  * - Mobile-first responsive
  */
 
@@ -20,108 +20,55 @@ import {
   MapPin,
   Clock,
   AlertCircle,
-  Gift,
-  Sparkles,
   HelpCircle,
-  ArrowRight,
-  X,
   Archive,
+  RefreshCw,
 } from 'lucide-react';
 import { LogoHorizontal } from '@/components/logo';
 
-// Mock Tracking Data
+// Interfacce allineate con API pubblica
 interface TrackingEvent {
   date: string;
-  time: string;
   status: string;
-  location: string;
+  status_normalized: string | null;
+  location: string | null;
   description: string;
 }
 
 interface TrackingData {
-  trackingId: string;
-  status: 'in_transit' | 'delivered' | 'exception' | 'out_for_delivery' | 'in_giacenza';
-  estimated_delivery: string;
-  current_location: string;
-  recipient_name: string;
-  history: TrackingEvent[];
-  upsell_product?: {
-    name: string;
-    image: string;
-    discount_code: string;
-    discount_percent: number;
-    expires_in?: number; // minuti rimanenti
-  };
+  tracking_number: string;
+  carrier?: string;
+  current_status: string;
+  current_status_normalized: string;
+  is_delivered: boolean;
+  last_update: string | null;
+  events: TrackingEvent[];
 }
 
-// Mock data generator
-function getMockTrackingData(trackingId: string): TrackingData {
-  // Usa un hash del trackingId per avere status consistenti
-  const hash = trackingId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-  const statuses: TrackingData['status'][] = [
-    'in_transit',
-    'delivered',
-    'exception',
-    'out_for_delivery',
-  ];
-  const randomStatus = statuses[hash % statuses.length] || 'in_transit';
+// Mappa status normalizzato a configurazione UI
+type NormalizedStatus =
+  | 'delivered'
+  | 'out_for_delivery'
+  | 'in_transit'
+  | 'exception'
+  | 'in_giacenza'
+  | 'created'
+  | 'pending_pickup'
+  | 'at_destination'
+  | 'returned'
+  | 'cancelled'
+  | 'unknown';
 
-  return {
-    trackingId,
-    status: randomStatus,
-    estimated_delivery: 'Domani, 14:00 - 18:00',
-    current_location: 'Hub Milano Mecenate',
-    recipient_name: 'Mario Rossi',
-    history: [
-      {
-        date: '2024-01-15',
-        time: '08:30',
-        status: 'delivered',
-        location: 'Milano',
-        description: 'Pacco consegnato al destinatario',
-      },
-      {
-        date: '2024-01-15',
-        time: '06:15',
-        status: 'out_for_delivery',
-        location: 'Hub Milano Mecenate',
-        description: 'In consegna',
-      },
-      {
-        date: '2024-01-14',
-        time: '22:45',
-        status: 'in_transit',
-        location: 'Hub Milano Mecenate',
-        description: 'Arrivato al centro di smistamento',
-      },
-      {
-        date: '2024-01-14',
-        time: '18:20',
-        status: 'in_transit',
-        location: 'Hub Bologna',
-        description: 'In transito verso destinazione',
-      },
-      {
-        date: '2024-01-14',
-        time: '10:00',
-        status: 'in_transit',
-        location: 'Roma',
-        description: 'Pacco ritirato dal mittente',
-      },
-    ],
-    upsell_product: {
-      name: 'Pacchetto Premium Spedizioni',
-      image: '/placeholder-product.jpg',
-      discount_code: 'TRACK20',
-      discount_percent: 20,
-      expires_in: 45, // minuti
-    },
-  };
-}
-
-// Status Badge Component
-function StatusBadge({ status }: { status: TrackingData['status'] }) {
-  const configs = {
+function getStatusConfig(status: string) {
+  const configs: Record<
+    string,
+    {
+      label: string;
+      className: string;
+      icon: typeof CheckCircle2;
+      pulse: boolean;
+    }
+  > = {
     delivered: {
       label: 'Consegnato',
       className: 'bg-gradient-to-r from-green-500 to-emerald-600',
@@ -140,6 +87,12 @@ function StatusBadge({ status }: { status: TrackingData['status'] }) {
       icon: Package,
       pulse: false,
     },
+    at_destination: {
+      label: 'Arrivata in Sede',
+      className: 'bg-gradient-to-r from-blue-600 to-indigo-600',
+      icon: MapPin,
+      pulse: false,
+    },
     exception: {
       label: 'Eccezione',
       className: 'bg-gradient-to-r from-red-500 to-rose-600',
@@ -152,9 +105,45 @@ function StatusBadge({ status }: { status: TrackingData['status'] }) {
       icon: Archive,
       pulse: true,
     },
+    created: {
+      label: 'Spedizione Generata',
+      className: 'bg-gradient-to-r from-gray-500 to-gray-600',
+      icon: Package,
+      pulse: false,
+    },
+    pending_pickup: {
+      label: 'In Attesa di Ritiro',
+      className: 'bg-gradient-to-r from-purple-500 to-violet-600',
+      icon: Clock,
+      pulse: true,
+    },
+    returned: {
+      label: 'Reso',
+      className: 'bg-gradient-to-r from-red-600 to-red-700',
+      icon: AlertCircle,
+      pulse: false,
+    },
+    cancelled: {
+      label: 'Annullata',
+      className: 'bg-gradient-to-r from-gray-600 to-gray-700',
+      icon: AlertCircle,
+      pulse: false,
+    },
   };
 
-  const config = configs[status] || configs.in_transit;
+  return (
+    configs[status] || {
+      label: 'In Transito',
+      className: 'bg-gradient-to-r from-blue-500 to-cyan-600',
+      icon: Package,
+      pulse: false,
+    }
+  );
+}
+
+// Status Badge Component
+function StatusBadge({ status }: { status: string }) {
+  const config = getStatusConfig(status);
   const Icon = config.icon;
 
   return (
@@ -175,37 +164,42 @@ function StatusBadge({ status }: { status: TrackingData['status'] }) {
 }
 
 // Timeline Component
-function TrackingTimeline({ history }: { history: TrackingEvent[] }) {
+function TrackingTimeline({ events }: { events: TrackingEvent[] }) {
   return (
     <div className="relative">
       <div className="absolute left-6 top-0 bottom-0 w-0.5 bg-gray-200" />
       <div className="space-y-6">
-        {history.map((event, index) => {
+        {events.map((event, index) => {
           const isActive = index === 0;
-          const isPast = index > 0;
+          const statusConfig = getStatusConfig(event.status_normalized || 'in_transit');
+          const Icon = statusConfig.icon;
+
+          // Formatta data
+          const eventDate = new Date(event.date);
+          const dateStr = eventDate.toLocaleDateString('it-IT', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+          });
+          const timeStr = eventDate.toLocaleTimeString('it-IT', {
+            hour: '2-digit',
+            minute: '2-digit',
+          });
 
           return (
-            <div key={index} className="relative flex items-start gap-4">
+            <div key={`${event.date}-${index}`} className="relative flex items-start gap-4">
               {/* Dot */}
               <div
                 className={`relative z-10 flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
                   isActive
                     ? 'bg-gradient-to-r from-[#FFD700] to-[#FF9500] shadow-lg shadow-[#FF9500]/50'
-                    : isPast
-                      ? 'bg-green-500'
-                      : 'bg-gray-300'
+                    : 'bg-green-500'
                 }`}
               >
                 {isActive && (
                   <div className="absolute inset-0 rounded-full bg-gradient-to-r from-[#FFD700] to-[#FF9500] animate-ping opacity-75" />
                 )}
-                {event.status === 'delivered' ? (
-                  <CheckCircle2 className="w-6 h-6 text-white" />
-                ) : event.status === 'out_for_delivery' ? (
-                  <Truck className="w-6 h-6 text-white" />
-                ) : (
-                  <Package className="w-6 h-6 text-white" />
-                )}
+                <Icon className="w-6 h-6 text-white" />
               </div>
 
               {/* Content */}
@@ -213,139 +207,19 @@ function TrackingTimeline({ history }: { history: TrackingEvent[] }) {
                 <div className="flex items-center justify-between mb-1">
                   <div className="font-semibold text-gray-900">{event.description}</div>
                   <div className="text-xs text-gray-500">
-                    {event.date} • {event.time}
+                    {dateStr} &bull; {timeStr}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm text-gray-600">
-                  <MapPin className="w-4 h-4" />
-                  <span>{event.location}</span>
-                </div>
+                {event.location && (
+                  <div className="flex items-center gap-2 text-sm text-gray-600">
+                    <MapPin className="w-4 h-4" />
+                    <span>{event.location}</span>
+                  </div>
+                )}
               </div>
             </div>
           );
         })}
-      </div>
-    </div>
-  );
-}
-
-// Countdown Timer Component
-function CountdownTimer({ minutes }: { minutes: number }) {
-  const [timeLeft, setTimeLeft] = useState(minutes * 60);
-
-  useEffect(() => {
-    if (timeLeft <= 0) return;
-
-    const timer = setInterval(() => {
-      setTimeLeft((prev) => Math.max(0, prev - 1));
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft]);
-
-  const mins = Math.floor(timeLeft / 60);
-  const secs = timeLeft % 60;
-
-  return (
-    <div className="flex items-center gap-2 text-sm font-semibold text-red-600">
-      <Clock className="w-4 h-4" />
-      <span>
-        {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
-      </span>
-    </div>
-  );
-}
-
-// Upsell Card Component
-function UpsellCard({
-  product,
-  onDismiss,
-}: {
-  product: NonNullable<TrackingData['upsell_product']>;
-  onDismiss: () => void;
-}) {
-  const [isDismissed, setIsDismissed] = useState(false);
-
-  if (isDismissed) return null;
-
-  return (
-    <div className="relative bg-gradient-to-br from-[#FFD700]/10 via-[#FF9500]/10 to-orange-50 border-2 border-[#FF9500]/30 rounded-2xl p-6 shadow-xl overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23FF9500' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
-        />
-      </div>
-
-      {/* Close Button */}
-      <button
-        onClick={() => {
-          setIsDismissed(true);
-          onDismiss();
-        }}
-        className="absolute top-4 right-4 p-1.5 hover:bg-black/10 rounded-lg transition-colors z-10"
-        aria-label="Chiudi"
-      >
-        <X className="w-5 h-5 text-gray-600" />
-      </button>
-
-      <div className="relative z-10">
-        {/* Header */}
-        <div className="flex items-center gap-2 mb-4">
-          <div className="p-2 bg-gradient-to-r from-[#FFD700] to-[#FF9500] rounded-lg">
-            <Gift className="w-6 h-6 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-gray-900">Sorpresa per te! 🎁</h3>
-            <p className="text-sm text-gray-600">Mentre aspetti il tuo pacco...</p>
-          </div>
-        </div>
-
-        {/* Offer */}
-        <div className="bg-white rounded-xl p-4 mb-4 border border-[#FF9500]/20">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-600">Sconto Esclusivo</span>
-            {product.expires_in && <CountdownTimer minutes={product.expires_in} />}
-          </div>
-          <div className="text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#FFD700] to-[#FF9500] mb-1">
-            {product.discount_percent}% OFF
-          </div>
-          <p className="text-sm text-gray-600">
-            Sul tuo prossimo ordine con codice:{' '}
-            <span className="font-mono font-bold text-[#FF9500]">{product.discount_code}</span>
-          </p>
-        </div>
-
-        {/* Product Image Placeholder */}
-        <div className="bg-white rounded-xl p-8 mb-4 border border-gray-200 flex items-center justify-center">
-          <div className="text-center">
-            <Package className="w-16 h-16 text-gray-300 mx-auto mb-2" />
-            <p className="text-sm text-gray-500">{product.name}</p>
-          </div>
-        </div>
-
-        {/* CTA Button */}
-        <button
-          onClick={() => {
-            // In produzione: redirect a pagina checkout con codice sconto
-            window.location.href = `/preventivo?discount=${product.discount_code}`;
-          }}
-          className="w-full px-6 py-4 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 flex items-center justify-center gap-2"
-        >
-          <Sparkles className="w-5 h-5" />
-          Sblocca Sconto Ora
-          <ArrowRight className="w-5 h-5" />
-        </button>
-
-        {/* FOMO Badge */}
-        <div className="mt-3 text-center">
-          <span className="inline-flex items-center gap-1 px-3 py-1 bg-red-50 text-red-700 rounded-full text-xs font-semibold border border-red-200">
-            ⚡ Offerta limitata
-          </span>
-        </div>
       </div>
     </div>
   );
@@ -357,29 +231,41 @@ export default function TrackingPage() {
 
   const [trackingData, setTrackingData] = useState<TrackingData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [upsellDismissed, setUpsellDismissed] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    // Simula fetch API
+  const fetchTracking = async () => {
     if (!trackingId || trackingId.trim() === '') {
       setIsLoading(false);
       setTrackingData(null);
       return;
     }
 
-    const timer = setTimeout(() => {
-      try {
-        const data = getMockTrackingData(trackingId);
-        setTrackingData(data);
-      } catch (error) {
-        console.error('Errore caricamento tracking:', error);
-        setTrackingData(null);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 500);
+    setIsLoading(true);
+    setError(null);
 
-    return () => clearTimeout(timer);
+    try {
+      const res = await fetch(`/api/public-tracking/${encodeURIComponent(trackingId.trim())}`);
+
+      if (res.ok) {
+        const data = await res.json();
+        setTrackingData(data);
+      } else if (res.status === 404) {
+        setTrackingData(null);
+        setError('not_found');
+      } else {
+        setTrackingData(null);
+        setError('server_error');
+      }
+    } catch {
+      setTrackingData(null);
+      setError('network_error');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchTracking();
   }, [trackingId]);
 
   if (isLoading) {
@@ -393,30 +279,61 @@ export default function TrackingPage() {
     );
   }
 
-  if (!trackingData) {
+  if (error || !trackingData) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
         <div className="text-center max-w-md">
           <AlertCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">Spedizione non trovata</h1>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">
+            {error === 'not_found' ? 'Spedizione non trovata' : 'Errore di caricamento'}
+          </h1>
           <p className="text-gray-600 mb-6">
-            Il codice di tracciamento <span className="font-mono font-bold">{trackingId}</span> non
-            è stato trovato.
+            {error === 'not_found' ? (
+              <>
+                Il codice di tracciamento <span className="font-mono font-bold">{trackingId}</span>{' '}
+                non e stato trovato.
+              </>
+            ) : (
+              'Si e verificato un errore durante il caricamento. Riprova tra qualche istante.'
+            )}
           </p>
-          <Link
-            href="/contatti"
-            className="inline-block px-6 py-3 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-semibold rounded-lg hover:shadow-lg transition-all"
-          >
-            Contatta Supporto
-          </Link>
+          <div className="flex items-center justify-center gap-4">
+            {error !== 'not_found' && (
+              <button
+                type="button"
+                onClick={fetchTracking}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-[#FFD700] to-[#FF9500] text-white font-semibold rounded-lg hover:shadow-lg transition-all"
+              >
+                <RefreshCw className="w-4 h-4" />
+                Riprova
+              </button>
+            )}
+            <Link
+              href="/contatti"
+              className="inline-block px-6 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-all"
+            >
+              Contatta Supporto
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
+  // Formatta ultimo aggiornamento
+  const lastUpdateStr = trackingData.last_update
+    ? new Date(trackingData.last_update).toLocaleString('it-IT', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      })
+    : null;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50/30 to-cyan-50/20">
-      {/* Simplified Header */}
+      {/* Header */}
       <header className="bg-white border-b border-gray-200 shadow-sm">
         <div className="max-w-2xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
@@ -437,72 +354,52 @@ export default function TrackingPage() {
 
       {/* Main Content */}
       <main className="max-w-2xl mx-auto px-4 py-8">
-        {/* Tracking ID */}
+        {/* Tracking ID + Carrier */}
         <div className="text-center mb-6">
           <p className="text-sm text-gray-500 mb-1">Codice di Tracciamento</p>
-          <p className="text-lg font-mono font-bold text-gray-900">{trackingId}</p>
+          <p className="text-lg font-mono font-bold text-gray-900">
+            {trackingData.tracking_number}
+          </p>
+          {trackingData.carrier && (
+            <p className="text-sm text-gray-500 mt-1">
+              Corriere: <span className="font-medium text-gray-700">{trackingData.carrier}</span>
+            </p>
+          )}
         </div>
 
-        {/* Zone A: Status Badge */}
+        {/* Status Badge */}
         <div className="mb-6">
-          <StatusBadge status={trackingData.status} />
+          <StatusBadge status={trackingData.current_status_normalized} />
         </div>
 
-        {/* Estimated Delivery */}
-        {trackingData.status !== 'delivered' && (
-          <div className="bg-white rounded-xl p-6 mb-6 border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-3">
-              <div className="p-3 bg-blue-50 rounded-lg">
-                <Clock className="w-6 h-6 text-blue-600" />
-              </div>
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Consegna Stimata</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {trackingData.estimated_delivery}
-                </p>
-              </div>
-            </div>
+        {/* Ultimo aggiornamento */}
+        {lastUpdateStr && (
+          <div className="text-center text-xs text-gray-500 mb-6">
+            Ultimo aggiornamento: {lastUpdateStr}
           </div>
         )}
 
-        {/* Current Location */}
-        <div className="bg-white rounded-xl p-4 mb-6 border border-gray-200 shadow-sm">
-          <div className="flex items-center gap-3">
-            <MapPin className="w-5 h-5 text-[#FF9500]" />
-            <div>
-              <p className="text-sm text-gray-600">Posizione Attuale</p>
-              <p className="font-semibold text-gray-900">{trackingData.current_location}</p>
-            </div>
+        {/* Timeline */}
+        {trackingData.events.length > 0 ? (
+          <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+            <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
+              <Truck className="w-5 h-5 text-[#FF9500]" />
+              Cronologia Spedizione
+            </h2>
+            <TrackingTimeline events={trackingData.events} />
           </div>
-        </div>
-
-        {/* Zone C: Upsell Card (High Visibility) */}
-        {trackingData.upsell_product && !upsellDismissed && (
-          <div className="mb-8">
-            <UpsellCard
-              product={trackingData.upsell_product}
-              onDismiss={() => setUpsellDismissed(true)}
-            />
+        ) : (
+          <div className="bg-white rounded-xl p-8 border border-gray-200 shadow-sm text-center">
+            <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-600">Nessun evento di tracking ancora disponibile.</p>
+            <p className="text-sm text-gray-500 mt-1">
+              Gli aggiornamenti appariranno non appena il corriere registra movimenti.
+            </p>
           </div>
         )}
-
-        {/* Zone B: Visual Timeline */}
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-          <h2 className="text-lg font-bold text-gray-900 mb-6 flex items-center gap-2">
-            <Truck className="w-5 h-5 text-[#FF9500]" />
-            Cronologia Spedizione
-          </h2>
-          <TrackingTimeline history={trackingData.history} />
-        </div>
-
-        {/* Additional Info */}
-        <div className="mt-6 bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-          <h3 className="text-sm font-semibold text-gray-900 mb-3">Destinatario</h3>
-          <p className="text-gray-700">{trackingData.recipient_name}</p>
-        </div>
       </main>
 
-      {/* Simple Footer */}
+      {/* Footer */}
       <footer className="max-w-2xl mx-auto px-4 py-8 text-center">
         <p className="text-sm text-gray-500 mb-2">
           Powered by <span className="font-semibold text-[#FF9500]">SpedireSicuro</span>
@@ -511,7 +408,7 @@ export default function TrackingPage() {
           <Link href="/contatti" className="hover:text-[#FF9500] transition-colors">
             Supporto
           </Link>
-          <span>•</span>
+          <span>&bull;</span>
           <Link href="/preventivi" className="hover:text-[#FF9500] transition-colors">
             Crea Spedizione
           </Link>
