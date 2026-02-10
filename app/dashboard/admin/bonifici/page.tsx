@@ -38,6 +38,7 @@ import {
 import { approveTopUpRequest, rejectTopUpRequest, deleteTopUpRequest } from '@/app/actions/wallet';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
+import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
 
 type StatusFilter = 'pending' | 'manual_review' | 'approved' | 'rejected';
 
@@ -55,6 +56,7 @@ export default function AdminBonificiPage() {
   const [approvedAmount, setApprovedAmount] = useState<string>('');
   const [rejectReason, setRejectReason] = useState<string>('');
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   // Verifica permessi admin
   useEffect(() => {
@@ -261,17 +263,8 @@ export default function AdminBonificiPage() {
     }
   }
 
-  async function handleDelete() {
+  async function handleDeleteConfirmed() {
     if (!selectedRequest) return;
-
-    // Conferma cancellazione
-    if (
-      !confirm(
-        `Sei sicuro di voler eliminare questa richiesta?\n\nQuesta azione è irreversibile e la richiesta verrà eliminata definitivamente.`
-      )
-    ) {
-      return;
-    }
 
     try {
       setIsProcessing(true);
@@ -647,7 +640,7 @@ export default function AdminBonificiPage() {
                         Rifiuta
                       </Button>
                       <Button
-                        onClick={handleDelete}
+                        onClick={() => setShowDeleteConfirm(true)}
                         disabled={isProcessing}
                         variant="outline"
                         className="font-medium h-11 border-red-300 text-red-700 hover:bg-red-50 hover:border-red-400"
@@ -698,6 +691,21 @@ export default function AdminBonificiPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Confirm dialog eliminazione richiesta */}
+        <ConfirmActionDialog
+          isOpen={showDeleteConfirm}
+          onClose={() => setShowDeleteConfirm(false)}
+          onConfirm={() => {
+            setShowDeleteConfirm(false);
+            handleDeleteConfirmed();
+          }}
+          title="Eliminare questa richiesta?"
+          description="Questa azione è irreversibile. La richiesta di ricarica verrà eliminata definitivamente."
+          confirmText="Elimina"
+          variant="destructive"
+          isLoading={isProcessing}
+        />
       </div>
     </div>
   );

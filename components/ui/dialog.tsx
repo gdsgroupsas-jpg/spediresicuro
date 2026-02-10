@@ -10,22 +10,74 @@ interface DialogProps {
   children: React.ReactNode;
 }
 
+const FOCUSABLE_SELECTOR =
+  'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
 const Dialog = ({ open, onOpenChange, children }: DialogProps) => {
+  const dialogRef = React.useRef<HTMLDivElement>(null);
+  const previousFocusRef = React.useRef<HTMLElement | null>(null);
+
   React.useEffect(() => {
     if (open) {
       document.body.style.overflow = 'hidden';
+      // Salva elemento precedentemente focalizzato
+      previousFocusRef.current = document.activeElement as HTMLElement;
     } else {
       document.body.style.overflow = 'unset';
+      // Ripristina focus all'elemento precedente
+      previousFocusRef.current?.focus();
     }
     return () => {
       document.body.style.overflow = 'unset';
     };
   }, [open]);
 
+  // Focus trap: Tab/Shift+Tab restano dentro il dialog
+  React.useEffect(() => {
+    if (!open) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onOpenChange(false);
+        return;
+      }
+      if (e.key !== 'Tab') return;
+
+      const container = dialogRef.current;
+      if (!container) return;
+
+      const focusable = Array.from(container.querySelectorAll<HTMLElement>(FOCUSABLE_SELECTOR));
+      if (focusable.length === 0) return;
+
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    // Auto-focus primo elemento focusabile
+    requestAnimationFrame(() => {
+      const container = dialogRef.current;
+      if (container) {
+        const first = container.querySelector<HTMLElement>(FOCUSABLE_SELECTOR);
+        first?.focus();
+      }
+    });
+
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [open, onOpenChange]);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div ref={dialogRef} className="fixed inset-0 z-50 flex items-center justify-center">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm"

@@ -20,7 +20,11 @@ import {
   getCommercialQuoteByIdAction,
   renewExpiredQuoteAction,
 } from '@/actions/commercial-quotes';
-import { QuoteAnalytics } from '@/components/commercial-quotes/quote-analytics';
+import dynamic from 'next/dynamic';
+const QuoteAnalytics = dynamic(
+  () => import('@/components/commercial-quotes/quote-analytics').then((mod) => mod.QuoteAnalytics),
+  { ssr: false, loading: () => <div className="animate-pulse bg-gray-100 rounded-xl h-64" /> }
+);
 import { BarChart3, FileText, PlusCircle } from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';

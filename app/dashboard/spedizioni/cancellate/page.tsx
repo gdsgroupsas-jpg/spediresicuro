@@ -13,6 +13,7 @@ import { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
+import { DataTableSkeleton } from '@/components/shared/data-table-skeleton';
 import {
   Search,
   Filter,
@@ -175,9 +176,8 @@ export default function SpedizioniCancellatePage() {
 
         {/* Lista spedizioni cancellate */}
         {isLoading ? (
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-12 text-center">
-            <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-orange-600 mb-4"></div>
-            <p className="text-gray-600">Caricamento spedizioni cancellate...</p>
+          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
+            <DataTableSkeleton rows={5} columns={5} />
           </div>
         ) : error ? (
           <div className="bg-white rounded-2xl shadow-sm border border-red-200 p-6">

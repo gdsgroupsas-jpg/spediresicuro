@@ -22,7 +22,11 @@ import { getLeadAnalytics } from '@/app/actions/crm-analytics';
 import { getCrmHealthAlerts } from '@/app/actions/crm-health';
 import type { HealthAlertsSummary } from '@/app/actions/crm-health';
 import type { CrmAnalyticsData } from '@/lib/crm/analytics';
-import CrmAnalyticsPanel from '@/components/crm-analytics-panel';
+import dynamic from 'next/dynamic';
+const CrmAnalyticsPanel = dynamic(() => import('@/components/crm-analytics-panel'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-100 rounded-xl h-64" />,
+});
 import CrmHealthAlerts from '@/components/crm-health-alerts';
 import type {
   Lead,
@@ -56,6 +60,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it as itLocale } from 'date-fns/locale';
+import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
 
 // Colori CSS per status badge
 const STATUS_CSS: Record<LeadStatus, string> = {
@@ -133,6 +138,7 @@ export default function AdminLeadsPage() {
   const [analyticsLoading, setAnalyticsLoading] = useState(false);
   const [healthData, setHealthData] = useState<HealthAlertsSummary | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   // Caricamento lazy analytics: solo al click su tab "Analisi"
   useEffect(() => {
@@ -220,16 +226,18 @@ export default function AdminLeadsPage() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Eliminare definitivamente questo lead?')) return;
+  const handleDeleteConfirmed = async () => {
+    if (!deleteConfirm) return;
     try {
-      const result = await deleteLead(id);
+      const result = await deleteLead(deleteConfirm);
       if (!result.success) {
-        alert(result.error);
+        setError(result.error || 'Errore eliminazione');
       }
       loadLeads();
     } catch {
-      alert('Errore eliminazione');
+      setError('Errore eliminazione');
+    } finally {
+      setDeleteConfirm(null);
     }
   };
 
@@ -523,7 +531,7 @@ export default function AdminLeadsPage() {
                                 </button>
                               )}
                               <button
-                                onClick={() => handleDelete(lead.id)}
+                                onClick={() => setDeleteConfirm(lead.id)}
                                 className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
                                 title="Elimina"
                               >
@@ -602,6 +610,17 @@ export default function AdminLeadsPage() {
           }}
         />
       )}
+
+      {/* Confirm dialog eliminazione lead */}
+      <ConfirmActionDialog
+        isOpen={!!deleteConfirm}
+        onClose={() => setDeleteConfirm(null)}
+        onConfirm={handleDeleteConfirmed}
+        title="Eliminare questo lead?"
+        description="Questa azione è irreversibile. Il lead e tutti i suoi eventi verranno eliminati definitivamente."
+        confirmText="Elimina"
+        variant="destructive"
+      />
     </div>
   );
 }

@@ -43,6 +43,7 @@ import ImportOrders from '@/components/import/import-orders';
 import { useRealtimeShipments } from '@/hooks/useRealtimeShipments';
 import { featureFlags } from '@/lib/config/feature-flags';
 import { useProfileCompletion } from '@/lib/hooks/use-profile-completion';
+import { DataTableSkeleton } from '@/components/shared/data-table-skeleton';
 import dynamic from 'next/dynamic';
 import { TrackingModal, TrackingToast } from '@/components/tracking';
 import { toast } from 'sonner';
@@ -1493,9 +1494,8 @@ export default function ListaSpedizioniPage() {
         <div className="bg-gradient-to-br from-white via-white to-gray-50/50 backdrop-blur-xl rounded-xl border border-gray-200/60 shadow-xl overflow-hidden">
           {/* Loading State */}
           {isLoading && (
-            <div className="p-12 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-              <p className="mt-4 text-sm text-gray-600">Caricamento spedizioni...</p>
+            <div className="p-6">
+              <DataTableSkeleton rows={6} columns={6} />
             </div>
           )}
 

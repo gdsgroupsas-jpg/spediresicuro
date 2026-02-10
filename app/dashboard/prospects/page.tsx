@@ -19,7 +19,11 @@ import { getProspectAnalytics } from '@/app/actions/crm-analytics';
 import { getProspectHealthAlerts } from '@/app/actions/crm-health';
 import type { HealthAlertsSummary } from '@/app/actions/crm-health';
 import type { CrmAnalyticsData } from '@/lib/crm/analytics';
-import CrmAnalyticsPanel from '@/components/crm-analytics-panel';
+import dynamic from 'next/dynamic';
+const CrmAnalyticsPanel = dynamic(() => import('@/components/crm-analytics-panel'), {
+  ssr: false,
+  loading: () => <div className="animate-pulse bg-gray-100 rounded-xl h-64" />,
+});
 import CrmHealthAlerts from '@/components/crm-health-alerts';
 import type {
   ResellerProspect,
