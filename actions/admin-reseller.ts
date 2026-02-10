@@ -237,7 +237,74 @@ export async function createSubUser(data: {
       };
     }
 
-    // 7. Crea anche nel database locale (compatibilità)
+    // 7. Crea workspace client per il sub-user (sotto il workspace del reseller)
+    try {
+      // Ottieni workspace del reseller
+      const { data: resellerUser } = await supabaseAdmin
+        .from('users')
+        .select('primary_workspace_id')
+        .eq('id', resellerCheck.userId)
+        .single();
+
+      if (resellerUser?.primary_workspace_id) {
+        // Ottieni organization_id dal workspace del reseller
+        const { data: resellerWs } = await supabaseAdmin
+          .from('workspaces')
+          .select('organization_id')
+          .eq('id', resellerUser.primary_workspace_id)
+          .single();
+
+        if (resellerWs?.organization_id) {
+          const wsName = `${data.name.trim()} Workspace`;
+
+          // Crea workspace client (depth 2) con sub-user come owner
+          const { data: clientWsId, error: wsError } = await supabaseAdmin.rpc(
+            'create_workspace_with_owner',
+            {
+              p_organization_id: resellerWs.organization_id,
+              p_name: wsName,
+              p_parent_workspace_id: resellerUser.primary_workspace_id,
+              p_owner_user_id: newUser.id,
+              p_type: 'client',
+              p_depth: 2,
+            }
+          );
+
+          if (wsError) {
+            console.error('⚠️ Errore creazione workspace client:', wsError.message);
+            // Non blocchiamo: l'utente e' stato creato, il workspace si puo' creare dopo
+          } else if (clientWsId) {
+            console.log('✅ Workspace client creato:', clientWsId, 'per sub-user:', newUser.id);
+
+            // Imposta primary_workspace_id sul sub-user
+            await supabaseAdmin
+              .from('users')
+              .update({ primary_workspace_id: clientWsId })
+              .eq('id', newUser.id);
+
+            // Aggiungi il reseller come admin nel workspace del client
+            // (per poter operare per conto del cliente via workspace switcher)
+            const { error: memberError } = await supabaseAdmin.from('workspace_members').insert({
+              workspace_id: clientWsId,
+              user_id: resellerCheck.userId,
+              role: 'admin',
+              status: 'active',
+              accepted_at: new Date().toISOString(),
+              invited_by: resellerCheck.userId,
+            });
+
+            if (memberError) {
+              console.error('⚠️ Errore aggiunta reseller come admin:', memberError.message);
+            }
+          }
+        }
+      }
+    } catch (wsSetupError: any) {
+      // Non blocchiamo la creazione utente se il workspace fallisce
+      console.error('⚠️ Errore setup workspace client (non critico):', wsSetupError.message);
+    }
+
+    // 8. Crea anche nel database locale (compatibilita)
     try {
       await createUser({
         email: data.email.trim(),
@@ -245,7 +312,7 @@ export async function createSubUser(data: {
         name: data.name.trim(),
         role: 'user',
         accountType: 'user',
-        parentAdminId: resellerCheck.userId, // Usa parentAdminId per compatibilità con sistema esistente
+        parentAdminId: resellerCheck.userId, // Usa parentAdminId per compatibilita con sistema esistente
       });
     } catch (localError: any) {
       // Non critico se Supabase ha funzionato

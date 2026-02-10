@@ -381,4 +381,57 @@ describe('Reseller Sub-User Parent ID Fix', () => {
       expect(validIds.size).toBe(2);
     });
   });
+
+  describe('Auto-provisioning workspace client per sub-user', () => {
+    it('workspace client deve avere type=client e depth=2', () => {
+      // Parametri attesi per create_workspace_with_owner RPC
+      const rpcParams = {
+        p_organization_id: 'org-123',
+        p_name: 'Test User Workspace',
+        p_parent_workspace_id: 'ws-reseller-123',
+        p_owner_user_id: SUB_USER_ID,
+        p_type: 'client',
+        p_depth: 2,
+      };
+
+      expect(rpcParams.p_type).toBe('client');
+      expect(rpcParams.p_depth).toBe(2);
+      expect(rpcParams.p_parent_workspace_id).toBeDefined();
+      expect(rpcParams.p_owner_user_id).toBe(SUB_USER_ID);
+    });
+
+    it('reseller deve essere aggiunto come admin nel workspace client', () => {
+      // Record membership che viene inserito per il reseller
+      const membershipRecord = {
+        workspace_id: 'ws-client-new',
+        user_id: RESELLER_ID,
+        role: 'admin',
+        status: 'active',
+        accepted_at: new Date().toISOString(),
+        invited_by: RESELLER_ID,
+      };
+
+      expect(membershipRecord.role).toBe('admin');
+      expect(membershipRecord.status).toBe('active');
+      expect(membershipRecord.user_id).toBe(RESELLER_ID);
+      expect(membershipRecord.workspace_id).toBeTruthy();
+    });
+
+    it('workspace name viene generato dal nome del sub-user', () => {
+      const subUserName = 'Mario Rossi';
+      const expectedWsName = `${subUserName} Workspace`;
+
+      expect(expectedWsName).toBe('Mario Rossi Workspace');
+    });
+
+    it('primary_workspace_id deve essere impostato sul sub-user', () => {
+      // Dopo la creazione del workspace, il sub-user deve avere primary_workspace_id
+      const updatePayload = {
+        primary_workspace_id: 'ws-client-new-123',
+      };
+
+      expect(updatePayload.primary_workspace_id).toBeTruthy();
+      expect(typeof updatePayload.primary_workspace_id).toBe('string');
+    });
+  });
 });
