@@ -32,6 +32,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_check_product_supplier_workspace ON product_suppliers;
 CREATE TRIGGER trg_check_product_supplier_workspace
   BEFORE INSERT OR UPDATE ON product_suppliers
   FOR EACH ROW EXECUTE FUNCTION check_product_supplier_workspace();
@@ -57,6 +58,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_check_inventory_workspace ON inventory;
 CREATE TRIGGER trg_check_inventory_workspace
   BEFORE INSERT OR UPDATE ON inventory
   FOR EACH ROW EXECUTE FUNCTION check_inventory_workspace();
@@ -91,6 +93,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_check_movement_workspace ON warehouse_movements;
 CREATE TRIGGER trg_check_movement_workspace
   BEFORE INSERT OR UPDATE ON warehouse_movements
   FOR EACH ROW EXECUTE FUNCTION check_movement_workspace();
@@ -110,6 +113,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_check_purchase_order_workspace ON purchase_orders;
 CREATE TRIGGER trg_check_purchase_order_workspace
   BEFORE INSERT OR UPDATE ON purchase_orders
   FOR EACH ROW EXECUTE FUNCTION check_purchase_order_workspace();
@@ -144,6 +148,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+DROP TRIGGER IF EXISTS trg_check_po_item_workspace ON purchase_order_items;
 CREATE TRIGGER trg_check_po_item_workspace
   BEFORE INSERT OR UPDATE ON purchase_order_items
   FOR EACH ROW EXECUTE FUNCTION check_po_item_workspace();

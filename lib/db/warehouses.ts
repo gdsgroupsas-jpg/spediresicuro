@@ -86,7 +86,11 @@ export async function listInventory(
     query = query.eq('warehouse_id', warehouseId);
   }
 
-  query = query.order('quantity_available', { ascending: true }).range(offset, offset + limit - 1);
+  // Tiebreaker 'id' per paginazione stabile su dataset grandi
+  query = query
+    .order('quantity_available', { ascending: true })
+    .order('id', { ascending: true })
+    .range(offset, offset + limit - 1);
 
   const { data, error, count } = await query;
 
@@ -209,7 +213,8 @@ export async function getLowStockProducts(workspaceId: string) {
     .from('inventory_low_stock')
     .select('*, product:products(*), warehouse:warehouses(*)')
     .eq('workspace_id', workspaceId)
-    .order('quantity_available');
+    .order('quantity_available', { ascending: true })
+    .order('id', { ascending: true });
 
   if (error) {
     console.error('[WMS] Error fetching low stock:', error.message);
