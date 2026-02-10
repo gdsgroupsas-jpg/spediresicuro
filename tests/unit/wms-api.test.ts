@@ -96,19 +96,25 @@ function mockMembership(role: string, permissions: string[] = []) {
 function mockNoMembership() {
   mockFrom.mockImplementation((table: string) => {
     if (table === 'workspace_members') {
-      return {
-        select: () => ({
-          eq: () => ({
-            eq: () => ({
-              single: () =>
-                Promise.resolve({
-                  data: null,
-                  error: { code: 'PGRST116', message: 'not found' },
-                }),
-            }),
-          }),
-        }),
-      };
+      // Chainable mock che gestisce sia la query membership diretta (.single())
+      // sia la query fallback parent/child (.in() → array vuoto)
+      const chainable: Record<string, any> = {};
+      const methods = ['select', 'eq', 'in', 'not', 'order', 'range'];
+      for (const m of methods) {
+        chainable[m] = vi.fn().mockReturnValue(chainable);
+      }
+      // .single() → no membership trovata
+      chainable.single = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST116', message: 'not found' },
+      });
+      // Quando la catena finisce senza .single() (es. parent/child query) → array vuoto
+      chainable.then = vi.fn((resolve: any) => resolve({ data: [], error: null }));
+      return chainable;
+    }
+    if (table === 'workspaces') {
+      // Mock per la query child workspace (verifyWmsAccess fallback)
+      return mockTable(table);
     }
     return mockTable(table);
   });

@@ -64,8 +64,19 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { searchParams } = new URL(request.url);
     const view = searchParams.get('view'); // inventory | movements | value | low-stock
 
-    const warehouseId = searchParams.get('warehouse_id') || undefined;
-    const productId = searchParams.get('product_id') || undefined;
+    const rawWarehouseId = searchParams.get('warehouse_id') || undefined;
+    const rawProductId = searchParams.get('product_id') || undefined;
+
+    // Valida UUID opzionali — ritorna 400 invece di 500 per input malformati
+    if (rawWarehouseId && !isValidUUID(rawWarehouseId)) {
+      return NextResponse.json({ error: 'warehouse_id non valido' }, { status: 400 });
+    }
+    if (rawProductId && !isValidUUID(rawProductId)) {
+      return NextResponse.json({ error: 'product_id non valido' }, { status: 400 });
+    }
+
+    const warehouseId = rawWarehouseId;
+    const productId = rawProductId;
     const limit = Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 100);
     const offset = Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0);
 
@@ -161,6 +172,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         { error: 'type obbligatorio (inbound, outbound, adjustment)' },
         { status: 400 }
       );
+    }
+
+    // Valida UUID opzionale — ritorna 400 invece di 500 per input malformati
+    if (body.reference_id && !isValidUUID(body.reference_id)) {
+      return NextResponse.json({ error: 'reference_id non valido' }, { status: 400 });
     }
 
     // Per outbound, la quantita' deve essere negativa

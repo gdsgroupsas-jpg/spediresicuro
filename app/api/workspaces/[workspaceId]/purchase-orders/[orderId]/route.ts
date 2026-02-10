@@ -173,6 +173,11 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'list_price obbligatorio e >= 0' }, { status: 400 });
     }
 
+    // Valida UUID opzionale — ritorna 400 invece di 500 per input malformati
+    if (body.warehouse_id && !isValidUUID(body.warehouse_id)) {
+      return NextResponse.json({ error: 'warehouse_id non valido' }, { status: 400 });
+    }
+
     // Verifica che l'ordine esista e appartenga al workspace
     const order = await getPurchaseOrderById(workspaceId, orderId);
     if (!order) {

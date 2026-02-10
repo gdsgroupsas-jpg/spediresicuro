@@ -58,9 +58,16 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     const { searchParams } = new URL(request.url);
     const validStatuses = ['draft', 'confirmed', 'shipped', 'partial', 'received', 'cancelled'];
     const statusParam = searchParams.get('status') || undefined;
+    const rawSupplierId = searchParams.get('supplier_id') || undefined;
+
+    // Valida UUID opzionale — ritorna 400 invece di 500
+    if (rawSupplierId && !isValidUUID(rawSupplierId)) {
+      return NextResponse.json({ error: 'supplier_id non valido' }, { status: 400 });
+    }
+
     const options = {
       status: statusParam && validStatuses.includes(statusParam) ? statusParam : undefined,
-      supplierId: searchParams.get('supplier_id') || undefined,
+      supplierId: rawSupplierId,
       limit: Math.min(parseInt(searchParams.get('limit') || '50', 10) || 50, 100),
       offset: Math.max(parseInt(searchParams.get('offset') || '0', 10) || 0, 0),
     };

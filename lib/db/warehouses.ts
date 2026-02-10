@@ -70,42 +70,20 @@ export async function listInventory(
   warehouseId?: string,
   options?: { search?: string; lowStockOnly?: boolean; limit?: number; offset?: number }
 ) {
+  const limit = options?.limit || 50;
+  const offset = options?.offset || 0;
+
+  // Per low-stock, usa la view SQL che filtra lato DB (quantity_available <= reorder_point)
+  // Evita il caricamento dell'intero dataset in memoria
+  const tableName = options?.lowStockOnly ? 'inventory_low_stock' : 'inventory';
+
   let query = supabaseAdmin
-    .from('inventory')
+    .from(tableName)
     .select('*, product:products(*), warehouse:warehouses(*)', { count: 'exact' })
     .eq('workspace_id', workspaceId);
 
   if (warehouseId) {
     query = query.eq('warehouse_id', warehouseId);
-  }
-
-  // Nota: lowStockOnly richiede filtro client-side perche' Supabase
-  // non supporta confronto tra colonne (.lte('quantity_available', 'reorder_point'))
-  if (options?.lowStockOnly) {
-    query = query.gt('reorder_point', 0);
-  }
-
-  const limit = options?.limit || 50;
-  const offset = options?.offset || 0;
-
-  // Se lowStockOnly, recupera tutto per filtrare client-side, poi pagina
-  if (options?.lowStockOnly) {
-    query = query.order('quantity_available', { ascending: true });
-
-    const { data, error } = await query;
-
-    if (error) {
-      console.error('[WMS] Error listing inventory:', error.message);
-      throw new Error(`Errore recupero inventario: ${error.message}`);
-    }
-
-    // Filtra client-side: quantity_available <= reorder_point
-    const filtered = (data || []).filter((inv: any) => inv.quantity_available <= inv.reorder_point);
-
-    return {
-      inventory: filtered.slice(offset, offset + limit),
-      total: filtered.length,
-    };
   }
 
   query = query.order('quantity_available', { ascending: true }).range(offset, offset + limit - 1);
@@ -127,50 +105,30 @@ export async function updateStock(
   input: StockUpdateInput,
   userId: string
 ): Promise<void> {
-  // Update atomico via funzione SQL — evita race condition read-then-write
-  const { data: newQty, error } = await supabaseAdmin.rpc('wms_update_stock', {
+  // Operazione atomica: stock update + movimento in una singola transazione SQL
+  // Se il movimento fallisce, lo stock viene rollbackato automaticamente
+  const { data: newQty, error } = await supabaseAdmin.rpc('wms_update_stock_with_movement', {
     p_workspace_id: workspaceId,
     p_product_id: input.product_id,
     p_warehouse_id: input.warehouse_id,
     p_delta: input.quantity,
+    p_movement_type: input.type,
+    p_created_by: userId,
+    p_notes: input.notes || null,
+    p_reference_type: input.reference_type || null,
+    p_reference_id: input.reference_id || null,
   });
 
   if (error) {
+    // Cross-workspace violation dal trigger SQL
+    if (error.message.includes('non appartiene al workspace')) {
+      throw new Error(error.message);
+    }
     throw new Error(`Errore aggiornamento stock: ${error.message}`);
   }
 
   if (newQty === -1) {
     throw new Error('Stock insufficiente');
-  }
-
-  // Registra movimento
-  await recordMovement(workspaceId, {
-    product_id: input.product_id,
-    warehouse_id: input.warehouse_id,
-    type: input.type,
-    quantity: input.quantity,
-    created_by: userId,
-    reference_type: input.reference_type,
-    reference_id: input.reference_id,
-    notes: input.notes,
-  });
-}
-
-// ─── MOVEMENTS ───
-
-async function recordMovement(
-  workspaceId: string,
-  movement: Partial<WarehouseMovement>
-): Promise<void> {
-  const { error } = await supabaseAdmin.from('warehouse_movements').insert({
-    workspace_id: workspaceId,
-    ...movement,
-  });
-
-  if (error) {
-    // Propaga errore — stock gia' aggiornato ma movimento non registrato e' incoerente
-    console.error('[WMS] Error recording movement:', error.message);
-    throw new Error(`Errore registrazione movimento: ${error.message}`);
   }
 }
 
@@ -246,11 +204,11 @@ export async function getStockValue(workspaceId: string, warehouseId?: string) {
 // ─── LOW STOCK ───
 
 export async function getLowStockProducts(workspaceId: string) {
+  // Usa la view inventory_low_stock: filtro DB-side (quantity_available <= reorder_point)
   const { data, error } = await supabaseAdmin
-    .from('inventory')
+    .from('inventory_low_stock')
     .select('*, product:products(*), warehouse:warehouses(*)')
     .eq('workspace_id', workspaceId)
-    .gt('reorder_point', 0)
     .order('quantity_available');
 
   if (error) {
@@ -258,6 +216,5 @@ export async function getLowStockProducts(workspaceId: string) {
     return [];
   }
 
-  // Filtra client-side perche' Supabase non supporta confronto tra colonne in .lt()
-  return (data || []).filter((inv: any) => inv.quantity_available <= inv.reorder_point);
+  return data || [];
 }
