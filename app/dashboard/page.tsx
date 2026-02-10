@@ -17,10 +17,21 @@ import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import PageHeader from '@/components/page-header';
 import UserFeaturesList from '@/components/features/user-features-list';
-import { Shield, ArrowRight, AlertCircle } from 'lucide-react';
+import {
+  Shield,
+  ArrowRight,
+  AlertCircle,
+  Building2,
+  Users,
+  User,
+  Wallet,
+  ChevronRight,
+} from 'lucide-react';
 import { useProfileCompletion } from '@/lib/hooks/use-profile-completion';
 import { WelcomeGate } from '@/components/invite/welcome-gate';
 import { WELCOME_SEEN_KEY } from '@/lib/welcome-gate-helpers';
+import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
+import { getInitials } from '@/lib/utils';
 
 // Interfaccia per le statistiche
 interface Stats {
@@ -180,6 +191,9 @@ export default function DashboardPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [recentSpedizioni, setRecentSpedizioni] = useState<any[]>([]);
   const [margine, setMargine] = useState(15);
+
+  // Workspace context
+  const { workspace, workspaces } = useWorkspaceContext();
 
   // WelcomeGate: primo accesso in assoluto
   const [showWelcome, setShowWelcome] = useState(false);
@@ -446,45 +460,102 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* 🚀 NEW: Doctor AI Status Bar */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 mb-8 relative z-10">
-        <div className="bg-white/80 backdrop-blur-md border border-indigo-100 rounded-xl p-4 shadow-lg flex flex-col md:flex-row items-center justify-between gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div className="flex items-center gap-4">
-            <div className="relative">
-              <div className="w-3 h-3 bg-green-500 rounded-full animate-ping absolute"></div>
-              <div className="w-3 h-3 bg-green-500 rounded-full relative"></div>
-            </div>
-            <div>
-              <p className="text-sm font-bold text-gray-800 flex items-center gap-2">
-                <span className="bg-gradient-to-r from-indigo-500 to-purple-600 bg-clip-text text-transparent">
-                  Doctor AI Active
-                </span>
-                <span className="px-2 py-0.5 rounded-full bg-green-100 text-green-700 text-[10px] uppercase tracking-wider font-bold">
-                  Protected
-                </span>
-              </p>
-              <p className="text-xs text-gray-500">
-                Il sistema monitora e ripara errori in background. Nessuna anomalia rilevata.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-6 text-xs text-gray-500 font-medium">
-            <div className="flex items-center gap-2">
-              <Shield className="w-4 h-4 text-indigo-400" />
-              <span>API Keys Valid</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-4 h-4 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-bold">
-                A
+      {/* Workspace Context Bar */}
+      {workspace && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-6 mb-8 relative z-10">
+          <div className="bg-white/80 backdrop-blur-md border border-gray-200/80 rounded-xl p-4 shadow-lg animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              {/* Sinistra: Workspace attivo */}
+              <div className="flex items-center gap-4">
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center text-sm font-bold text-white ${
+                    workspace.workspace_type === 'platform'
+                      ? 'bg-violet-600'
+                      : workspace.workspace_type === 'reseller'
+                        ? 'bg-blue-600'
+                        : 'bg-emerald-600'
+                  }`}
+                >
+                  {getInitials(workspace.workspace_name)}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-bold text-gray-900">{workspace.workspace_name}</p>
+                    <span
+                      className={`text-[10px] px-2 py-0.5 rounded-full font-semibold uppercase tracking-wide ring-1 ${
+                        workspace.workspace_type === 'platform'
+                          ? 'bg-violet-50 text-violet-700 ring-violet-200'
+                          : workspace.workspace_type === 'reseller'
+                            ? 'bg-blue-50 text-blue-700 ring-blue-200'
+                            : 'bg-emerald-50 text-emerald-700 ring-emerald-200'
+                      }`}
+                    >
+                      {workspace.workspace_type === 'platform'
+                        ? 'Platform'
+                        : workspace.workspace_type === 'reseller'
+                          ? 'Reseller'
+                          : 'Client'}
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium capitalize">
+                      {workspace.role}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">{workspace.organization_name}</p>
+                </div>
               </div>
-              <span>Anne Ready</span>
-            </div>
-            <div className="hidden md:flex items-center gap-2 text-indigo-600 cursor-pointer hover:underline">
-              Vedi Report Completo &rarr;
+
+              {/* Destra: Metriche rapide */}
+              <div className="flex items-center gap-6">
+                {/* Wallet */}
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center">
+                    <Wallet className="w-4 h-4 text-emerald-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">
+                      Saldo
+                    </p>
+                    <p className="text-sm font-bold text-gray-900 tabular-nums">
+                      {new Intl.NumberFormat('it-IT', {
+                        style: 'currency',
+                        currency: 'EUR',
+                      }).format(workspace.wallet_balance)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Workspace totali */}
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                    <Users className="w-4 h-4 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">
+                      Workspace
+                    </p>
+                    <p className="text-sm font-bold text-gray-900 tabular-nums">
+                      {workspaces.length}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Protezione attiva */}
+                <div className="hidden md:flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-green-50 flex items-center justify-center">
+                    <Shield className="w-4 h-4 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-gray-500 uppercase tracking-wide font-medium">
+                      Sistema
+                    </p>
+                    <p className="text-sm font-semibold text-green-600">Protetto</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

@@ -14,7 +14,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useState, useEffect, useMemo } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { Package, LogOut, ChevronDown, ChevronRight } from 'lucide-react';
+import { Package, LogOut, ChevronDown, ChevronRight, Shield } from 'lucide-react';
 import {
   getNavigationForUser,
   isNavItemActive,
@@ -551,6 +551,20 @@ export default function DashboardSidebar() {
             </div>
           );
         })}
+      </div>
+
+      {/* Doctor AI Status - Indicatore compatto */}
+      <div className="px-3 py-2 border-t border-gray-200">
+        <div className="flex items-center gap-2.5 px-3 py-1.5 rounded-lg bg-green-50/60">
+          <div className="relative shrink-0">
+            <div className="w-2 h-2 bg-green-500 rounded-full animate-ping absolute" />
+            <div className="w-2 h-2 bg-green-500 rounded-full relative" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] font-semibold text-gray-700">Doctor AI</p>
+          </div>
+          <Shield className="w-3.5 h-3.5 text-green-600 shrink-0" />
+        </div>
       </div>
 
       {/* Footer - User Profile */}
