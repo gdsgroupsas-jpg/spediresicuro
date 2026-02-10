@@ -321,6 +321,9 @@ export function ShipmentWizardProvider({ children }: { children: React.ReactNode
           if (data.services.contrassegnoEnabled && data.services.contrassegnoAmount <= 0) {
             errors.push('Importo contrassegno deve essere maggiore di 0');
           }
+          if (data.services.contrassegnoEnabled && data.services.contrassegnoAmount > 5000) {
+            errors.push('Importo massimo contrassegno: 5.000 €');
+          }
           if (data.services.contrassegnoEnabled && !data.destinatario.telefono) {
             errors.push('Telefono destinatario obbligatorio per contrassegno');
           }

@@ -23,6 +23,7 @@ import { WelcomeGate } from '@/components/invite/welcome-gate';
 import { WELCOME_SEEN_KEY } from '@/lib/welcome-gate-helpers';
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
 import WorkspaceSwitcher from '@/components/workspace-switcher';
+import { useUser } from '@/contexts/UserContext';
 
 // Interfaccia per le statistiche
 interface Stats {
@@ -165,7 +166,8 @@ export default function DashboardPage() {
   const { isComplete: isProfileComplete, isLoading: isProfileLoading } = useProfileCompletion();
   const profileIncomplete = !isProfileLoading && isProfileComplete === false;
 
-  const [userRole, setUserRole] = useState<string | null>(null);
+  // Dati utente condivisi (elimina fetch ridondanti /api/user/settings e /api/user/dati-cliente)
+  const { user, isAdmin, hasCompletedOnboarding, isLoading: isUserLoading } = useUser();
   const [stats, setStats] = useState<Stats>({
     totaleSpedizioni: 0,
     spedizioniOggi: 0,
@@ -197,93 +199,18 @@ export default function DashboardPage() {
     }
   }, [status]);
 
-  // Verifica se i dati cliente sono completati (solo per nuovi utenti)
+  // Redirect se dati cliente non completati (usa UserContext, no fetch aggiuntivo)
   useEffect(() => {
-    if (status === 'authenticated' && session?.user?.email) {
-      // ⚠️ P0 FIX: Controllo database PRIMA di localStorage (fail-closed)
-      // Rimuove bypass localStorage e delay
-      async function checkDatiCompletati() {
-        try {
-          // Email dell'utente corrente
-          const userEmail = session?.user?.email?.toLowerCase() || '';
-
-          // Per l'utenza test@spediresicuro.it, NON reindirizzare mai a dati-cliente
-          const isTestUser = userEmail === 'test@spediresicuro.it';
-
-          if (isTestUser) {
-            console.log(
-              '✅ [DASHBOARD] Utente test rilevato, salvo flag e NON reindirizzo a dati-cliente'
-            );
-            if (typeof window !== 'undefined' && session?.user?.email) {
-              localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
-            }
-            return; // Esci senza controllare il database
-          }
-
-          // ⚠️ CRITICO: Controlla database (no localStorage bypass, no delay)
-          const response = await fetch('/api/user/dati-cliente', {
-            cache: 'no-store',
-          });
-
-          if (response.ok) {
-            const data = await response.json();
-            console.log('📋 [DASHBOARD] Verifica dati cliente dal database:', {
-              hasDatiCliente: !!data.datiCliente,
-              datiCompletati: data.datiCliente?.datiCompletati,
-            });
-
-            // Se i dati sono completati nel database, salva in localStorage
-            if (data.datiCliente && data.datiCliente.datiCompletati) {
-              console.log(
-                '✅ [DASHBOARD] Dati cliente completati nel database, salvo in localStorage'
-              );
-              if (typeof window !== 'undefined' && session?.user?.email) {
-                localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
-              }
-              // NON reindirizzare se i dati sono completati
-            } else {
-              // ⚠️ P0 FIX: Se i dati NON sono completati → redirect OBBLIGATORIO
-              console.log(
-                '🔄 [DASHBOARD] Dati non completati nel database, reindirizzamento OBBLIGATORIO a /dashboard/dati-cliente'
-              );
-              router.push('/dashboard/dati-cliente');
-            }
-          } else {
-            // ⚠️ P0-5 FIX: Fail-closed - se API fallisce → redirect a dati-cliente
-            console.warn('⚠️ [DASHBOARD] Errore API, fail-closed: redirect a dati-cliente');
-            router.push('/dashboard/dati-cliente');
-          }
-        } catch (err) {
-          // ⚠️ P0-5 FIX: Fail-closed - se errore → redirect a dati-cliente
-          console.error(
-            '❌ [DASHBOARD] Errore verifica dati cliente, fail-closed: redirect a dati-cliente'
-          );
-          router.push('/dashboard/dati-cliente');
-        }
-      }
-
-      // ⚠️ P0-3 FIX: Rimuove delay, esegue controllo immediato
-      checkDatiCompletati();
+    if (isUserLoading || !user) return;
+    // Utente test: mai redirect
+    if (user.email?.toLowerCase() === 'test@spediresicuro.it') return;
+    // Fail-closed: se dati non completati → redirect obbligatorio
+    if (!hasCompletedOnboarding) {
+      router.push('/dashboard/dati-cliente');
     }
-  }, [status, session, router]);
+  }, [isUserLoading, user, hasCompletedOnboarding, router]);
 
-  // Verifica ruolo utente
-  useEffect(() => {
-    async function checkUserRole() {
-      if (session?.user?.email) {
-        try {
-          const response = await fetch('/api/user/settings');
-          if (response.ok) {
-            const data = await response.json();
-            setUserRole(data.role || null);
-          }
-        } catch (error) {
-          console.error('Errore verifica ruolo:', error);
-        }
-      }
-    }
-    checkUserRole();
-  }, [session]);
+  // Ruolo utente derivato da UserContext (nessun fetch aggiuntivo)
 
   // Carica dati dashboard
   useEffect(() => {
@@ -823,7 +750,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Admin Dashboard Link - Solo per admin */}
-              {userRole === 'admin' && (
+              {isAdmin && (
                 <div className="mb-8">
                   <Link
                     href="/dashboard/admin"

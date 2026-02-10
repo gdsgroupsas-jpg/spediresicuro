@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 import { ShipmentWizardProvider, useShipmentWizard } from './ShipmentWizardContext';
 import { WizardProgress } from './components/WizardProgress';
@@ -40,6 +41,15 @@ function normalizeCarrierCode(carrierCode: string | undefined): string {
 function WizardContent({ onSuccess, onCancel }: ShipmentWizardProps) {
   const { data, currentStep, isStepComplete } = useShipmentWizard();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitDone, setSubmitDone] = useState(false);
+
+  // Protezione modifiche non salvate: dirty se almeno un campo compilato
+  const isWizardDirty =
+    !submitDone &&
+    (data.mittente.nome.length > 0 ||
+      data.destinatario.nome.length > 0 ||
+      data.packages.some((p) => p.peso > 0));
+  useUnsavedChanges(isWizardDirty);
 
   // Render the current step
   const renderStep = () => {
@@ -198,6 +208,9 @@ function WizardContent({ onSuccess, onCancel }: ShipmentWizardProps) {
           )}
         </div>
       );
+
+      // Disattiva protezione unsaved changes prima del redirect
+      setSubmitDone(true);
 
       // Callback di successo
       onSuccess?.(result.shipment?.id || result.shipmentId || result.ldv);

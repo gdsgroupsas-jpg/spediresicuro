@@ -1,6 +1,6 @@
 ﻿{
-  "version": "1.1",
-  "updated": "2026-01-19",
+  "version": "1.2",
+  "updated": "2026-02-10",
   "entries": [
     {
       "id": "CHANGELOG_md",
@@ -1470,15 +1470,6 @@
       "source_of_truth": false
     },
     {
-      "id": "docs_DOCS_CHANGELOG_md",
-      "title": "DOCS_CHANGELOG",
-      "path": "docs/DOCS_CHANGELOG.md",
-      "tags": ["doc"],
-      "owner": "docs",
-      "status": "active",
-      "source_of_truth": false
-    },
-    {
       "id": "docs_DOCUMENTATION_ALIGNMENT_REPORT_md",
       "title": "DOCUMENTATION_ALIGNMENT_REPORT",
       "path": "docs/DOCUMENTATION_ALIGNMENT_REPORT.md",
@@ -2329,6 +2320,258 @@
       "title": "TEST_INSTRUCTIONS",
       "path": "TEST_INSTRUCTIONS.md",
       "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_rules_SECURITY_SECRETS_md",
+      "title": "SECURITY_SECRETS",
+      "path": "docs/00-HANDBOOK/rules/SECURITY_SECRETS.md",
+      "tags": ["doc", "security"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_ARCHITECTURE_V2_PLAN_md",
+      "title": "ARCHITECTURE_V2_PLAN",
+      "path": "docs/00-HANDBOOK/ARCHITECTURE_V2_PLAN.md",
+      "tags": ["doc", "architecture"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_REFACTORING_MILESTONES_md",
+      "title": "REFACTORING_MILESTONES",
+      "path": "docs/00-HANDBOOK/REFACTORING_MILESTONES.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_features_WORKSPACE_ADAPTIVE_UI_md",
+      "title": "WORKSPACE_ADAPTIVE_UI",
+      "path": "docs/00-HANDBOOK/features/WORKSPACE_ADAPTIVE_UI.md",
+      "tags": ["doc", "feature"],
+      "owner": "engineering",
+      "status": "active",
+      "source_of_truth": true
+    },
+    {
+      "id": "docs_00_HANDBOOK_features_WORKSPACE_EMAIL_INFRASTRUCTURE_md",
+      "title": "WORKSPACE_EMAIL_INFRASTRUCTURE",
+      "path": "docs/00-HANDBOOK/features/WORKSPACE_EMAIL_INFRASTRUCTURE.md",
+      "tags": ["doc", "feature"],
+      "owner": "engineering",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_features_POSTA_RESELLER_UI_md",
+      "title": "POSTA_RESELLER_UI",
+      "path": "docs/00-HANDBOOK/features/POSTA_RESELLER_UI.md",
+      "tags": ["doc", "feature"],
+      "owner": "engineering",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_features_BACHECA_BROADCAST_md",
+      "title": "BACHECA_BROADCAST",
+      "path": "docs/00-HANDBOOK/features/BACHECA_BROADCAST.md",
+      "tags": ["doc", "feature"],
+      "owner": "engineering",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_00_HANDBOOK_features_WMS_MVP_md",
+      "title": "WMS_MVP",
+      "path": "docs/00-HANDBOOK/features/WMS_MVP.md",
+      "tags": ["doc", "feature"],
+      "owner": "engineering",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_COD_MANAGEMENT_md",
+      "title": "COD_MANAGEMENT",
+      "path": "docs/11-FEATURES/COD_MANAGEMENT.md",
+      "tags": ["doc", "feature"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_COMMERCIAL_QUOTES_md",
+      "title": "COMMERCIAL_QUOTES",
+      "path": "docs/11-FEATURES/COMMERCIAL_QUOTES.md",
+      "tags": ["doc", "feature"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_TRACKING_md",
+      "title": "TRACKING",
+      "path": "docs/11-FEATURES/TRACKING.md",
+      "tags": ["doc", "feature"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_NOTIFICATIONS_md",
+      "title": "NOTIFICATIONS",
+      "path": "docs/11-FEATURES/NOTIFICATIONS.md",
+      "tags": ["doc", "feature"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_CRM_INTELLIGENCE_md",
+      "title": "CRM_INTELLIGENCE",
+      "path": "docs/11-FEATURES/CRM_INTELLIGENCE.md",
+      "tags": ["doc", "feature"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_OUTREACH_MULTI_CHANNEL_md",
+      "title": "OUTREACH_MULTI_CHANNEL",
+      "path": "docs/11-FEATURES/OUTREACH_MULTI_CHANNEL.md",
+      "tags": ["doc", "feature"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_ONBOARDING_WIZARD_md",
+      "title": "ONBOARDING_WIZARD",
+      "path": "docs/11-FEATURES/ONBOARDING_WIZARD.md",
+      "tags": ["doc", "feature"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_ADDRESS_VALIDATION_md",
+      "title": "ADDRESS_VALIDATION",
+      "path": "docs/11-FEATURES/ADDRESS_VALIDATION.md",
+      "tags": ["doc", "feature"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_11_FEATURES_SECURITY_PRICE_LISTS_ATOMIC_md",
+      "title": "SECURITY_PRICE_LISTS_ATOMIC",
+      "path": "docs/11-FEATURES/SECURITY_PRICE_LISTS_ATOMIC.md",
+      "tags": ["doc", "feature", "security"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_4_UI_COMPONENTS_WORKFLOWS_md",
+      "title": "WORKFLOWS",
+      "path": "docs/4-UI-COMPONENTS/WORKFLOWS.md",
+      "tags": ["doc"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_8_SECURITY_RATE_LIMITING_md",
+      "title": "RATE_LIMITING",
+      "path": "docs/8-SECURITY/RATE_LIMITING.md",
+      "tags": ["doc", "security"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_milestones_MILESTONE_SHIPMENT_CORE_REFACTOR_md",
+      "title": "MILESTONE-SHIPMENT-CORE-REFACTOR",
+      "path": "docs/milestones/MILESTONE-SHIPMENT-CORE-REFACTOR.md",
+      "tags": ["doc", "milestone"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_milestones_MILESTONE_COMMERCIAL_QUOTES_MVP_PHASE_A_md",
+      "title": "MILESTONE-COMMERCIAL-QUOTES-MVP-PHASE-A",
+      "path": "docs/milestones/MILESTONE-COMMERCIAL-QUOTES-MVP-PHASE-A.md",
+      "tags": ["doc", "milestone"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_milestones_MILESTONE_COMMERCIAL_QUOTES_PHASES_BCD_md",
+      "title": "MILESTONE-COMMERCIAL-QUOTES-PHASES-BCD",
+      "path": "docs/milestones/MILESTONE-COMMERCIAL-QUOTES-PHASES-BCD.md",
+      "tags": ["doc", "milestone"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_milestones_MILESTONE_CRM_INTELLIGENCE_S1_md",
+      "title": "MILESTONE-CRM-INTELLIGENCE-S1",
+      "path": "docs/milestones/MILESTONE-CRM-INTELLIGENCE-S1.md",
+      "tags": ["doc", "milestone"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_milestones_MILESTONE_CRM_INTELLIGENCE_S2_md",
+      "title": "MILESTONE-CRM-INTELLIGENCE-S2",
+      "path": "docs/milestones/MILESTONE-CRM-INTELLIGENCE-S2.md",
+      "tags": ["doc", "milestone"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_milestones_MILESTONE_OUTREACH_S3_md",
+      "title": "MILESTONE-OUTREACH-S3",
+      "path": "docs/milestones/MILESTONE-OUTREACH-S3.md",
+      "tags": ["doc", "milestone"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_milestones_MILESTONE_CRM_OUTREACH_UI_S4_md",
+      "title": "MILESTONE-CRM-OUTREACH-UI-S4",
+      "path": "docs/milestones/MILESTONE-CRM-OUTREACH-UI-S4.md",
+      "tags": ["doc", "milestone"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_architecture_ADR_003_pricing_single_source_of_truth_md",
+      "title": "ADR-003-pricing-single-source-of-truth",
+      "path": "docs/architecture/ADR-003-pricing-single-source-of-truth.md",
+      "tags": ["doc", "architecture", "adr"],
+      "owner": "docs",
+      "status": "active",
+      "source_of_truth": false
+    },
+    {
+      "id": "docs_guides_pricing_calculation_guide_md",
+      "title": "pricing-calculation-guide",
+      "path": "docs/guides/pricing-calculation-guide.md",
+      "tags": ["doc", "guide"],
       "owner": "docs",
       "status": "active",
       "source_of_truth": false

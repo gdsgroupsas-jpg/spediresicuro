@@ -36,6 +36,7 @@ import { useEffect, useMemo, useState, useCallback } from 'react';
 // Enterprise Feedback UX Components (Phase 3)
 import { SuccessModal, ErrorDialog } from '@/components/feedback';
 import { useEnterpriseFeedbackUX } from '@/hooks/useEnterpriseFeedbackUX';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import { formatError } from '@/lib/errors';
 
 interface FormData {
@@ -281,6 +282,14 @@ export function QuickModeForm() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [submitCompleted, setSubmitCompleted] = useState(false); // Blocca pulsante fino a reset form
+
+  // Protezione modifiche non salvate: dirty se almeno un campo compilato e non ancora inviato
+  const isFormDirty =
+    !submitCompleted &&
+    (formData.mittenteNome.length > 0 ||
+      formData.destinatarioNome.length > 0 ||
+      formData.peso.length > 0);
+  useUnsavedChanges(isFormDirty);
   const [createdTracking, setCreatedTracking] = useState<string | null>(null);
   const [sourceMode, setSourceMode] = useState<'manual' | 'ai'>('manual');
 
@@ -475,7 +484,9 @@ export function QuickModeForm() {
         /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.destinatarioEmail),
       peso: parseFloat(formData.peso) > 0,
       contrassegnoAmount:
-        !formData.contrassegnoAmount || parseFloat(formData.contrassegnoAmount) > 0,
+        !formData.contrassegnoAmount ||
+        (parseFloat(formData.contrassegnoAmount) > 0 &&
+          parseFloat(formData.contrassegnoAmount) <= 5000),
     };
   }, [formData]);
 
@@ -1487,6 +1498,7 @@ export function QuickModeForm() {
                       type="number"
                       step="0.01"
                       min="0"
+                      max="5000"
                       value={formData.contrassegnoAmount}
                       onChange={(e) => {
                         const value = e.target.value;
@@ -1520,10 +1532,16 @@ export function QuickModeForm() {
                       )}
                   </div>
                   {formData.contrassegnoAmount &&
+                    parseFloat(formData.contrassegnoAmount) > 5000 && (
+                      <p className="text-xs text-red-600 mt-1">
+                        Importo massimo contrassegno: 5.000 €
+                      </p>
+                    )}
+                  {formData.contrassegnoAmount &&
                     parseFloat(formData.contrassegnoAmount) > 0 &&
                     !formData.destinatarioTelefono && (
                       <p className="text-xs text-amber-600 mt-1">
-                        ⚠️ Il telefono destinatario è obbligatorio per il contrassegno
+                        Il telefono destinatario e obbligatorio per il contrassegno
                       </p>
                     )}
                 </div>

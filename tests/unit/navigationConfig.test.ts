@@ -209,13 +209,14 @@ describe('navigationConfig - Nested Sections', () => {
     expect(itemIds).toContain('leads');
   });
 
-  it('should have admin-finance subsection with 7 items', () => {
+  it('should have admin-finance subsection with 5 items', () => {
     const config = getNavigationForUser('admin');
 
     const adminSection = config.sections.find((s) => s.id === 'admin');
     const financeSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-finance');
 
-    expect(financeSubsection?.items).toHaveLength(7);
+    // 5 items: rimossi cost-adjustment e cash-statements (link morti)
+    expect(financeSubsection?.items).toHaveLength(5);
   });
 
   it('should have admin-system subsection with 5 items', () => {

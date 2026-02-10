@@ -441,13 +441,6 @@ const adminSection: NavSection = {
           description: 'Approvazione e rifiuto richieste ricarica wallet',
         },
         {
-          id: 'cost-adjustment',
-          label: 'Rettifica Costi',
-          href: '/dashboard/rettifica-costi',
-          icon: Calculator,
-          description: 'Correzione costi spedizioni',
-        },
-        {
           id: 'price-lists',
           label: 'Listini',
           href: '/dashboard/listini',
@@ -460,13 +453,6 @@ const adminSection: NavSection = {
           href: '/dashboard/contrassegni',
           icon: DollarSign,
           description: 'Gestione amministrativa contrassegni',
-        },
-        {
-          id: 'cash-statements',
-          label: 'Distinte Contrassegni',
-          href: '/dashboard/distinte-contrassegni',
-          icon: FileSpreadsheet,
-          description: 'Distinte riepilogative contrassegni',
         },
       ],
     },

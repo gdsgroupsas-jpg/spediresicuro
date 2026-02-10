@@ -5,7 +5,7 @@ audience: all
 owner: docs
 status: active
 source_of_truth: true
-updated: 2026-01-19
+updated: 2026-02-10
 ---
 
 # Documentation Map
@@ -22,6 +22,7 @@ Key sections:
 
 - docs/1-GETTING-STARTED/README.md
 - docs/2-ARCHITECTURE/OVERVIEW.md
+- docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md
 - docs/3-API/OVERVIEW.md
 - docs/4-UI-COMPONENTS/OVERVIEW.md
 - docs/5-TESTING/STRATEGY.md
@@ -29,9 +30,9 @@ Key sections:
 - docs/7-OPERATIONS/MONITORING.md
 - docs/8-SECURITY/OVERVIEW.md
 - docs/9-BUSINESS/VISION.md
-- docs/10-AI-AGENT/OVERVIEW.md
+- docs/11-FEATURES/ (feature documentation)
+- docs/12-TROUBLESHOOTING/COMMON_ISSUES.md
 - ROADMAP.md
-- docs/DOCS_CHANGELOG.md
 - docs/00-HANDBOOK/DECISION_LOG.md
 - docs/00-HANDBOOK/testing/TASK_DOC_TEST_MAP.md
 - docs/00-HANDBOOK/testing/ENV_REQUIREMENTS.md
@@ -46,4 +47,4 @@ Use these as canonical references:
 - Architecture overview: docs/2-ARCHITECTURE/OVERVIEW.md
 - API overview: docs/3-API/OVERVIEW.md
 - Testing strategy: docs/5-TESTING/STRATEGY.md
-- AI system: docs/10-AI-AGENT/OVERVIEW.md
+- AI orchestrator: docs/2-ARCHITECTURE/AI_ORCHESTRATOR.md

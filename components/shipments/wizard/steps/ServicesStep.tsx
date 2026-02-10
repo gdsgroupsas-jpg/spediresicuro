@@ -79,6 +79,7 @@ export function ServicesStep() {
                 type="number"
                 step="0.01"
                 min="0.01"
+                max="5000"
                 value={data.services.contrassegnoAmount || ''}
                 onChange={(e) =>
                   setServices({ contrassegnoAmount: parseFloat(e.target.value) || 0 })
@@ -91,6 +92,9 @@ export function ServicesStep() {
               <p className="text-sm text-red-500 mt-1">
                 Inserisci un importo valido per il contrassegno
               </p>
+            )}
+            {data.services.contrassegnoEnabled && data.services.contrassegnoAmount > 5000 && (
+              <p className="text-sm text-red-500 mt-1">Importo massimo contrassegno: 5.000 €</p>
             )}
             <p className="text-xs text-gray-500 mt-2">
               Il telefono del destinatario e obbligatorio per il contrassegno

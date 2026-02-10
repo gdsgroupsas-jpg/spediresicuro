@@ -49,7 +49,10 @@ export const createShipmentSchema = z.object({
     .optional(),
   cod: z
     .object({
-      value: z.number().nonnegative('Valore contrassegno non valido'),
+      value: z
+        .number()
+        .nonnegative('Valore contrassegno non valido')
+        .max(5000, 'Contrassegno massimo 5.000 €'),
     })
     .optional(),
   notes: z.string().optional(),
