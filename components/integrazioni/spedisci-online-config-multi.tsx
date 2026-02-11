@@ -29,6 +29,7 @@ import {
   Edit2,
   X,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface Contract {
   codice: string;
@@ -189,13 +190,13 @@ export default function SpedisciOnlineConfigMulti() {
     try {
       // Valida
       if (!formData.api_key.trim()) {
-        alert('API Key è obbligatoria');
+        toast.warning('API Key è obbligatoria');
         setIsSaving(false);
         return;
       }
 
       if (!formData.base_url.trim()) {
-        alert('Endpoint (Base URL) è obbligatorio');
+        toast.warning('Endpoint (Base URL) è obbligatorio');
         setIsSaving(false);
         return;
       }
@@ -254,10 +255,10 @@ export default function SpedisciOnlineConfigMulti() {
         await loadConfigurations();
         handleCancel();
       } else {
-        alert(result.error || 'Errore durante il salvataggio');
+        toast.error(result.error || 'Errore durante il salvataggio');
       }
     } catch (error: any) {
-      alert(error.message || 'Errore durante il salvataggio');
+      toast.error(error.message || 'Errore durante il salvataggio');
     } finally {
       setIsSaving(false);
     }

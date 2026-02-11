@@ -19,6 +19,7 @@ import {
   createInvoice,
 } from '@/app/actions/invoices';
 import { Invoice, InvoiceStatus } from '@/types/invoices';
+import { toast } from 'sonner';
 import Link from 'next/link';
 import { format } from 'date-fns';
 import { it } from 'date-fns/locale';
@@ -60,7 +61,7 @@ export default function AdminInvoicesPage() {
       await issueInvoice(id);
       await loadInvoices(); // Reload to see new number/status
     } catch (err: any) {
-      alert(`Errore: ${err.message}`);
+      toast.error(err.message);
     } finally {
       setIsUpdating(false);
     }
@@ -72,7 +73,7 @@ export default function AdminInvoicesPage() {
       await updateInvoiceStatus(id, 'paid');
       await loadInvoices();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setIsUpdating(false);
     }

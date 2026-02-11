@@ -32,6 +32,7 @@ import {
   XCircle,
   Package,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface PurchaseOrder {
   id: string;
@@ -168,7 +169,7 @@ export default function OrdiniFornitore() {
       setOffset(0);
       fetchOrders(filterStatus, 0);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSaving(false);
     }
@@ -195,7 +196,7 @@ export default function OrdiniFornitore() {
       setNewStatus('');
       fetchOrders(filterStatus, 0);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 

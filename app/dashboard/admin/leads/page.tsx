@@ -61,6 +61,7 @@ import {
 import { format } from 'date-fns';
 import { it as itLocale } from 'date-fns/locale';
 import { ConfirmActionDialog } from '@/components/shared/confirm-action-dialog';
+import { toast } from 'sonner';
 
 // Colori CSS per status badge
 const STATUS_CSS: Record<LeadStatus, string> = {
@@ -207,7 +208,7 @@ export default function AdminLeadsPage() {
   const handleStatusChange = async (lead: Lead, newStatus: LeadStatus) => {
     const validTargets = LEAD_VALID_TRANSITIONS[lead.status] || [];
     if (!validTargets.includes(newStatus)) {
-      alert(`Transizione ${lead.status} → ${newStatus} non valida`);
+      toast.warning(`Transizione ${lead.status} → ${newStatus} non valida`);
       return;
     }
 
@@ -218,7 +219,7 @@ export default function AdminLeadsPage() {
           newStatus === 'lost' ? prompt('Motivo perdita (opzionale):') || undefined : undefined,
       });
       if (!result.success) {
-        alert(result.error);
+        toast.error(result.error);
       }
       loadLeads();
     } catch {
@@ -247,7 +248,7 @@ export default function AdminLeadsPage() {
 
     const result = await addLeadNote(lead.id, note);
     if (!result.success) {
-      alert(result.error);
+      toast.error(result.error);
     }
     loadLeads();
   };

@@ -22,6 +22,7 @@ import {
 import { cn } from '@/lib/utils';
 import { markContrassegnoInCarica, markContrassegnoEvaso } from '@/actions/contrassegni';
 import { useRealtimeShipments } from '@/hooks/useRealtimeShipments';
+import { toast } from 'sonner';
 
 export interface CashOnDeliveryShipment {
   id: string;
@@ -231,10 +232,10 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
           })
         );
       } else {
-        alert(`Errore: ${result.error}`);
+        toast.error(result.error);
       }
     } catch (error: any) {
-      alert(`Errore: ${error.message}`);
+      toast.error(error.message);
     } finally {
       setProcessingId(null);
     }
@@ -259,10 +260,10 @@ export default function ContrassegniUI({ initialShipments, userId }: Contrassegn
           })
         );
       } else {
-        alert(`Errore: ${result.error}`);
+        toast.error(result.error);
       }
     } catch (error: any) {
-      alert(`Errore: ${error.message}`);
+      toast.error(error.message);
     } finally {
       setProcessingId(null);
     }

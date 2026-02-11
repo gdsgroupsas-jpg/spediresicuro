@@ -575,7 +575,7 @@ export default function ListaSpedizioniPage() {
   // Cancella spedizioni selezionate
   const handleDeleteSelected = () => {
     if (selectedShipments.size === 0) {
-      alert('Seleziona almeno una spedizione da eliminare');
+      toast.warning('Seleziona almeno una spedizione da eliminare');
       return;
     }
     setSpedizioniToDelete(selectedShipments);
@@ -678,7 +678,7 @@ export default function ListaSpedizioniPage() {
       console.log(`✅ Eliminazione completata: ${successfulIds.length} spedizione/i eliminate`);
     } catch (error: any) {
       console.error('❌ Errore eliminazione:', error);
-      alert(`Errore durante l'eliminazione delle spedizioni:\n${error.message}`);
+      toast.error(`Errore eliminazione spedizioni: ${error.message}`);
     } finally {
       setIsDeleting(false);
     }
@@ -832,7 +832,7 @@ export default function ListaSpedizioniPage() {
       window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Errore download LDV:', error);
-      alert('Errore durante il download della LDV');
+      toast.error('Errore durante il download della LDV');
     }
   };
 
@@ -945,7 +945,7 @@ export default function ListaSpedizioniPage() {
       setSelectAll(spedizioniNelRange.length === filteredSpedizioni.length);
       setShowSelectMenu(false);
     } catch (error) {
-      alert('Formato data non valido. Usa YYYY-MM-DD');
+      toast.error('Formato data non valido. Usa YYYY-MM-DD');
     }
   };
 
@@ -972,7 +972,7 @@ export default function ListaSpedizioniPage() {
         : filteredSpedizioni;
 
     if (spedizioniToExport.length === 0) {
-      alert('Seleziona almeno una spedizione da esportare');
+      toast.warning('Seleziona almeno una spedizione da esportare');
       return;
     }
 
@@ -1033,7 +1033,7 @@ export default function ListaSpedizioniPage() {
       downloadMultipleCSV(csvData, filename);
     } catch (error) {
       console.error('Errore export CSV Spedisci.Online:', error);
-      alert("Errore durante l'esportazione CSV Spedisci.Online");
+      toast.error("Errore durante l'esportazione CSV Spedisci.Online");
     } finally {
       setIsExporting(false);
     }
@@ -1047,7 +1047,7 @@ export default function ListaSpedizioniPage() {
         : filteredSpedizioni;
 
     if (spedizioniToExport.length === 0) {
-      alert('Seleziona almeno una spedizione da esportare');
+      toast.warning('Seleziona almeno una spedizione da esportare');
       return;
     }
 
@@ -1137,7 +1137,7 @@ export default function ListaSpedizioniPage() {
       }
     } catch (error) {
       console.error('Errore export:', error);
-      alert(
+      toast.error(
         `Errore durante l'export: ${error instanceof Error ? error.message : 'Errore sconosciuto'}`
       );
     } finally {

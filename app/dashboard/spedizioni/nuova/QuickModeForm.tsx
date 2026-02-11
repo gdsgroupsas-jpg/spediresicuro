@@ -895,9 +895,8 @@ export function QuickModeForm() {
             const errorMsg = result.error || result.message;
 
             if (errorMsg) {
-              // Messaggio generico per errori
-              alert(
-                `⚠️ Errore Creazione Etichetta\n\n${errorMsg}\n\nÈ stato generato un ticket di riserva (PDF locale).`
+              toast.error(
+                `Errore creazione etichetta: ${errorMsg}. Generato ticket di riserva (PDF locale).`
               );
             }
 

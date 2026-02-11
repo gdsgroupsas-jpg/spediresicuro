@@ -26,6 +26,7 @@ import {
 } from '@/actions/automation';
 import type { AutomationSettings } from '@/lib/automation/spedisci-online-agent';
 import { OTPInputModal } from '@/components/automation/otp-input-modal';
+import { toast } from 'sonner';
 
 interface CourierConfig {
   id: string;
@@ -112,9 +113,9 @@ export default function AutomationPage() {
     const result = await toggleAutomation(configId, enabled);
     if (result.success) {
       await loadConfigs();
-      alert(enabled ? 'Automation abilitata' : 'Automation disabilitata');
+      toast.success(enabled ? 'Automation abilitata' : 'Automation disabilitata');
     } else {
-      alert(`Errore: ${result.error}`);
+      toast.error(result.error);
     }
   }
 
@@ -161,11 +162,11 @@ export default function AutomationPage() {
     const result = await saveAutomationSettings(selectedConfig, fullSettings);
 
     if (result.success) {
-      alert('Settings salvati con successo');
+      toast.success('Settings salvati con successo');
       setSelectedConfig(null);
       await loadConfigs();
     } else {
-      alert(`Errore: ${result.error}`);
+      toast.error(result.error);
     }
   }
 
@@ -194,7 +195,7 @@ export default function AutomationPage() {
       const result = await manualSync(configId, force);
 
       if (result.success) {
-        alert('Sync completata con successo!');
+        toast.success('Sync completata con successo!');
         await loadConfigs();
         await loadLocks();
       } else {
@@ -203,7 +204,7 @@ export default function AutomationPage() {
           setPendingSyncConfigId(configId);
           setShowOTPModal(true);
         } else {
-          alert(`Errore sync: ${result.error}`);
+          toast.error(`Errore sync: ${result.error}`);
         }
       }
     } finally {
@@ -216,7 +217,7 @@ export default function AutomationPage() {
     if (pendingSyncConfigId) {
       // TODO: Passa OTP a sync
       // Per ora, mostra messaggio
-      alert(`OTP ricevuto: ${otp}. Sync verrà eseguita con questo OTP.`);
+      toast.info(`OTP ricevuto: ${otp}. Sync verrà eseguita con questo OTP.`);
       // executeSync(pendingSyncConfigId, false, otp)
       setPendingSyncConfigId(null);
     }
@@ -225,20 +226,20 @@ export default function AutomationPage() {
   async function handleAcquireManualLock(configId: string) {
     const result = await acquireManualLock(configId, 60); // 60 minuti
     if (result.success) {
-      alert('Lock manuale acquisito. Agent non interferirà per 60 minuti.');
+      toast.success('Lock manuale acquisito. Agent non interferirà per 60 minuti.');
       await loadLocks();
     } else {
-      alert(`Errore: ${result.error}`);
+      toast.error(result.error);
     }
   }
 
   async function handleReleaseLock(configId: string) {
     const result = await releaseManualLock(configId);
     if (result.success) {
-      alert('Lock rilasciato. Agent può ora lavorare.');
+      toast.success('Lock rilasciato. Agent può ora lavorare.');
       await loadLocks();
     } else {
-      alert(`Errore: ${result.error}`);
+      toast.error(result.error);
     }
   }
 

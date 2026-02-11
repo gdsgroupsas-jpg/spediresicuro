@@ -166,6 +166,39 @@ const QuoteAnalytics = dynamic(
 
 ---
 
+## Sprint 5 — "Pulizia Finale"
+
+**Commit:** `TBD`
+**Tema:** Eliminare ogni alert() nativo, uniformare feedback UX su toast (sonner)
+
+### Modifiche
+
+| Task                   | Descrizione                                                                  | File principali                                                                                           |
+| ---------------------- | ---------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Kill alert() utente    | 8 alert spedizioni + 2 team + 1 QuickModeForm + 4 contrassegni + 3 giacenze  | `spedizioni/page.tsx`, `team/page.tsx`, `QuickModeForm.tsx`, `contrassegni-ui.tsx`, `giacenze/page.tsx`   |
+| Kill alert() admin     | 11 admin + 14 configurations + 12 automation + 3 leads + 2 invoices          | `admin/page.tsx`, `configurations/page.tsx`, `automation/page.tsx`, `leads/page.tsx`, `invoices/page.tsx` |
+| Kill alert() rimanenti | 6 prospects + 2 ordini-fornitore + 2 prodotti + 2 magazzini + 4 integrazioni | `prospects/page.tsx`, `wms/*/page.tsx`, `spedisci-online-config-multi.tsx`                                |
+
+### Dettagli tecnici
+
+**Pattern di migrazione:** Sostituzione sistematica di tutti i 78 `alert()` nativi del browser con toast di `sonner` (già presente nel progetto e nel layout Toaster). Nessun nuovo componente creato — uso delle API esistenti:
+
+- `toast.success()` per conferme operazioni riuscite
+- `toast.error()` per errori API/operazioni fallite
+- `toast.warning()` per validazioni form e avvisi
+- `toast.info()` per notifiche informative
+
+**Copertura completa:** 15 file modificati, 0 `alert()` rimasti nel codebase (verificato con grep). Aggiunto `import { toast } from 'sonner'` nei 12 file che non lo avevano.
+
+**Nessun cambio di logica:** Tutti i flussi (return, catch, finally) sono rimasti identici. Solo il metodo di presentazione del feedback è cambiato.
+
+### Test
+
+- Tutti i 2596 unit test verdi
+- Build clean (0 errori)
+
+---
+
 ## Componenti riusabili creati/migliorati
 
 | Componente                         | File                                            | Sprint |

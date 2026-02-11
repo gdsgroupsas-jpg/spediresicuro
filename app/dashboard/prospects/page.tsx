@@ -50,6 +50,7 @@ import {
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { it as itLocale } from 'date-fns/locale';
+import { toast } from 'sonner';
 
 // Colori Tailwind per status
 const STATUS_CSS: Record<ProspectStatus, string> = {
@@ -143,7 +144,7 @@ export default function ProspectsPage() {
     try {
       const result = await updateProspect(id, { status: newStatus });
       if (!result.success) {
-        alert(result.error || 'Errore aggiornamento stato');
+        toast.error(result.error || 'Errore aggiornamento stato');
         loadProspects(); // Revert
       } else {
         loadProspects(); // Aggiorna stats
@@ -161,10 +162,10 @@ export default function ProspectsPage() {
         setProspects((prev) => prev.filter((p) => p.id !== id));
         loadProspects();
       } else {
-        alert(result.error);
+        toast.error(result.error);
       }
     } catch {
-      alert('Errore eliminazione');
+      toast.error('Errore eliminazione');
     }
   };
 
@@ -175,10 +176,10 @@ export default function ProspectsPage() {
         setShowCreateModal(false);
         loadProspects();
       } else {
-        alert(result.error);
+        toast.error(result.error);
       }
     } catch {
-      alert('Errore creazione');
+      toast.error('Errore creazione');
     }
   };
 
@@ -541,7 +542,7 @@ function CreateProspectModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.company_name?.trim()) {
-      alert('Il nome azienda e obbligatorio');
+      toast.warning('Il nome azienda è obbligatorio');
       return;
     }
     setSubmitting(true);

@@ -53,6 +53,7 @@ import {
   filterProductionShipments,
   countTestVsProduction,
 } from '@/lib/utils/test-data-detection';
+import { toast } from 'sonner';
 
 interface AdminStats {
   // Utenti
@@ -174,13 +175,13 @@ export default function AdminDashboardPage() {
             setUsers(data.users || []);
           }
         }
-        alert(result.message || 'Configurazione assegnata con successo');
+        toast.success(result.message || 'Configurazione assegnata con successo');
       } else {
-        alert(`Errore: ${result.error}`);
+        toast.error(result.error || 'Errore assegnazione configurazione');
       }
     } catch (error: any) {
       console.error('Errore assegnazione configurazione:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      toast.error(error.message || 'Errore sconosciuto');
     } finally {
       setAssigningConfig(null);
     }
@@ -432,11 +433,11 @@ export default function AdminDashboardPage() {
         }
       } else {
         const errorData = await response.json();
-        alert(`Errore: ${errorData.error || 'Errore sconosciuto'}`);
+        toast.error(errorData.error || 'Errore sconosciuto');
       }
     } catch (error: any) {
       console.error('Errore toggle feature:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      toast.error(error.message || 'Errore sconosciuto');
     }
   }
 
@@ -463,14 +464,14 @@ export default function AdminDashboardPage() {
         }
         setShowDeleteUserModal(false);
         setSelectedUser(null);
-        alert('Utente cancellato con successo');
+        toast.success('Utente cancellato con successo');
       } else {
         const errorData = await response.json();
-        alert(`Errore: ${errorData.error || 'Errore sconosciuto'}`);
+        toast.error(errorData.error || 'Errore sconosciuto');
       }
     } catch (error: any) {
       console.error('Errore cancellazione utente:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      toast.error(error.message || 'Errore sconosciuto');
     } finally {
       setIsDeleting(false);
     }
@@ -499,14 +500,14 @@ export default function AdminDashboardPage() {
         }
         setShowDeleteShipmentModal(false);
         setSelectedShipment(null);
-        alert('Spedizione cancellata con successo');
+        toast.success('Spedizione cancellata con successo');
       } else {
         const errorData = await response.json();
-        alert(`Errore: ${errorData.error || 'Errore sconosciuto'}`);
+        toast.error(errorData.error || 'Errore sconosciuto');
       }
     } catch (error: any) {
       console.error('Errore cancellazione spedizione:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      toast.error(error.message || 'Errore sconosciuto');
     } finally {
       setIsDeleting(false);
     }

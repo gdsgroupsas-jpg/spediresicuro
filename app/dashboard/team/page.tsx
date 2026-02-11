@@ -38,6 +38,7 @@ import {
   getHierarchyStats,
   deleteSubAdmin,
 } from '@/actions/admin';
+import { toast } from 'sonner';
 
 interface SubAdmin {
   id: string;
@@ -216,10 +217,10 @@ export default function TeamManagementPage() {
         await loadSubAdmins();
         await loadStats();
       } else {
-        alert(result.error || "Errore durante l'eliminazione");
+        toast.error(result.error || "Errore durante l'eliminazione");
       }
     } catch (err: any) {
-      alert(err.message || 'Errore sconosciuto');
+      toast.error(err.message || 'Errore sconosciuto');
     } finally {
       setIsDeleting(null);
     }

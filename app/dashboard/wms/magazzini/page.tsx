@@ -32,6 +32,7 @@ import {
   TrendingDown,
   ChevronDown,
 } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface WarehouseItem {
   id: string;
@@ -243,7 +244,7 @@ export default function MagazziniPage() {
       fetchInventory(selectedWarehouse, 0);
       fetchMovements(selectedWarehouse, 0);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSavingStock(false);
     }
@@ -271,7 +272,7 @@ export default function MagazziniPage() {
       setWhForm({ code: '', name: '', type: 'standard', city: '' });
       fetchWarehouses();
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSavingWH(false);
     }

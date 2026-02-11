@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Package, Plus, Search, Pencil, Trash2, Loader2, ChevronDown, X } from 'lucide-react';
 import type { Product, ProductType } from '@/types/products';
+import { toast } from 'sonner';
 
 // ─── Form State ───
 
@@ -234,7 +235,7 @@ export default function ProdottiPage() {
       setOffset(0);
       fetchProducts(search, filterType, 0);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     } finally {
       setSaving(false);
     }
@@ -257,7 +258,7 @@ export default function ProdottiPage() {
       setOffset(0);
       fetchProducts(search, filterType, 0);
     } catch (err: any) {
-      alert(err.message);
+      toast.error(err.message);
     }
   };
 

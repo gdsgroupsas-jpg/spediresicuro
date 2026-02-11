@@ -38,6 +38,7 @@ import {
   type CourierConfigInput,
 } from '@/actions/configurations';
 import { toggleAutomation } from '@/actions/automation';
+import { toast } from 'sonner';
 
 // Provider disponibili
 const AVAILABLE_PROVIDERS = [
@@ -196,15 +197,15 @@ export default function ConfigurationsPage() {
       const result = await response.json();
 
       if (result.success) {
-        alert('✅ Credenziali valide');
-        await loadConfigurations(); // Refresh per aggiornare status
+        toast.success('Credenziali valide');
+        await loadConfigurations();
       } else {
-        alert(`❌ Errore: ${result.error || 'Test fallito'}`);
-        await loadConfigurations(); // Refresh anche in caso di errore per aggiornare status
+        toast.error(result.error || 'Test fallito');
+        await loadConfigurations();
       }
     } catch (error: any) {
       console.error('Errore test credenziali:', error);
-      alert('Errore durante test credenziali');
+      toast.error('Errore durante test credenziali');
     }
   }
 
@@ -216,18 +217,18 @@ export default function ConfigurationsPage() {
       if (result.success) {
         await loadConfigurations(); // Refresh per aggiornare stato
       } else {
-        alert(`❌ Errore: ${result.error || 'Impossibile aggiornare auto-sync'}`);
+        toast.error(result.error || 'Impossibile aggiornare auto-sync');
       }
     } catch (error: any) {
       console.error('Errore toggle auto-sync:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      toast.error(error.message || 'Errore sconosciuto');
     }
   }
 
   // Salva configurazione
   async function handleSave() {
     if (!formData.name || !formData.provider_id || !formData.api_key || !formData.base_url) {
-      alert('Compila tutti i campi obbligatori');
+      toast.warning('Compila tutti i campi obbligatori');
       return;
     }
 
@@ -249,17 +250,17 @@ export default function ConfigurationsPage() {
       if (result.success) {
         setShowConfigModal(false);
         await loadConfigurations();
-        alert(
+        toast.success(
           selectedConfig
             ? 'Configurazione aggiornata con successo'
             : 'Configurazione creata con successo'
         );
       } else {
-        alert(`Errore: ${result.error || 'Errore sconosciuto'}`);
+        toast.error(result.error || 'Errore sconosciuto');
       }
     } catch (error: any) {
       console.error('Errore salvataggio:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      toast.error(error.message || 'Errore sconosciuto');
     } finally {
       setIsSaving(false);
     }
@@ -304,13 +305,13 @@ export default function ConfigurationsPage() {
         setShowDeleteModal(false);
         setSelectedConfig(null);
         await loadConfigurations();
-        alert('Configurazione eliminata con successo');
+        toast.success('Configurazione eliminata con successo');
       } else {
-        alert(`Errore: ${result.error || 'Errore sconosciuto'}`);
+        toast.error(result.error || 'Errore sconosciuto');
       }
     } catch (error: any) {
       console.error('Errore eliminazione:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      toast.error(error.message || 'Errore sconosciuto');
     } finally {
       setIsDeleting(false);
     }
@@ -323,7 +324,7 @@ export default function ConfigurationsPage() {
 
   async function handleDeleteAll() {
     if (deleteAllConfirm !== 'ELIMINA TUTTE') {
-      alert('Devi digitare "ELIMINA TUTTE" per confermare');
+      toast.warning('Devi digitare "ELIMINA TUTTE" per confermare');
       return;
     }
 
@@ -346,10 +347,10 @@ export default function ConfigurationsPage() {
       setDeleteAllConfirm('');
       await loadConfigurations();
 
-      alert(`Eliminazione completata: ${deleted} eliminate, ${errors} errori`);
+      toast.success(`Eliminazione completata: ${deleted} eliminate, ${errors} errori`);
     } catch (error: any) {
       console.error('Errore eliminazione multipla:', error);
-      alert(`Errore: ${error.message || 'Errore sconosciuto'}`);
+      toast.error(error.message || 'Errore sconosciuto');
     } finally {
       setIsDeletingAll(false);
     }

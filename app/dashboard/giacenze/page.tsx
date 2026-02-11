@@ -29,6 +29,7 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
+import { toast } from 'sonner';
 
 // =====================================================
 // Helpers
@@ -216,7 +217,7 @@ export default function GiacenzePage() {
 
   function handleConfirmNewAddress() {
     if (!newAddress.name || !newAddress.address || !newAddress.city || !newAddress.zip) {
-      alert('Compila tutti i campi obbligatori del nuovo indirizzo');
+      toast.warning('Compila tutti i campi obbligatori del nuovo indirizzo');
       return;
     }
     setShowConfirmDialog(true);
@@ -246,7 +247,7 @@ export default function GiacenzePage() {
 
       if (!response.ok) {
         if (result.code === 'INSUFFICIENT_BALANCE') {
-          alert(result.error);
+          toast.error(result.error);
           return;
         }
         throw new Error(result.error || 'Errore esecuzione azione');
@@ -260,7 +261,7 @@ export default function GiacenzePage() {
       setNewAddress({ name: '', address: '', city: '', zip: '', province: '', phone: '' });
       fetchHolds();
     } catch (err: any) {
-      alert(err.message || 'Errore esecuzione azione');
+      toast.error(err.message || 'Errore esecuzione azione');
     } finally {
       setIsExecuting(false);
     }
