@@ -1,12 +1,11 @@
 /**
  * Test: Fix Supabase Database Linter Warnings
  *
- * Verifica che la migration 20260215100000_fix_supabase_linter_warnings.sql:
- * 1. Contenga il fix search_path = '' per tutte le funzioni public
- * 2. Sposti pg_trgm dallo schema public a extensions
- * 3. Documenti le policy RLS intenzionali con WITH CHECK (true)
+ * Verifica che le migration:
+ * - 20260215100000: fix iniziale search_path = '' + pg_trgm + doc RLS
+ * - 20260215120000: hotfix search_path '' -> 'public' (evita 42P01)
  *
- * MOCK: Test sulla struttura della migration SQL, nessun accesso DB
+ * MOCK: Test sulla struttura delle migration SQL, nessun accesso DB
  */
 
 import { describe, it, expect } from 'vitest';
@@ -206,5 +205,59 @@ describe('Supabase Linter Fixes Migration', () => {
 
       expect(migrationSql).toContain('pg_extension');
     });
+  });
+});
+
+// ============================================================
+// HOTFIX: Migration 20260215120000 - search_path '' -> 'public'
+// ============================================================
+
+const HOTFIX_PATH = join(
+  process.cwd(),
+  'supabase/migrations/20260215120000_fix_search_path_use_public.sql'
+);
+
+describe('Hotfix: search_path vuoto -> public', () => {
+  let hotfixSql: string;
+
+  it('il file di hotfix esiste', () => {
+    expect(existsSync(HOTFIX_PATH)).toBe(true);
+    hotfixSql = readFileSync(HOTFIX_PATH, 'utf-8');
+    expect(hotfixSql.length).toBeGreaterThan(0);
+  });
+
+  it('corregge search_path da vuoto a public', () => {
+    hotfixSql = readFileSync(HOTFIX_PATH, 'utf-8');
+
+    // Deve settare search_path = public (non vuoto)
+    expect(hotfixSql).toContain('search_path = public');
+  });
+
+  it('usa lo stesso loop dinamico su pg_proc', () => {
+    hotfixSql = readFileSync(HOTFIX_PATH, 'utf-8');
+
+    expect(hotfixSql).toContain('pg_proc');
+    expect(hotfixSql).toContain("nspname = 'public'");
+    expect(hotfixSql).toContain("prokind = 'f'");
+  });
+
+  it('gestisce funzioni con e senza argomenti', () => {
+    hotfixSql = readFileSync(HOTFIX_PATH, 'utf-8');
+
+    expect(hotfixSql).toContain("func_args = ''");
+  });
+
+  it('gestisce errori senza bloccare la migration', () => {
+    hotfixSql = readFileSync(HOTFIX_PATH, 'utf-8');
+
+    expect(hotfixSql).toContain('EXCEPTION WHEN OTHERS');
+  });
+
+  it('non usa search_path vuoto (quello che ha causato il problema)', () => {
+    hotfixSql = readFileSync(HOTFIX_PATH, 'utf-8');
+
+    // Non deve usare search_path = '' come valore target
+    // (puo' menzionarlo nei commenti, ma l'ALTER deve usare 'public')
+    expect(hotfixSql).not.toMatch(/SET search_path = ''/);
   });
 });

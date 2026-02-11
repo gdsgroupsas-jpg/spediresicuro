@@ -961,13 +961,15 @@ export async function listPriceListsAction(filters?: {
       p_is_global: filters?.isGlobal ?? null,
     });
 
-    if (error) {
+    // Per reseller: se la RPC fallisce (es. search_path rotto), prosegui con query manuali
+    // Per altri utenti: restituisci l'errore
+    const isReseller = user.is_reseller === true;
+    if (error && !isReseller) {
       return { success: false, error: error.message };
     }
 
-    // Per reseller: integra anche i listini CUSTOM assegnati dal superadmin
+    // Per reseller: integra listini assegnati + globali del superadmin
     // che la RPC potrebbe non restituire (filtra solo created_by)
-    const isReseller = user.is_reseller === true;
     if (isReseller) {
       const ownedIds = new Set((data || []).map((pl: any) => pl.id));
 
