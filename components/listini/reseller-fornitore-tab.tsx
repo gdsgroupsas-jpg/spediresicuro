@@ -110,15 +110,15 @@ export function ResellerFornitoreTab({
       const result = await listSupplierPriceListsAction();
       const ownSupplier = result.success && result.priceLists ? result.priceLists : [];
 
-      // Carica anche i listini ricevuti dal SuperAdmin (custom, created_by != me)
+      // Carica anche i listini globali e assegnati dal SuperAdmin (created_by != me)
       let receivedLists: PriceList[] = [];
-      if (userId) {
-        const allResult = await listPriceListsAction();
-        if (allResult.success && allResult.priceLists) {
-          receivedLists = allResult.priceLists.filter(
-            (pl) => pl.created_by && pl.created_by !== userId
-          );
-        }
+      const allResult = await listPriceListsAction();
+      if (allResult.success && allResult.priceLists) {
+        // Filtra solo i listini NON creati dal reseller (globali + assegnati)
+        const ownSupplierIds = new Set(ownSupplier.map((pl) => pl.id));
+        receivedLists = allResult.priceLists.filter(
+          (pl) => !ownSupplierIds.has(pl.id) && (!userId || pl.created_by !== userId)
+        );
       }
 
       setPriceLists([...ownSupplier, ...receivedLists]);
