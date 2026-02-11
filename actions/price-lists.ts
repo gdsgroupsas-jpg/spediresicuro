@@ -1029,21 +1029,9 @@ export async function listPriceListsAction(filters?: {
         }
       }
 
-      // Listini globali della piattaforma (is_global = true, creati dal superadmin)
-      // Il reseller deve poterli vedere per valutare e usare i servizi della piattaforma
-      let globalQuery = supabaseAdmin.from('price_lists').select('*').eq('is_global', true);
-
-      if (filters?.courierId) globalQuery = globalQuery.eq('courier_id', filters.courierId);
-      if (filters?.status) globalQuery = globalQuery.eq('status', filters.status);
-
-      const { data: globalLists } = await globalQuery;
-      if (globalLists?.length) {
-        const currentIds = new Set((data || []).map((pl: any) => pl.id));
-        const newGlobals = globalLists.filter((gl: any) => !currentIds.has(gl.id));
-        if (newGlobals.length > 0) {
-          data!.push(...newGlobals);
-        }
-      }
+      // Modello OPT-IN: il reseller vede SOLO listini esplicitamente assegnati
+      // (via price_list_assignments, assigned_price_list_id, o workspace).
+      // NON vede tutti i listini globali - il superadmin assegna quelli necessari.
     }
 
     // Recupera i corrieri separatamente se necessario

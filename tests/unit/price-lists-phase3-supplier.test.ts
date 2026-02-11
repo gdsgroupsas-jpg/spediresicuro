@@ -5,7 +5,7 @@
  * - Server Actions per listini fornitore (Reseller/BYOC)
  * - Permessi e isolamento listini
  * - CRUD operations per Reseller e BYOC
- * - Visibilita': Reseller vede listini globali + propri supplier
+ * - Visibilita' OPT-IN: Reseller vede solo propri supplier + assegnati
  *
  * NOTA: Questo test verifica principalmente la logica delle Server Actions
  * usando mock per l'autenticazione. Per test end-to-end completi, vedere
@@ -453,8 +453,8 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
     });
   });
 
-  describe('Visibilita Listini Globali', () => {
-    it('Reseller vede sia propri listini supplier che listini globali', async () => {
+  describe('Visibilita OPT-IN: solo listini assegnati', () => {
+    it('Reseller vede propri listini + assegnati, NON globali non assegnati', async () => {
       if (resellerUserId.startsWith('mock-')) {
         console.log('⏭️  Test saltato: Supabase non configurato');
         return;
@@ -465,7 +465,7 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         actor: { email: `test-reseller-phase3-${Date.now()}@test.local` },
       });
 
-      // Mock RPC get_user_price_lists - restituisce solo listini creati dal reseller
+      // Mock RPC get_user_price_lists - restituisce listini propri + assegnati via assigned_to_user_id
       const mockRpcData = [
         {
           id: 'test-pricelist-supplier',
@@ -477,6 +477,17 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
           courier_id: testCourierId,
           created_by: resellerUserId,
         },
+        {
+          id: 'assigned-pricelist-1',
+          name: 'POSTAEXPRESS',
+          version: '1.0.0',
+          status: 'active',
+          list_type: 'custom',
+          is_global: false,
+          courier_id: testCourierId,
+          created_by: adminUserId,
+          assigned_to_user_id: resellerUserId,
+        },
       ];
 
       vi.spyOn(supabaseAdmin, 'rpc').mockResolvedValue({
@@ -484,21 +495,7 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         error: null,
       } as any);
 
-      // Listini globali del superadmin che il reseller deve poter vedere
-      const mockGlobalLists = [
-        {
-          id: 'global-pricelist-1',
-          name: 'Listino Globale GLS',
-          version: '1.0.0',
-          status: 'active',
-          list_type: 'global',
-          is_global: true,
-          courier_id: 'gls-courier-id',
-          created_by: adminUserId,
-        },
-      ];
-
-      // Mock from() per le query supplementari
+      // Mock from() per le query supplementari (nessun assegnamento extra)
       vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
         if (table === 'users') {
           return {
@@ -534,28 +531,11 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
             }),
           } as any;
         }
-        if (table === 'price_lists') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockResolvedValue({
-                data: mockGlobalLists,
-                error: null,
-              }),
-              in: vi.fn().mockResolvedValue({
-                data: [],
-                error: null,
-              }),
-            }),
-          } as any;
-        }
         if (table === 'couriers') {
           return {
             select: vi.fn().mockReturnValue({
               in: vi.fn().mockResolvedValue({
-                data: [
-                  { id: testCourierId, name: 'Test Courier', code: 'TEST' },
-                  { id: 'gls-courier-id', name: 'GLS', code: 'GLS' },
-                ],
+                data: [{ id: testCourierId, name: 'Test Courier', code: 'TEST' }],
                 error: null,
               }),
             }),
@@ -568,15 +548,14 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
 
       expect(result.success).toBe(true);
       expect(result.priceLists).toBeDefined();
-      expect(result.priceLists!.length).toBeGreaterThanOrEqual(2);
+      // Reseller vede esattamente i 2 listini: proprio + assegnato
+      expect(result.priceLists!.length).toBe(2);
 
-      // Verifica che contenga sia supplier propri che globali
-      const supplierLists = result.priceLists!.filter((pl: any) => pl.list_type === 'supplier');
-      const globalLists = result.priceLists!.filter((pl: any) => pl.is_global === true);
-
-      expect(supplierLists.length).toBeGreaterThanOrEqual(1);
-      expect(globalLists.length).toBeGreaterThanOrEqual(1);
-      expect(globalLists[0].name).toBe('Listino Globale GLS');
+      // Verifica: nessun listino globale non assegnato
+      const globalNonAssigned = result.priceLists!.filter(
+        (pl: any) => pl.is_global === true && pl.assigned_to_user_id !== resellerUserId
+      );
+      expect(globalNonAssigned.length).toBe(0);
     });
   });
 
