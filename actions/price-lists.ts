@@ -971,27 +971,51 @@ export async function listPriceListsAction(filters?: {
     if (isReseller) {
       const ownedIds = new Set((data || []).map((pl: any) => pl.id));
 
-      // Listini assegnati via price_list_assignments
+      // Listini assegnati via price_list_assignments (legacy)
       const { data: assignedIds } = await supabaseAdmin
         .from('price_list_assignments')
         .select('price_list_id')
         .eq('user_id', user.id)
         .is('revoked_at', null);
 
-      // Listino assegnato direttamente via users.assigned_price_list_id
+      // Listino assegnato direttamente via users.assigned_price_list_id (legacy)
       const { data: userRow } = await supabaseAdmin
         .from('users')
         .select('assigned_price_list_id')
         .eq('id', user.id)
         .single();
 
+      // Listini assegnati via workspace (sistema multi-tenant attuale)
+      // Il reseller vede i listini assigned_price_list_id e selling_price_list_id
+      // dei workspace di cui e' membro
+      const { data: workspaceListIds } = await supabaseAdmin
+        .from('workspace_members')
+        .select('workspace:workspaces(assigned_price_list_id, selling_price_list_id)')
+        .eq('user_id', user.id)
+        .eq('status', 'active');
+
+      const workspacePriceListIds: string[] = [];
+      if (workspaceListIds) {
+        for (const wm of workspaceListIds) {
+          const ws = wm.workspace as any;
+          if (ws?.assigned_price_list_id) workspacePriceListIds.push(ws.assigned_price_list_id);
+          if (ws?.selling_price_list_id) workspacePriceListIds.push(ws.selling_price_list_id);
+        }
+      }
+
       const missingIds = [
         ...(assignedIds?.map((a: any) => a.price_list_id) || []),
         ...(userRow?.assigned_price_list_id ? [userRow.assigned_price_list_id] : []),
+        ...workspacePriceListIds,
       ].filter((id) => id && !ownedIds.has(id));
 
       if (missingIds.length > 0) {
-        let assignedQuery = supabaseAdmin.from('price_lists').select('*').in('id', missingIds);
+        // Deduplica gli ID
+        const uniqueMissingIds = [...new Set(missingIds)];
+        let assignedQuery = supabaseAdmin
+          .from('price_lists')
+          .select('*')
+          .in('id', uniqueMissingIds);
 
         // Applica stessi filtri
         if (filters?.courierId) assignedQuery = assignedQuery.eq('courier_id', filters.courierId);
@@ -1000,6 +1024,22 @@ export async function listPriceListsAction(filters?: {
         const { data: assignedLists } = await assignedQuery;
         if (assignedLists?.length) {
           data!.push(...assignedLists);
+        }
+      }
+
+      // Listini globali della piattaforma (is_global = true, creati dal superadmin)
+      // Il reseller deve poterli vedere per valutare e usare i servizi della piattaforma
+      let globalQuery = supabaseAdmin.from('price_lists').select('*').eq('is_global', true);
+
+      if (filters?.courierId) globalQuery = globalQuery.eq('courier_id', filters.courierId);
+      if (filters?.status) globalQuery = globalQuery.eq('status', filters.status);
+
+      const { data: globalLists } = await globalQuery;
+      if (globalLists?.length) {
+        const currentIds = new Set((data || []).map((pl: any) => pl.id));
+        const newGlobals = globalLists.filter((gl: any) => !currentIds.has(gl.id));
+        if (newGlobals.length > 0) {
+          data!.push(...newGlobals);
         }
       }
     }

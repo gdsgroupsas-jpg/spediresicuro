@@ -5,7 +5,7 @@
  * - Server Actions per listini fornitore (Reseller/BYOC)
  * - Permessi e isolamento listini
  * - CRUD operations per Reseller e BYOC
- * - Isolamento: Reseller/BYOC NON vedono listini globali
+ * - Visibilita': Reseller vede listini globali + propri supplier
  *
  * NOTA: Questo test verifica principalmente la logica delle Server Actions
  * usando mock per l'autenticazione. Per test end-to-end completi, vedere
@@ -453,8 +453,8 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
     });
   });
 
-  describe('Isolamento Listini Globali', () => {
-    it('Reseller NON vede listini globali in listPriceListsAction', async () => {
+  describe('Visibilita Listini Globali', () => {
+    it('Reseller vede sia propri listini supplier che listini globali', async () => {
       if (resellerUserId.startsWith('mock-')) {
         console.log('⏭️  Test saltato: Supabase non configurato');
         return;
@@ -465,8 +465,40 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         actor: { email: `test-reseller-phase3-${Date.now()}@test.local` },
       });
 
-      // Mock completo per users e price_lists - ritorna solo listini non globali del reseller
-      // listPriceListsAction usa: .select().order().or()
+      // Mock RPC get_user_price_lists - restituisce solo listini creati dal reseller
+      const mockRpcData = [
+        {
+          id: 'test-pricelist-supplier',
+          name: 'Listino Supplier Test',
+          version: '1.0.0',
+          status: 'draft',
+          list_type: 'supplier',
+          is_global: false,
+          courier_id: testCourierId,
+          created_by: resellerUserId,
+        },
+      ];
+
+      vi.spyOn(supabaseAdmin, 'rpc').mockResolvedValue({
+        data: mockRpcData,
+        error: null,
+      } as any);
+
+      // Listini globali del superadmin che il reseller deve poter vedere
+      const mockGlobalLists = [
+        {
+          id: 'global-pricelist-1',
+          name: 'Listino Globale GLS',
+          version: '1.0.0',
+          status: 'active',
+          list_type: 'global',
+          is_global: true,
+          courier_id: 'gls-courier-id',
+          created_by: adminUserId,
+        },
+      ];
+
+      // Mock from() per le query supplementari
       vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
         if (table === 'users') {
           return {
@@ -477,34 +509,54 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
                     id: resellerUserId,
                     account_type: 'user',
                     is_reseller: true,
+                    assigned_price_list_id: null,
                   },
                 }),
               }),
             }),
           } as any;
         }
-        if (table === 'price_lists') {
-          const mockData = {
-            data: [
-              {
-                id: 'test-pricelist-supplier',
-                name: 'Listino Supplier Test',
-                version: '1.0.0',
-                status: 'draft',
-                list_type: 'supplier',
-                is_global: false,
-                courier_id: testCourierId,
-                created_by: resellerUserId,
-              },
-            ],
-          };
+        if (table === 'price_list_assignments') {
           return {
             select: vi.fn().mockReturnValue({
-              order: vi.fn().mockReturnValue({
-                or: vi.fn().mockResolvedValue(mockData),
-                eq: vi.fn().mockReturnValue({
-                  eq: vi.fn().mockResolvedValue(mockData),
-                }),
+              eq: vi.fn().mockReturnValue({
+                is: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          } as any;
+        }
+        if (table === 'workspace_members') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+              }),
+            }),
+          } as any;
+        }
+        if (table === 'price_lists') {
+          return {
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockResolvedValue({
+                data: mockGlobalLists,
+                error: null,
+              }),
+              in: vi.fn().mockResolvedValue({
+                data: [],
+                error: null,
+              }),
+            }),
+          } as any;
+        }
+        if (table === 'couriers') {
+          return {
+            select: vi.fn().mockReturnValue({
+              in: vi.fn().mockResolvedValue({
+                data: [
+                  { id: testCourierId, name: 'Test Courier', code: 'TEST' },
+                  { id: 'gls-courier-id', name: 'GLS', code: 'GLS' },
+                ],
+                error: null,
               }),
             }),
           } as any;
@@ -515,13 +567,16 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
       const result = await listPriceListsAction();
 
       expect(result.success).toBe(true);
-      if (result.priceLists) {
-        // Verifica che non ci siano listini globali
-        result.priceLists.forEach((pl) => {
-          expect(pl.list_type).not.toBe('global');
-          expect(pl.is_global).not.toBe(true);
-        });
-      }
+      expect(result.priceLists).toBeDefined();
+      expect(result.priceLists!.length).toBeGreaterThanOrEqual(2);
+
+      // Verifica che contenga sia supplier propri che globali
+      const supplierLists = result.priceLists!.filter((pl: any) => pl.list_type === 'supplier');
+      const globalLists = result.priceLists!.filter((pl: any) => pl.is_global === true);
+
+      expect(supplierLists.length).toBeGreaterThanOrEqual(1);
+      expect(globalLists.length).toBeGreaterThanOrEqual(1);
+      expect(globalLists[0].name).toBe('Listino Globale GLS');
     });
   });
 
