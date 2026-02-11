@@ -168,7 +168,7 @@ const QuoteAnalytics = dynamic(
 
 ## Sprint 5 — "Pulizia Finale"
 
-**Commit:** `TBD`
+**Commit:** `4a05d10`
 **Tema:** Eliminare ogni alert() nativo, uniformare feedback UX su toast (sonner)
 
 ### Modifiche
