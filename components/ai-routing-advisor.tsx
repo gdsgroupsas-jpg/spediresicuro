@@ -7,7 +7,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, CheckCircle, TrendingUp, Zap, X, Sparkles } from 'lucide-react';
 import { RoutingSuggestion } from '@/types/corrieri';
 
@@ -32,39 +32,49 @@ export default function AIRoutingAdvisor({
   const [isLoading, setIsLoading] = useState(false);
   const [isDismissed, setIsDismissed] = useState(false);
 
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
     if (!citta || !provincia || !corriereScelto || isDismissed) return;
 
-    async function fetchSuggestion() {
+    // Cancella fetch precedente e debounce timer
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    if (abortRef.current) abortRef.current.abort();
+
+    debounceRef.current = setTimeout(() => {
+      const controller = new AbortController();
+      abortRef.current = controller;
+
       setIsLoading(true);
-      try {
-        const response = await fetch('/api/corrieri/reliability', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            citta,
-            provincia,
-            corriereScelto,
-            prezzoCorriereScelto,
-          }),
-        });
 
-        if (response.ok) {
-          const result = await response.json();
-          if (result.data) {
-            setSuggestion(result.data);
+      fetch('/api/corrieri/reliability', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ citta, provincia, corriereScelto, prezzoCorriereScelto }),
+        signal: controller.signal,
+      })
+        .then((response) => {
+          if (response.ok) return response.json();
+          return null;
+        })
+        .then((result) => {
+          if (result?.data) setSuggestion(result.data);
+        })
+        .catch((error) => {
+          if (error.name !== 'AbortError') {
+            console.error('Errore caricamento suggerimento:', error);
           }
-        }
-      } catch (error) {
-        console.error('Errore caricamento suggerimento:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    }
+        })
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }, 500);
 
-    fetchSuggestion();
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (abortRef.current) abortRef.current.abort();
+    };
   }, [citta, provincia, corriereScelto, prezzoCorriereScelto, isDismissed]);
 
   // Mostra loading anche se non c'è ancora suggerimento

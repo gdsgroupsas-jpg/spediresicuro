@@ -10,7 +10,7 @@
 
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import {
@@ -870,8 +870,8 @@ function PriceCalculatorPreview({
     return code;
   }
 
-  // Costruisce merged rows (stessa logica di listino fornitore)
-  function buildMergedRows() {
+  // Costruisce merged rows (memoizzato per evitare ricalcolo O(n²) ad ogni render)
+  const mergedRowsMemo = useMemo(() => {
     const sortedZones = [...PRICING_MATRIX.ZONES]
       .map((z) => z.code)
       .sort((a, b) => {
@@ -944,7 +944,7 @@ function PriceCalculatorPreview({
     }
 
     return mergedRows;
-  }
+  }, [entries]);
 
   if (isLoading) {
     return (
@@ -958,7 +958,7 @@ function PriceCalculatorPreview({
   }
 
   // Usa editingMatrix se in editing, altrimenti buildMergedRows per visualizzazione
-  const displayRows = isEditing ? editingMatrix : buildMergedRows();
+  const displayRows = isEditing ? editingMatrix : mergedRowsMemo;
   const sortedZones = [...PRICING_MATRIX.ZONES]
     .map((z) => z.code)
     .sort((a, b) => {

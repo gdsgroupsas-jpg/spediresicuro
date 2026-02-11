@@ -13,7 +13,17 @@
 
 import AIRoutingAdvisor from '@/components/ai-routing-advisor';
 import DashboardNav from '@/components/dashboard-nav';
-import OCRUpload from '@/components/ocr/ocr-upload';
+import dynamic from 'next/dynamic';
+
+const OCRUpload = dynamic(() => import('@/components/ocr/ocr-upload'), {
+  ssr: false,
+  loading: () => (
+    <div className="bg-white rounded-2xl border border-gray-200 p-6 animate-pulse min-h-[200px]">
+      <div className="h-6 w-48 bg-gray-200 rounded mb-4" />
+      <div className="h-32 bg-gray-100 rounded-xl border-2 border-dashed border-gray-300" />
+    </div>
+  ),
+});
 import ContractComparison from '@/components/shipments/contract-comparison';
 import { IntelligentQuoteComparator } from '@/components/shipments/intelligent-quote-comparator';
 import AddressFields from '@/components/ui/address-fields';
