@@ -13,7 +13,12 @@
 import { useSession } from 'next-auth/react';
 import { useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-import { PilotModal } from '@/components/ai/pilot/pilot-modal';
+import dynamic from 'next/dynamic';
+
+const PilotModal = dynamic(
+  () => import('@/components/ai/pilot/pilot-modal').then((mod) => mod.PilotModal),
+  { ssr: false }
+);
 import { AnneProvider, AnneAssistant } from '@/components/anne';
 import AnneDoctorBridge from '@/components/anne/AnneDoctorBridge';
 import { WorkspaceProvider } from '@/contexts/WorkspaceContext';

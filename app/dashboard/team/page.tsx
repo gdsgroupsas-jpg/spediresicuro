@@ -110,11 +110,8 @@ export default function TeamManagementPage() {
 
         setIsAuthorized(true);
 
-        // Carica sotto-admin
-        await loadSubAdmins();
-
-        // Carica statistiche
-        await loadStats();
+        // Carica sotto-admin e statistiche in parallelo
+        await Promise.all([loadSubAdmins(), loadStats()]);
       } catch (err: any) {
         console.error('Errore caricamento dati team:', err);
         setError(err.message || 'Errore nel caricamento dei dati');
@@ -247,10 +244,51 @@ export default function TeamManagementPage() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
-          <p className="text-gray-600">Caricamento team management...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Skeleton header */}
+          <div className="mb-8">
+            <div className="h-8 w-56 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-4 w-80 bg-gray-200 rounded animate-pulse" />
+          </div>
+          {/* Skeleton stat cards */}
+          <div className="mb-8">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-h-[160px] animate-pulse"
+                >
+                  <div className="h-[52px] bg-gray-200" />
+                  <div className="p-6">
+                    <div className="h-8 w-16 bg-gray-200 rounded mb-2" />
+                    <div className="h-4 w-32 bg-gray-200 rounded" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Skeleton header tabella */}
+          <div className="mb-6 flex items-center justify-between">
+            <div className="h-7 w-48 bg-gray-200 rounded animate-pulse" />
+            <div className="h-12 w-52 bg-gray-200 rounded-xl animate-pulse" />
+          </div>
+          {/* Skeleton tabella */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="divide-y divide-gray-100">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="px-6 py-4 flex items-center gap-4 animate-pulse">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                  <div className="flex-1">
+                    <div className="h-4 w-32 bg-gray-200 rounded mb-2" />
+                    <div className="h-3 w-48 bg-gray-200 rounded" />
+                  </div>
+                  <div className="h-6 w-16 bg-gray-200 rounded-full" />
+                  <div className="h-4 w-24 bg-gray-200 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );

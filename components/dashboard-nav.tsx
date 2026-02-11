@@ -42,8 +42,14 @@ import {
   Users,
   AlertTriangle,
 } from 'lucide-react';
-import { PilotModal } from '@/components/ai/pilot/pilot-modal';
+import dynamic from 'next/dynamic';
+
+const PilotModal = dynamic(
+  () => import('@/components/ai/pilot/pilot-modal').then((mod) => mod.PilotModal),
+  { ssr: false }
+);
 import { useWorkspaceContext } from '@/contexts/WorkspaceContext';
+import { useUser } from '@/contexts/UserContext';
 
 interface BreadcrumbItem {
   label: string;
@@ -71,8 +77,7 @@ export default function DashboardNav({
   const [showDatiClienteModal, setShowDatiClienteModal] = useState(false);
   const [datiCliente, setDatiCliente] = useState<any>(null);
   const [isLoadingDati, setIsLoadingDati] = useState(false);
-  const [userRole, setUserRole] = useState<string | null>(null);
-  const [accountType, setAccountType] = useState<string | null>(null);
+  const { user: ctxUser } = useUser();
   const [showAiAssistant, setShowAiAssistant] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isSwitchingBack, setIsSwitchingBack] = useState(false);
@@ -104,26 +109,9 @@ export default function DashboardNav({
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  // Verifica ruolo utente
-  useEffect(() => {
-    async function checkUserRole() {
-      if (session?.user?.email) {
-        try {
-          const response = await fetch('/api/user/info');
-          if (response.ok) {
-            const data = await response.json();
-            const userData = data.user || data;
-            setUserRole(userData.role || null);
-            setAccountType(userData.account_type || null);
-            console.log('Account Type caricato:', userData.account_type, 'Role:', userData.role);
-          }
-        } catch (error) {
-          console.error('Errore verifica ruolo:', error);
-        }
-      }
-    }
-    checkUserRole();
-  }, [session]);
+  // Ruolo utente da UserContext (singolo fetch centralizzato)
+  const accountType = ctxUser?.account_type || null;
+  const userRole = ctxUser?.role || null;
 
   // Genera breadcrumbs automatici se non forniti
   const autoBreadcrumbs: BreadcrumbItem[] =

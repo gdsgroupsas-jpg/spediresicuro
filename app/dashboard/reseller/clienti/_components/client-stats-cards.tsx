@@ -20,7 +20,10 @@ export function ClientStatsCards({ stats, isLoading }: ClientStatsCardsProps) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         {[...Array(4)].map((_, i) => (
-          <div key={i} className="bg-white rounded-xl p-5 border border-gray-200 animate-pulse">
+          <div
+            key={i}
+            className="bg-white rounded-xl p-5 border border-gray-200 animate-pulse min-h-[120px]"
+          >
             <div className="h-4 bg-gray-200 rounded w-24 mb-3"></div>
             <div className="h-8 bg-gray-200 rounded w-20"></div>
           </div>
@@ -85,7 +88,7 @@ export function ClientStatsCards({ stats, isLoading }: ClientStatsCardsProps) {
         return (
           <div
             key={index}
-            className={`bg-white rounded-xl p-5 border ${
+            className={`bg-white rounded-xl p-5 border min-h-[120px] ${
               card.alert ? 'border-amber-300' : 'border-gray-200'
             } hover:shadow-md transition-shadow`}
           >

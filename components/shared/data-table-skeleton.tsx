@@ -63,7 +63,7 @@ export function StatsCardsSkeleton({ count = 4 }: { count?: number }) {
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
-          className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse"
+          className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse min-h-[140px]"
           style={{ animationDelay: `${i * 100}ms` }}
         >
           <div className="flex items-center justify-between mb-4">

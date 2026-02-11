@@ -68,7 +68,7 @@ function StatCard({
   trend?: 'up' | 'down' | 'neutral';
 }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
+    <div className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group min-h-[140px]">
       <div className={`h-1 ${gradient}`}></div>
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">

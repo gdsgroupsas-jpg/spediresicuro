@@ -378,10 +378,52 @@ export default function WorkspaceTeamPage() {
 
   if (wsLoading || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Caricamento team...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-cyan-50/20">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Skeleton header */}
+          <div className="mb-8">
+            <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-4 w-72 bg-gray-200 rounded animate-pulse" />
+          </div>
+          {/* Skeleton stat cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            {[0, 1, 2].map((i) => (
+              <div
+                key={i}
+                className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden min-h-[140px] animate-pulse"
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <div className="h-[52px] bg-gray-200" />
+                <div className="p-6">
+                  <div className="h-8 w-16 bg-gray-200 rounded mb-2" />
+                  <div className="h-4 w-28 bg-gray-200 rounded" />
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Skeleton tabella */}
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-100">
+              <div className="h-6 w-40 bg-gray-200 rounded animate-pulse" />
+            </div>
+            <div className="divide-y divide-gray-100">
+              {[0, 1, 2, 3].map((i) => (
+                <div
+                  key={i}
+                  className="px-6 py-4 flex items-center gap-4 animate-pulse"
+                  style={{ animationDelay: `${i * 80}ms` }}
+                >
+                  <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                  <div className="flex-1">
+                    <div className="h-4 w-32 bg-gray-200 rounded mb-2" />
+                    <div className="h-3 w-48 bg-gray-200 rounded" />
+                  </div>
+                  <div className="h-6 w-16 bg-gray-200 rounded-full" />
+                  <div className="h-4 w-24 bg-gray-200 rounded" />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     );

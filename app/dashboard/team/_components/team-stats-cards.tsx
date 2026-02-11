@@ -31,7 +31,7 @@ interface StatCardProps {
 function StatCard({ title, value, icon, trend, gradient, isLoading }: StatCardProps) {
   if (isLoading) {
     return (
-      <div className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse">
+      <div className="bg-white rounded-xl border border-gray-200 p-6 animate-pulse min-h-[140px]">
         <div className="flex items-center justify-between mb-4">
           <div className="h-12 w-12 bg-gray-200 rounded-xl" />
           <div className="h-6 w-16 bg-gray-200 rounded-full" />
@@ -43,7 +43,7 @@ function StatCard({ title, value, icon, trend, gradient, isLoading }: StatCardPr
   }
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
+    <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group min-h-[140px]">
       <div className={cn('h-1', gradient)} />
       <div className="p-6">
         <div className="flex items-center justify-between mb-4">

@@ -527,10 +527,44 @@ export default function ResellerClientiPage() {
 
   if (status === 'loading' || isLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/20 to-amber-50/10 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500 mb-4" />
-          <p className="text-gray-600">Caricamento...</p>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50/20 to-amber-50/10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {/* Skeleton header */}
+          <div className="mb-8">
+            <div className="h-8 w-48 bg-gray-200 rounded animate-pulse mb-2" />
+            <div className="h-4 w-64 bg-gray-200 rounded animate-pulse" />
+          </div>
+          {/* Skeleton stat cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+            {[0, 1, 2, 3].map((i) => (
+              <div
+                key={i}
+                className="bg-white rounded-xl p-5 border border-gray-200 animate-pulse min-h-[120px]"
+              >
+                <div className="h-4 bg-gray-200 rounded w-24 mb-3" />
+                <div className="h-8 bg-gray-200 rounded w-20 mb-2" />
+                <div className="h-3 bg-gray-200 rounded w-32" />
+              </div>
+            ))}
+          </div>
+          {/* Skeleton search + lista clienti */}
+          <div className="mb-4">
+            <div className="h-10 w-full bg-gray-200 rounded-lg animate-pulse" />
+          </div>
+          <div className="space-y-4">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="bg-white rounded-xl p-5 border border-gray-200 animate-pulse">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-gray-200 rounded-full" />
+                  <div className="flex-1">
+                    <div className="h-4 w-40 bg-gray-200 rounded mb-2" />
+                    <div className="h-3 w-56 bg-gray-200 rounded" />
+                  </div>
+                  <div className="h-6 w-24 bg-gray-200 rounded-full" />
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     );
