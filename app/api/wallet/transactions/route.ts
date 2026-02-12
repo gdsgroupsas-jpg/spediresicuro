@@ -48,10 +48,10 @@ export async function GET() {
       .order('created_at', { ascending: false })
       .limit(100);
 
-    // Filtra per workspace se disponibile
+    // Filtra per workspace se disponibile (include anche transazioni senza workspace_id)
     if (workspaceId) {
-      query = query.eq('workspace_id', workspaceId);
-      console.log(`🏢 [WALLET] Filtro workspace_id: ${workspaceId.substring(0, 8)}...`);
+      query = query.or(`workspace_id.eq.${workspaceId},workspace_id.is.null`);
+      console.log(`🏢 [WALLET] Filtro workspace_id: ${workspaceId.substring(0, 8)}... (+ NULL)`);
     }
 
     const { data: transactions, error } = await query;
