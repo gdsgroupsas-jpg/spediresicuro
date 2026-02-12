@@ -2,11 +2,13 @@
 -- Motivo: reset completo wallet pilot per nuovo ciclo test
 
 -- 1. Audit log prima della cancellazione
-INSERT INTO public.audit_logs (action, resource_type, user_email, metadata)
+INSERT INTO public.audit_logs (action, resource_type, user_email, severity, message, metadata)
 SELECT
   'topup_requests_reset_pilot',
   'top_up_requests',
   'gdsgroupsas@gmail.com',
+  'info',
+  'Reset richieste ricarica e transazioni pilot gdsgroupsas@gmail.com',
   jsonb_build_object(
     'reason', 'Reset richieste ricarica pilot - nuovo ciclo test',
     'deleted_count', (

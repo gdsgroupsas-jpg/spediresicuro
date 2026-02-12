@@ -14,11 +14,13 @@ WHERE u.email = 'gdsgroupsas@gmail.com'
   AND u.wallet_balance > 0;
 
 -- 2. Audit log con saldo precedente
-INSERT INTO public.audit_logs (action, resource_type, user_email, metadata)
+INSERT INTO public.audit_logs (action, resource_type, user_email, severity, message, metadata)
 SELECT
   'wallet_reset_pilot',
   'wallet',
   'gdsgroupsas@gmail.com',
+  'info',
+  'Reset wallet pilot gdsgroupsas@gmail.com a 0€',
   jsonb_build_object(
     'previous_balance', u.wallet_balance,
     'new_balance', 0,
