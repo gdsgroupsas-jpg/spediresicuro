@@ -28,6 +28,11 @@ vi.mock('resend', () => ({
 
 vi.stubEnv('RESEND_API_KEY', 'test-key');
 
+// Mock rate limit per permettere sempre l'invio nei test
+vi.mock('@/lib/security/rate-limit', () => ({
+  rateLimit: vi.fn().mockResolvedValue({ allowed: true, remaining: 99, source: 'mock' }),
+}));
+
 const mockFrom = vi.fn();
 const mockRpc = vi.fn();
 

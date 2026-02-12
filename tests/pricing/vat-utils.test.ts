@@ -56,7 +56,8 @@ describe('VAT Utils', () => {
 
     it('handles edge cases with very small prices', () => {
       const result = normalizePrice(0.01, 'excluded', 'included', 22);
-      expect(result).toBeCloseTo(0.0122, 4);
+      // roundToTwoDecimals(0.0122) = 0.01 (arrotondamento finanziario a 2 decimali)
+      expect(result).toBeCloseTo(0.01, 2);
     });
   });
 

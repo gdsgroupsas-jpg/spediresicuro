@@ -10,12 +10,40 @@
 import type { PriceList } from '@/types/listini';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock Supabase
-vi.mock('@/lib/db/client', () => ({
-  supabaseAdmin: {
-    from: vi.fn(),
-  },
-}));
+// Mock Supabase con chain fluida completa (supporta .or(), .lte(), .in(), etc.)
+vi.mock('@/lib/db/client', () => {
+  const createChainMock = (resolvedValue?: any): any => {
+    const chain: any = {};
+    const methods = [
+      'select',
+      'eq',
+      'neq',
+      'or',
+      'in',
+      'lte',
+      'gte',
+      'lt',
+      'gt',
+      'like',
+      'ilike',
+      'is',
+      'order',
+      'limit',
+      'range',
+    ];
+    for (const method of methods) {
+      chain[method] = vi.fn().mockReturnValue(chain);
+    }
+    chain.single = vi.fn().mockResolvedValue(resolvedValue ?? { data: null, error: null });
+    chain.maybeSingle = vi.fn().mockResolvedValue(resolvedValue ?? { data: null, error: null });
+    return chain;
+  };
+  return {
+    supabaseAdmin: {
+      from: vi.fn(() => createChainMock()),
+    },
+  };
+});
 
 // Mock calculatePriceFromList
 vi.mock('@/lib/pricing/calculator', () => ({
@@ -25,6 +53,36 @@ vi.mock('@/lib/pricing/calculator', () => ({
 import { supabaseAdmin } from '@/lib/db/client';
 import { calculatePriceWithRules, __clearMasterListCache } from '@/lib/db/price-lists-advanced';
 import { calculatePriceFromList } from '@/lib/pricing/calculator';
+
+/**
+ * Helper: crea mock chain Supabase che risolve con i dati forniti
+ */
+function createResolvedChain(data: any, error: any = null): any {
+  const chain: any = {};
+  const methods = [
+    'select',
+    'eq',
+    'neq',
+    'or',
+    'in',
+    'lte',
+    'gte',
+    'lt',
+    'gt',
+    'like',
+    'ilike',
+    'is',
+    'order',
+    'limit',
+    'range',
+  ];
+  for (const method of methods) {
+    chain[method] = vi.fn().mockReturnValue(chain);
+  }
+  chain.single = vi.fn().mockResolvedValue({ data, error });
+  chain.maybeSingle = vi.fn().mockResolvedValue({ data, error });
+  return chain;
+}
 
 describe('VAT Margin Zero Fix', () => {
   const mockUserId = 'test-user-id';
@@ -100,25 +158,13 @@ describe('VAT Margin Zero Fix', () => {
         ],
       };
 
-      // Mock: Prima chiamata - recupera custom list
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { ...customList, entries: customList.entries },
-          error: null,
-        }),
-      } as any);
-
-      // Mock: Seconda chiamata - recupera master list (quando calcola supplierPrice)
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { ...masterList, entries: masterList.entries },
-          error: null,
-        }),
-      } as any);
+      // Mock: chain fluida con .or(), .lte() etc. per getApplicablePriceList
+      vi.mocked(supabaseAdmin.from).mockReturnValueOnce(
+        createResolvedChain({ ...customList, entries: customList.entries })
+      );
+      vi.mocked(supabaseAdmin.from).mockReturnValueOnce(
+        createResolvedChain({ ...masterList, entries: masterList.entries })
+      );
 
       // Mock: Calcolo prezzo dal master (per supplierPrice)
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
@@ -142,7 +188,12 @@ describe('VAT Margin Zero Fix', () => {
         },
       } as any);
 
-      const result = await calculatePriceWithRules(mockUserId, mockParams, 'custom-list-id');
+      const result = await calculatePriceWithRules(
+        mockUserId,
+        'test-workspace-id',
+        mockParams,
+        'custom-list-id'
+      );
 
       expect(result).not.toBeNull();
       expect(result?.vatMode).toBe('included');
@@ -214,25 +265,13 @@ describe('VAT Margin Zero Fix', () => {
         ],
       };
 
-      // Mock: Prima chiamata - recupera custom list
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { ...customList, entries: customList.entries },
-          error: null,
-        }),
-      } as any);
-
-      // Mock: Seconda chiamata - recupera master list
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { ...masterList, entries: masterList.entries },
-          error: null,
-        }),
-      } as any);
+      // Mock: chain fluida con .or(), .lte() etc. per getApplicablePriceList
+      vi.mocked(supabaseAdmin.from).mockReturnValueOnce(
+        createResolvedChain({ ...customList, entries: customList.entries })
+      );
+      vi.mocked(supabaseAdmin.from).mockReturnValueOnce(
+        createResolvedChain({ ...masterList, entries: masterList.entries })
+      );
 
       // Mock: Calcolo prezzo dal master (per supplierPrice)
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
@@ -256,7 +295,12 @@ describe('VAT Margin Zero Fix', () => {
         },
       } as any);
 
-      const result = await calculatePriceWithRules(mockUserId, mockParams, 'custom-list-id');
+      const result = await calculatePriceWithRules(
+        mockUserId,
+        'test-workspace-id',
+        mockParams,
+        'custom-list-id'
+      );
 
       expect(result).not.toBeNull();
       expect(result?.vatMode).toBe('excluded');
@@ -328,25 +372,13 @@ describe('VAT Margin Zero Fix', () => {
         ],
       };
 
-      // Mock: Prima chiamata - recupera custom list
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { ...customList, entries: customList.entries },
-          error: null,
-        }),
-      } as any);
-
-      // Mock: Seconda chiamata - recupera master list
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { ...masterList, entries: masterList.entries },
-          error: null,
-        }),
-      } as any);
+      // Mock: chain fluida con .or(), .lte() etc. per getApplicablePriceList
+      vi.mocked(supabaseAdmin.from).mockReturnValueOnce(
+        createResolvedChain({ ...customList, entries: customList.entries })
+      );
+      vi.mocked(supabaseAdmin.from).mockReturnValueOnce(
+        createResolvedChain({ ...masterList, entries: masterList.entries })
+      );
 
       // Mock: Calcolo prezzo dal master (per supplierPrice)
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
@@ -370,7 +402,12 @@ describe('VAT Margin Zero Fix', () => {
         },
       } as any);
 
-      const result = await calculatePriceWithRules(mockUserId, mockParams, 'custom-list-id');
+      const result = await calculatePriceWithRules(
+        mockUserId,
+        'test-workspace-id',
+        mockParams,
+        'custom-list-id'
+      );
 
       expect(result).not.toBeNull();
 
@@ -437,25 +474,13 @@ describe('VAT Margin Zero Fix', () => {
         ],
       };
 
-      // Mock: Prima chiamata - recupera custom list
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { ...customList, entries: customList.entries },
-          error: null,
-        }),
-      } as any);
-
-      // Mock: Seconda chiamata - recupera master list
-      vi.mocked(supabaseAdmin.from).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: { ...masterList, entries: masterList.entries },
-          error: null,
-        }),
-      } as any);
+      // Mock: chain fluida con .or(), .lte() etc. per getApplicablePriceList
+      vi.mocked(supabaseAdmin.from).mockReturnValueOnce(
+        createResolvedChain({ ...customList, entries: customList.entries })
+      );
+      vi.mocked(supabaseAdmin.from).mockReturnValueOnce(
+        createResolvedChain({ ...masterList, entries: masterList.entries })
+      );
 
       // Mock: Calcolo prezzo dal master (per supplierPrice)
       vi.mocked(calculatePriceFromList).mockReturnValueOnce({
@@ -479,7 +504,12 @@ describe('VAT Margin Zero Fix', () => {
         },
       } as any);
 
-      const result = await calculatePriceWithRules(mockUserId, mockParams, 'custom-list-id');
+      const result = await calculatePriceWithRules(
+        mockUserId,
+        'test-workspace-id',
+        mockParams,
+        'custom-list-id'
+      );
 
       expect(result).not.toBeNull();
       expect(result?.vatMode).toBe('excluded');

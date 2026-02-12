@@ -13,12 +13,40 @@ import { calculatePriceWithRules } from '@/lib/db/price-lists-advanced';
 import { calculatePriceFromList } from '@/lib/pricing/calculator';
 import { getVATModeWithFallback } from '@/lib/pricing/vat-utils';
 
-// Mock Supabase
-vi.mock('@/lib/db/client', () => ({
-  supabaseAdmin: {
-    from: vi.fn(),
-  },
-}));
+// Mock Supabase con chain fluida completa (supporta .or(), .lte(), .in(), etc.)
+vi.mock('@/lib/db/client', () => {
+  const createChainMock = (): any => {
+    const chain: any = {};
+    const methods = [
+      'select',
+      'eq',
+      'neq',
+      'or',
+      'in',
+      'lte',
+      'gte',
+      'lt',
+      'gt',
+      'like',
+      'ilike',
+      'is',
+      'order',
+      'limit',
+      'range',
+    ];
+    for (const method of methods) {
+      chain[method] = vi.fn().mockReturnValue(chain);
+    }
+    chain.single = vi.fn().mockResolvedValue({ data: null, error: null });
+    chain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+    return chain;
+  };
+  return {
+    supabaseAdmin: {
+      from: vi.fn(() => createChainMock()),
+    },
+  };
+});
 
 // Mock calculatePriceFromList
 vi.mock('@/lib/pricing/calculator', () => ({
@@ -86,32 +114,49 @@ describe('VAT Semantics - Backward Compatibility (ADR-001)', () => {
         totalCost: 110.0,
       });
 
-      // Mock setup - getPriceListById query
-      (supabaseAdmin.from as any).mockReturnValueOnce({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({
-          data: legacyPriceList,
-          error: null,
-        }),
-      });
+      // Mock setup - getPriceListById query (chain fluida con .or(), .lte())
+      const listChain: any = {};
+      const chainMethods = [
+        'select',
+        'eq',
+        'neq',
+        'or',
+        'in',
+        'lte',
+        'gte',
+        'lt',
+        'gt',
+        'like',
+        'ilike',
+        'is',
+        'order',
+        'limit',
+        'range',
+      ];
+      for (const method of chainMethods) {
+        listChain[method] = vi.fn().mockReturnValue(listChain);
+      }
+      listChain.single = vi.fn().mockResolvedValue({ data: legacyPriceList, error: null });
+      listChain.maybeSingle = vi.fn().mockResolvedValue({ data: legacyPriceList, error: null });
 
-      // Mock for supplier_price_list_config query (called in calculateWithDefaultMargin)
-      (supabaseAdmin.from as any).mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        in: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({
-          data: null,
-          error: null,
-        }),
-        order: vi.fn().mockResolvedValue({
-          data: [],
-          error: null,
-        }),
-      });
+      (supabaseAdmin.from as any).mockReturnValueOnce(listChain);
 
-      const result = await calculatePriceWithRules(mockUserId, mockParams, 'legacy-list-id');
+      // Mock for subsequent queries (default chain)
+      const defaultChain: any = {};
+      for (const method of chainMethods) {
+        defaultChain[method] = vi.fn().mockReturnValue(defaultChain);
+      }
+      defaultChain.single = vi.fn().mockResolvedValue({ data: null, error: null });
+      defaultChain.maybeSingle = vi.fn().mockResolvedValue({ data: null, error: null });
+
+      (supabaseAdmin.from as any).mockReturnValue(defaultChain);
+
+      const result = await calculatePriceWithRules(
+        mockUserId,
+        'test-workspace-id',
+        mockParams,
+        'legacy-list-id'
+      );
 
       expect(result).not.toBeNull();
       // vatMode dovrebbe essere 'excluded' (fallback da null)
@@ -167,7 +212,12 @@ describe('VAT Semantics - Backward Compatibility (ADR-001)', () => {
         }),
       });
 
-      const result = await calculatePriceWithRules(mockUserId, mockParams, 'test-list-id');
+      const result = await calculatePriceWithRules(
+        mockUserId,
+        'test-workspace-id',
+        mockParams,
+        'test-list-id'
+      );
 
       expect(result).not.toBeNull();
       // Dovrebbe avere valori di default per retrocompatibilità
@@ -263,7 +313,12 @@ describe('VAT Semantics - Backward Compatibility (ADR-001)', () => {
         }),
       });
 
-      const legacyResult = await calculatePriceWithRules(mockUserId, mockParams, 'legacy-list-id');
+      const legacyResult = await calculatePriceWithRules(
+        mockUserId,
+        'test-workspace-id',
+        mockParams,
+        'legacy-list-id'
+      );
 
       // Reset mocks
       vi.clearAllMocks();
@@ -288,6 +343,7 @@ describe('VAT Semantics - Backward Compatibility (ADR-001)', () => {
 
       const explicitResult = await calculatePriceWithRules(
         mockUserId,
+        'test-workspace-id',
         mockParams,
         'explicit-list-id'
       );
