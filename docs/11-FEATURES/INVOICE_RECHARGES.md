@@ -603,10 +603,49 @@ const result = await generatePeriodicInvoiceAction({
 
 ---
 
+## Fatturazione Postpagata (dal 2026-02-12)
+
+### Flusso
+
+Per utenti con `billing_mode = 'postpagato'`, le spedizioni creano record `POSTPAID_CHARGE` in `wallet_transactions` senza toccare il saldo wallet. A fine mese, il Reseller genera la fattura mensile.
+
+### Server Action
+
+```typescript
+import { generatePostpaidMonthlyInvoice } from '@/actions/invoice-recharges';
+
+const result = await generatePostpaidMonthlyInvoice(subUserId, '2026-02');
+// result: { success, invoiceId, totalAmount, itemsCount }
+```
+
+### Logica
+
+1. Verifica auth reseller + ownership sub-user (parent_id + workspace V2)
+2. Query `wallet_transactions` con `type = 'POSTPAID_CHARGE'` per il mese specificato
+3. Filtra transazioni gia fatturate (join `invoice_recharge_links`)
+4. Crea fattura con tipo `periodic`, period_start/period_end
+5. Crea `invoice_items` per ogni spedizione
+6. Crea `invoice_recharge_links` per collegare transazioni a fattura
+7. Rollback atomico se items o links falliscono
+
+### Vista SQL
+
+```sql
+-- postpaid_monthly_summary: aggrega consumo mensile per utente postpagato
+SELECT user_id, date_trunc('month', created_at) AS month,
+       SUM(ABS(amount)) AS total_consumed, COUNT(*) AS shipments_count
+FROM wallet_transactions WHERE type = 'POSTPAID_CHARGE'
+GROUP BY user_id, date_trunc('month', created_at);
+```
+
+**File:** `supabase/migrations/20260216200000_postpaid_billing_support.sql`
+
+---
+
 ## Roadmap Futura
 
 - [ ] Job automatico per fatture periodiche (cron)
 - [ ] Notifica email quando fattura generata
 - [ ] Dashboard fatture ricariche
-- [ ] Export CSV fatture per contabilità
+- [ ] Export CSV fatture per contabilita
 - [ ] Integrazione con software contabili esterni

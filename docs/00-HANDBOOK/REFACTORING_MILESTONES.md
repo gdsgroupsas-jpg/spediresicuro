@@ -445,23 +445,50 @@ Gestione domini custom via Resend API (SPF, DKIM, MX).
 
 ## Tracking
 
-| Milestone                         | Status         | Completato |
-| --------------------------------- | -------------- | ---------- |
-| 1. VAT Consolidation              | ✅ Completato  | 2026-02-05 |
-| 2. Pricing Decomposition          | ✅ Completato  | 2026-02-05 |
-| 3. Workspace Integration          | ✅ Completato  | 2026-02-05 |
-| 4. Unified Logging                | ✅ Completato  | 2026-02-05 |
-| 5. Cache Unification              | ✅ Completato  | 2026-02-05 |
-| 6. Security Hardening             | ✅ Completato  | 2026-02-06 |
-| 7. Wallet Refund Accounting       | ✅ Completato  | 2026-02-06 |
-| 8. Reseller Team Navigation       | ✅ Completato  | 2026-02-06 |
-| 9. WelcomeGate Onboarding         | ✅ Completato  | 2026-02-06 |
-| 10. Workspace Hierarchy Hardening | ✅ Completato  | 2026-02-06 |
-| 11. Premium Welcome Email (F1)    | ✅ Completato  | 2026-02-09 |
-| 12. Workspace Email Infra (F2)    | ✅ Completato  | 2026-02-09 |
-| 13. Posta Reseller UI (F3)        | ✅ Completato  | 2026-02-09 |
-| 14. Bacheca Broadcast (F4)        | ✅ Completato  | 2026-02-09 |
-| 15. Dominio Custom Email (F5)     | 📋 Pianificata | —          |
+| Milestone                          | Status         | Completato |
+| ---------------------------------- | -------------- | ---------- |
+| 1. VAT Consolidation               | ✅ Completato  | 2026-02-05 |
+| 2. Pricing Decomposition           | ✅ Completato  | 2026-02-05 |
+| 3. Workspace Integration           | ✅ Completato  | 2026-02-05 |
+| 4. Unified Logging                 | ✅ Completato  | 2026-02-05 |
+| 5. Cache Unification               | ✅ Completato  | 2026-02-05 |
+| 6. Security Hardening              | ✅ Completato  | 2026-02-06 |
+| 7. Wallet Refund Accounting        | ✅ Completato  | 2026-02-06 |
+| 8. Reseller Team Navigation        | ✅ Completato  | 2026-02-06 |
+| 9. WelcomeGate Onboarding          | ✅ Completato  | 2026-02-06 |
+| 10. Workspace Hierarchy Hardening  | ✅ Completato  | 2026-02-06 |
+| 11. Premium Welcome Email (F1)     | ✅ Completato  | 2026-02-09 |
+| 12. Workspace Email Infra (F2)     | ✅ Completato  | 2026-02-09 |
+| 13. Posta Reseller UI (F3)         | ✅ Completato  | 2026-02-09 |
+| 14. Bacheca Broadcast (F4)         | ✅ Completato  | 2026-02-09 |
+| 15. Dominio Custom Email (F5)      | 📋 Pianificata | —          |
+| 16. Reseller Transfer Atomico      | ✅ Completato  | 2026-02-12 |
+| 17. Gestione Contratti UI          | ✅ Completato  | 2026-02-12 |
+| 18. Fattura a Fine Mese (Postpaid) | ✅ Completato  | 2026-02-12 |
+
+---
+
+### FASE 6: Wallet Post-Paid & Reseller Transfer — COMPLETATA (2026-02-12)
+
+#### Milestone 16: Reseller Transfer Atomico
+
+RPC SQL `reseller_transfer_credit` con lock deterministico, idempotency, e doppia transazione (RESELLER_TRANSFER_OUT + RESELLER_TRANSFER_IN). Sostituisce la vecchia `add_wallet_credit` per i trasferimenti reseller.
+
+**File chiave:** `supabase/migrations/20260216100000_reseller_transfer_credit.sql`, `actions/admin-reseller.ts`
+
+#### Milestone 17: Gestione Contratti UI
+
+Dialog per Reseller per cambiare billing_mode (prepagato/postpagato) dei propri sub-user. Protezione: blocca cambio postpagato->prepagato se ci sono spedizioni non fatturate. Badge billing mode sulla client card.
+
+**File chiave:** `app/dashboard/reseller/clienti/_components/billing-mode-dialog.tsx`, `actions/admin-reseller.ts`
+
+#### Milestone 18: Fattura a Fine Mese (Post-Paid)
+
+Sub-user postpagato spedisce senza saldo. `POSTPAID_CHARGE` traccia consumo senza toccare wallet_balance. Compensazione automatica su errore. `generatePostpaidMonthlyInvoice()` per fatturazione mensile. Vista SQL `postpaid_monthly_summary`.
+
+**File chiave:** `lib/shipments/create-shipment-core.ts`, `lib/wallet/credit-check.ts`, `actions/invoice-recharges.ts`
+
+**Audit:** 14 bug trovati e fixati in 4 round di review. 42 nuovi test.
 
 ---
 

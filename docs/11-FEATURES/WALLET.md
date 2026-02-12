@@ -45,6 +45,7 @@ Il wallet è un sistema di credito prepagato che permette agli utenti di:
 
 - Nessuna etichetta viene generata senza credito disponibile nel wallet
 - Eccezione: SuperAdmin può bypassare (per testing/emergenze)
+- Eccezione: Utenti **Postpagato** possono spedire senza saldo (fattura a fine mese)
 - Modello BYOC: Wallet NON toccato (cliente paga direttamente corriere)
 
 **Modelli Operativi:**
@@ -52,6 +53,32 @@ Il wallet è un sistema di credito prepagato che permette agli utenti di:
 - **Broker/Arbitraggio (B2B Core):** Wallet obbligatorio, cliente usa nostri contratti
 - **SaaS/BYOC:** Wallet NON utilizzato per spedizioni (solo fee SaaS)
 - **Web Reseller (B2C):** Wallet "Web Channel" (non personale)
+
+**Billing Modes (dal 2026-02-12):**
+
+- **Prepagato** (default): Il cliente paga in anticipo tramite wallet. Le spedizioni vengono addebitate immediatamente dal saldo disponibile.
+- **Postpagato**: Il cliente spedisce senza pagare subito. A fine mese riceve una fattura con il riepilogo di tutte le spedizioni effettuate (`POSTPAID_CHARGE`). Solo i Reseller possono impostare il billing_mode dei propri sub-user.
+
+### Reseller Transfer Atomico
+
+Quando un Reseller ricarica un sub-user, il trasferimento è **atomico**: il wallet del Reseller viene debitato e quello del sub-user accreditato in una singola transazione SQL (`reseller_transfer_credit`).
+
+- **Lock deterministico**: ordina UUID (min first) per evitare deadlock
+- **Idempotency**: key basata su hash SHA-256 dei parametri + finestra temporale 5s
+- **Tipi transazione**: `RESELLER_TRANSFER_OUT` (debit reseller) + `RESELLER_TRANSFER_IN` (credit sub-user)
+- **Max importo**: 10.000 EUR per singolo trasferimento (validato in TS + SQL)
+- **File**: `supabase/migrations/20260216100000_reseller_transfer_credit.sql`
+
+### Fatturazione Postpagata
+
+Per utenti con `billing_mode = 'postpagato'`:
+
+1. **Pre-check credito**: bypassa verifica saldo (`credit-check.ts`)
+2. **Creazione spedizione**: crea `POSTPAID_CHARGE` in `wallet_transactions` (importo negativo per tracciamento, ma wallet_balance NON modificato)
+3. **Compensazione errore**: se corriere/DB fallisce, il record `POSTPAID_CHARGE` viene eliminato
+4. **Fatturazione mensile**: `generatePostpaidMonthlyInvoice()` aggrega i `POSTPAID_CHARGE` del mese e genera fattura con tipo `periodic`
+5. **Vista SQL**: `postpaid_monthly_summary` aggrega consumo mensile per utente
+6. **Protezione cambio contratto**: non si puo passare da postpagato a prepagato se ci sono `POSTPAID_CHARGE` non fatturate
 
 ---
 
@@ -449,10 +476,11 @@ transactions.forEach((tx) => {
 
 | Date       | Version | Changes                                                              | Author   |
 | ---------- | ------- | -------------------------------------------------------------------- | -------- |
+| 2026-02-12 | 2.0.0   | Post-paid billing, reseller transfer atomico, billing mode UI        | AI Agent |
 | 2026-01-12 | 1.0.0   | Initial version - Wallet system completo, Acting Context, Anti-fraud | AI Agent |
 
 ---
 
-_Last Updated: 2026-01-12_  
-_Status: 🟢 Active_  
+_Last Updated: 2026-02-12_
+_Status: 🟢 Active_
 _Maintainer: Engineering Team_

@@ -1,3 +1,36 @@
+# 1.2.0 (2026-02-12) - WALLET POST-PAID & RESELLER TRANSFER
+
+### Features
+
+- **wallet:** Fatturazione post-paid: sub-user postpagato spedisce senza saldo, fattura a fine mese
+- **wallet:** Reseller transfer atomico via RPC SQL con lock deterministico e idempotency
+- **reseller:** Gestione contratti UI: dialog per cambiare billing_mode (prepagato/postpagato)
+- **reseller:** Badge billing mode sulla client card
+- **invoice:** `generatePostpaidMonthlyInvoice()` per fatturazione mensile postpagata
+- **sql:** Vista `postpaid_monthly_summary` per aggregazione consumo mensile
+- **sql:** RPC `reseller_transfer_credit` con protezione deadlock e idempotency
+
+### Bug Fixes (Audit - 14 bug fixati)
+
+- **billing-mode-dialog:** Fix stale state quando dialog riutilizzato per client diversi
+- **invoice-recharges:** Aggiunto ownership check reseller in generatePostpaidMonthlyInvoice
+- **invoice-recharges:** Fix calcolo due_date (era mese sbagliato, ora endOfMonth + 30 giorni)
+- **invoice-recharges:** Rollback atomico su errore creazione invoice_items/links
+- **invoice-recharges:** Validazione mese (1-12) e anno (2020-2100)
+- **create-shipment-core:** Fix `validated.courier` -> `validated.carrier`
+- **create-shipment-core:** Aggiornamento reference_id e description dopo creazione shipment postpaid
+- **create-shipment-core:** Compensazione postpaid nel catch dbError
+- **admin-reseller:** Max amount 10.000 EUR coerente con RPC SQL
+- **admin-reseller:** Blocco cambio postpagato->prepagato se POSTPAID_CHARGE non fatturate
+- **admin-reseller:** Idempotency key stabile (SHA-256 hash con finestra 5s)
+- **credit-check:** Rimosso `as any` a favore di type cast sicuri
+
+### Security
+
+- **deps:** Upgrade axios 1.13.4 -> 1.13.5 (CVE DoS via `__proto__`)
+
+---
+
 # 1.1.0 (2026-01-24) - FUSION RELEASE
 
 ### Features
