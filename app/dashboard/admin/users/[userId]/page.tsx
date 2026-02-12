@@ -8,6 +8,7 @@
  */
 
 import { AiFeaturesCard } from '@/components/admin/ai-features/AiFeaturesCard';
+import { ManageWalletCard } from '@/components/admin/manage-wallet-card';
 import { CurrentFeeDisplay, FeeHistoryTable } from '@/components/admin/platform-fee';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -178,6 +179,13 @@ export default async function UserDetailPage({ params }: PageProps) {
             </div>
           </div>
         </div>
+
+        {/* Gestione Wallet */}
+        <ManageWalletCard
+          userId={userId}
+          userName={user.name || user.email}
+          currentBalance={user.wallet_balance || 0}
+        />
 
         {/* AI Capabilities */}
         {user.is_reseller && (
