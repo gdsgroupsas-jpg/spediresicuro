@@ -260,8 +260,8 @@ describe('getMyTopUpRequests - Server Action', () => {
   });
 
   it('verifica autenticazione utente', () => {
-    // Deve usare supabase.auth.getUser() o requireSafeAuth
-    expect(walletSource).toMatch(/getMyTopUpRequests[\s\S]*?auth\.getUser/);
+    // Deve usare getSafeAuth() per autenticazione NextAuth
+    expect(walletSource).toMatch(/getMyTopUpRequests[\s\S]*?getSafeAuth/);
   });
 
   it('ritorna errore se non autenticato', () => {

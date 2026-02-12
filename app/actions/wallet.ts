@@ -1,6 +1,5 @@
 'use server';
 
-import { createServerActionClient } from '@/lib/supabase-server';
 import {
   createStripeCheckoutSession,
   calculateStripeFee,
@@ -125,11 +124,9 @@ export async function getWalletRechargePreview(grossAmount: number) {
  * Con validazioni server-side: tipo file, dimensione, importo, rate limiting, duplicati
  */
 export async function uploadBankTransferReceipt(formData: FormData) {
-  const supabase = createServerActionClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) return { success: false, error: 'Unauthorized' };
+  const context = await getSafeAuth();
+  if (!context) return { success: false, error: 'Unauthorized' };
+  const user = context.target;
 
   const file = formData.get('file') as File;
   const declaredAmount = parseFloat(formData.get('amount') as string);
@@ -167,7 +164,7 @@ export async function uploadBankTransferReceipt(formData: FormData) {
   }
 
   // 3. Rate limiting: max 5 richieste nelle ultime 24h
-  const { count: recentCount } = await supabase
+  const { count: recentCount } = await supabaseAdmin
     .from('top_up_requests')
     .select('id', { count: 'exact', head: true })
     .eq('user_id', user.id)
@@ -187,7 +184,7 @@ export async function uploadBankTransferReceipt(formData: FormData) {
   const fileHash = hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 
   // 5. Controllo duplicati: stesso file_hash + user_id
-  const { data: duplicate } = await supabase
+  const { data: duplicate } = await supabaseAdmin
     .from('top_up_requests')
     .select('id, status')
     .eq('user_id', user.id)
@@ -203,7 +200,7 @@ export async function uploadBankTransferReceipt(formData: FormData) {
   }
 
   // 6. Controllo duplicati: stesso amount + user_id nelle ultime 24h
-  const { data: duplicateAmount } = await supabase
+  const { data: duplicateAmount } = await supabaseAdmin
     .from('top_up_requests')
     .select('id')
     .eq('user_id', user.id)
@@ -225,7 +222,9 @@ export async function uploadBankTransferReceipt(formData: FormData) {
   // ============================================
 
   const fileName = `${user.id}/${Date.now()}_${file.name}`;
-  const { error: uploadError } = await supabase.storage.from('receipts').upload(fileName, file);
+  const { error: uploadError } = await supabaseAdmin.storage
+    .from('receipts')
+    .upload(fileName, file);
 
   if (uploadError) return { success: false, error: 'Upload fallito: ' + uploadError.message };
 
@@ -235,9 +234,9 @@ export async function uploadBankTransferReceipt(formData: FormData) {
 
   const {
     data: { publicUrl },
-  } = supabase.storage.from('receipts').getPublicUrl(fileName);
+  } = supabaseAdmin.storage.from('receipts').getPublicUrl(fileName);
 
-  const { data: req, error: dbError } = await supabase
+  const { data: req, error: dbError } = await supabaseAdmin
     .from('top_up_requests')
     .insert({
       user_id: user.id,
@@ -271,7 +270,7 @@ export async function uploadBankTransferReceipt(formData: FormData) {
 
     // Aggiorna subito il record con i dati AI
     if (analysis.confidence > 0) {
-      await supabase
+      await supabaseAdmin
         .from('top_up_requests')
         .update({
           ai_confidence: analysis.confidence,
@@ -336,16 +335,13 @@ export async function getMyTopUpRequests(): Promise<{
   error?: string;
 }> {
   try {
-    const supabase = createServerActionClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-
-    if (!user) {
+    const context = await getSafeAuth();
+    if (!context) {
       return { success: false, error: 'Non autenticato' };
     }
+    const user = context.target;
 
-    const { data, error } = await supabase
+    const { data, error } = await supabaseAdmin
       .from('top_up_requests')
       .select('id, amount, status, created_at, approved_amount, admin_notes')
       .eq('user_id', user.id)
@@ -368,27 +364,8 @@ export async function getMyTopUpRequests(): Promise<{
  * Aggiorna il bilancio del wallet (SOLO ADMIN o SYSTEM)
  * Exported per uso interno, non esporre direttamente senza controlli
  */
-export async function rechargeMyWallet(amount: number, reason: string) {
-  // Questa funzione era usata dal vecchio dialog di test.
-  // Ora la rendiamo compatibile o la deprecchiamo in favore dei nuovi flussi.
-  // Per retrocompatibilità (Admin Gift):
-  const supabase = createServerActionClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  // In produzione, bloccare questo per utenti normali!
-  // Qui assumiamo sia un ambiente dev o che solo admin la chiami.
-  // Per ora la lasciamo funzionante come "Self Recharge" di test se l'utente è admin, altrimenti errore.
-
-  /* 
-    if (user.role !== 'admin') { 
-        return { success: false, error: 'Solo Admin può usare ricarica manuale diretta.' };
-    } 
-    */
-
-  // ... Logica vecchia ricarica ...
-  // Per ora ritorniamo Errore per forzare uso nuovi metodi
+export async function rechargeMyWallet(_amount: number, _reason: string) {
+  // Deprecata: forzare uso nuovi metodi (Bonifico Smart o Carta/Stripe)
   return { success: false, error: 'Usa il nuovo wizard Bonifico o Carta.' };
 }
 
