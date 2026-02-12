@@ -104,6 +104,24 @@ Per utenti con `billing_mode = 'postpagato'`:
    - CRO/TRN valido (no duplicati)
 5. **Approva o Rifiuta** con motivo
 
+#### Notifica Email Admin (dal 2026-02-12)
+
+Quando un utente carica una ricevuta di bonifico, il sistema invia automaticamente una email a tutti gli admin/superadmin tramite `sendAdminTopUpNotificationEmail()`:
+
+- **Template:** Amber-themed con link diretto a `/dashboard/admin/bonifici`
+- **Contenuto:** Nome utente, email, importo dichiarato, ID richiesta
+- **Non-bloccante:** Errore email non impedisce il completamento dell'upload
+- **File:** `lib/email/resend.ts`
+
+#### Storage Ricevute (Bucket `receipts`)
+
+Le ricevute bonifico vengono salvate nel bucket Supabase `receipts`:
+
+- **Limite file:** 10MB
+- **Formati:** JPEG, PNG, PDF
+- **RLS:** Utente carica/vede solo nella propria cartella, admin vedono tutto
+- **Migrazione:** `20260217100000_create_receipts_storage_bucket.sql`
+
 #### Limitazioni Anti-Frode
 
 - **Limite per transazione:** €10,000 (enforced in DB function)
@@ -268,6 +286,19 @@ export async function getMyWalletTransactions() {
 - Filtri per tipo (tutte/crediti/debiti)
 - Statistiche (totale crediti, totale debiti, ultima ricarica)
 - Pulsante "Ricarica Wallet"
+- Card con `variant="dark"` (sfondo scuro per leggibilità, dal 2026-02-12)
+
+### Azzera Wallet (SuperAdmin)
+
+**File:** `components/admin/manage-wallet-card.tsx`
+
+Il SuperAdmin può azzerare il saldo di un utente direttamente dalla dashboard, senza dover eseguire SQL manuali.
+
+- **Bottone:** "Azzera Wallet (€XX.XX)" — visibile solo quando `currentBalance > 0`
+- **Azione:** Pre-compila il dialog di debito con importo completo e motivo "Reset wallet — azzeramento saldo"
+- **Stile:** Arancione (distinto da credito verde e debito rosso)
+- **Icona:** `RotateCcw` (lucide-react)
+- **Sottostante:** Usa la stessa `manageWallet()` server action (tipo `debit`)
 
 ---
 
@@ -476,6 +507,7 @@ transactions.forEach((tx) => {
 
 | Date       | Version | Changes                                                              | Author   |
 | ---------- | ------- | -------------------------------------------------------------------- | -------- |
+| 2026-02-12 | 2.1.0   | UI contrast fix, email admin top-up, receipts bucket, azzera wallet  | AI Agent |
 | 2026-02-12 | 2.0.0   | Post-paid billing, reseller transfer atomico, billing mode UI        | AI Agent |
 | 2026-01-12 | 1.0.0   | Initial version - Wallet system completo, Acting Context, Anti-fraud | AI Agent |
 

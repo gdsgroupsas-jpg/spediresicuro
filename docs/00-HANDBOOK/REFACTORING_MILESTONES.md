@@ -445,26 +445,27 @@ Gestione domini custom via Resend API (SPF, DKIM, MX).
 
 ## Tracking
 
-| Milestone                          | Status         | Completato |
-| ---------------------------------- | -------------- | ---------- |
-| 1. VAT Consolidation               | ✅ Completato  | 2026-02-05 |
-| 2. Pricing Decomposition           | ✅ Completato  | 2026-02-05 |
-| 3. Workspace Integration           | ✅ Completato  | 2026-02-05 |
-| 4. Unified Logging                 | ✅ Completato  | 2026-02-05 |
-| 5. Cache Unification               | ✅ Completato  | 2026-02-05 |
-| 6. Security Hardening              | ✅ Completato  | 2026-02-06 |
-| 7. Wallet Refund Accounting        | ✅ Completato  | 2026-02-06 |
-| 8. Reseller Team Navigation        | ✅ Completato  | 2026-02-06 |
-| 9. WelcomeGate Onboarding          | ✅ Completato  | 2026-02-06 |
-| 10. Workspace Hierarchy Hardening  | ✅ Completato  | 2026-02-06 |
-| 11. Premium Welcome Email (F1)     | ✅ Completato  | 2026-02-09 |
-| 12. Workspace Email Infra (F2)     | ✅ Completato  | 2026-02-09 |
-| 13. Posta Reseller UI (F3)         | ✅ Completato  | 2026-02-09 |
-| 14. Bacheca Broadcast (F4)         | ✅ Completato  | 2026-02-09 |
-| 15. Dominio Custom Email (F5)      | 📋 Pianificata | —          |
-| 16. Reseller Transfer Atomico      | ✅ Completato  | 2026-02-12 |
-| 17. Gestione Contratti UI          | ✅ Completato  | 2026-02-12 |
-| 18. Fattura a Fine Mese (Postpaid) | ✅ Completato  | 2026-02-12 |
+| Milestone                           | Status         | Completato |
+| ----------------------------------- | -------------- | ---------- |
+| 1. VAT Consolidation                | ✅ Completato  | 2026-02-05 |
+| 2. Pricing Decomposition            | ✅ Completato  | 2026-02-05 |
+| 3. Workspace Integration            | ✅ Completato  | 2026-02-05 |
+| 4. Unified Logging                  | ✅ Completato  | 2026-02-05 |
+| 5. Cache Unification                | ✅ Completato  | 2026-02-05 |
+| 6. Security Hardening               | ✅ Completato  | 2026-02-06 |
+| 7. Wallet Refund Accounting         | ✅ Completato  | 2026-02-06 |
+| 8. Reseller Team Navigation         | ✅ Completato  | 2026-02-06 |
+| 9. WelcomeGate Onboarding           | ✅ Completato  | 2026-02-06 |
+| 10. Workspace Hierarchy Hardening   | ✅ Completato  | 2026-02-06 |
+| 11. Premium Welcome Email (F1)      | ✅ Completato  | 2026-02-09 |
+| 12. Workspace Email Infra (F2)      | ✅ Completato  | 2026-02-09 |
+| 13. Posta Reseller UI (F3)          | ✅ Completato  | 2026-02-09 |
+| 14. Bacheca Broadcast (F4)          | ✅ Completato  | 2026-02-09 |
+| 15. Dominio Custom Email (F5)       | 📋 Pianificata | —          |
+| 16. Reseller Transfer Atomico       | ✅ Completato  | 2026-02-12 |
+| 17. Gestione Contratti UI           | ✅ Completato  | 2026-02-12 |
+| 18. Fattura a Fine Mese (Postpaid)  | ✅ Completato  | 2026-02-12 |
+| 19. Wallet UI & Admin Notifications | ✅ Completato  | 2026-02-12 |
 
 ---
 
@@ -489,6 +490,43 @@ Sub-user postpagato spedisce senza saldo. `POSTPAID_CHARGE` traccia consumo senz
 **File chiave:** `lib/shipments/create-shipment-core.ts`, `lib/wallet/credit-check.ts`, `actions/invoice-recharges.ts`
 
 **Audit:** 14 bug trovati e fixati in 4 round di review. 42 nuovi test.
+
+---
+
+### Milestone 19: Wallet UI & Admin Notifications ✅
+
+**Commit:** `fa03aff` | **Completato:** 2026-02-12
+
+#### Problemi risolti
+
+| Problema                                                       | Fix                                                     |
+| -------------------------------------------------------------- | ------------------------------------------------------- |
+| Card wallet illeggibili (testo grigio chiaro su sfondo bianco) | `variant="dark"` su 6 Card components nella wallet page |
+| Nessuna notifica admin quando utente crea richiesta ricarica   | Email automatica a tutti admin/superadmin via Resend    |
+| Bucket storage `receipts` mai creato da migrazione             | Nuova migrazione SQL con bucket + RLS policies          |
+| SuperAdmin non può azzerare wallet da UI                       | Bottone "Azzera Wallet" in ManageWalletCard             |
+
+#### Deliverables
+
+- [x] Fix contrasto UI: `variant="dark"` su chart, 4 stats cards, transactions list
+- [x] `sendAdminTopUpNotificationEmail()` in `lib/email/resend.ts` (template amber)
+- [x] Chiamata non-bloccante in `uploadBankTransferReceipt()` con try/catch
+- [x] Migrazione `20260217100000_create_receipts_storage_bucket.sql` (bucket + RLS)
+- [x] Bottone "Azzera Wallet" con pre-fill debit dialog (importo completo + motivo)
+- [x] Migrazione `20260217110000_reset_wallet_pilot_gdsgroupsas.sql`
+- [x] 6 nuovi test Azzera Wallet + 22 test notifiche/bucket/contrast
+- [x] Test verdi su tutta la suite (2772 unit)
+
+#### File coinvolti
+
+- `app/dashboard/wallet/page.tsx` (variant="dark" su 6 Card)
+- `app/actions/wallet.ts` (import + chiamata email admin)
+- `lib/email/resend.ts` (nuova funzione `sendAdminTopUpNotificationEmail`)
+- `components/admin/manage-wallet-card.tsx` (bottone Azzera Wallet + prefill dialog)
+- `supabase/migrations/20260217100000_create_receipts_storage_bucket.sql` (nuovo)
+- `supabase/migrations/20260217110000_reset_wallet_pilot_gdsgroupsas.sql` (nuovo)
+- `tests/unit/topup-requests-notifications.test.ts` (22 nuovi test)
+- `tests/unit/manage-wallet-card.test.ts` (6 nuovi test)
 
 ---
 
