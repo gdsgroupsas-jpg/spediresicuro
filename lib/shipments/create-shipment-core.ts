@@ -242,7 +242,7 @@ export async function createShipmentCore(params: {
   // ============================================
   const { data: user, error: userError } = await supabaseAdmin
     .from('users')
-    .select('wallet_balance, role')
+    .select('wallet_balance, role, billing_mode')
     .eq('id', targetId)
     .single();
 
@@ -261,6 +261,7 @@ export async function createShipmentCore(params: {
 
   const isSuperadmin = user.role === 'SUPERADMIN' || user.role === 'superadmin';
   const isByoc = user.role === 'BYOC' || user.role === 'byoc';
+  const isPostpaid = (user as unknown as { billing_mode?: string }).billing_mode === 'postpagato';
 
   let walletChargeAmount: number;
   let chargeSource: 'quoted' | 'fallback' | 'byoc_fee';
@@ -291,7 +292,7 @@ export async function createShipmentCore(params: {
     userId: targetId?.substring(0, 8) + '...', // NO PII
   });
 
-  if (!isSuperadmin && (user.wallet_balance || 0) < walletChargeAmount) {
+  if (!isSuperadmin && !isPostpaid && (user.wallet_balance || 0) < walletChargeAmount) {
     return {
       status: 402,
       json: {
@@ -323,7 +324,44 @@ export async function createShipmentCore(params: {
   let walletDebitAmount = 0;
   let _walletTransactionId: string | undefined; // Prefixed: kept for audit trail
 
-  if (!isSuperadmin) {
+  if (!isSuperadmin && isPostpaid) {
+    // ============================================
+    // POSTPAID: Traccia consumo senza debitare wallet
+    // ============================================
+    console.log('📋 [POSTPAID] Recording postpaid charge:', {
+      userId: targetId?.substring(0, 8) + '...',
+      amount: walletChargeAmount,
+      idempotencyKey: idempotencyKey?.substring(0, 16) + '...',
+    });
+
+    const { error: postpaidError } = await supabaseAdmin.from('wallet_transactions').insert({
+      user_id: targetId,
+      amount: -walletChargeAmount, // Negativo per coerenza con SHIPMENT_CHARGE
+      type: 'POSTPAID_CHARGE',
+      description: `Spedizione postpagata - ${validated.carrier || 'corriere'}`,
+      idempotency_key: idempotencyKey,
+      reference_id: null, // Aggiornato dopo creazione spedizione
+    });
+
+    if (postpaidError) {
+      // Idempotent replay: se key esiste gia', e' un retry OK
+      if (postpaidError.code === '23505') {
+        console.log('📋 [POSTPAID] Idempotent replay: charge already recorded');
+      } else {
+        console.error('❌ [POSTPAID] Failed to record charge:', postpaidError);
+        return {
+          status: 500,
+          json: {
+            error: 'POSTPAID_CHARGE_FAILED',
+            message: 'Errore nella registrazione della spedizione postpagata.',
+          },
+        };
+      }
+    }
+
+    walletDebited = false; // Non serve compensazione wallet
+    walletDebitAmount = walletChargeAmount; // Per tracking finanziario
+  } else if (!isSuperadmin) {
     console.log('💳 [WALLET] Starting wallet debit:', {
       userId: targetId?.substring(0, 8) + '...',
       amount: walletChargeAmount,
@@ -420,8 +458,23 @@ export async function createShipmentCore(params: {
     );
   } catch (courierError: any) {
     // ============================================
-    // COMPENSAZIONE: etichetta non creata → refund wallet
+    // COMPENSAZIONE: etichetta non creata → refund wallet / rimuovi postpaid charge
     // ============================================
+    // Postpaid: rimuovi POSTPAID_CHARGE (non c'e' wallet da rimborsare)
+    if (isPostpaid && !isSuperadmin) {
+      try {
+        await supabaseAdmin
+          .from('wallet_transactions')
+          .delete()
+          .eq('idempotency_key', idempotencyKey)
+          .eq('type', 'POSTPAID_CHARGE');
+        console.log('📋 [POSTPAID] Compensazione: POSTPAID_CHARGE rimosso per errore corriere');
+      } catch (postpaidCompError) {
+        console.error('❌ [POSTPAID] Compensazione fallita:', postpaidCompError);
+      }
+    }
+
+    // Prepaid: refund wallet
     if (walletDebited && !isSuperadmin) {
       try {
         const refundFn =
@@ -605,6 +658,20 @@ export async function createShipmentCore(params: {
         .eq('id', _walletTransactionId);
     }
 
+    // Aggiorna POSTPAID_CHARGE con reference_id (shipment) e descrizione dettagliata
+    if (isPostpaid && !isSuperadmin && shipment.id) {
+      const recipientName = validated.recipient.name || '';
+      const recipientCity = validated.recipient.city || '';
+      const carrierName = validated.carrier || '';
+      const tracking = courierResponse.trackingNumber || '';
+      const description = `Spedizione postpagata ${carrierName} → ${recipientName}, ${recipientCity} - ${tracking}`;
+      await supabaseAdmin
+        .from('wallet_transactions')
+        .update({ reference_id: shipment.id, description })
+        .eq('idempotency_key', idempotencyKey)
+        .eq('type', 'POSTPAID_CHARGE');
+    }
+
     await supabaseAdmin.rpc('complete_idempotency_lock', {
       p_idempotency_key: idempotencyKey,
       p_shipment_id: shipment.id,
@@ -734,6 +801,20 @@ export async function createShipmentCore(params: {
       });
     } catch {
       // ignore
+    }
+
+    // Postpaid: rimuovi POSTPAID_CHARGE orfano (best-effort)
+    if (isPostpaid && !isSuperadmin) {
+      try {
+        await supabaseAdmin
+          .from('wallet_transactions')
+          .delete()
+          .eq('idempotency_key', idempotencyKey)
+          .eq('type', 'POSTPAID_CHARGE');
+        console.log('📋 [POSTPAID] Compensazione DB error: POSTPAID_CHARGE rimosso');
+      } catch (postpaidCompError) {
+        console.error('❌ [POSTPAID] Compensazione DB error fallita:', postpaidCompError);
+      }
     }
 
     // Refund wallet (best-effort)

@@ -21,6 +21,7 @@ import {
   MoreHorizontal,
   Package,
   Plus,
+  Receipt,
   Wallet,
 } from 'lucide-react';
 
@@ -42,6 +43,7 @@ export interface ClientWithListino {
   shipments_count: number;
   total_spent: number;
   assigned_listini: ListinoInfo[];
+  billing_mode?: 'prepagato' | 'postpagato';
 }
 
 interface ClientCardWithListinoProps {
@@ -51,6 +53,7 @@ interface ClientCardWithListinoProps {
   onManageWallet: (clientId: string) => void;
   onViewShipments: (clientId: string) => void;
   onEditClient: (clientId: string) => void;
+  onChangeBillingMode?: (clientId: string) => void;
 }
 
 export function ClientCardWithListino({
@@ -60,6 +63,7 @@ export function ClientCardWithListino({
   onManageWallet,
   onViewShipments,
   onEditClient,
+  onChangeBillingMode,
 }: ClientCardWithListinoProps) {
   const isLowBalance = client.wallet_balance < WALLET_THRESHOLDS.LOW;
   const isNewClient = () => {
@@ -68,6 +72,7 @@ export function ClientCardWithListino({
     return new Date(client.created_at) >= sevenDaysAgo;
   };
 
+  const isPostpaid = client.billing_mode === 'postpagato';
   const listini = client.assigned_listini;
   const hasListini = listini.length > 0;
   const MAX_VISIBLE = 2;
@@ -92,6 +97,16 @@ export function ClientCardWithListino({
                   Nuovo
                 </Badge>
               )}
+              <Badge
+                variant="secondary"
+                className={`shrink-0 text-xs ${
+                  isPostpaid
+                    ? 'bg-blue-100 text-blue-700 border-blue-200'
+                    : 'bg-green-100 text-green-700 border-green-200'
+                }`}
+              >
+                {isPostpaid ? 'Postpagato' : 'Prepagato'}
+              </Badge>
             </div>
             <p className="text-sm text-gray-500 truncate">{client.email}</p>
           </div>
@@ -200,6 +215,12 @@ export function ClientCardWithListino({
               Crea Listino Personalizzato
             </DropdownMenuItem>
             <DropdownMenuSeparator />
+            {onChangeBillingMode && (
+              <DropdownMenuItem onClick={() => onChangeBillingMode(client.id)}>
+                <Receipt className="w-4 h-4 mr-2 text-indigo-600" />
+                Cambia Contratto
+              </DropdownMenuItem>
+            )}
             <DropdownMenuItem onClick={() => onEditClient(client.id)}>
               <Eye className="w-4 h-4 mr-2 text-gray-600" />
               Dettagli Cliente

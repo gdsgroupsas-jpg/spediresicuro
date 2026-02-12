@@ -11,6 +11,7 @@
  * - Gestire la configurazione corrieri per i Sub-Users
  */
 
+import crypto from 'crypto';
 import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { createUser } from '@/lib/database';
@@ -569,12 +570,19 @@ export async function manageSubUserWallet(
       };
     }
 
-    // 2. Valida importo (solo positivo per sicurezza)
+    // 2. Valida importo (solo positivo, max 10.000 per sicurezza - coerente con RPC SQL)
     if (amount <= 0) {
       return {
         success: false,
         error:
           "L'importo deve essere positivo. I Reseller possono solo aggiungere credito, non rimuoverlo.",
+      };
+    }
+
+    if (amount > 10000) {
+      return {
+        success: false,
+        error: "L'importo massimo per singolo trasferimento e' €10.000.",
       };
     }
 
@@ -628,27 +636,51 @@ export async function manageSubUserWallet(
       };
     }
 
-    // 4. Aggiungi credito usando funzione SQL se disponibile
-    let transactionId: string;
+    // 4. Trasferimento atomico: debita reseller + accredita sub-user
+    // Usa RPC reseller_transfer_credit per atomicita e lock deterministico
+    let transferResult: any;
 
     try {
-      const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit', {
-        p_user_id: subUserId,
-        p_amount: amount,
-        p_description: reason,
-        p_created_by: resellerCheck.userId,
-      });
+      // Idempotency key stabile: hash dei parametri + finestra temporale 5s
+      // Protegge da double-click/retry: stessa operazione nella stessa finestra = stessa key
+      const idempotencyKey = `reseller-transfer-${crypto
+        .createHash('sha256')
+        .update(
+          JSON.stringify({
+            resellerId: resellerCheck.userId,
+            subUserId,
+            amount,
+            timestamp: Math.floor(Date.now() / 5000),
+          })
+        )
+        .digest('hex')
+        .substring(0, 16)}`;
 
-      if (txError) {
-        // RPC fallito: ritorna errore (no fallback manuale per evitare doppio accredito)
-        console.error('Errore RPC add_wallet_credit:', txError);
+      const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
+        'reseller_transfer_credit',
+        {
+          p_reseller_id: resellerCheck.userId,
+          p_sub_user_id: subUserId,
+          p_amount: amount,
+          p_description: reason,
+          p_idempotency_key: idempotencyKey,
+        }
+      );
+
+      if (rpcError) {
+        console.error('Errore RPC reseller_transfer_credit:', rpcError);
+        // Messaggio user-friendly per saldo insufficiente
+        const isInsufficientBalance =
+          rpcError.message?.includes('insufficiente') || rpcError.message?.includes('Insufficient');
         return {
           success: false,
-          error: txError.message || 'Errore durante la ricarica del wallet. Riprova più tardi.',
+          error: isInsufficientBalance
+            ? `Saldo insufficiente. Il tuo wallet non ha abbastanza credito per trasferire €${amount}.`
+            : rpcError.message || 'Errore durante il trasferimento. Riprova più tardi.',
         };
-      } else {
-        transactionId = txData;
       }
+
+      transferResult = rpcResult;
     } catch (error: any) {
       console.error('Errore in manageSubUserWallet:', error);
       return {
@@ -661,7 +693,7 @@ export async function manageSubUserWallet(
     try {
       const auditContext = await getSafeAuth();
       await supabaseAdmin.from('audit_logs').insert({
-        action: 'wallet_credit_added',
+        action: 'reseller_transfer_credit',
         resource_type: 'wallet',
         resource_id: subUserId,
         user_email: auditContext?.actor?.email || 'unknown',
@@ -669,30 +701,200 @@ export async function manageSubUserWallet(
         metadata: {
           amount: amount,
           reason: reason,
-          transaction_id: transactionId,
-          type: 'reseller_recharge',
+          transaction_id_out: transferResult?.transaction_id_out,
+          transaction_id_in: transferResult?.transaction_id_in,
+          type: 'reseller_transfer',
           target_user_id: subUserId,
+          reseller_new_balance: transferResult?.reseller_new_balance,
+          sub_user_new_balance: transferResult?.sub_user_new_balance,
         },
       });
     } catch (auditError) {
       console.warn('Errore audit log:', auditError);
     }
 
-    // 6. Ottieni nuovo balance
-    const { data: updatedUser } = await supabaseAdmin
-      .from('users')
-      .select('wallet_balance')
-      .eq('id', subUserId)
-      .single();
-
     return {
       success: true,
-      message: `Ricarica di €${amount} completata con successo.`,
-      transactionId,
-      newBalance: updatedUser?.wallet_balance || 0,
+      message: `Trasferimento di €${amount} completato. Il tuo saldo e stato aggiornato.`,
+      transactionId: transferResult?.transaction_id_in,
+      newBalance: transferResult?.sub_user_new_balance || 0,
     };
   } catch (error: any) {
     console.error('Errore in manageSubUserWallet:', error);
+    return {
+      success: false,
+      error: error.message || 'Errore sconosciuto.',
+    };
+  }
+}
+
+/**
+ * Server Action: Cambia il billing_mode di un Sub-User (prepagato / postpagato)
+ *
+ * Solo il Reseller proprietario puo' cambiare il contratto del proprio sub-user.
+ *
+ * @param subUserId - ID del Sub-User
+ * @param billingMode - 'prepagato' o 'postpagato'
+ * @returns Risultato operazione
+ */
+export async function updateSubUserBillingMode(
+  subUserId: string,
+  billingMode: 'prepagato' | 'postpagato'
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    // 1. Verifica autenticazione
+    const context = await getSafeAuth();
+    if (!context?.actor?.email) {
+      return { success: false, error: 'Non autenticato.' };
+    }
+
+    // 2. Verifica che sia reseller
+    const resellerCheck = await isCurrentUserReseller();
+    if (!resellerCheck.isReseller || !resellerCheck.userId) {
+      return {
+        success: false,
+        error: 'Solo i Reseller possono cambiare il contratto dei Sub-Users.',
+      };
+    }
+
+    // 3. Validazione input
+    if (!['prepagato', 'postpagato'].includes(billingMode)) {
+      return {
+        success: false,
+        error: "Modalita' di fatturazione non valida. Valori ammessi: prepagato, postpagato.",
+      };
+    }
+
+    if (!subUserId || typeof subUserId !== 'string') {
+      return { success: false, error: 'ID Sub-User non valido.' };
+    }
+
+    // 4. Verifica ownership (parent_id legacy + workspace V2)
+    const { data: subUser, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, email, name, billing_mode, parent_id')
+      .eq('id', subUserId)
+      .single();
+
+    if (userError || !subUser) {
+      return { success: false, error: 'Sub-User non trovato.' };
+    }
+
+    // Check 1: Legacy parent_id
+    let isOwner = subUser.parent_id === resellerCheck.userId;
+
+    // Check 2: Workspace V2
+    if (!isOwner) {
+      const { data: resellerUser } = await supabaseAdmin
+        .from('users')
+        .select('primary_workspace_id')
+        .eq('id', resellerCheck.userId)
+        .single();
+
+      if (resellerUser?.primary_workspace_id) {
+        const { data: subUserWs } = await supabaseAdmin
+          .from('workspace_members')
+          .select('workspace_id, workspaces!inner(parent_workspace_id)')
+          .eq('user_id', subUserId)
+          .eq('status', 'active')
+          .eq('role', 'owner');
+
+        if (subUserWs) {
+          isOwner = subUserWs.some(
+            (m: any) => m.workspaces?.parent_workspace_id === resellerUser.primary_workspace_id
+          );
+        }
+      }
+    }
+
+    if (!isOwner) {
+      return {
+        success: false,
+        error: 'Non hai i permessi per cambiare il contratto di questo utente.',
+      };
+    }
+
+    // 5. Se gia' nella modalita' richiesta, return OK
+    if (subUser.billing_mode === billingMode) {
+      return {
+        success: true,
+        message: `Il cliente e' gia' in modalita' ${billingMode}.`,
+      };
+    }
+
+    // 5b. Se passaggio postpagato -> prepagato: verifica POSTPAID_CHARGE non fatturate
+    if (subUser.billing_mode === 'postpagato' && billingMode === 'prepagato') {
+      const { data: unfatturate } = await supabaseAdmin
+        .from('wallet_transactions')
+        .select('id')
+        .eq('user_id', subUserId)
+        .eq('type', 'POSTPAID_CHARGE')
+        .limit(1);
+
+      // Verifica che non siano gia' linkate a fatture
+      if (unfatturate && unfatturate.length > 0) {
+        const { data: linked } = await supabaseAdmin
+          .from('invoice_recharge_links')
+          .select('id')
+          .eq('wallet_transaction_id', unfatturate[0].id)
+          .limit(1);
+
+        if (!linked || linked.length === 0) {
+          return {
+            success: false,
+            error:
+              'Impossibile passare a Prepagato: ci sono spedizioni postpagate non ancora fatturate. Genera prima la fattura mensile.',
+          };
+        }
+      }
+    }
+
+    // 6. Aggiorna billing_mode
+    const { error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({ billing_mode: billingMode })
+      .eq('id', subUserId);
+
+    if (updateError) {
+      console.error('Errore aggiornamento billing_mode:', updateError);
+      return {
+        success: false,
+        error: updateError.message || "Errore durante l'aggiornamento del contratto.",
+      };
+    }
+
+    // 7. Audit log
+    try {
+      await supabaseAdmin.from('audit_logs').insert({
+        action: 'billing_mode_changed',
+        resource_type: 'user',
+        resource_id: subUserId,
+        user_email: context.actor.email,
+        user_id: resellerCheck.userId,
+        metadata: {
+          type: 'billing_mode_change',
+          target_user_id: subUserId,
+          target_email: subUser.email,
+          old_billing_mode: subUser.billing_mode || 'prepagato',
+          new_billing_mode: billingMode,
+        },
+      });
+    } catch (auditError) {
+      console.warn('Errore audit log billing_mode:', auditError);
+    }
+
+    const modeLabel =
+      billingMode === 'prepagato' ? 'Prepagato' : 'Postpagato (fattura a fine mese)';
+    return {
+      success: true,
+      message: `Contratto aggiornato a "${modeLabel}" per ${subUser.name || subUser.email}.`,
+    };
+  } catch (error: any) {
+    console.error('Errore in updateSubUserBillingMode:', error);
     return {
       success: false,
       error: error.message || 'Errore sconosciuto.',

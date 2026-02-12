@@ -40,10 +40,10 @@ export async function checkCreditBeforeBooking(
   // Determina user target (supporta impersonation)
   const targetUserId = actingContext?.target.id || userId;
 
-  // Query wallet balance
+  // Query wallet balance e billing_mode
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('wallet_balance, role')
+    .select('wallet_balance, role, billing_mode')
     .eq('id', targetUserId)
     .single();
 
@@ -118,6 +118,25 @@ export async function checkCreditBeforeBooking(
       required: estimatedCost,
       bypassUsed: true,
       bypassReason: 'SuperAdmin wallet bypass enabled',
+    };
+  }
+
+  // ============================================
+  // POSTPAID BYPASS
+  // ============================================
+  if ((data as unknown as { billing_mode?: string }).billing_mode === 'postpagato') {
+    console.log('📋 [WALLET] Postpaid user: credit check bypassed', {
+      userId: targetUserId.substring(0, 8) + '...',
+      currentBalance,
+      required: estimatedCost,
+    });
+
+    return {
+      sufficient: true,
+      currentBalance,
+      required: estimatedCost,
+      bypassUsed: true,
+      bypassReason: 'Postpaid billing mode (fattura a fine mese)',
     };
   }
 

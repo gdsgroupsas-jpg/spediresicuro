@@ -30,6 +30,7 @@ export interface ClientWithListino {
   shipments_count: number;
   total_spent: number;
   assigned_listini: ListinoInfo[];
+  billing_mode: 'prepagato' | 'postpagato';
 }
 
 export interface ClientsStatsResult {
@@ -134,7 +135,8 @@ export async function getResellerClientsWithListino(): Promise<{
           wallet_balance,
           created_at,
           dati_cliente,
-          assigned_price_list_id
+          assigned_price_list_id,
+          billing_mode
         `
         )
         .in('id', clientIds)
@@ -252,6 +254,7 @@ export async function getResellerClientsWithListino(): Promise<{
         shipments_count: shipmentStats.count,
         total_spent: shipmentStats.total,
         assigned_listini: assignmentMap.get(client.id) || [],
+        billing_mode: (client as any).billing_mode || 'prepagato',
       };
     });
 

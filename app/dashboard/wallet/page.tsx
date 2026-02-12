@@ -834,6 +834,15 @@ function getTransactionTypeLabel(type: string): { label: string; color: string }
     feature: { label: 'Feature', color: 'bg-orange-900/40 text-orange-300' },
     refund: { label: 'Rimborso', color: 'bg-teal-900/40 text-teal-300' },
     reseller_recharge: { label: 'Ricarica Reseller', color: 'bg-indigo-900/40 text-indigo-300' },
+    reseller_transfer_in: {
+      label: 'Trasferimento Reseller',
+      color: 'bg-indigo-900/40 text-indigo-300',
+    },
+    reseller_transfer_out: {
+      label: 'Trasferimento a Cliente',
+      color: 'bg-violet-900/40 text-violet-300',
+    },
+    postpaid_charge: { label: 'Spedizione Postpagato', color: 'bg-cyan-900/40 text-cyan-300' },
   };
   return types[type.toLowerCase()] || { label: type, color: 'bg-gray-700 text-gray-300' };
 }

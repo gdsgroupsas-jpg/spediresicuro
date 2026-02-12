@@ -40,6 +40,7 @@ import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 
 import { AssignListinoDialog } from './_components/assign-listino-dialog';
+import { BillingModeDialog } from './_components/billing-mode-dialog';
 import {
   ClientCardWithListino,
   type ClientWithListino,
@@ -84,6 +85,9 @@ function ResellerClientiContent() {
   );
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showWalletDialog, setShowWalletDialog] = useState(false);
+  const [selectedClientForBilling, setSelectedClientForBilling] =
+    useState<ClientWithListino | null>(null);
+  const [showBillingDialog, setShowBillingDialog] = useState(false);
 
   // Load data
   const loadData = useCallback(async () => {
@@ -209,6 +213,21 @@ function ResellerClientiContent() {
     setSelectedClientForWallet(null);
     loadData();
     toast.success('Wallet aggiornato con successo');
+  };
+
+  const handleChangeBillingMode = (clientId: string) => {
+    const client = clients.find((c) => c.id === clientId);
+    if (client) {
+      setSelectedClientForBilling(client);
+      setShowBillingDialog(true);
+    }
+  };
+
+  const handleBillingModeSuccess = () => {
+    setShowBillingDialog(false);
+    setSelectedClientForBilling(null);
+    loadData();
+    toast.success('Contratto aggiornato con successo');
   };
 
   return (
@@ -423,6 +442,7 @@ function ResellerClientiContent() {
                   onManageWallet={handleManageWallet}
                   onViewShipments={handleViewShipments}
                   onEditClient={handleEditClient}
+                  onChangeBillingMode={handleChangeBillingMode}
                 />
               ))}
             </>
@@ -455,6 +475,17 @@ function ResellerClientiContent() {
             setSelectedClientForWallet(null);
           }}
           onSuccess={handleWalletSuccess}
+        />
+      )}
+
+      {selectedClientForBilling && (
+        <BillingModeDialog
+          open={showBillingDialog}
+          onOpenChange={setShowBillingDialog}
+          clientId={selectedClientForBilling.id}
+          clientName={selectedClientForBilling.name}
+          currentMode={selectedClientForBilling.billing_mode || 'prepagato'}
+          onSuccess={handleBillingModeSuccess}
         />
       )}
 

@@ -611,3 +611,243 @@ export async function listUninvoicedRechargesAction(userId: string): Promise<{
     };
   }
 }
+
+/**
+ * Genera fattura mensile per utente postpagato.
+ *
+ * Aggrega tutti i POSTPAID_CHARGE del mese specificato e crea una fattura
+ * con tipo 'periodic', period_start/period_end, e invoice_items per ogni spedizione.
+ *
+ * @param userId - ID utente postpagato
+ * @param yearMonth - Mese in formato 'YYYY-MM' (es. '2026-02')
+ * @returns Fattura creata o errore
+ */
+export async function generatePostpaidMonthlyInvoice(
+  userId: string,
+  yearMonth: string
+): Promise<{
+  success: boolean;
+  invoice?: Invoice;
+  error?: string;
+}> {
+  try {
+    // Solo admin/superadmin puo' generare fatture postpaid
+    const context = await requireSafeAuth();
+    const isAdmin =
+      context.actor.account_type === 'admin' || context.actor.account_type === 'superadmin';
+    const isReseller = (context.actor as unknown as { is_reseller?: boolean }).is_reseller === true;
+
+    if (!isAdmin && !isReseller) {
+      return { success: false, error: 'Solo admin o reseller possono generare fatture postpaid' };
+    }
+
+    // Se reseller (non admin): verifica ownership sub-user
+    if (isReseller && !isAdmin) {
+      const { data: resellerUser } = await supabaseAdmin
+        .from('users')
+        .select('id, primary_workspace_id')
+        .eq('email', context.actor.email)
+        .single();
+
+      if (!resellerUser) {
+        return { success: false, error: 'Reseller non trovato' };
+      }
+
+      // Check 1: Legacy parent_id
+      const { data: targetParent } = await supabaseAdmin
+        .from('users')
+        .select('parent_id')
+        .eq('id', userId)
+        .single();
+
+      let isOwner = targetParent?.parent_id === resellerUser.id;
+
+      // Check 2: Workspace V2
+      if (!isOwner && resellerUser.primary_workspace_id) {
+        const { data: subUserWs } = await supabaseAdmin
+          .from('workspace_members')
+          .select('workspace_id, workspaces!inner(parent_workspace_id)')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .eq('role', 'owner');
+
+        if (subUserWs) {
+          isOwner = subUserWs.some(
+            (m: any) => m.workspaces?.parent_workspace_id === resellerUser.primary_workspace_id
+          );
+        }
+      }
+
+      if (!isOwner) {
+        return {
+          success: false,
+          error: 'Non hai i permessi per generare fatture per questo utente.',
+        };
+      }
+    }
+
+    // Validazione yearMonth
+    const monthMatch = yearMonth.match(/^(\d{4})-(\d{2})$/);
+    if (!monthMatch) {
+      return { success: false, error: 'Formato mese non valido. Usare YYYY-MM.' };
+    }
+
+    const year = parseInt(monthMatch[1]);
+    const month = parseInt(monthMatch[2]);
+
+    if (month < 1 || month > 12) {
+      return { success: false, error: 'Mese non valido. Deve essere tra 01 e 12.' };
+    }
+
+    if (year < 2020 || year > 2100) {
+      return { success: false, error: 'Anno non valido.' };
+    }
+
+    const periodStart = new Date(year, month - 1, 1).toISOString();
+    const periodEnd = new Date(year, month, 0, 23, 59, 59, 999).toISOString();
+
+    // Verifica che l'utente sia postpagato
+    const { data: targetUser, error: userError } = await supabaseAdmin
+      .from('users')
+      .select('id, billing_mode, name, email')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !targetUser) {
+      return { success: false, error: 'Utente non trovato' };
+    }
+
+    if (targetUser.billing_mode !== 'postpagato') {
+      return { success: false, error: "L'utente non e' in modalita' postpagato" };
+    }
+
+    // Verifica che non esista gia' una fattura per questo mese
+    const { data: existingInvoice } = await supabaseAdmin
+      .from('invoices')
+      .select('id, invoice_number')
+      .eq('user_id', userId)
+      .eq('invoice_type', 'periodic')
+      .gte('period_start', periodStart)
+      .lte('period_end', periodEnd)
+      .limit(1);
+
+    if (existingInvoice && existingInvoice.length > 0) {
+      return {
+        success: false,
+        error: `Fattura gia\' generata per ${yearMonth}: ${existingInvoice[0].invoice_number}`,
+      };
+    }
+
+    // Recupera POSTPAID_CHARGE del mese
+    const { data: charges, error: chargesError } = await supabaseAdmin
+      .from('wallet_transactions')
+      .select('id, amount, description, created_at, reference_id')
+      .eq('user_id', userId)
+      .eq('type', 'POSTPAID_CHARGE')
+      .gte('created_at', periodStart)
+      .lte('created_at', periodEnd)
+      .order('created_at', { ascending: true });
+
+    if (chargesError) {
+      return { success: false, error: 'Errore recupero spedizioni postpagato' };
+    }
+
+    if (!charges || charges.length === 0) {
+      return { success: false, error: `Nessuna spedizione postpagata trovata per ${yearMonth}` };
+    }
+
+    // Calcola totali (amount e' negativo, usiamo ABS)
+    const subtotal = charges.reduce((sum, c) => sum + Math.abs(c.amount), 0);
+    const taxRate = 22; // IVA 22%
+    const taxAmount = subtotal * (taxRate / 100);
+    const total = subtotal + taxAmount;
+
+    // Genera numero fattura
+    const { data: nextNumber } = await supabaseAdmin.rpc('get_next_invoice_number');
+    const invoiceNumber = nextNumber || `${year}-DRAFT`;
+
+    // Crea fattura
+    const { data: newInvoice, error: invoiceError } = await supabaseAdmin
+      .from('invoices')
+      .insert({
+        user_id: userId,
+        invoice_number: invoiceNumber,
+        invoice_date: new Date().toISOString(),
+        due_date: (() => {
+          // 30 giorni dopo l'ultimo giorno del mese di riferimento
+          const endOfMonth = new Date(year, month, 0); // ultimo giorno del mese
+          endOfMonth.setDate(endOfMonth.getDate() + 30);
+          return endOfMonth.toISOString();
+        })(),
+        status: 'issued',
+        subtotal,
+        tax_amount: taxAmount,
+        total,
+        amount_paid: 0,
+        currency: 'EUR',
+        invoice_type: 'periodic',
+        period_start: periodStart,
+        period_end: periodEnd,
+        notes: `Fattura spedizioni postpagato - ${yearMonth}`,
+        created_by: context.actor.id,
+      })
+      .select()
+      .single();
+
+    if (invoiceError || !newInvoice) {
+      console.error('Errore creazione fattura postpaid:', invoiceError);
+      return { success: false, error: 'Errore creazione fattura' };
+    }
+
+    // Crea invoice_items per ogni spedizione
+    const items = charges.map((charge) => ({
+      invoice_id: newInvoice.id,
+      shipment_id: charge.reference_id || null,
+      description: charge.description || `Spedizione postpagata`,
+      quantity: 1,
+      unit_price: Math.abs(charge.amount),
+      tax_rate: taxRate,
+      total: Math.abs(charge.amount),
+    }));
+
+    const { error: itemsError } = await supabaseAdmin.from('invoice_items').insert(items);
+
+    if (itemsError) {
+      console.error('Errore creazione invoice items - rollback fattura:', itemsError);
+      // ROLLBACK: cancella fattura orfana per evitare inconsistenze
+      await supabaseAdmin.from('invoices').delete().eq('id', newInvoice.id);
+      return {
+        success: false,
+        error: 'Errore creazione dettagli fattura. Nessuna fattura generata.',
+      };
+    }
+
+    // Collega transazioni alla fattura (per evitare doppia fatturazione)
+    const links = charges.map((charge) => ({
+      invoice_id: newInvoice.id,
+      wallet_transaction_id: charge.id,
+      amount: Math.abs(charge.amount),
+    }));
+
+    const { error: linksError } = await supabaseAdmin.from('invoice_recharge_links').insert(links);
+
+    if (linksError) {
+      console.error('Errore creazione links anti-duplicazione - rollback fattura:', linksError);
+      // ROLLBACK: cancella items + fattura per evitare fatture senza protezione duplicazione
+      await supabaseAdmin.from('invoice_items').delete().eq('invoice_id', newInvoice.id);
+      await supabaseAdmin.from('invoices').delete().eq('id', newInvoice.id);
+      return {
+        success: false,
+        error: 'Errore collegamento transazioni. Nessuna fattura generata.',
+      };
+    }
+
+    return {
+      success: true,
+      invoice: newInvoice as any,
+    };
+  } catch (error: any) {
+    console.error('Errore generatePostpaidMonthlyInvoice:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
