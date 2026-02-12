@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Loader2, Minus, Plus, Wallet } from 'lucide-react';
+import { Loader2, Minus, Plus, RotateCcw, Wallet } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { toast } from 'sonner';
@@ -44,10 +44,14 @@ export function ManageWalletCard({ userId, userName, currentBalance }: ManageWal
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(value);
 
-  const openDialog = (selectedMode: 'credit' | 'debit') => {
+  const openDialog = (
+    selectedMode: 'credit' | 'debit',
+    prefillAmount?: number,
+    prefillReason?: string
+  ) => {
     setMode(selectedMode);
-    setAmount('');
-    setReason('');
+    setAmount(prefillAmount ? String(prefillAmount) : '');
+    setReason(prefillReason || '');
     setDialogOpen(true);
   };
 
@@ -130,6 +134,16 @@ export function ManageWalletCard({ userId, userName, currentBalance }: ManageWal
             Addebita
           </Button>
         </div>
+        {currentBalance > 0 && (
+          <Button
+            onClick={() => openDialog('debit', currentBalance, 'Reset wallet — azzeramento saldo')}
+            variant="outline"
+            className="w-full mt-2 gap-2 border-orange-200 text-orange-700 hover:bg-orange-50"
+          >
+            <RotateCcw className="h-4 w-4" />
+            Azzera Wallet ({formatCurrency(currentBalance)})
+          </Button>
+        )}
       </div>
 
       {/* Dialog */}

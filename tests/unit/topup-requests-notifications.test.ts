@@ -388,7 +388,7 @@ describe('Email Notifica Approvazione Top-Up', () => {
   const walletSource = readSource('app/actions/wallet.ts');
 
   it('importa sendWalletTopUp da resend', () => {
-    expect(walletSource).toContain('import { sendWalletTopUp');
+    expect(walletSource).toContain('sendWalletTopUp');
     expect(walletSource).toContain("from '@/lib/email/resend'");
   });
 
@@ -521,5 +521,155 @@ describe('Sicurezza e Consistenza', () => {
     const fnSection = resendSource.split('sendTopUpRejectedEmail')[1];
     // Usa il wrapper sendEmail che gestisce invio sicuro via Resend
     expect(fnSection).toContain('sendEmail');
+  });
+
+  it('email admin fallita non blocca il flusso di upload', () => {
+    const walletSource = readSource('app/actions/wallet.ts');
+    const adminSection = walletSource.split('EMAIL NOTIFICA ADMIN')[1]?.split('return {')[0];
+    expect(adminSection).toContain('catch');
+    expect(adminSection).toContain('warn');
+  });
+});
+
+// ============================================
+// TEST: EMAIL NOTIFICA ADMIN (NUOVA RICHIESTA TOP-UP)
+// ============================================
+
+describe('Email Notifica Admin - Nuova Richiesta Top-Up', () => {
+  const walletSource = readSource('app/actions/wallet.ts');
+  const resendSource = readSource('lib/email/resend.ts');
+
+  it('importa sendAdminTopUpNotificationEmail da resend', () => {
+    expect(walletSource).toContain('sendAdminTopUpNotificationEmail');
+    expect(walletSource).toContain("from '@/lib/email/resend'");
+  });
+
+  it('sendAdminTopUpNotificationEmail esiste in resend.ts', () => {
+    expect(resendSource).toContain('export async function sendAdminTopUpNotificationEmail');
+  });
+
+  it('uploadBankTransferReceipt invia notifica admin dopo creazione richiesta', () => {
+    const uploadSection = walletSource.split('uploadBankTransferReceipt')[1]?.split('export')[0];
+    expect(uploadSection).toContain('sendAdminTopUpNotificationEmail');
+  });
+
+  it('notifica admin è non-bloccante (try/catch)', () => {
+    const adminSection = walletSource.split('EMAIL NOTIFICA ADMIN')[1]?.split('return {')[0];
+    expect(adminSection).toContain('catch');
+    expect(adminSection).toContain('warn');
+  });
+
+  it('recupera email admin/superadmin dal DB', () => {
+    const adminSection = walletSource.split('EMAIL NOTIFICA ADMIN')[1]?.split('return {')[0];
+    expect(adminSection).toContain("from('users')");
+    expect(adminSection).toContain("'superadmin', 'admin'");
+  });
+
+  it('template email admin contiene testo appropriato', () => {
+    expect(resendSource).toContain('Nuova Richiesta Ricarica');
+    expect(resendSource).toContain('Importo dichiarato');
+    expect(resendSource).toContain('Approva / Rifiuta');
+  });
+
+  it('template email admin ha link alla pagina admin bonifici', () => {
+    expect(resendSource).toContain('spediresicuro.it/dashboard/admin/bonifici');
+  });
+
+  it('template email admin usa colori amber (coerenza visiva)', () => {
+    const adminEmailSection = resendSource.split('sendAdminTopUpNotificationEmail')[1];
+    expect(adminEmailSection).toContain('#d97706');
+  });
+
+  it('sendAdminTopUpNotificationEmail usa sendEmail internamente', () => {
+    const fnSection = resendSource.split('sendAdminTopUpNotificationEmail')[1]?.split('export')[0];
+    expect(fnSection).toContain('sendEmail');
+  });
+
+  it('email admin ha subject con importo e nome utente', () => {
+    const fnSection = resendSource.split('sendAdminTopUpNotificationEmail')[1]?.split('export')[0];
+    expect(fnSection).toContain('Nuova richiesta ricarica');
+  });
+
+  it('AdminTopUpNotificationParams accetta array di email', () => {
+    expect(resendSource).toContain('adminEmails: string[]');
+  });
+
+  it('gestisce caso nessun admin trovato', () => {
+    const fnSection = resendSource.split('sendAdminTopUpNotificationEmail')[1]?.split('export')[0];
+    expect(fnSection).toContain('adminEmails.length === 0');
+  });
+});
+
+// ============================================
+// TEST: UI CONTRAST - WALLET PAGE CARD VARIANTS
+// ============================================
+
+describe('Wallet Page - Card Variant Dark', () => {
+  const walletPage = readSource('app/dashboard/wallet/page.tsx');
+
+  it('sezione grafico andamento saldo usa Card variant="dark"', () => {
+    // Cerca il pattern: Card variant="dark" seguito da "Andamento Saldo" senza altre Card in mezzo
+    const match = walletPage.match(/<Card variant="dark">[\s\S]*?Andamento Saldo/);
+    expect(match).not.toBeNull();
+  });
+
+  it('sezione storico transazioni usa Card variant="dark"', () => {
+    const match = walletPage.match(/<Card variant="dark">[\s\S]*?Storico Transazioni/);
+    expect(match).not.toBeNull();
+  });
+
+  it('quick stats cards usano variant="dark"', () => {
+    // La griglia stats è la seconda occorrenza di grid-cols-1 md:grid-cols-3
+    // (la prima è nello skeleton loader)
+    const parts = walletPage.split('grid-cols-1 md:grid-cols-3');
+    // parts[2] è il contenuto dopo la seconda occorrenza (quella reale)
+    const statsSection = parts[2]?.split('TopUpRequestsList')[0];
+    expect(statsSection).toBeTruthy();
+    const darkMatches = statsSection!.match(/<Card variant="dark">/g) || [];
+    // Almeno 3: Ultima Ricarica, Questo Mese, Speso Oggi (+ Media Transazione se visibile)
+    expect(darkMatches.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+// ============================================
+// TEST: MIGRAZIONE BUCKET RECEIPTS
+// ============================================
+
+describe('Migrazione Bucket Receipts', () => {
+  const migrationSource = readSource(
+    'supabase/migrations/20260217100000_create_receipts_storage_bucket.sql'
+  );
+
+  it('crea bucket receipts', () => {
+    expect(migrationSource).toContain('INSERT INTO storage.buckets');
+    expect(migrationSource).toContain("'receipts'");
+  });
+
+  it('è idempotente (ON CONFLICT DO NOTHING)', () => {
+    expect(migrationSource).toContain('ON CONFLICT (id) DO NOTHING');
+  });
+
+  it('limita dimensione file a 10MB', () => {
+    expect(migrationSource).toContain('10485760');
+  });
+
+  it('permette solo tipi MIME validi (jpg, png, pdf)', () => {
+    expect(migrationSource).toContain('image/jpeg');
+    expect(migrationSource).toContain('image/png');
+    expect(migrationSource).toContain('application/pdf');
+  });
+
+  it('ha RLS policy per upload nella propria cartella', () => {
+    expect(migrationSource).toContain('Users can upload receipts to own folder');
+    expect(migrationSource).toContain('auth.uid()');
+  });
+
+  it('ha RLS policy per lettura proprie ricevute', () => {
+    expect(migrationSource).toContain('Users can view own receipts');
+  });
+
+  it('ha RLS policy per admin che vedono tutte le ricevute', () => {
+    expect(migrationSource).toContain('Admins can view all receipts');
+    expect(migrationSource).toContain("'superadmin', 'admin'");
   });
 });

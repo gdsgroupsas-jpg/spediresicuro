@@ -261,6 +261,71 @@ export async function sendTopUpRejectedEmail(params: TopUpRejectedParams) {
   });
 }
 
+// ─── ADMIN NOTIFICATION: NEW TOP-UP REQUEST ───
+
+interface AdminTopUpNotificationParams {
+  adminEmails: string[];
+  userName: string;
+  userEmail: string;
+  amount: number;
+  requestId: string;
+}
+
+export async function sendAdminTopUpNotificationEmail(params: AdminTopUpNotificationParams) {
+  const { adminEmails, userName, userEmail, amount, requestId } = params;
+
+  if (adminEmails.length === 0) return { success: false, error: 'Nessun admin da notificare' };
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #d97706, #f59e0b); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Nuova Richiesta Ricarica</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #334155; font-size: 16px; margin-top: 0;">
+          Un utente ha caricato una ricevuta di bonifico e richiede l'accredito wallet.
+        </p>
+
+        <div style="background: white; border-radius: 8px; padding: 16px; margin: 16px 0; border: 1px solid #e2e8f0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Utente</td>
+              <td style="padding: 8px 0; color: #1e293b; font-weight: 600; text-align: right; font-size: 14px;">${userName || userEmail}</td>
+            </tr>
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Email</td>
+              <td style="padding: 8px 0; color: #1e293b; text-align: right; font-size: 14px;">${userEmail}</td>
+            </tr>
+            <tr style="border-top: 1px solid #e2e8f0;">
+              <td style="padding: 12px 0 8px; color: #64748b; font-size: 14px; font-weight: 600;">Importo dichiarato</td>
+              <td style="padding: 12px 0 8px; color: #d97706; font-weight: 700; text-align: right; font-size: 18px;">&euro;${amount.toFixed(2)}</td>
+            </tr>
+          </table>
+        </div>
+
+        <div style="text-align: center; margin: 24px 0;">
+          <a href="https://spediresicuro.it/dashboard/admin/bonifici" style="display: inline-block; background: linear-gradient(135deg, #d97706, #f59e0b); color: white; font-weight: 600; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px;">
+            Approva / Rifiuta &rarr;
+          </a>
+        </div>
+
+        <p style="color: #64748b; font-size: 13px; margin-bottom: 0;">
+          ID richiesta: <code style="background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-size: 12px;">${requestId}</code>
+        </p>
+      </div>
+      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
+        SpedireSicuro &mdash; Notifica automatica per admin
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to: adminEmails,
+    subject: `Nuova richiesta ricarica €${amount.toFixed(2)} — ${userName || userEmail}`,
+    html,
+  });
+}
+
 // ─── TRACKING UPDATE ───
 
 export async function sendTrackingUpdate(params: ShipmentTrackingUpdateParams) {

@@ -499,7 +499,7 @@ export default function WalletPage() {
 
         {/* Grafico Andamento Saldo */}
         {chartData.length > 1 && (
-          <Card>
+          <Card variant="dark">
             <CardContent className="p-4">
               <h2 className="text-sm font-bold text-gray-100 mb-3">Andamento Saldo</h2>
               <div className="h-44">
@@ -552,7 +552,7 @@ export default function WalletPage() {
         {/* Quick Stats */}
         {stats && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card>
+            <Card variant="dark">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-green-900/30 flex items-center justify-center">
@@ -571,7 +571,7 @@ export default function WalletPage() {
             </Card>
 
             {stats.transactionsCount >= 2 && (
-              <Card>
+              <Card variant="dark">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 rounded-xl bg-blue-900/30 flex items-center justify-center">
@@ -588,7 +588,7 @@ export default function WalletPage() {
               </Card>
             )}
 
-            <Card>
+            <Card variant="dark">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-purple-900/30 flex items-center justify-center">
@@ -610,7 +610,7 @@ export default function WalletPage() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card variant="dark">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 rounded-xl bg-orange-900/30 flex items-center justify-center">
@@ -634,7 +634,7 @@ export default function WalletPage() {
         <TopUpRequestsList />
 
         {/* Transactions List */}
-        <Card>
+        <Card variant="dark">
           <CardContent className="p-4">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
               <div>

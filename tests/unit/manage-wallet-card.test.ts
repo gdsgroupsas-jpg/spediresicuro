@@ -215,6 +215,69 @@ describe('ManageWalletCard - Formattazione valuta', () => {
   });
 });
 
+describe('ManageWalletCard - Azzera Wallet', () => {
+  it('il componente contiene il bottone Azzera Wallet', () => {
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const source = readFileSync(
+      resolve(__dirname, '../../components/admin/manage-wallet-card.tsx'),
+      'utf-8'
+    );
+    expect(source).toContain('Azzera Wallet');
+  });
+
+  it('importa icona RotateCcw per il bottone azzera', () => {
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const source = readFileSync(
+      resolve(__dirname, '../../components/admin/manage-wallet-card.tsx'),
+      'utf-8'
+    );
+    expect(source).toContain('RotateCcw');
+  });
+
+  it('azzera wallet pre-compila importo uguale al saldo corrente', () => {
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const source = readFileSync(
+      resolve(__dirname, '../../components/admin/manage-wallet-card.tsx'),
+      'utf-8'
+    );
+    // Il bottone deve passare currentBalance come prefillAmount
+    expect(source).toContain("openDialog('debit', currentBalance");
+  });
+
+  it('azzera wallet pre-compila motivazione di reset', () => {
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const source = readFileSync(
+      resolve(__dirname, '../../components/admin/manage-wallet-card.tsx'),
+      'utf-8'
+    );
+    expect(source).toContain('Reset wallet');
+  });
+
+  it('bottone azzera visibile solo se saldo > 0', () => {
+    const { readFileSync } = require('fs');
+    const { resolve } = require('path');
+    const source = readFileSync(
+      resolve(__dirname, '../../components/admin/manage-wallet-card.tsx'),
+      'utf-8'
+    );
+    expect(source).toContain('currentBalance > 0');
+  });
+
+  it('azzera wallet usa mode debit (importo negativo)', () => {
+    // Simula il flusso: openDialog('debit', 600, 'Reset wallet...')
+    // Il dialog crea finalAmount = -600
+    const amount = 600;
+    const mode = 'debit' as const;
+    const finalAmount = mode === 'credit' ? amount : -amount;
+    expect(finalAmount).toBe(-600);
+    expect(calculateNewBalance(600, 600, 'debit')).toBe(0);
+  });
+});
+
 describe('ManageWalletCard - Logica server action (manageWallet)', () => {
   it('accredito invia importo positivo', () => {
     const amount = 100;

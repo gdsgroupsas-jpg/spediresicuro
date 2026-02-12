@@ -11,7 +11,11 @@ import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
 import { requireSafeAuth } from '@/lib/safe-auth';
-import { sendWalletTopUp, sendTopUpRejectedEmail } from '@/lib/email/resend';
+import {
+  sendWalletTopUp,
+  sendTopUpRejectedEmail,
+  sendAdminTopUpNotificationEmail,
+} from '@/lib/email/resend';
 
 /**
  * Inizia una ricarica con Carta (Stripe)
@@ -311,6 +315,32 @@ export async function uploadBankTransferReceipt(formData: FormData) {
     console.warn('Errore audit log:', auditError);
   }
 
+  // ============================================
+  // EMAIL NOTIFICA ADMIN (non-bloccante)
+  // ============================================
+
+  try {
+    const { data: admins } = await supabaseAdmin
+      .from('users')
+      .select('email')
+      .in('account_type', ['superadmin', 'admin']);
+
+    const adminEmails = (admins || []).map((a) => a.email).filter(Boolean) as string[];
+
+    if (adminEmails.length > 0) {
+      await sendAdminTopUpNotificationEmail({
+        adminEmails,
+        userName: user.name || '',
+        userEmail: user.email || '',
+        amount: declaredAmount,
+        requestId: req.id,
+      });
+    }
+  } catch (emailError) {
+    // Non bloccare il flusso se l'email admin fallisce
+    console.warn('[TOPUP] Errore invio notifica admin:', emailError);
+  }
+
   return {
     success: true,
     requestId: req.id,
@@ -429,8 +459,6 @@ export async function approveTopUpRequest(
   const log = (msg: string, data?: any) => {
     console.log(`[TOPUP_APPROVE] ${msg}`, data ? JSON.stringify(data) : '');
   };
-
-  log('START approveTopUpRequest', { requestId, approvedAmount });
 
   log('START approveTopUpRequest', { requestId, approvedAmount });
 
