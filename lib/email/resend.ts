@@ -209,6 +209,58 @@ export async function sendWalletTopUp(params: WalletTopUpParams) {
   });
 }
 
+// ─── TOP-UP REQUEST REJECTED ───
+
+interface TopUpRejectedParams {
+  to: string;
+  userName: string;
+  amount: number;
+  reason: string;
+}
+
+export async function sendTopUpRejectedEmail(params: TopUpRejectedParams) {
+  const { to, userName, amount, reason } = params;
+
+  const html = `
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+      <div style="background: linear-gradient(135deg, #dc2626, #ef4444); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: white; margin: 0; font-size: 24px;">Ricarica Non Approvata</h1>
+      </div>
+      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #334155; font-size: 16px; margin-top: 0;">Ciao ${userName || 'utente'},</p>
+        <p style="color: #334155; font-size: 16px;">La tua richiesta di ricarica wallet non è stata approvata.</p>
+
+        <div style="background: white; border-radius: 8px; padding: 16px; margin: 16px 0; border: 1px solid #e2e8f0;">
+          <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Importo richiesto</td>
+              <td style="padding: 8px 0; color: #1e293b; font-weight: 600; text-align: right; font-size: 16px;">&euro;${amount.toFixed(2)}</td>
+            </tr>
+            <tr style="border-top: 1px solid #e2e8f0;">
+              <td style="padding: 8px 0; color: #64748b; font-size: 14px;">Motivo</td>
+              <td style="padding: 8px 0; color: #991b1b; text-align: right; font-size: 14px;">${reason}</td>
+            </tr>
+          </table>
+        </div>
+
+        <p style="color: #64748b; font-size: 14px;">
+          Puoi riprovare caricando una nuova ricevuta dalla tua <a href="https://spediresicuro.it/dashboard/wallet" style="color: #3b82f6;">pagina wallet</a>.
+          Per qualsiasi dubbio, contattaci rispondendo a questa email.
+        </p>
+      </div>
+      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
+        SpedireSicuro &mdash; Spedizioni semplici e sicure
+      </div>
+    </div>
+  `;
+
+  return sendEmail({
+    to,
+    subject: `Richiesta ricarica non approvata`,
+    html,
+  });
+}
+
 // ─── TRACKING UPDATE ───
 
 export async function sendTrackingUpdate(params: ShipmentTrackingUpdateParams) {

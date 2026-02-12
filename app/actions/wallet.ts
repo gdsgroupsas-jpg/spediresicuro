@@ -12,6 +12,7 @@ import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
 import { requireSafeAuth } from '@/lib/safe-auth';
+import { sendWalletTopUp, sendTopUpRejectedEmail } from '@/lib/email/resend';
 
 /**
  * Inizia una ricarica con Carta (Stripe)
@@ -316,6 +317,51 @@ export async function uploadBankTransferReceipt(formData: FormData) {
     requestId: req.id,
     message: 'Ricevuta caricata. In attesa di approvazione.',
   };
+}
+
+/**
+ * Ottiene le richieste di ricarica dell'utente corrente
+ * Usata nella pagina wallet per mostrare lo stato delle richieste
+ */
+export async function getMyTopUpRequests(): Promise<{
+  success: boolean;
+  requests?: Array<{
+    id: string;
+    amount: number;
+    status: string;
+    created_at: string;
+    approved_amount: number | null;
+    admin_notes: string | null;
+  }>;
+  error?: string;
+}> {
+  try {
+    const supabase = createServerActionClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    if (!user) {
+      return { success: false, error: 'Non autenticato' };
+    }
+
+    const { data, error } = await supabase
+      .from('top_up_requests')
+      .select('id, amount, status, created_at, approved_amount, admin_notes')
+      .eq('user_id', user.id)
+      .order('created_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      console.error('Errore recupero richieste top-up:', error);
+      return { success: false, error: 'Errore durante il recupero delle richieste.' };
+    }
+
+    return { success: true, requests: data || [] };
+  } catch (error: any) {
+    console.error('Errore in getMyTopUpRequests:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
 }
 
 /**
@@ -778,6 +824,28 @@ export async function approveTopUpRequest(
       });
     }
 
+    // 9. Email notifica al cliente (non bloccante)
+    try {
+      const { data: targetUser } = await supabaseAdmin
+        .from('users')
+        .select('email, name, wallet_balance')
+        .eq('id', updatedRequest.user_id)
+        .single();
+
+      if (targetUser?.email) {
+        await sendWalletTopUp({
+          to: targetUser.email,
+          userName: targetUser.name || 'utente',
+          amount: amountToCredit,
+          method: 'bank_transfer',
+          newBalance: targetUser.wallet_balance ?? undefined,
+        });
+        console.info('[TOPUP_APPROVE] Email sent to user', { requestId });
+      }
+    } catch (emailError) {
+      console.warn('[TOPUP_APPROVE] Email send failed (non-blocking)', emailError);
+    }
+
     return {
       success: true,
       message: `Richiesta approvata. Credito di €${amountToCredit} accreditato.`,
@@ -880,6 +948,27 @@ export async function rejectTopUpRequest(
       });
     } catch (auditError) {
       console.warn('Errore audit log:', auditError);
+    }
+
+    // 6. Email notifica rifiuto al cliente (non bloccante)
+    try {
+      const { data: targetUser } = await supabaseAdmin
+        .from('users')
+        .select('email, name')
+        .eq('id', request.user_id)
+        .single();
+
+      if (targetUser?.email) {
+        await sendTopUpRejectedEmail({
+          to: targetUser.email,
+          userName: targetUser.name || 'utente',
+          amount: request.amount,
+          reason: reason || 'Nessun motivo specificato',
+        });
+        console.info('[TOPUP_REJECT] Email sent to user', { requestId });
+      }
+    } catch (emailError) {
+      console.warn('[TOPUP_REJECT] Email send failed (non-blocking)', emailError);
     }
 
     return {

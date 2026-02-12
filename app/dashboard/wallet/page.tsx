@@ -38,6 +38,7 @@ import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { RechargeWalletDialog } from '@/components/wallet/recharge-wallet-dialog';
+import { TopUpRequestsList } from '@/components/wallet/top-up-requests-list';
 import { formatCurrency, formatDateTime, cn } from '@/lib/utils';
 
 interface WalletTransaction {
@@ -628,6 +629,9 @@ export default function WalletPage() {
             </Card>
           </div>
         )}
+
+        {/* Le mie richieste di ricarica (bonifico) */}
+        <TopUpRequestsList />
 
         {/* Transactions List */}
         <Card>
