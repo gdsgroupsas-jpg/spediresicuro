@@ -71,6 +71,7 @@ const TabsTrigger = React.forwardRef<HTMLButtonElement, TabsTriggerProps>(
         type="button"
         role="tab"
         aria-selected={isSelected}
+        data-state={isSelected ? 'active' : 'inactive'}
         onClick={() => onValueChange(value)}
         className={cn(
           'inline-flex items-center justify-center whitespace-nowrap rounded-md px-3 py-1.5 text-sm font-medium ring-offset-white transition-all',

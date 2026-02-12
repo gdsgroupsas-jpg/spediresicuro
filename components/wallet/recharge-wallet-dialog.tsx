@@ -160,7 +160,7 @@ export function RechargeWalletDialog({
         </DialogHeader>
 
         <div className="p-6">
-          <Tabs defaultValue="card" onValueChange={setActiveTab} className="w-full">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <TabsList className="grid w-full grid-cols-2 mb-8 p-1 bg-slate-200/50 rounded-xl">
               <TabsTrigger
                 value="card"
