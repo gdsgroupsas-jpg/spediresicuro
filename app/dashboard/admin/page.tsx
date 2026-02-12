@@ -12,7 +12,6 @@
 
 'use client';
 
-import { assignConfigurationToUser, listConfigurations } from '@/actions/configurations';
 import { AiFeaturesCard } from '@/components/admin/ai-features/AiFeaturesCard';
 import { ManagePriceListAssignmentsDialog } from '@/components/admin/manage-price-list-assignments-dialog';
 import DashboardNav from '@/components/dashboard-nav';
@@ -130,9 +129,6 @@ export default function AdminDashboardPage() {
   const [userFeatures, setUserFeatures] = useState<any[]>([]);
   const [isLoadingFeatures, setIsLoadingFeatures] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [courierConfigs, setCourierConfigs] = useState<any[]>([]);
-  const [assigningConfig, setAssigningConfig] = useState<string | null>(null);
-
   // Stati per gestione listini personalizzati
   const [selectedUserForPriceLists, setSelectedUserForPriceLists] = useState<User | null>(null);
   const [showPriceListsDialog, setShowPriceListsDialog] = useState(false);
@@ -144,48 +140,6 @@ export default function AdminDashboardPage() {
   const [currentUserPage, setCurrentUserPage] = useState(1);
   const [currentShipmentPage, setCurrentShipmentPage] = useState(1);
   const ITEMS_PER_PAGE = 20;
-
-  // Carica configurazioni corrieri
-  useEffect(() => {
-    loadCourierConfigs();
-  }, []);
-
-  async function loadCourierConfigs() {
-    try {
-      const result = await listConfigurations();
-      if (result.success && result.configs) {
-        setCourierConfigs(result.configs);
-      }
-    } catch (error) {
-      console.error('Errore caricamento configurazioni:', error);
-    }
-  }
-
-  // Assegna configurazione a utente
-  async function handleAssignConfig(userId: string, configId: string | null) {
-    setAssigningConfig(userId);
-    try {
-      const result = await assignConfigurationToUser(userId, configId);
-      if (result.success) {
-        // Ricarica dati
-        const overviewResponse = await fetch('/api/admin/overview');
-        if (overviewResponse.ok) {
-          const data = await overviewResponse.json();
-          if (data.success) {
-            setUsers(data.users || []);
-          }
-        }
-        toast.success(result.message || 'Configurazione assegnata con successo');
-      } else {
-        toast.error(result.error || 'Errore assegnazione configurazione');
-      }
-    } catch (error: any) {
-      console.error('Errore assegnazione configurazione:', error);
-      toast.error(error.message || 'Errore sconosciuto');
-    } finally {
-      setAssigningConfig(null);
-    }
-  }
 
   // Verifica autorizzazione e carica dati
   useEffect(() => {
@@ -945,9 +899,6 @@ export default function AdminDashboardPage() {
                       Provider
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Configurazione Corriere
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Listini Personalizzati
                     </th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -998,21 +949,6 @@ export default function AdminDashboardPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {user.provider || 'credentials'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <select
-                            value={user.assigned_config_id || ''}
-                            onChange={(e) => handleAssignConfig(user.id, e.target.value || null)}
-                            disabled={assigningConfig === user.id}
-                            className="text-sm border border-gray-300 rounded px-2 py-1 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:opacity-50"
-                          >
-                            <option value="">Nessuna (usa default)</option>
-                            {courierConfigs.map((config) => (
-                              <option key={config.id} value={config.id}>
-                                {config.name} ({config.provider_id})
-                              </option>
-                            ))}
-                          </select>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           {!user.parent_user_id ? (
