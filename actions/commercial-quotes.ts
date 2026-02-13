@@ -71,6 +71,87 @@ const VALID_TRANSITIONS: Record<CommercialQuoteStatus, CommercialQuoteStatus[]> 
   expired: [], // Stato finale (impostato da cron/trigger)
 };
 
+/**
+ * Raccoglie TUTTI i price_list ID accessibili da un reseller (3 fonti):
+ * 1. workspaces.assigned_price_list_id
+ * 2. price_list_assignments (tabella N:N)
+ * 3. price_lists.assigned_to_user_id (legacy)
+ */
+async function collectAccessiblePriceListIds(
+  workspaceId: string,
+  userId: string
+): Promise<string[]> {
+  const ids = new Set<string>();
+
+  // Fonte 1: workspaces.assigned_price_list_id
+  const { data: wsData } = await supabaseAdmin
+    .from('workspaces')
+    .select('assigned_price_list_id')
+    .eq('id', workspaceId)
+    .single();
+  if (wsData?.assigned_price_list_id) {
+    ids.add(wsData.assigned_price_list_id);
+  }
+
+  // Fonte 2: price_list_assignments (tabella N:N)
+  const { data: assignments } = await supabaseAdmin
+    .from('price_list_assignments')
+    .select('price_list_id')
+    .eq('user_id', userId)
+    .is('revoked_at', null);
+  if (assignments) {
+    for (const a of assignments) {
+      ids.add(a.price_list_id);
+    }
+  }
+
+  // Fonte 3: price_lists.assigned_to_user_id (legacy)
+  const { data: directAssigned } = await supabaseAdmin
+    .from('price_lists')
+    .select('id')
+    .eq('assigned_to_user_id', userId)
+    .eq('status', 'active');
+  if (directAssigned) {
+    for (const pl of directAssigned) {
+      ids.add(pl.id);
+    }
+  }
+
+  return Array.from(ids);
+}
+
+/**
+ * Query listini accessibili: workspace_id del reseller + listini assegnati.
+ */
+async function queryAccessiblePriceLists(
+  workspaceId: string,
+  accessiblePlIds: string[],
+  selectColumns: string
+): Promise<Array<{
+  id: string;
+  metadata: Record<string, unknown> | null;
+  [key: string]: unknown;
+}> | null> {
+  let query = supabaseAdmin.from('price_lists').select(selectColumns).eq('status', 'active');
+
+  if (accessiblePlIds.length > 0) {
+    const orConditions = [`workspace_id.eq.${workspaceId}`];
+    for (const plId of accessiblePlIds) {
+      orConditions.push(`id.eq.${plId}`);
+    }
+    query = query.or(orConditions.join(','));
+  } else {
+    query = query.eq('workspace_id', workspaceId);
+  }
+
+  const { data } = await query;
+  return data as Array<{
+    id: string;
+    metadata: Record<string, unknown> | null;
+    [key: string]: unknown;
+  }> | null;
+}
+
 // ============================================
 // CREATE
 // ============================================
@@ -97,28 +178,13 @@ export async function createCommercialQuoteAction(
       return { success: false, error: 'Corriere e contratto obbligatori' };
     }
 
-    // Recupera assigned_price_list_id dal workspace (listini assegnati dal superadmin)
-    const { data: wsData } = await supabaseAdmin
-      .from('workspaces')
-      .select('assigned_price_list_id')
-      .eq('id', workspaceId)
-      .single();
-
-    const assignedPlId = wsData?.assigned_price_list_id;
+    // Raccogli tutti i listini accessibili (3 fonti, stessa logica di getAvailableCarriersForQuotesAction)
+    const accessiblePlIds = await collectAccessiblePriceListIds(workspaceId, userId);
 
     // Trova il price_list_id dal contract_code se non fornito
     let priceListId: string | undefined = input.price_list_id;
     if (!priceListId) {
-      // Cerca listino attivo - include listini del workspace E listini assegnati
-      let plQuery = supabaseAdmin.from('price_lists').select('id, metadata').eq('status', 'active');
-
-      if (assignedPlId) {
-        plQuery = plQuery.or(`workspace_id.eq.${workspaceId},id.eq.${assignedPlId}`);
-      } else {
-        plQuery = plQuery.eq('workspace_id', workspaceId);
-      }
-
-      const { data: plList } = await plQuery;
+      const plList = await queryAccessiblePriceLists(workspaceId, accessiblePlIds, 'id, metadata');
 
       const matched = plList?.find(
         (p: { id: string; metadata: Record<string, unknown> | null }) =>
@@ -169,19 +235,11 @@ export async function createCommercialQuoteAction(
         // Usa price_list_id diretto se fornito, altrimenti cerca per contract_code
         let acPriceListId = ac.price_list_id;
         if (!acPriceListId) {
-          // Includi listini del workspace E listini assegnati (stessa logica di sopra)
-          let acPlQuery = supabaseAdmin
-            .from('price_lists')
-            .select('id, metadata')
-            .eq('status', 'active');
-
-          if (assignedPlId) {
-            acPlQuery = acPlQuery.or(`workspace_id.eq.${workspaceId},id.eq.${assignedPlId}`);
-          } else {
-            acPlQuery = acPlQuery.eq('workspace_id', workspaceId);
-          }
-
-          const { data: acPlList } = await acPlQuery;
+          const acPlList = await queryAccessiblePriceLists(
+            workspaceId,
+            accessiblePlIds,
+            'id, metadata'
+          );
 
           const acMatched = acPlList?.find(
             (p: { id: string; metadata: Record<string, unknown> | null }) =>
@@ -1390,34 +1448,17 @@ export async function getAvailableCarriersForQuotesAction(): Promise<
     if (!wsAuth) return { success: false, error: 'Non autenticato' };
 
     const workspaceId = wsAuth.workspace.id;
+    const userId = wsAuth.target.id;
 
-    // Recupera assigned_price_list_id dal workspace (listini assegnati dal superadmin)
-    const { data: wsData } = await supabaseAdmin
-      .from('workspaces')
-      .select('assigned_price_list_id')
-      .eq('id', workspaceId)
-      .single();
+    // Raccogli tutti i listini accessibili (3 fonti: workspace, assignments, legacy)
+    const accessiblePlIds = await collectAccessiblePriceListIds(workspaceId, userId);
 
-    const assignedPriceListId = wsData?.assigned_price_list_id;
-
-    // Query con LEFT JOIN su couriers - include listini del workspace E listini assegnati
-    let query = supabaseAdmin
-      .from('price_lists')
-      .select('id, name, metadata, source_metadata, courier_id, couriers(name)')
-      .eq('status', 'active');
-
-    if (assignedPriceListId) {
-      // Listini del workspace OR listino assegnato dal superadmin
-      query = query.or(`workspace_id.eq.${workspaceId},id.eq.${assignedPriceListId}`);
-    } else {
-      query = query.eq('workspace_id', workspaceId);
-    }
-
-    const { data: priceLists, error } = await query;
-
-    if (error) {
-      return { success: false, error: `Errore caricamento listini: ${error.message}` };
-    }
+    // Query: listini del workspace + tutti i listini assegnati
+    const priceLists = await queryAccessiblePriceLists(
+      workspaceId,
+      accessiblePlIds,
+      'id, name, metadata, source_metadata, courier_id, couriers(name)'
+    );
 
     if (!priceLists || priceLists.length === 0) {
       return { success: true, data: [] };
@@ -1436,25 +1477,31 @@ export async function getAvailableCarriersForQuotesAction(): Promise<
 
     for (const pl of priceLists) {
       const metadata = (pl.metadata || {}) as Record<string, unknown>;
-      const sourceMeta = (pl.source_metadata || {}) as Record<string, unknown>;
+      const sourceMeta = ((pl as Record<string, unknown>).source_metadata || {}) as Record<
+        string,
+        unknown
+      >;
 
       // Risolvi contract_code: metadata -> source_metadata -> pl.id come fallback
       const contractCode =
-        (metadata.contract_code as string) || (sourceMeta.contract_code as string) || pl.id;
+        (metadata.contract_code as string) ||
+        (sourceMeta.contract_code as string) ||
+        (pl.id as string);
 
       // Risolvi carrier_code: metadata -> source_metadata -> contract_code
       const carrierCode =
         (metadata.carrier_code as string) || (sourceMeta.carrier_code as string) || contractCode;
 
       // Risolvi nome display: couriers.name -> formatCarrierDisplayName -> pl.name
-      const courierJoin = pl.couriers as unknown as { name: string } | null;
-      const courierName = courierJoin?.name || formatCarrierDisplayName(carrierCode) || pl.name;
+      const courierJoin = (pl as Record<string, unknown>).couriers as { name: string } | null;
+      const plName = (pl as Record<string, unknown>).name as string;
+      const courierName = courierJoin?.name || formatCarrierDisplayName(carrierCode) || plName;
 
       carriers.push({
         contractCode,
         carrierCode,
         courierName,
-        priceListId: pl.id,
+        priceListId: pl.id as string,
         doesClientPickup: false,
       });
 
