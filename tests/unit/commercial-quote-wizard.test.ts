@@ -46,11 +46,12 @@ describe('QuoteWizardContext', () => {
     expect(result.current.carrier.additionalCarriers).toHaveLength(0);
   });
 
-  it('dovrebbe avere offerta con margine 20% e validita 30gg', () => {
+  it('dovrebbe avere offerta con margine 20%, validita 30gg e divisore 5000', () => {
     const { result } = renderHook(() => useQuoteWizard(), { wrapper });
     expect(result.current.offerta.marginPercent).toBe('20');
     expect(result.current.offerta.validityDays).toBe('30');
     expect(result.current.offerta.vatMode).toBe('excluded');
+    expect(result.current.offerta.volumetricDivisor).toBe('5000');
   });
 
   // ---- Data Setters ----
@@ -86,6 +87,14 @@ describe('QuoteWizardContext', () => {
     });
     expect(result.current.offerta.marginPercent).toBe('25');
     expect(result.current.offerta.deliveryMode).toBe('own_fleet');
+  });
+
+  it('dovrebbe aggiornare divisore volumetrico', () => {
+    const { result } = renderHook(() => useQuoteWizard(), { wrapper });
+    act(() => {
+      result.current.setOfferta({ volumetricDivisor: '6000' });
+    });
+    expect(result.current.offerta.volumetricDivisor).toBe('6000');
   });
 
   // ---- Validazione ----

@@ -82,6 +82,8 @@ export interface PriceMatrixSnapshot {
   goods_needs_processing: boolean;
   /** Costo lavorazione per spedizione in EUR (null = incluso/gratuito) */
   processing_fee: number | null;
+  /** Divisore peso volumetrico (default 5000) */
+  volumetric_divisor?: number;
   /** Timestamp generazione snapshot (ISO) */
   generated_at: string;
 }
@@ -230,6 +232,8 @@ export interface CreateCommercialQuoteInput {
   pickup_fee?: number;
   goods_needs_processing?: boolean;
   processing_fee?: number;
+  /** Divisore peso volumetrico (default 5000) */
+  volumetric_divisor?: number;
   /** Corrieri aggiuntivi per confronto (opzionale) */
   additional_carrier_codes?: Array<{
     carrier_code: string;

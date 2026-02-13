@@ -301,16 +301,21 @@ export async function createCommercialQuoteAction(
       }
     }
 
-    // Clausole: default + custom (con delivery mode)
-    const defaultClauses = getDefaultClauses(vatMode, vatRate, {
-      deliveryMode,
-      pickupFee,
-      goodsNeedsProcessing,
-      processingFee,
-    });
-    const clauses = input.clauses
-      ? mergeWithCustomClauses(defaultClauses, input.clauses)
-      : defaultClauses;
+    // Salva divisore volumetrico nella matrice (campo JSONB)
+    if (input.volumetric_divisor && input.volumetric_divisor !== 5000) {
+      priceMatrix.volumetric_divisor = input.volumetric_divisor;
+    }
+
+    // Clausole: usa quelle pre-merge dal wizard se presenti, altrimenti genera default
+    const clauses =
+      input.clauses && input.clauses.length > 0
+        ? input.clauses
+        : getDefaultClauses(vatMode, vatRate, {
+            deliveryMode,
+            pickupFee,
+            goodsNeedsProcessing,
+            processingFee,
+          });
 
     // INSERT preventivo
     const { data: quote, error: insertError } = await supabaseAdmin
@@ -608,7 +613,14 @@ export async function sendCommercialQuoteAction(
     // Genera PDF con branding + footer white-label
     const branding = wsAuth.workspace.branding || null;
     const orgInfo = await loadOrgFooterInfo(wsAuth.workspace.organization_id);
-    const pdfBuffer = await generateCommercialQuotePDF(quote as CommercialQuote, branding, orgInfo);
+    const volDiv = (quote as CommercialQuote).price_matrix?.volumetric_divisor;
+    const pdfBuffer = await generateCommercialQuotePDF(
+      quote as CommercialQuote,
+      branding,
+      orgInfo,
+      null,
+      volDiv
+    );
 
     // Upload PDF in Supabase Storage
     const storagePath = `${workspaceId}/${quoteId}/preventivo_rev${quote.revision}.pdf`;
@@ -1160,7 +1172,14 @@ export async function generateQuotePdfAction(
     // Genera PDF con branding + footer white-label
     const branding = wsAuth.workspace.branding || null;
     const orgInfo = await loadOrgFooterInfo(wsAuth.workspace.organization_id);
-    const pdfBuffer = await generateCommercialQuotePDF(quote as CommercialQuote, branding, orgInfo);
+    const volDiv2 = (quote as CommercialQuote).price_matrix?.volumetric_divisor;
+    const pdfBuffer = await generateCommercialQuotePDF(
+      quote as CommercialQuote,
+      branding,
+      orgInfo,
+      null,
+      volDiv2
+    );
     const pdfBase64 = pdfBuffer.toString('base64');
 
     return { success: true, data: { pdfBase64 } };

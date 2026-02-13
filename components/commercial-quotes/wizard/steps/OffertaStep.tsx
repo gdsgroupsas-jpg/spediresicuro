@@ -23,7 +23,7 @@ export function OffertaStep() {
         <h3 className="text-lg font-semibold">Configurazione Offerta</h3>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <div>
           <Label htmlFor="margin">Margine %</Label>
           <Input
@@ -60,6 +60,20 @@ export function OffertaStep() {
             <option value="excluded">Esclusa</option>
             <option value="included">Inclusa</option>
           </Select>
+        </div>
+        <div>
+          <Label htmlFor="vol-divisor">Divisore volumetrico</Label>
+          <Input
+            id="vol-divisor"
+            type="number"
+            min="1000"
+            max="10000"
+            step="1000"
+            value={offerta.volumetricDivisor}
+            onChange={(e) => setOfferta({ volumetricDivisor: e.target.value })}
+            className="mt-1"
+          />
+          <p className="text-xs text-gray-500 mt-1">Standard: 5000 (corrieri), 6000 (aerei)</p>
         </div>
       </div>
 

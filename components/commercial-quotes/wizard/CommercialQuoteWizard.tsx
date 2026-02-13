@@ -110,11 +110,13 @@ function WizardInner({ onSuccess }: CommercialQuoteWizardProps) {
       );
 
       // Genera clausole (standard + custom)
+      const volDivisor = offerta.volumetricDivisor ? parseInt(offerta.volumetricDivisor) : 5000;
       const defaultClauses = getDefaultClauses(offerta.vatMode, 22, {
         deliveryMode: offerta.deliveryMode,
         pickupFee: offerta.pickupFee ? parseFloat(offerta.pickupFee) : null,
         goodsNeedsProcessing: offerta.goodsNeedsProcessing,
         processingFee: offerta.processingFee ? parseFloat(offerta.processingFee) : null,
+        volumetricDivisor: volDivisor,
       });
       const allClauses = mergeWithCustomClauses(
         defaultClauses,
@@ -150,6 +152,7 @@ function WizardInner({ onSuccess }: CommercialQuoteWizardProps) {
         pickup_fee: offerta.pickupFee ? parseFloat(offerta.pickupFee) : undefined,
         goods_needs_processing: offerta.goodsNeedsProcessing,
         processing_fee: offerta.processingFee ? parseFloat(offerta.processingFee) : undefined,
+        volumetric_divisor: volDivisor !== 5000 ? volDivisor : undefined,
         clauses: allClauses,
         additional_carrier_codes:
           additionalCarrierCodes.length > 0 ? additionalCarrierCodes : undefined,

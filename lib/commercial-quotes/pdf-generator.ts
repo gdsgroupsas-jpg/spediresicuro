@@ -32,8 +32,10 @@ const PREMIUM_BORDER: [number, number, number] = [228, 230, 235];
 
 // Margini e layout
 const ML = 15; // margine sinistro
-const MR = 195; // margine destro
+const MR = 195; // margine destro (posizione x, NON larghezza margine)
 const CONTENT_W = MR - ML; // larghezza contenuto
+const PAGE_WIDTH = 210; // larghezza A4
+const MARGIN_RIGHT = PAGE_WIDTH - MR; // 15mm margine destro per autoTable
 const FOOTER_ZONE_START = 268; // sotto questa y -> footer
 const PAGE_BOTTOM = 297; // altezza A4
 
@@ -55,7 +57,8 @@ export async function generateCommercialQuotePDF(
   quote: CommercialQuote,
   branding?: OrganizationBranding | null,
   orgInfo?: OrganizationFooterInfo | null,
-  enabledServices?: EnabledService[] | null
+  enabledServices?: EnabledService[] | null,
+  volumetricDivisor?: number
 ): Promise<Buffer> {
   // Import dinamico per compatibilita' Next.js SSR
   let jsPDF: typeof import('jspdf').jsPDF;
@@ -197,6 +200,10 @@ export async function generateCommercialQuotePDF(
     return row;
   });
 
+  // Font e dimensioni adattivi in base al numero di colonne
+  const totalCols = tableHead.length;
+  const { headFont, bodyFont, headPad, bodyPad, pesoWidth } = getAdaptiveTableSizes(totalCols);
+
   autoTable(doc, {
     startY: yPos,
     head: [tableHead],
@@ -206,14 +213,14 @@ export async function generateCommercialQuotePDF(
       fillColor: primaryColor,
       textColor: 255,
       fontStyle: 'bold',
-      fontSize: 9,
+      fontSize: headFont,
       halign: 'center',
-      cellPadding: 4,
+      cellPadding: headPad,
     },
     bodyStyles: {
-      fontSize: 9,
+      fontSize: bodyFont,
       halign: 'center',
-      cellPadding: 3.5,
+      cellPadding: bodyPad,
       textColor: DEFAULT_TEXT,
     },
     columnStyles: {
@@ -221,18 +228,18 @@ export async function generateCommercialQuotePDF(
         fillColor: PREMIUM_LIGHT_BG,
         fontStyle: 'bold',
         halign: 'left',
-        cellWidth: 35,
+        cellWidth: pesoWidth,
         textColor: DEFAULT_TEXT,
       },
     },
     alternateRowStyles: {
       fillColor: [252, 252, 253],
     },
-    margin: { left: ML, right: PAGE_BOTTOM - MR },
+    margin: { left: ML, right: MARGIN_RIGHT },
     styles: {
       lineColor: PREMIUM_BORDER,
       lineWidth: 0.2,
-      overflow: 'linebreak',
+      overflow: 'ellipsize',
     },
     tableLineColor: PREMIUM_BORDER,
     tableLineWidth: 0.2,
@@ -341,6 +348,12 @@ export async function generateCommercialQuotePDF(
         return row;
       });
 
+      const acTotalCols = acTableHead.length;
+      const acSizes = getAdaptiveTableSizes(acTotalCols);
+      // Alternative usano font leggermente piu' piccolo
+      const acHeadFont = Math.max(acSizes.headFont - 1, 6);
+      const acBodyFont = Math.max(acSizes.bodyFont - 1, 6);
+
       autoTable(doc, {
         startY: yPos,
         head: [acTableHead],
@@ -350,23 +363,28 @@ export async function generateCommercialQuotePDF(
           fillColor: primaryDark,
           textColor: 255,
           fontStyle: 'bold',
-          fontSize: 8,
+          fontSize: acHeadFont,
           halign: 'center',
-          cellPadding: 3.5,
+          cellPadding: acSizes.headPad,
         },
-        bodyStyles: { fontSize: 8, halign: 'center', cellPadding: 3, textColor: DEFAULT_TEXT },
+        bodyStyles: {
+          fontSize: acBodyFont,
+          halign: 'center',
+          cellPadding: acSizes.bodyPad,
+          textColor: DEFAULT_TEXT,
+        },
         columnStyles: {
           0: {
             fillColor: PREMIUM_LIGHT_BG,
             fontStyle: 'bold',
             halign: 'left',
-            cellWidth: 35,
+            cellWidth: acSizes.pesoWidth,
             textColor: DEFAULT_TEXT,
           },
         },
         alternateRowStyles: { fillColor: [252, 252, 253] },
-        margin: { left: ML, right: PAGE_BOTTOM - MR },
-        styles: { lineColor: PREMIUM_BORDER, lineWidth: 0.2 },
+        margin: { left: ML, right: MARGIN_RIGHT },
+        styles: { lineColor: PREMIUM_BORDER, lineWidth: 0.2, overflow: 'ellipsize' },
       });
 
       yPos = (doc as any).lastAutoTable.finalY + 6;
@@ -387,6 +405,9 @@ export async function generateCommercialQuotePDF(
   doc.setFillColor(...primaryColor);
   doc.rect(ML, yPos, 2, volBoxH, 'F');
 
+  const volDiv = volumetricDivisor || 5000;
+  const exampleResult = Math.round(60000 / volDiv);
+
   doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...primaryColor);
@@ -395,9 +416,13 @@ export async function generateCommercialQuotePDF(
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   doc.setTextColor(80, 80, 80);
-  doc.text('Formula: (Lunghezza \u00D7 Larghezza \u00D7 Altezza in cm) / 5000', ML + 7, yPos + 11);
   doc.text(
-    'Esempio: Un pacco 50\u00D740\u00D730 cm = 60.000 cm\u00B3 / 5000 = 12 kg volumetrici',
+    `Formula: (Lunghezza \u00D7 Larghezza \u00D7 Altezza in cm) / ${volDiv}`,
+    ML + 7,
+    yPos + 11
+  );
+  doc.text(
+    `Esempio: Un pacco 50\u00D740\u00D730 cm = 60.000 cm\u00B3 / ${volDiv} = ${exampleResult} kg volumetrici`,
     ML + 7,
     yPos + 15.5
   );
@@ -564,6 +589,29 @@ function drawFooter(
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
+
+/**
+ * Calcola font, padding e larghezza colonna PESO in base al numero totale di colonne.
+ * Piu' colonne -> font piu' piccolo, padding ridotto, colonna PESO stretta.
+ */
+function getAdaptiveTableSizes(totalCols: number): {
+  headFont: number;
+  bodyFont: number;
+  headPad: number;
+  bodyPad: number;
+  pesoWidth: number;
+} {
+  if (totalCols <= 5) {
+    // Fino a 4 zone: tabella comoda
+    return { headFont: 9, bodyFont: 9, headPad: 4, bodyPad: 3.5, pesoWidth: 30 };
+  }
+  if (totalCols <= 7) {
+    // 5-6 zone: leggermente compatto
+    return { headFont: 8, bodyFont: 8, headPad: 3, bodyPad: 2.5, pesoWidth: 26 };
+  }
+  // 7+ zone: compatto
+  return { headFont: 7, bodyFont: 7, headPad: 2.5, bodyPad: 2, pesoWidth: 22 };
+}
 
 /** Nome organizzazione nell'header se logo non disponibile */
 function drawOrgNameHeader(

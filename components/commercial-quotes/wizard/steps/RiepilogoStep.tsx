@@ -164,6 +164,11 @@ export function RiepilogoStep() {
               {offerta.processingFee ? `${offerta.processingFee} \u20AC` : 'Inclusa'}
             </div>
           )}
+          {offerta.volumetricDivisor && offerta.volumetricDivisor !== '5000' && (
+            <div>
+              <span className="font-medium">Divisore volumetrico:</span> {offerta.volumetricDivisor}
+            </div>
+          )}
         </CardContent>
       </Card>
 

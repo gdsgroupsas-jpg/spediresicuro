@@ -47,6 +47,7 @@ export interface OffertaData {
   pickupFee: string;
   goodsNeedsProcessing: boolean;
   processingFee: string;
+  volumetricDivisor: string;
 }
 
 export interface AccessoryService {
@@ -97,6 +98,7 @@ const initialOfferta: OffertaData = {
   pickupFee: '',
   goodsNeedsProcessing: false,
   processingFee: '',
+  volumetricDivisor: '5000',
 };
 
 const initialServiziCondizioni: ServiziCondizioniData = {

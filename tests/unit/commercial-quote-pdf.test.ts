@@ -190,6 +190,14 @@ describe('generateCommercialQuotePDF', () => {
     expect(mockAutoTable).toHaveBeenCalled();
   });
 
+  it('dovrebbe usare margini simmetrici (15mm) nella matrice', async () => {
+    await generateCommercialQuotePDF(createMockQuote());
+    const tableCall = mockAutoTable.mock.calls[0];
+    const options = tableCall[1];
+    expect(options.margin.left).toBe(15);
+    expect(options.margin.right).toBe(15);
+  });
+
   it('dovrebbe scrivere la data di emissione', async () => {
     await generateCommercialQuotePDF(createMockQuote());
     const dateCalls = mockText.mock.calls.filter(
@@ -268,6 +276,27 @@ describe('generateCommercialQuotePDF', () => {
       (call: any) => typeof call[0] === 'string' && call[0].includes('PESO VOLUMETRICO')
     );
     expect(volCalls.length).toBe(1);
+  });
+
+  it('dovrebbe usare divisore volumetrico personalizzato nel PDF', async () => {
+    await generateCommercialQuotePDF(createMockQuote(), null, null, null, 6000);
+    const formulaCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('/ 6000')
+    );
+    expect(formulaCalls.length).toBeGreaterThanOrEqual(1);
+    // Verifica che 5000 NON appaia nella formula
+    const oldFormula = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('/ 5000')
+    );
+    expect(oldFormula.length).toBe(0);
+  });
+
+  it('dovrebbe usare 5000 come divisore volumetrico di default', async () => {
+    await generateCommercialQuotePDF(createMockQuote());
+    const formulaCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('/ 5000')
+    );
+    expect(formulaCalls.length).toBeGreaterThanOrEqual(1);
   });
 
   it('dovrebbe includere sezione servizi aggiuntivi', async () => {
