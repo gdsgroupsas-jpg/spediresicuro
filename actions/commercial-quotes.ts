@@ -1570,6 +1570,55 @@ export async function getAvailableCarriersForQuotesAction(): Promise<
 }
 
 // ============================================
+// SERVIZI ACCESSORI
+// ============================================
+
+/**
+ * Carica i servizi accessori configurati per un listino specifico.
+ * Query supplier_price_list_config per accessory_services_config.
+ */
+export async function getAccessoryServicesAction(
+  priceListId: string
+): Promise<ActionResult<Array<{ service: string; price: number; percent: number }>>> {
+  try {
+    const wsAuth = await getWorkspaceAuth();
+    if (!wsAuth) return { success: false, error: 'Non autenticato' };
+
+    const { data, error } = await supabaseAdmin
+      .from('supplier_price_list_config')
+      .select('accessory_services_config')
+      .eq('price_list_id', priceListId)
+      .maybeSingle();
+
+    if (error) {
+      console.error('Errore getAccessoryServicesAction:', error);
+      return { success: false, error: 'Errore caricamento servizi' };
+    }
+
+    if (!data?.accessory_services_config) {
+      return { success: true, data: [] };
+    }
+
+    const services = (
+      data.accessory_services_config as Array<{
+        service: string;
+        price: number;
+        percent: number;
+      }>
+    ).map((s) => ({
+      service: s.service,
+      price: s.price ?? 0,
+      percent: s.percent ?? 0,
+    }));
+
+    return { success: true, data: services };
+  } catch (error: any) {
+    console.error('Errore getAccessoryServicesAction:', error);
+    return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+// ============================================
 // HELPERS
 // ============================================
 

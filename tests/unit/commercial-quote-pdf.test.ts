@@ -434,4 +434,46 @@ describe('generateCommercialQuotePDF', () => {
     );
     expect(opzioneCalls.length).toBe(1);
   });
+
+  // --- Test Servizi Dinamici ---
+
+  it('dovrebbe mostrare servizi dinamici nel PDF quando enabledServices presente', async () => {
+    const enabledServices = [
+      { service: 'Preavviso Telefonico', price: 0.61, percent: 0 },
+      { service: 'Consegna Sabato', price: 122.0, percent: 0 },
+    ];
+    await generateCommercialQuotePDF(createMockQuote(), null, null, enabledServices);
+
+    const preavvisoCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('Preavviso Telefonico')
+    );
+    expect(preavvisoCalls.length).toBe(1);
+
+    const sabatoCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('Consegna Sabato')
+    );
+    expect(sabatoCalls.length).toBe(1);
+  });
+
+  it('dovrebbe mostrare servizi fallback quando enabledServices vuoto/null', async () => {
+    await generateCommercialQuotePDF(createMockQuote(), null, null, null);
+    const fallbackCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('Assicurazione integrativa')
+    );
+    expect(fallbackCalls.length).toBe(1);
+  });
+
+  it('dovrebbe mostrare prezzo e percentuale per servizi dinamici', async () => {
+    const enabledServices = [{ service: 'Assicurazione', price: 1.5, percent: 5 }];
+    await generateCommercialQuotePDF(createMockQuote(), null, null, enabledServices);
+
+    const assicCalls = mockText.mock.calls.filter(
+      (call: any) =>
+        typeof call[0] === 'string' &&
+        call[0].includes('Assicurazione') &&
+        call[0].includes('\u20AC1.50') &&
+        call[0].includes('5%')
+    );
+    expect(assicCalls.length).toBe(1);
+  });
 });

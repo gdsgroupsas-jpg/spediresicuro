@@ -37,16 +37,25 @@ const CONTENT_W = MR - ML; // larghezza contenuto
 const FOOTER_ZONE_START = 268; // sotto questa y -> footer
 const PAGE_BOTTOM = 297; // altezza A4
 
+/** Servizio accessorio abilitato dal wizard */
+export interface EnabledService {
+  service: string;
+  price: number;
+  percent: number;
+}
+
 /**
  * Genera il PDF del preventivo commerciale — Premium Corporate.
  * @param quote - Dati preventivo
  * @param branding - Colori/logo organizzazione (opzionale)
  * @param orgInfo - Dati organizzazione per footer white-label (opzionale)
+ * @param enabledServices - Servizi accessori abilitati dal wizard (opzionale)
  */
 export async function generateCommercialQuotePDF(
   quote: CommercialQuote,
   branding?: OrganizationBranding | null,
-  orgInfo?: OrganizationFooterInfo | null
+  orgInfo?: OrganizationFooterInfo | null,
+  enabledServices?: EnabledService[] | null
 ): Promise<Buffer> {
   // Import dinamico per compatibilita' Next.js SSR
   let jsPDF: typeof import('jspdf').jsPDF;
@@ -428,33 +437,45 @@ export async function generateCommercialQuotePDF(
   }
 
   // ============================================
-  // 7. SERVIZI AGGIUNTIVI
+  // 7. SERVIZI AGGIUNTIVI (dinamici o fallback)
   // ============================================
 
-  if (yPos < FOOTER_ZONE_START - 22) {
-    const servH = 18;
-    doc.setFillColor(...PREMIUM_LIGHT_BG);
-    doc.setDrawColor(...PREMIUM_BORDER);
-    doc.setLineWidth(0.3);
-    doc.roundedRect(ML, yPos, CONTENT_W, servH, 1.5, 1.5, 'FD');
-    doc.setFillColor(...primaryColor);
-    doc.rect(ML, yPos, 2, servH, 'F');
+  const hasEnabledServices = enabledServices && enabledServices.length > 0;
+  const serviceLines: string[] = hasEnabledServices
+    ? enabledServices.map((s) => {
+        const parts: string[] = [];
+        if (s.price > 0) parts.push(`\u20AC${s.price.toFixed(2)}`);
+        if (s.percent > 0) parts.push(`${s.percent}%`);
+        const costStr = parts.length > 0 ? ` (${parts.join(' + ')})` : '';
+        return `\u2022  ${s.service}${costStr}`;
+      })
+    : [
+        '\u2022  Assicurazione integrativa (oltre 100\u20AC di valore)',
+        '\u2022  Consegna al piano / Fermo deposito / Consegna su appuntamento',
+      ];
 
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...primaryColor);
-    doc.text('SERVIZI AGGIUNTIVI DISPONIBILI', ML + 7, yPos + 5.5);
+  const servLineH = 4.5;
+  const servH = 8 + serviceLines.length * servLineH;
+  yPos = ensureSpace(doc, yPos, servH + 2);
 
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(8);
-    doc.setTextColor(80, 80, 80);
-    doc.text('\u2022  Assicurazione integrativa (oltre 100\u20AC di valore)', ML + 8, yPos + 10);
-    doc.text(
-      '\u2022  Consegna al piano / Fermo deposito / Consegna su appuntamento',
-      ML + 8,
-      yPos + 14.5
-    );
-  }
+  doc.setFillColor(...PREMIUM_LIGHT_BG);
+  doc.setDrawColor(...PREMIUM_BORDER);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(ML, yPos, CONTENT_W, servH, 1.5, 1.5, 'FD');
+  doc.setFillColor(...primaryColor);
+  doc.rect(ML, yPos, 2, servH, 'F');
+
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...primaryColor);
+  doc.text('SERVIZI AGGIUNTIVI DISPONIBILI', ML + 7, yPos + 5.5);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
+  serviceLines.forEach((line, i) => {
+    doc.text(line, ML + 8, yPos + 10 + i * servLineH);
+  });
 
   // ============================================
   // 8. FOOTER WHITE-LABEL (tutte le pagine)

@@ -11,7 +11,7 @@
 
 import DashboardNav from '@/components/dashboard-nav';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import { QuoteForm } from '@/components/commercial-quotes/quote-form';
+import { CommercialQuoteWizard } from '@/components/commercial-quotes/wizard/CommercialQuoteWizard';
 import { QuotePipeline } from '@/components/commercial-quotes/quote-pipeline';
 import { QuoteDetailDialog } from '@/components/commercial-quotes/quote-detail-dialog';
 import { ConvertDialog } from '@/components/commercial-quotes/convert-dialog';
@@ -132,8 +132,8 @@ export default function PreventivoPage() {
           </TabsContent>
 
           <TabsContent value="new">
-            <div className="max-w-2xl mx-auto">
-              <QuoteForm onQuoteCreated={handleQuoteCreated} />
+            <div className="max-w-3xl mx-auto">
+              <CommercialQuoteWizard onSuccess={handleQuoteCreated} />
             </div>
           </TabsContent>
 
