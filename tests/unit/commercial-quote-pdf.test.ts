@@ -78,6 +78,7 @@ const createMockQuote = (overrides?: Partial<CommercialQuote>): CommercialQuote 
   contract_code: 'gls-GLS-5000',
   price_list_id: 'pl-123',
   margin_percent: 20,
+  margin_fixed_eur: null,
   validity_days: 30,
   delivery_mode: 'carrier_pickup',
   pickup_fee: null,

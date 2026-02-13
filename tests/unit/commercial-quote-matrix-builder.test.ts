@@ -335,4 +335,77 @@ describe('buildPriceMatrix', () => {
     });
     expect(matrix.processing_fee).toBe(1.5);
   });
+
+  // --- Margine fisso EUR ---
+
+  it('dovrebbe applicare margine fisso 2.00 EUR a tutti i prezzi', async () => {
+    const matrix = await buildPriceMatrix({
+      ...defaultParams,
+      marginPercent: 0,
+      marginFixedEur: 2.0,
+    });
+
+    // IT-ITALIA 0-5kg: 5.00 * 1.00 + 2.00 = 7.00
+    expect(matrix.prices[0][0]).toBe(7.0);
+    // IT-ITALIA 5-10kg: 8.00 * 1.00 + 2.00 = 10.00
+    expect(matrix.prices[1][0]).toBe(10.0);
+    // IT-SICILIA 0-5kg: 7.00 * 1.00 + 2.00 = 9.00
+    expect(matrix.prices[0][1]).toBe(9.0);
+  });
+
+  it('dovrebbe combinare margine 20% + 2.00 EUR fisso', async () => {
+    const matrix = await buildPriceMatrix({
+      ...defaultParams,
+      marginPercent: 20,
+      marginFixedEur: 2.0,
+    });
+
+    // IT-ITALIA 0-5kg: 5.00 * 1.20 + 2.00 = 8.00
+    expect(matrix.prices[0][0]).toBe(8.0);
+    // IT-ITALIA 5-10kg: 8.00 * 1.20 + 2.00 = 11.60
+    expect(matrix.prices[1][0]).toBe(11.6);
+    // IT-SICILIA 0-5kg: 7.00 * 1.20 + 2.00 = 10.40
+    expect(matrix.prices[0][1]).toBe(10.4);
+  });
+
+  it('dovrebbe applicare solo fisso con 0% + 3.00 EUR', async () => {
+    const matrix = await buildPriceMatrix({
+      ...defaultParams,
+      marginPercent: 0,
+      marginFixedEur: 3.0,
+    });
+
+    // IT-ITALIA 0-5kg: 5.00 + 3.00 = 8.00
+    expect(matrix.prices[0][0]).toBe(8.0);
+    // IT-SARDEGNA 5-10kg: 11.00 + 3.00 = 14.00
+    expect(matrix.prices[1][2]).toBe(14.0);
+  });
+
+  it('marginFixedEur undefined non ha effetto', async () => {
+    const matrixSenza = await buildPriceMatrix(defaultParams);
+    const matrixConUndefined = await buildPriceMatrix({
+      ...defaultParams,
+      marginFixedEur: undefined,
+    });
+
+    // Prezzi identici
+    expect(matrixSenza.prices[0][0]).toBe(matrixConUndefined.prices[0][0]);
+    expect(matrixSenza.prices[1][2]).toBe(matrixConUndefined.prices[1][2]);
+  });
+
+  it('dovrebbe includere margin_fixed_eur nello snapshot se > 0', async () => {
+    const matrix = await buildPriceMatrix({
+      ...defaultParams,
+      marginFixedEur: 1.5,
+    });
+    expect(matrix.margin_fixed_eur).toBe(1.5);
+  });
+
+  it('non dovrebbe includere margin_fixed_eur nello snapshot se 0 o undefined', async () => {
+    const matrix = await buildPriceMatrix(defaultParams);
+    expect(matrix.margin_fixed_eur).toBeUndefined();
+
+    const matrix0 = await buildPriceMatrix({ ...defaultParams, marginFixedEur: 0 });
+    expect(matrix0.margin_fixed_eur).toBeUndefined();
+  });
 });

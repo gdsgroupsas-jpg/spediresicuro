@@ -74,6 +74,9 @@ function WizardInner({ onSuccess }: CommercialQuoteWizardProps) {
     carrier,
     offerta,
     serviziCondizioni,
+    matrixPreview,
+    matrixOverrides,
+    overriddenCells,
     validateStep,
     setIsSubmitting,
     setSubmitError,
@@ -132,6 +135,19 @@ function WizardInner({ onSuccess }: CommercialQuoteWizardProps) {
           margin_percent: ac.marginPercent ? parseFloat(ac.marginPercent) : undefined,
         }));
 
+      // Costruisci matrice con overrides se presenti
+      let priceMatrixOverride = undefined;
+      if (overriddenCells.size > 0 && matrixPreview && matrixOverrides) {
+        priceMatrixOverride = {
+          ...matrixPreview,
+          prices: matrixOverrides,
+        };
+      }
+
+      const marginFixedEur = offerta.marginFixedEur
+        ? parseFloat(offerta.marginFixedEur)
+        : undefined;
+
       const input: CreateCommercialQuoteInput = {
         prospect_company: prospect.company,
         prospect_contact_name: prospect.contactName || undefined,
@@ -146,6 +162,7 @@ function WizardInner({ onSuccess }: CommercialQuoteWizardProps) {
         contract_code: carrier.primaryCarrier.contractCode,
         price_list_id: carrier.primaryCarrier.priceListId,
         margin_percent: parseFloat(offerta.marginPercent) || 20,
+        margin_fixed_eur: marginFixedEur,
         validity_days: parseInt(offerta.validityDays) || 30,
         vat_mode: offerta.vatMode,
         delivery_mode: offerta.deliveryMode,
@@ -154,6 +171,7 @@ function WizardInner({ onSuccess }: CommercialQuoteWizardProps) {
         processing_fee: offerta.processingFee ? parseFloat(offerta.processingFee) : undefined,
         volumetric_divisor: volDivisor !== 5000 ? volDivisor : undefined,
         clauses: allClauses,
+        price_matrix_override: priceMatrixOverride,
         additional_carrier_codes:
           additionalCarrierCodes.length > 0 ? additionalCarrierCodes : undefined,
       };
@@ -180,6 +198,9 @@ function WizardInner({ onSuccess }: CommercialQuoteWizardProps) {
     carrier,
     offerta,
     serviziCondizioni,
+    matrixPreview,
+    matrixOverrides,
+    overriddenCells,
     validateStep,
     setIsSubmitting,
     setSubmitError,

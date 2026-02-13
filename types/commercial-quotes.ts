@@ -84,6 +84,8 @@ export interface PriceMatrixSnapshot {
   processing_fee: number | null;
   /** Divisore peso volumetrico (default 5000) */
   volumetric_divisor?: number;
+  /** Margine fisso in EUR applicato a ogni fascia (opzionale) */
+  margin_fixed_eur?: number;
   /** Timestamp generazione snapshot (ISO) */
   generated_at: string;
 }
@@ -135,6 +137,7 @@ export interface CommercialQuote {
   contract_code: string;
   price_list_id: string | null;
   margin_percent: number | null;
+  margin_fixed_eur: number | null;
   validity_days: number;
 
   // Logistica inbound (Fase A)
@@ -224,6 +227,8 @@ export interface CreateCommercialQuoteInput {
   contract_code: string;
   price_list_id?: string;
   margin_percent?: number;
+  /** Margine fisso in EUR aggiunto a ogni fascia dopo il margine % */
+  margin_fixed_eur?: number;
   validity_days?: number;
   clauses?: QuoteClause[];
   vat_mode?: 'included' | 'excluded';
@@ -234,6 +239,8 @@ export interface CreateCommercialQuoteInput {
   processing_fee?: number;
   /** Divisore peso volumetrico (default 5000) */
   volumetric_divisor?: number;
+  /** Matrice prezzi con override manuali (se presente, salta buildPriceMatrix) */
+  price_matrix_override?: PriceMatrixSnapshot;
   /** Corrieri aggiuntivi per confronto (opzionale) */
   additional_carrier_codes?: Array<{
     carrier_code: string;
@@ -247,6 +254,7 @@ export interface CreateRevisionInput {
   parent_quote_id: string;
   revision_notes: string;
   margin_percent?: number;
+  margin_fixed_eur?: number;
   validity_days?: number;
   clauses?: QuoteClause[];
   delivery_mode?: DeliveryMode;
@@ -407,4 +415,5 @@ export interface RenewExpiredQuoteInput {
   new_validity_days?: number;
   revision_notes?: string;
   margin_percent?: number;
+  margin_fixed_eur?: number;
 }

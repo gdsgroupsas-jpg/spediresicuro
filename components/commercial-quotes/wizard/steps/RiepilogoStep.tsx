@@ -12,7 +12,8 @@ import { PROSPECT_SECTORS, DELIVERY_MODES } from '@/types/commercial-quotes';
 import { useQuoteWizard } from '../CommercialQuoteWizardContext';
 
 export function RiepilogoStep() {
-  const { prospect, carrier, offerta, serviziCondizioni, setCurrentStep } = useQuoteWizard();
+  const { prospect, carrier, offerta, serviziCondizioni, overriddenCells, setCurrentStep } =
+    useQuoteWizard();
 
   const sectorLabel =
     PROSPECT_SECTORS.find((s) => s.value === prospect.sector)?.label || prospect.sector;
@@ -142,6 +143,7 @@ export function RiepilogoStep() {
         <CardContent className="text-sm space-y-1">
           <div>
             <span className="font-medium">Margine:</span> {offerta.marginPercent}%
+            {offerta.marginFixedEur && <> + {offerta.marginFixedEur} &euro; fisso</>}
           </div>
           <div>
             <span className="font-medium">Validit&agrave;:</span> {offerta.validityDays} giorni
@@ -167,6 +169,12 @@ export function RiepilogoStep() {
           {offerta.volumetricDivisor && offerta.volumetricDivisor !== '5000' && (
             <div>
               <span className="font-medium">Divisore volumetrico:</span> {offerta.volumetricDivisor}
+            </div>
+          )}
+          {overriddenCells.size > 0 && (
+            <div className="text-amber-600">
+              <span className="font-medium">{overriddenCells.size} prezzo/i personalizzato/i</span>{' '}
+              nella matrice
             </div>
           )}
         </CardContent>

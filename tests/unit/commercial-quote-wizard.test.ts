@@ -368,4 +368,85 @@ describe('QuoteWizardContext', () => {
     expect(result.current.serviziCondizioni.codNotes).toBe('COD fino a 500 EUR');
     expect(result.current.serviziCondizioni.insuranceNotes).toBe('Assicurazione max 3000 EUR');
   });
+
+  // ---- Margine fisso EUR ----
+
+  it('marginFixedEur vuoto inizialmente', () => {
+    const { result } = renderHook(() => useQuoteWizard(), { wrapper });
+    expect(result.current.offerta.marginFixedEur).toBe('');
+  });
+
+  it('setOfferta con marginFixedEur', () => {
+    const { result } = renderHook(() => useQuoteWizard(), { wrapper });
+    act(() => {
+      result.current.setOfferta({ marginFixedEur: '2.50' });
+    });
+    expect(result.current.offerta.marginFixedEur).toBe('2.50');
+  });
+
+  it('offerta invalida con marginFixedEur negativo', () => {
+    const { result } = renderHook(() => useQuoteWizard(), { wrapper });
+    act(() => {
+      result.current.setOfferta({ marginFixedEur: '-1' });
+    });
+    const v = result.current.validateStep('offerta');
+    expect(v.isValid).toBe(false);
+    expect(v.errors.some((e: string) => e.includes('Margine fisso'))).toBe(true);
+  });
+
+  it('offerta valida con marginFixedEur vuoto', () => {
+    const { result } = renderHook(() => useQuoteWizard(), { wrapper });
+    // Default: marginFixedEur '' non genera errore
+    const v = result.current.validateStep('offerta');
+    expect(v.isValid).toBe(true);
+  });
+
+  // ---- Matrix Preview State ----
+
+  it('matrixPreview null inizialmente', () => {
+    const { result } = renderHook(() => useQuoteWizard(), { wrapper });
+    expect(result.current.matrixPreview).toBeNull();
+  });
+
+  it('overriddenCells Set iniziale vuoto', () => {
+    const { result } = renderHook(() => useQuoteWizard(), { wrapper });
+    expect(result.current.overriddenCells.size).toBe(0);
+  });
+
+  it('resetWizard resetta matrixPreview e overrides', () => {
+    const { result } = renderHook(() => useQuoteWizard(), { wrapper });
+    // Simula stato con matrice caricata
+    act(() => {
+      result.current.setMatrixPreview({
+        zones: ['Italia'],
+        weight_ranges: [{ from: 0, to: 5, label: '0 - 5 kg' }],
+        prices: [[6.0]],
+        services_included: [],
+        carrier_display_name: 'GLS',
+        vat_mode: 'excluded',
+        vat_rate: 22,
+        pickup_fee: null,
+        delivery_mode: 'carrier_pickup',
+        goods_needs_processing: false,
+        processing_fee: null,
+        generated_at: new Date().toISOString(),
+      });
+      result.current.setMatrixOverrides([[6.0]]);
+      result.current.setOverriddenCells(new Set(['0-0']));
+    });
+    expect(result.current.matrixPreview).not.toBeNull();
+    expect(result.current.overriddenCells.size).toBe(1);
+
+    act(() => {
+      result.current.resetWizard();
+    });
+    expect(result.current.matrixPreview).toBeNull();
+    expect(result.current.matrixOverrides).toBeNull();
+    expect(result.current.overriddenCells.size).toBe(0);
+  });
+
+  it('isLoadingMatrix false inizialmente', () => {
+    const { result } = renderHook(() => useQuoteWizard(), { wrapper });
+    expect(result.current.isLoadingMatrix).toBe(false);
+  });
 });

@@ -8,7 +8,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
-import type { DeliveryMode, QuoteClause } from '@/types/commercial-quotes';
+import type { DeliveryMode, QuoteClause, PriceMatrixSnapshot } from '@/types/commercial-quotes';
 import type { AccessoryServiceConfig } from '@/types/supplier-price-list-config';
 
 // ============================================
@@ -41,6 +41,7 @@ export interface QuoteCarrierData {
 
 export interface OffertaData {
   marginPercent: string;
+  marginFixedEur: string;
   validityDays: string;
   vatMode: 'included' | 'excluded';
   deliveryMode: DeliveryMode;
@@ -92,6 +93,7 @@ const initialCarrier: QuoteCarrierData = {
 
 const initialOfferta: OffertaData = {
   marginPercent: '20',
+  marginFixedEur: '',
   validityDays: '30',
   vatMode: 'excluded',
   deliveryMode: 'carrier_pickup',
@@ -160,6 +162,16 @@ interface QuoteWizardContextValue {
   isStepComplete: (step: QuoteWizardStep) => boolean;
   getCompletionPercentage: () => number;
 
+  // Matrix preview (anteprima editabile nello step Offerta)
+  matrixPreview: PriceMatrixSnapshot | null;
+  setMatrixPreview: (matrix: PriceMatrixSnapshot | null) => void;
+  matrixOverrides: number[][] | null;
+  setMatrixOverrides: (overrides: number[][] | null) => void;
+  overriddenCells: Set<string>;
+  setOverriddenCells: (cells: Set<string>) => void;
+  isLoadingMatrix: boolean;
+  setIsLoadingMatrix: (value: boolean) => void;
+
   // Actions
   resetWizard: () => void;
 
@@ -185,6 +197,10 @@ export function QuoteWizardProvider({ children }: { children: React.ReactNode })
   const [currentStep, setCurrentStep] = useState<QuoteWizardStep>('prospect');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [matrixPreview, setMatrixPreview] = useState<PriceMatrixSnapshot | null>(null);
+  const [matrixOverrides, setMatrixOverrides] = useState<number[][] | null>(null);
+  const [overriddenCells, setOverriddenCells] = useState<Set<string>>(new Set());
+  const [isLoadingMatrix, setIsLoadingMatrix] = useState(false);
 
   // ---- Data Setters ----
 
@@ -281,6 +297,12 @@ export function QuoteWizardProvider({ children }: { children: React.ReactNode })
           if (isNaN(margin) || margin < 0 || margin > 100) {
             errors.push('Margine deve essere tra 0 e 100');
           }
+          if (offerta.marginFixedEur) {
+            const fixedEur = parseFloat(offerta.marginFixedEur);
+            if (isNaN(fixedEur) || fixedEur < 0) {
+              errors.push('Margine fisso deve essere >= 0');
+            }
+          }
           const validity = parseInt(offerta.validityDays);
           if (isNaN(validity) || validity < 1 || validity > 180) {
             errors.push("Validita' deve essere tra 1 e 180 giorni");
@@ -359,6 +381,10 @@ export function QuoteWizardProvider({ children }: { children: React.ReactNode })
     setCurrentStep('prospect');
     setIsSubmitting(false);
     setSubmitError(null);
+    setMatrixPreview(null);
+    setMatrixOverrides(null);
+    setOverriddenCells(new Set());
+    setIsLoadingMatrix(false);
   }, []);
 
   // ---- Context Value ----
@@ -387,6 +413,14 @@ export function QuoteWizardProvider({ children }: { children: React.ReactNode })
       validateStep,
       isStepComplete,
       getCompletionPercentage,
+      matrixPreview,
+      setMatrixPreview,
+      matrixOverrides,
+      setMatrixOverrides,
+      overriddenCells,
+      setOverriddenCells,
+      isLoadingMatrix,
+      setIsLoadingMatrix,
       resetWizard,
       isSubmitting,
       setIsSubmitting,
@@ -415,6 +449,10 @@ export function QuoteWizardProvider({ children }: { children: React.ReactNode })
       validateStep,
       isStepComplete,
       getCompletionPercentage,
+      matrixPreview,
+      matrixOverrides,
+      overriddenCells,
+      isLoadingMatrix,
       resetWizard,
       isSubmitting,
       submitError,

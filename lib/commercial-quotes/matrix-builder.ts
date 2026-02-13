@@ -42,6 +42,8 @@ export interface BuildPriceMatrixParams {
   goodsNeedsProcessing?: boolean;
   /** Costo lavorazione per spedizione in EUR (null = incluso) */
   processingFee?: number | null;
+  /** Margine fisso in EUR aggiunto a ogni fascia dopo il margine % */
+  marginFixedEur?: number;
 }
 
 /**
@@ -66,6 +68,7 @@ export async function buildPriceMatrix(
     pickupFee = null,
     goodsNeedsProcessing = false,
     processingFee = null,
+    marginFixedEur,
   } = params;
 
   // 1. Carica tutte le entries del listino
@@ -140,6 +143,7 @@ export async function buildPriceMatrix(
   }
 
   const marginMultiplier = 1 + marginPercent / 100;
+  const fixedMargin = marginFixedEur ?? 0;
 
   const prices: number[][] = weightRanges.map((range) => {
     return sortedZoneCodes.map((zoneCode) => {
@@ -154,13 +158,13 @@ export async function buildPriceMatrix(
           // Applica eventuale sovrapprezzo isola
           const surcharge = fallbackEntry.island_surcharge || 0;
           const basePrice = fallbackEntry.base_price + surcharge;
-          return roundPrice(basePrice * marginMultiplier);
+          return roundPrice(basePrice * marginMultiplier + fixedMargin);
         }
         return 0; // Nessun prezzo disponibile
       }
 
       const basePrice = entry.base_price + (entry.island_surcharge || 0);
-      return roundPrice(basePrice * marginMultiplier);
+      return roundPrice(basePrice * marginMultiplier + fixedMargin);
     });
   });
 
@@ -184,6 +188,7 @@ export async function buildPriceMatrix(
     delivery_mode: deliveryMode,
     goods_needs_processing: goodsNeedsProcessing,
     processing_fee: processingFee ?? null,
+    ...(fixedMargin > 0 && { margin_fixed_eur: fixedMargin }),
     generated_at: new Date().toISOString(),
   };
 

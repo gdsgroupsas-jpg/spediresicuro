@@ -39,6 +39,8 @@ import type {
   NegotiationTimelineEntry,
   RenewExpiredQuoteInput,
   CommercialQuoteEventType,
+  DeliveryMode,
+  PriceMatrixSnapshot,
 } from '@/types/commercial-quotes';
 import type { OrganizationFooterInfo } from '@/types/workspace';
 
@@ -230,6 +232,7 @@ export async function createCommercialQuoteAction(
     }
 
     const marginPercent = input.margin_percent ?? 20;
+    const marginFixedEur = input.margin_fixed_eur ?? null;
     const vatMode = input.vat_mode ?? 'excluded';
     const vatRate = input.vat_rate ?? 22;
     const validityDays = input.validity_days ?? 30;
@@ -241,19 +244,37 @@ export async function createCommercialQuoteAction(
     // Genera carrier display name dal carrier_code
     const carrierDisplayName = formatCarrierDisplayName(input.carrier_code);
 
-    // Costruisci matrice prezzi
-    const priceMatrix = await buildPriceMatrix({
-      priceListId,
-      marginPercent,
-      workspaceId,
-      vatMode,
-      vatRate,
-      carrierDisplayName,
-      deliveryMode,
-      pickupFee,
-      goodsNeedsProcessing,
-      processingFee,
-    });
+    // Usa matrice override se fornita (wizard con modifiche manuali), altrimenti genera
+    let priceMatrix: PriceMatrixSnapshot;
+    if (input.price_matrix_override) {
+      // Validazione: prezzi >= 0 e dimensioni coerenti
+      const ovr = input.price_matrix_override;
+      if (
+        !ovr.zones?.length ||
+        !ovr.weight_ranges?.length ||
+        !ovr.prices?.length ||
+        ovr.prices.length !== ovr.weight_ranges.length ||
+        ovr.prices.some((row) => row.length !== ovr.zones.length) ||
+        ovr.prices.some((row) => row.some((p) => p < 0))
+      ) {
+        return { success: false, error: 'Matrice prezzi override non valida' };
+      }
+      priceMatrix = ovr;
+    } else {
+      priceMatrix = await buildPriceMatrix({
+        priceListId,
+        marginPercent,
+        marginFixedEur: marginFixedEur ?? undefined,
+        workspaceId,
+        vatMode,
+        vatRate,
+        carrierDisplayName,
+        deliveryMode,
+        pickupFee,
+        goodsNeedsProcessing,
+        processingFee,
+      });
+    }
 
     // Costruisci matrici aggiuntive per confronto multi-corriere
     let additionalCarriers = null;
@@ -280,6 +301,7 @@ export async function createCommercialQuoteAction(
           const acMatrix = await buildPriceMatrix({
             priceListId: acPriceListId,
             marginPercent: ac.margin_percent ?? marginPercent,
+            marginFixedEur: marginFixedEur ?? undefined,
             workspaceId,
             vatMode,
             vatRate,
@@ -334,6 +356,7 @@ export async function createCommercialQuoteAction(
         contract_code: input.contract_code,
         price_list_id: priceListId,
         margin_percent: marginPercent,
+        margin_fixed_eur: marginFixedEur,
         validity_days: validityDays,
         delivery_mode: deliveryMode,
         pickup_fee: pickupFee,
@@ -359,7 +382,11 @@ export async function createCommercialQuoteAction(
     await supabaseAdmin.from('commercial_quote_events').insert({
       quote_id: quote.id,
       event_type: 'created',
-      event_data: { margin_percent: marginPercent, carrier_code: input.carrier_code },
+      event_data: {
+        margin_percent: marginPercent,
+        margin_fixed_eur: marginFixedEur,
+        carrier_code: input.carrier_code,
+      },
       actor_id: userId,
     });
 
@@ -397,6 +424,52 @@ export async function createCommercialQuoteAction(
   } catch (error: any) {
     console.error('Errore createCommercialQuoteAction:', error);
     return { success: false, error: error.message || 'Errore sconosciuto' };
+  }
+}
+
+// ============================================
+// PREVIEW MATRIX (per wizard)
+// ============================================
+
+/**
+ * Genera anteprima matrice prezzi senza creare preventivo.
+ * Usata dal wizard per mostrare la matrice editabile nello step Offerta.
+ */
+export async function previewPriceMatrixAction(params: {
+  priceListId: string;
+  marginPercent: number;
+  marginFixedEur?: number;
+  carrierCode: string;
+  vatMode?: 'included' | 'excluded';
+  deliveryMode?: DeliveryMode;
+  pickupFee?: number | null;
+  goodsNeedsProcessing?: boolean;
+  processingFee?: number | null;
+}): Promise<ActionResult<PriceMatrixSnapshot>> {
+  try {
+    const wsAuth = await getWorkspaceAuth();
+    if (!wsAuth) return { success: false, error: 'Non autenticato' };
+
+    const carrierDisplayName = formatCarrierDisplayName(params.carrierCode);
+
+    const matrix = await buildPriceMatrix({
+      priceListId: params.priceListId,
+      marginPercent: params.marginPercent,
+      marginFixedEur: params.marginFixedEur,
+      workspaceId: wsAuth.workspace.id,
+      vatMode: params.vatMode ?? 'excluded',
+      vatRate: 22,
+      carrierDisplayName,
+      deliveryMode: params.deliveryMode ?? 'carrier_pickup',
+      pickupFee: params.pickupFee ?? null,
+      goodsNeedsProcessing: params.goodsNeedsProcessing ?? false,
+      processingFee: params.processingFee ?? null,
+    });
+
+    return { success: true, data: matrix };
+  } catch (error: any) {
+    console.error('Errore previewPriceMatrixAction:', error);
+    return { success: false, error: error.message || 'Errore generazione anteprima' };
   }
 }
 
@@ -848,6 +921,10 @@ export async function createRevisionAction(
 
     const newRevision = (revisionCount || 1) + 1;
     const newMargin = input.margin_percent ?? parent.margin_percent;
+    const newMarginFixedEur =
+      input.margin_fixed_eur !== undefined
+        ? input.margin_fixed_eur
+        : (parent.margin_fixed_eur ?? null);
     const newValidityDays = input.validity_days ?? parent.validity_days;
     const newDeliveryMode = input.delivery_mode ?? parent.delivery_mode ?? 'carrier_pickup';
     const newPickupFee =
@@ -859,16 +936,16 @@ export async function createRevisionAction(
 
     // Ricalcola matrice se margine cambiato
     let newMatrix = parent.price_matrix;
-    if (
-      input.margin_percent &&
-      input.margin_percent !== parent.margin_percent &&
-      parent.price_list_id
-    ) {
+    const marginChanged =
+      (input.margin_percent && input.margin_percent !== parent.margin_percent) ||
+      (input.margin_fixed_eur !== undefined && input.margin_fixed_eur !== parent.margin_fixed_eur);
+    if (marginChanged && parent.price_list_id) {
       const carrierDisplayName =
         parent.price_matrix?.carrier_display_name || formatCarrierDisplayName(parent.carrier_code);
       newMatrix = await buildPriceMatrix({
         priceListId: parent.price_list_id,
-        marginPercent: input.margin_percent,
+        marginPercent: newMargin,
+        marginFixedEur: newMarginFixedEur ?? undefined,
         workspaceId,
         vatMode: parent.vat_mode || 'excluded',
         vatRate: parent.vat_rate || 22,
@@ -915,6 +992,7 @@ export async function createRevisionAction(
         contract_code: parent.contract_code,
         price_list_id: parent.price_list_id,
         margin_percent: newMargin,
+        margin_fixed_eur: newMarginFixedEur,
         validity_days: newValidityDays,
         delivery_mode: newDeliveryMode,
         pickup_fee: newPickupFee,
@@ -1363,21 +1441,25 @@ export async function renewExpiredQuoteAction(
 
     const newRevision = (revisionCount || 1) + 1;
     const newMargin = input.margin_percent ?? expired.margin_percent;
+    const newMarginFixedEur =
+      input.margin_fixed_eur !== undefined
+        ? input.margin_fixed_eur
+        : (expired.margin_fixed_eur ?? null);
     const newValidityDays = input.new_validity_days ?? expired.validity_days;
 
     // Ricalcola matrice se margine cambiato
     let newMatrix = expired.price_matrix;
-    if (
-      input.margin_percent &&
-      input.margin_percent !== expired.margin_percent &&
-      expired.price_list_id
-    ) {
+    const marginChanged =
+      (input.margin_percent && input.margin_percent !== expired.margin_percent) ||
+      (input.margin_fixed_eur !== undefined && input.margin_fixed_eur !== expired.margin_fixed_eur);
+    if (marginChanged && expired.price_list_id) {
       const carrierDisplayName =
         expired.price_matrix?.carrier_display_name ||
         formatCarrierDisplayName(expired.carrier_code);
       newMatrix = await buildPriceMatrix({
         priceListId: expired.price_list_id,
-        marginPercent: input.margin_percent,
+        marginPercent: newMargin,
+        marginFixedEur: newMarginFixedEur ?? undefined,
         workspaceId,
         vatMode: expired.vat_mode || 'excluded',
         vatRate: expired.vat_rate || 22,
@@ -1406,6 +1488,7 @@ export async function renewExpiredQuoteAction(
         contract_code: expired.contract_code,
         price_list_id: expired.price_list_id,
         margin_percent: newMargin,
+        margin_fixed_eur: newMarginFixedEur,
         validity_days: newValidityDays,
         delivery_mode: expired.delivery_mode,
         pickup_fee: expired.pickup_fee,
