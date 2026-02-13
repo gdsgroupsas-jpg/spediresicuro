@@ -45,7 +45,10 @@ vi.mock('jspdf', () => ({
   jsPDF: vi.fn(() => mockDoc),
 }));
 
-vi.mock('jspdf-autotable', () => ({}));
+vi.mock('jspdf-autotable', () => ({
+  autoTable: mockAutoTable,
+  default: mockAutoTable,
+}));
 
 // Mock fetch per logo
 global.fetch = vi.fn();

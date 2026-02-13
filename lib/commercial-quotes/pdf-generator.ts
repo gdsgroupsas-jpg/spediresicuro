@@ -37,12 +37,14 @@ export async function generateCommercialQuotePDF(
 ): Promise<Buffer> {
   // Import dinamico per compatibilita' Next.js SSR
   let jsPDF: typeof import('jspdf').jsPDF;
+  let autoTable: typeof import('jspdf-autotable').autoTable;
   try {
     const jspdfModule = await import('jspdf');
     jsPDF =
       jspdfModule.jsPDF ||
       (jspdfModule as unknown as { default: typeof import('jspdf') }).default?.jsPDF;
-    await import('jspdf-autotable');
+    const autoTableModule = await import('jspdf-autotable');
+    autoTable = autoTableModule.autoTable || autoTableModule.default;
   } catch {
     throw new Error('Librerie PDF non disponibili (jspdf, jspdf-autotable)');
   }
@@ -175,7 +177,7 @@ export async function generateCommercialQuotePDF(
     return row;
   });
 
-  (doc as any).autoTable({
+  autoTable(doc, {
     startY: yPos,
     head: [tableHead],
     body: tableBody,
@@ -313,7 +315,7 @@ export async function generateCommercialQuotePDF(
         return row;
       });
 
-      (doc as any).autoTable({
+      autoTable(doc, {
         startY: yPos,
         head: [acTableHead],
         body: acTableBody,

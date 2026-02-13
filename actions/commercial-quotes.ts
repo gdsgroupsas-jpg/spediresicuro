@@ -117,17 +117,6 @@ async function collectAccessiblePriceListIds(
     }
   }
 
-  // Diagnostica temporanea per debug
-  console.log('[PREVENTIVATORE-DEBUG] collectAccessiblePriceListIds:', {
-    workspaceId,
-    userId,
-    fonte1_wsAssigned: wsData?.assigned_price_list_id || null,
-    fonte2_assignments: assignments?.length || 0,
-    fonte3_directAssigned: directAssigned?.length || 0,
-    totalIds: ids.size,
-    ids: Array.from(ids),
-  });
-
   return Array.from(ids);
 }
 
@@ -157,18 +146,9 @@ async function queryAccessiblePriceLists(
 
   const { data, error } = await query;
 
-  // Diagnostica temporanea per debug
-  console.log('[PREVENTIVATORE-DEBUG] queryAccessiblePriceLists:', {
-    workspaceId,
-    accessiblePlIds,
-    selectColumns,
-    resultCount: data?.length || 0,
-    error: error?.message || null,
-    listini: data?.map((pl: unknown) => {
-      const row = pl as Record<string, unknown>;
-      return { id: row.id, name: row.name, metadata: row.metadata, workspace_id: row.workspace_id };
-    }),
-  });
+  if (error) {
+    console.error('[queryAccessiblePriceLists] Errore query:', error.message);
+  }
 
   return data as Array<{
     id: string;
@@ -1454,8 +1434,8 @@ export async function renewExpiredQuoteAction(
 
 /**
  * Restituisce i corrieri disponibili per il preventivatore commerciale.
- * Basato sui price_lists attivi del workspace con LEFT JOIN su couriers.
- * Ogni listino attivo = un corriere selezionabile (non richiede metadata.contract_code).
+ * Basato sui price_lists attivi accessibili dal reseller (3 fonti di assegnazione).
+ * Ogni listino attivo = un corriere selezionabile.
  */
 export async function getAvailableCarriersForQuotesAction(): Promise<
   ActionResult<
@@ -1482,7 +1462,7 @@ export async function getAvailableCarriersForQuotesAction(): Promise<
     const priceLists = await queryAccessiblePriceLists(
       workspaceId,
       accessiblePlIds,
-      'id, name, metadata, source_metadata, courier_id, couriers(name)'
+      'id, name, metadata, source_metadata, courier_id'
     );
 
     if (!priceLists || priceLists.length === 0) {
@@ -1517,10 +1497,9 @@ export async function getAvailableCarriersForQuotesAction(): Promise<
       const carrierCode =
         (metadata.carrier_code as string) || (sourceMeta.carrier_code as string) || contractCode;
 
-      // Risolvi nome display: couriers.name -> formatCarrierDisplayName -> pl.name
-      const courierJoin = (pl as Record<string, unknown>).couriers as { name: string } | null;
+      // Risolvi nome display: formatCarrierDisplayName -> pl.name
       const plName = (pl as Record<string, unknown>).name as string;
-      const courierName = courierJoin?.name || formatCarrierDisplayName(carrierCode) || plName;
+      const courierName = formatCarrierDisplayName(carrierCode) || plName;
 
       carriers.push({
         contractCode,

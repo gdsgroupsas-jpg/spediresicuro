@@ -18,7 +18,7 @@ import {
   createCommercialQuoteAction,
   getAvailableCarriersForQuotesAction,
 } from '@/actions/commercial-quotes';
-import { AlertTriangle, Building2, Loader2, Plus, Send, Truck, User, X } from 'lucide-react';
+import { Building2, Loader2, Plus, Send, Truck, User, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
 
@@ -68,18 +68,11 @@ export function QuoteForm({ onQuoteCreated }: QuoteFormProps) {
     Array<{ contractCode: string; marginPercent: string }>
   >([]);
 
-  // Corrieri filtrati in base a delivery mode
-  // carrier_pickup: solo corrieri con doesClientPickup = true
-  // own_fleet / client_dropoff: tutti i corrieri (il reseller gestisce la logistica)
-  const filteredCouriers = useMemo(() => {
-    if (deliveryMode === 'carrier_pickup') {
-      return couriers.filter((c) => c.doesClientPickup);
-    }
-    return couriers;
-  }, [couriers, deliveryMode]);
-
-  // Quanti corrieri esclusi dal filtro
-  const excludedCount = couriers.length - filteredCouriers.length;
+  // Tutti i corrieri disponibili (nessun filtro su doesClientPickup:
+  // nella realta' il ritiro dipende da accordi specifici corriere-reseller,
+  // il reseller sa quali corrieri supportano quale modalita')
+  const filteredCouriers = couriers;
+  const excludedCount = 0;
 
   // Corrieri disponibili per confronto (escludi primario e gia' selezionati)
   const availableForComparison = useMemo(() => {
@@ -344,21 +337,7 @@ export function QuoteForm({ onQuoteCreated }: QuoteFormProps) {
                 </option>
               ))}
             </Select>
-            {deliveryMode === 'carrier_pickup' && excludedCount > 0 && (
-              <p className="flex items-center gap-1 text-xs text-amber-600 mt-1">
-                <AlertTriangle className="h-3 w-3 flex-shrink-0" />
-                {excludedCount} corriere/i esclusi (non fanno ritiro dal cliente)
-              </p>
-            )}
-            {deliveryMode === 'carrier_pickup' &&
-              filteredCouriers.length === 0 &&
-              couriers.length > 0 && (
-                <p className="flex items-center gap-1 text-xs text-red-600 mt-1">
-                  <AlertTriangle className="h-3 w-3 flex-shrink-0" />
-                  Nessun corriere fa ritiro dal cliente. Cambia modalit&agrave; o configura il flag
-                  nelle impostazioni listino.
-                </p>
-              )}
+            {/* Nessun filtro per doesClientPickup: il reseller gestisce direttamente */}
           </div>
 
           {/* Corrieri aggiuntivi per confronto multi-corriere */}
