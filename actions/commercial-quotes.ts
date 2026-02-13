@@ -117,6 +117,17 @@ async function collectAccessiblePriceListIds(
     }
   }
 
+  // Diagnostica temporanea per debug
+  console.log('[PREVENTIVATORE-DEBUG] collectAccessiblePriceListIds:', {
+    workspaceId,
+    userId,
+    fonte1_wsAssigned: wsData?.assigned_price_list_id || null,
+    fonte2_assignments: assignments?.length || 0,
+    fonte3_directAssigned: directAssigned?.length || 0,
+    totalIds: ids.size,
+    ids: Array.from(ids),
+  });
+
   return Array.from(ids);
 }
 
@@ -144,7 +155,21 @@ async function queryAccessiblePriceLists(
     query = query.eq('workspace_id', workspaceId);
   }
 
-  const { data } = await query;
+  const { data, error } = await query;
+
+  // Diagnostica temporanea per debug
+  console.log('[PREVENTIVATORE-DEBUG] queryAccessiblePriceLists:', {
+    workspaceId,
+    accessiblePlIds,
+    selectColumns,
+    resultCount: data?.length || 0,
+    error: error?.message || null,
+    listini: data?.map((pl: unknown) => {
+      const row = pl as Record<string, unknown>;
+      return { id: row.id, name: row.name, metadata: row.metadata, workspace_id: row.workspace_id };
+    }),
+  });
+
   return data as Array<{
     id: string;
     metadata: Record<string, unknown> | null;
