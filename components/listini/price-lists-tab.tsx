@@ -49,6 +49,8 @@ interface PriceList {
   created_at: string;
   valid_from?: string;
   valid_until?: string;
+  vat_mode?: 'included' | 'excluded' | null;
+  vat_rate?: number;
 }
 
 export function PriceListsTab() {
@@ -239,6 +241,9 @@ export function PriceListsTab() {
                     Stato
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                    IVA
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
                     Priorità
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
@@ -269,6 +274,20 @@ export function PriceListsTab() {
                       )}
                     </td>
                     <td className="px-6 py-4">{getStatusBadge(list.status)}</td>
+                    <td className="px-6 py-4">
+                      {list.vat_mode === 'included' ? (
+                        <Badge
+                          variant="outline"
+                          className="text-blue-600 border-blue-200 bg-blue-50"
+                        >
+                          IVA Inclusa
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-500">
+                          IVA Esclusa
+                        </Badge>
+                      )}
+                    </td>
                     <td className="px-6 py-4">{getPriorityBadge(list.priority)}</td>
                     <td className="px-6 py-4">
                       <div className="text-sm text-gray-900">{list.usage_count || 0}</div>
