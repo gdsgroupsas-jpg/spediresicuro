@@ -97,15 +97,28 @@ export async function createCommercialQuoteAction(
       return { success: false, error: 'Corriere e contratto obbligatori' };
     }
 
+    // Recupera assigned_price_list_id dal workspace (listini assegnati dal superadmin)
+    const { data: wsData } = await supabaseAdmin
+      .from('workspaces')
+      .select('assigned_price_list_id')
+      .eq('id', workspaceId)
+      .single();
+
+    const assignedPlId = wsData?.assigned_price_list_id;
+
     // Trova il price_list_id dal contract_code se non fornito
     let priceListId: string | undefined = input.price_list_id;
     if (!priceListId) {
-      // Cerca listino attivo con metadata->contract_code corrispondente
-      const { data: plList } = await supabaseAdmin
-        .from('price_lists')
-        .select('id, metadata')
-        .eq('workspace_id', workspaceId)
-        .eq('status', 'active');
+      // Cerca listino attivo - include listini del workspace E listini assegnati
+      let plQuery = supabaseAdmin.from('price_lists').select('id, metadata').eq('status', 'active');
+
+      if (assignedPlId) {
+        plQuery = plQuery.or(`workspace_id.eq.${workspaceId},id.eq.${assignedPlId}`);
+      } else {
+        plQuery = plQuery.eq('workspace_id', workspaceId);
+      }
+
+      const { data: plList } = await plQuery;
 
       const matched = plList?.find(
         (p: { id: string; metadata: Record<string, unknown> | null }) =>
@@ -156,11 +169,19 @@ export async function createCommercialQuoteAction(
         // Usa price_list_id diretto se fornito, altrimenti cerca per contract_code
         let acPriceListId = ac.price_list_id;
         if (!acPriceListId) {
-          const { data: acPlList } = await supabaseAdmin
+          // Includi listini del workspace E listini assegnati (stessa logica di sopra)
+          let acPlQuery = supabaseAdmin
             .from('price_lists')
             .select('id, metadata')
-            .eq('workspace_id', workspaceId)
             .eq('status', 'active');
+
+          if (assignedPlId) {
+            acPlQuery = acPlQuery.or(`workspace_id.eq.${workspaceId},id.eq.${assignedPlId}`);
+          } else {
+            acPlQuery = acPlQuery.eq('workspace_id', workspaceId);
+          }
+
+          const { data: acPlList } = await acPlQuery;
 
           const acMatched = acPlList?.find(
             (p: { id: string; metadata: Record<string, unknown> | null }) =>
@@ -1370,12 +1391,29 @@ export async function getAvailableCarriersForQuotesAction(): Promise<
 
     const workspaceId = wsAuth.workspace.id;
 
-    // Query con LEFT JOIN su couriers per risolvere il nome corriere
-    const { data: priceLists, error } = await supabaseAdmin
+    // Recupera assigned_price_list_id dal workspace (listini assegnati dal superadmin)
+    const { data: wsData } = await supabaseAdmin
+      .from('workspaces')
+      .select('assigned_price_list_id')
+      .eq('id', workspaceId)
+      .single();
+
+    const assignedPriceListId = wsData?.assigned_price_list_id;
+
+    // Query con LEFT JOIN su couriers - include listini del workspace E listini assegnati
+    let query = supabaseAdmin
       .from('price_lists')
       .select('id, name, metadata, source_metadata, courier_id, couriers(name)')
-      .eq('workspace_id', workspaceId)
       .eq('status', 'active');
+
+    if (assignedPriceListId) {
+      // Listini del workspace OR listino assegnato dal superadmin
+      query = query.or(`workspace_id.eq.${workspaceId},id.eq.${assignedPriceListId}`);
+    } else {
+      query = query.eq('workspace_id', workspaceId);
+    }
+
+    const { data: priceLists, error } = await query;
 
     if (error) {
       return { success: false, error: `Errore caricamento listini: ${error.message}` };
