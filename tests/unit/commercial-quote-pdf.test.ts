@@ -10,6 +10,13 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { CommercialQuote } from '@/types/commercial-quotes';
 import type { OrganizationBranding, OrganizationFooterInfo } from '@/types/workspace';
 
+// Mock fs — impedisce caricamento logo locale nei test (getSpedireSicuroLogo)
+vi.mock('fs', () => ({
+  readFileSync: vi.fn(() => {
+    throw new Error('File not found (mock)');
+  }),
+}));
+
 // Mock jsPDF
 const mockText = vi.fn();
 const mockSetFontSize = vi.fn();
@@ -25,6 +32,7 @@ const mockAddImage = vi.fn();
 const mockAddPage = vi.fn();
 const mockSetPage = vi.fn();
 const mockGetNumberOfPages = vi.fn().mockReturnValue(1);
+const mockGetTextWidth = vi.fn().mockReturnValue(50);
 const mockOutput = vi.fn().mockReturnValue(new ArrayBuffer(100));
 const mockAutoTable = vi.fn();
 
@@ -43,6 +51,7 @@ const mockDoc = {
   addPage: mockAddPage,
   setPage: mockSetPage,
   getNumberOfPages: mockGetNumberOfPages,
+  getTextWidth: mockGetTextWidth,
   output: mockOutput,
   autoTable: mockAutoTable,
   lastAutoTable: { finalY: 150 },

@@ -79,6 +79,9 @@ export async function generateCommercialQuotePDF(
   const primaryDark = darkenColor(primaryColor, 0.25);
   const matrix = quote.price_matrix;
 
+  // Pre-carica logo SpedireSicuro (usato in header fallback + footer)
+  const spedireSicuroLogo = await getSpedireSicuroLogo();
+
   let yPos = 15;
 
   // ============================================
@@ -91,12 +94,21 @@ export async function generateCommercialQuotePDF(
       const logoBase64 = await fetchLogoAsBase64(branding.logo_url);
       if (logoBase64) {
         doc.addImage(logoBase64, 'PNG', ML, yPos, 50, 16);
+      } else if (spedireSicuroLogo) {
+        doc.addImage(spedireSicuroLogo, 'PNG', ML, yPos, 50, 16);
       } else {
         drawOrgNameHeader(doc, orgInfo, primaryColor, yPos);
       }
     } catch {
-      drawOrgNameHeader(doc, orgInfo, primaryColor, yPos);
+      if (spedireSicuroLogo) {
+        doc.addImage(spedireSicuroLogo, 'PNG', ML, yPos, 50, 16);
+      } else {
+        drawOrgNameHeader(doc, orgInfo, primaryColor, yPos);
+      }
     }
+  } else if (spedireSicuroLogo) {
+    // Nessun logo reseller → mostra logo SpedireSicuro
+    doc.addImage(spedireSicuroLogo, 'PNG', ML, yPos, 50, 16);
   } else {
     drawOrgNameHeader(doc, orgInfo, primaryColor, yPos);
   }
@@ -509,7 +521,7 @@ export async function generateCommercialQuotePDF(
   const totalPages = doc.getNumberOfPages();
   for (let p = 1; p <= totalPages; p++) {
     doc.setPage(p);
-    drawFooter(doc, primaryColor, orgInfo || null, p, totalPages);
+    drawFooter(doc, primaryColor, orgInfo || null, p, totalPages, spedireSicuroLogo);
   }
 
   return Buffer.from(doc.output('arraybuffer'));
@@ -524,7 +536,8 @@ function drawFooter(
   primaryColor: number[],
   orgInfo: OrganizationFooterInfo | null,
   currentPage: number,
-  totalPages: number
+  totalPages: number,
+  spedireSicuroLogo: string | null
 ): void {
   const footerY = 278;
 
@@ -557,16 +570,36 @@ function drawFooter(
       doc.text(details.join('  \u00B7  '), 105, footerY + 4, { align: 'center' });
     }
 
-    // "Powered by SpedireSicuro.it"
-    doc.setFontSize(6.5);
-    doc.setTextColor(180, 180, 180);
-    doc.text('Powered by SpedireSicuro.it', 105, footerY + 8, { align: 'center' });
+    // "Powered by SpedireSicuro.it" con mini-logo
+    if (spedireSicuroLogo) {
+      // Mini-logo (12x4mm) + testo
+      const logoW = 12;
+      const logoH = 4;
+      const poweredText = 'Powered by SpedireSicuro.it';
+      doc.setFontSize(6.5);
+      doc.setTextColor(180, 180, 180);
+      const textW = doc.getTextWidth(poweredText);
+      const totalW = logoW + 1.5 + textW; // logo + gap + testo
+      const startX = 105 - totalW / 2;
+      doc.addImage(spedireSicuroLogo, 'PNG', startX, footerY + 5.5, logoW, logoH);
+      doc.text(poweredText, startX + logoW + 1.5, footerY + 8.5);
+    } else {
+      doc.setFontSize(6.5);
+      doc.setTextColor(180, 180, 180);
+      doc.text('Powered by SpedireSicuro.it', 105, footerY + 8, { align: 'center' });
+    }
   } else {
     // --- Footer default SpedireSicuro ---
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...(primaryColor as [number, number, number]));
-    doc.text('SPEDIRESICURO.IT', 105, footerY, { align: 'center' });
+    // Logo o testo "SPEDIRESICURO.IT"
+    if (spedireSicuroLogo) {
+      // Logo centrato (30x10mm)
+      doc.addImage(spedireSicuroLogo, 'PNG', 105 - 15, footerY - 3, 30, 10);
+    } else {
+      doc.setFontSize(9);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(...(primaryColor as [number, number, number]));
+      doc.text('SPEDIRESICURO.IT', 105, footerY, { align: 'center' });
+    }
 
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.5);
@@ -574,7 +607,7 @@ function drawFooter(
     doc.text(
       'Tel: +39 081 827 6241  \u00B7  info@spedisci.online  \u00B7  P.IVA: 06758621210',
       105,
-      footerY + 4,
+      spedireSicuroLogo ? footerY + 8 : footerY + 4,
       { align: 'center' }
     );
   }
@@ -668,6 +701,26 @@ function darkenColor(rgb: number[], amount: number): [number, number, number] {
     Math.round(rgb[1] * (1 - amount)),
     Math.round(rgb[2] * (1 - amount)),
   ];
+}
+
+/** Carica il logo SpedireSicuro locale da public/brand/logo/. Cache permanente. */
+let spedireSicuroLogoCache: string | null | undefined;
+
+async function getSpedireSicuroLogo(): Promise<string | null> {
+  if (spedireSicuroLogoCache !== undefined) return spedireSicuroLogoCache;
+
+  try {
+    const { readFileSync } = await import('fs');
+    const { join } = await import('path');
+    const logoPath = join(process.cwd(), 'public', 'brand', 'logo', 'logo-horizontal.png');
+    const buffer = readFileSync(logoPath);
+    const base64 = buffer.toString('base64');
+    spedireSicuroLogoCache = `data:image/png;base64,${base64}`;
+    return spedireSicuroLogoCache;
+  } catch {
+    spedireSicuroLogoCache = null;
+    return null;
+  }
 }
 
 /** Scarica logo da URL e converte in base64 per jsPDF. Cache 5 min. */
