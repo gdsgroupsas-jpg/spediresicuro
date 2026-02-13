@@ -40,6 +40,7 @@ import type {
   RenewExpiredQuoteInput,
   CommercialQuoteEventType,
 } from '@/types/commercial-quotes';
+import type { OrganizationFooterInfo } from '@/types/workspace';
 
 // ============================================
 // HELPERS
@@ -59,6 +60,28 @@ interface ActionResult<T = undefined> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+/** Carica dati organizzazione per footer white-label nei PDF */
+async function loadOrgFooterInfo(orgId: string): Promise<OrganizationFooterInfo | null> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('organizations')
+      .select('name, vat_number, billing_email, billing_address')
+      .eq('id', orgId)
+      .single();
+
+    if (error || !data) return null;
+
+    return {
+      name: data.name,
+      vat_number: data.vat_number || null,
+      billing_email: data.billing_email || '',
+      billing_address: data.billing_address || null,
+    };
+  } catch {
+    return null;
+  }
 }
 
 /** Transizioni di stato valide */
@@ -582,9 +605,10 @@ export async function sendCommercialQuoteAction(
       return { success: false, error: `Impossibile inviare preventivo in stato "${quote.status}"` };
     }
 
-    // Genera PDF
+    // Genera PDF con branding + footer white-label
     const branding = wsAuth.workspace.branding || null;
-    const pdfBuffer = await generateCommercialQuotePDF(quote as CommercialQuote, branding);
+    const orgInfo = await loadOrgFooterInfo(wsAuth.workspace.organization_id);
+    const pdfBuffer = await generateCommercialQuotePDF(quote as CommercialQuote, branding, orgInfo);
 
     // Upload PDF in Supabase Storage
     const storagePath = `${workspaceId}/${quoteId}/preventivo_rev${quote.revision}.pdf`;
@@ -1133,9 +1157,10 @@ export async function generateQuotePdfAction(
       return { success: false, error: 'Preventivo non trovato' };
     }
 
-    // Genera PDF
+    // Genera PDF con branding + footer white-label
     const branding = wsAuth.workspace.branding || null;
-    const pdfBuffer = await generateCommercialQuotePDF(quote as CommercialQuote, branding);
+    const orgInfo = await loadOrgFooterInfo(wsAuth.workspace.organization_id);
+    const pdfBuffer = await generateCommercialQuotePDF(quote as CommercialQuote, branding, orgInfo);
     const pdfBase64 = pdfBuffer.toString('base64');
 
     return { success: true, data: { pdfBase64 } };

@@ -63,6 +63,19 @@ export interface OrganizationBranding {
   favicon?: string;
 }
 
+/** Dati organizzazione per il footer PDF preventivi (white-label) */
+export interface OrganizationFooterInfo {
+  name: string;
+  vat_number: string | null;
+  billing_email: string;
+  billing_address: {
+    via?: string;
+    citta?: string;
+    cap?: string;
+    provincia?: string;
+  } | null;
+}
+
 export interface OrganizationSettings {
   [key: string]: unknown;
 }

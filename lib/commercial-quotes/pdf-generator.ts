@@ -1,39 +1,52 @@
 /**
- * PDF Generator per Preventivi Commerciali
+ * PDF Generator per Preventivi Commerciali — Premium Corporate
  *
- * Genera PDF brandizzati con matrice peso x zona,
- * clausole standard e branding reseller/organizzazione.
+ * Design: minimal, professionale, colori desaturati.
+ * Footer: white-label con dati organizzazione reseller.
  *
- * Struttura (ispirata al template SELFIE):
- * 1. Header: logo + titolo + data + validita' + revisione
- * 2. Prospect: dati azienda
+ * Struttura:
+ * 1. Header: logo/org name + titolo + barra colorata
+ * 2. Prospect: box con bordo sinistro colorato
  * 3. Servizio: nome corriere
- * 4. Matrice: tabella peso x zona con autoTable
- * 5. Peso volumetrico: formula + esempio
- * 6. Clausole: lista puntata
- * 7. Footer: contatti
+ * 4. Matrice: tabella peso x zona (tema plain)
+ * 4b. Ritiro / 4c. Lavorazione / 4d. Alternative
+ * 5. Peso volumetrico
+ * 6. Condizioni (clausole)
+ * 7. Servizi aggiuntivi
+ * 8. Footer white-label (tutte le pagine)
  */
 
 import type {
   CommercialQuote,
   DeliveryMode,
   AdditionalCarrierSnapshot,
-  PriceMatrixSnapshot,
 } from '@/types/commercial-quotes';
-import type { OrganizationBranding } from '@/types/workspace';
+import type { OrganizationBranding, OrganizationFooterInfo } from '@/types/workspace';
 
-// Colori default SpedireSicuro
-const DEFAULT_PRIMARY = [30, 58, 95] as const; // #1e3a5f
-const DEFAULT_TEXT = [26, 26, 26] as const;
-const DEFAULT_MUTED = [102, 102, 102] as const;
+// Costanti colore
+const DEFAULT_PRIMARY: [number, number, number] = [30, 58, 95]; // #1e3a5f
+const DEFAULT_TEXT: [number, number, number] = [33, 33, 33];
+const DEFAULT_MUTED: [number, number, number] = [120, 120, 120];
+const PREMIUM_LIGHT_BG: [number, number, number] = [247, 248, 250]; // grigio ghiaccio
+const PREMIUM_BORDER: [number, number, number] = [228, 230, 235];
+
+// Margini e layout
+const ML = 15; // margine sinistro
+const MR = 195; // margine destro
+const CONTENT_W = MR - ML; // larghezza contenuto
+const FOOTER_ZONE_START = 268; // sotto questa y -> footer
+const PAGE_BOTTOM = 297; // altezza A4
 
 /**
- * Genera il PDF del preventivo commerciale.
- * Ritorna un Buffer pronto per download o storage.
+ * Genera il PDF del preventivo commerciale — Premium Corporate.
+ * @param quote - Dati preventivo
+ * @param branding - Colori/logo organizzazione (opzionale)
+ * @param orgInfo - Dati organizzazione per footer white-label (opzionale)
  */
 export async function generateCommercialQuotePDF(
   quote: CommercialQuote,
-  branding?: OrganizationBranding | null
+  branding?: OrganizationBranding | null,
+  orgInfo?: OrganizationFooterInfo | null
 ): Promise<Buffer> {
   // Import dinamico per compatibilita' Next.js SSR
   let jsPDF: typeof import('jspdf').jsPDF;
@@ -49,51 +62,41 @@ export async function generateCommercialQuotePDF(
     throw new Error('Librerie PDF non disponibili (jspdf, jspdf-autotable)');
   }
 
-  const doc = new jsPDF({
-    orientation: 'portrait',
-    unit: 'mm',
-    format: 'a4',
-  });
-
-  // Colore primario dal branding o default
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
   const primaryColor = parseBrandingColor(branding?.primary_color) || [...DEFAULT_PRIMARY];
+  const primaryDark = darkenColor(primaryColor, 0.25);
   const matrix = quote.price_matrix;
 
   let yPos = 15;
 
   // ============================================
-  // 1. HEADER
+  // 1. HEADER — Premium Corporate
   // ============================================
 
-  // Logo (se disponibile) o testo default
+  // Logo o nome organizzazione (sinistra)
   if (branding?.logo_url) {
     try {
       const logoBase64 = await fetchLogoAsBase64(branding.logo_url);
       if (logoBase64) {
-        doc.addImage(logoBase64, 'PNG', 15, yPos, 60, 20);
+        doc.addImage(logoBase64, 'PNG', ML, yPos, 50, 16);
+      } else {
+        drawOrgNameHeader(doc, orgInfo, primaryColor, yPos);
       }
     } catch {
-      // Fallback: testo se logo non caricabile
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.setTextColor(...primaryColor);
-      doc.text('SpedireSicuro.it', 15, yPos + 10);
+      drawOrgNameHeader(doc, orgInfo, primaryColor, yPos);
     }
   } else {
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(...primaryColor);
-    doc.text('SpedireSicuro.it', 15, yPos + 10);
+    drawOrgNameHeader(doc, orgInfo, primaryColor, yPos);
   }
 
-  // Titolo PREVENTIVO (destra)
-  doc.setFontSize(24);
+  // Titolo "PREVENTIVO COMMERCIALE" (destra)
+  doc.setFontSize(20);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...primaryColor);
-  doc.text('PREVENTIVO', 195, yPos + 5, { align: 'right' });
+  doc.text('PREVENTIVO COMMERCIALE', MR, yPos + 5, { align: 'right' });
 
-  // Data e validita'
-  doc.setFontSize(10);
+  // Data / Validita' / Rev (destra, sotto titolo)
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...DEFAULT_MUTED);
 
@@ -102,77 +105,85 @@ export async function generateCommercialQuotePDF(
     month: '2-digit',
     year: 'numeric',
   });
-  doc.text(`Data: ${dataEmissione}`, 195, yPos + 12, { align: 'right' });
-  doc.text(`Validit\u00E0: ${quote.validity_days} giorni`, 195, yPos + 17, { align: 'right' });
+  doc.text(`Data: ${dataEmissione}`, MR, yPos + 11, { align: 'right' });
+  doc.text(`Validit\u00E0: ${quote.validity_days} giorni`, MR, yPos + 15.5, { align: 'right' });
 
   if (quote.revision > 1) {
-    doc.setFontSize(9);
-    doc.text(`Rev. ${quote.revision}`, 195, yPos + 22, { align: 'right' });
+    doc.text(`Rev. ${quote.revision}`, MR, yPos + 20, { align: 'right' });
   }
 
-  // Linea separatore header
-  yPos += 30;
-  doc.setDrawColor(...primaryColor);
-  doc.setLineWidth(0.8);
-  doc.line(15, yPos, 195, yPos);
-  yPos += 8;
+  // Barra colorata sottile sotto header
+  yPos += 24;
+  doc.setFillColor(...primaryColor);
+  doc.rect(ML, yPos, CONTENT_W, 1.5, 'F');
+  yPos += 6;
 
   // ============================================
-  // 2. PROSPECT
+  // 2. PROSPECT — Bordo sinistro colorato
   // ============================================
 
-  doc.setFillColor(249, 249, 249);
-  doc.roundedRect(15, yPos, 180, 22, 2, 2, 'F');
-  doc.setDrawColor(221, 221, 221);
-  doc.roundedRect(15, yPos, 180, 22, 2, 2, 'S');
+  const prospectBoxH = 24;
+  // Sfondo bianco con bordo sinistro colorato
+  doc.setFillColor(255, 255, 255);
+  doc.setDrawColor(...PREMIUM_BORDER);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(ML, yPos, CONTENT_W, prospectBoxH, 1.5, 1.5, 'FD');
+  // Bordo sinistro accent
+  doc.setFillColor(...primaryColor);
+  doc.rect(ML, yPos, 2, prospectBoxH, 'F');
 
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...primaryColor);
-  doc.text('CLIENTE', 20, yPos + 7);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(...DEFAULT_MUTED);
+  doc.text('DESTINATARIO', ML + 7, yPos + 5);
 
-  doc.setFontSize(10);
+  doc.setFontSize(12);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(...DEFAULT_TEXT);
-  doc.text(quote.prospect_company, 20, yPos + 13);
+  doc.text(quote.prospect_company, ML + 7, yPos + 11);
 
-  // Contatto e settore sulla stessa riga
+  // Contatti sotto il nome
   doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
   doc.setTextColor(...DEFAULT_MUTED);
   const contactParts: string[] = [];
   if (quote.prospect_contact_name) contactParts.push(quote.prospect_contact_name);
   if (quote.prospect_email) contactParts.push(quote.prospect_email);
   if (quote.prospect_phone) contactParts.push(quote.prospect_phone);
   if (contactParts.length > 0) {
-    doc.text(contactParts.join(' | '), 20, yPos + 18);
+    doc.text(contactParts.join('  \u00B7  '), ML + 7, yPos + 16);
   }
 
-  yPos += 28;
+  // Settore (se disponibile)
+  if (quote.prospect_sector) {
+    doc.setFontSize(8);
+    doc.text(`Settore: ${quote.prospect_sector}`, ML + 7, yPos + 20.5);
+  }
+
+  yPos += prospectBoxH + 6;
 
   // ============================================
-  // 3. SERVIZIO (titolo corriere)
+  // 3. SERVIZIO — Corriere principale
   // ============================================
 
   doc.setFillColor(...primaryColor);
-  doc.roundedRect(15, yPos, 180, 12, 2, 2, 'F');
-  doc.setFontSize(13);
+  doc.roundedRect(ML, yPos, CONTENT_W, 10, 1.5, 1.5, 'F');
+  doc.setFontSize(11);
   doc.setFont('helvetica', 'bold');
   doc.setTextColor(255, 255, 255);
-  doc.text(`SERVIZIO: ${matrix.carrier_display_name}`, 105, yPos + 8, { align: 'center' });
-
-  yPos += 18;
+  doc.text(`SERVIZIO: ${matrix.carrier_display_name}`, 105, yPos + 7, { align: 'center' });
+  yPos += 14;
 
   // ============================================
-  // 4. MATRICE PREZZI (autoTable)
+  // 4. MATRICE PREZZI — Tema plain, minimal
   // ============================================
 
   const tableHead = ['PESO', ...matrix.zones];
-
   const tableBody = matrix.weight_ranges.map((range, rowIdx) => {
     const row = [range.label];
     matrix.zones.forEach((_, colIdx) => {
       const price = matrix.prices[rowIdx]?.[colIdx];
-      row.push(price ? `${price.toFixed(2)} \u20AC` : '-');
+      row.push(price ? `\u20AC ${price.toFixed(2)}` : '-');
     });
     return row;
   });
@@ -181,69 +192,78 @@ export async function generateCommercialQuotePDF(
     startY: yPos,
     head: [tableHead],
     body: tableBody,
-    theme: 'grid',
+    theme: 'plain',
     headStyles: {
       fillColor: primaryColor,
       textColor: 255,
       fontStyle: 'bold',
-      fontSize: 10,
+      fontSize: 9,
       halign: 'center',
+      cellPadding: 4,
     },
     bodyStyles: {
-      fontSize: 10,
+      fontSize: 9,
       halign: 'center',
+      cellPadding: 3.5,
+      textColor: DEFAULT_TEXT,
     },
     columnStyles: {
       0: {
-        fillColor: [245, 245, 245],
+        fillColor: PREMIUM_LIGHT_BG,
         fontStyle: 'bold',
         halign: 'left',
         cellWidth: 35,
+        textColor: DEFAULT_TEXT,
       },
     },
     alternateRowStyles: {
-      fillColor: [249, 249, 249],
+      fillColor: [252, 252, 253],
     },
-    margin: { left: 15, right: 15 },
+    margin: { left: ML, right: PAGE_BOTTOM - MR },
     styles: {
-      cellPadding: 3,
-      lineColor: [221, 221, 221],
-      lineWidth: 0.3,
+      lineColor: PREMIUM_BORDER,
+      lineWidth: 0.2,
+      overflow: 'linebreak',
     },
+    tableLineColor: PREMIUM_BORDER,
+    tableLineWidth: 0.2,
   });
 
-  yPos = (doc as any).lastAutoTable.finalY + 8;
+  yPos = (doc as any).lastAutoTable.finalY + 6;
 
   // ============================================
-  // 4b. MODALITA' RITIRO (se presente nello snapshot)
+  // 4b. MODALITA' RITIRO — Corporate desaturato
   // ============================================
 
   const deliveryMode = matrix.delivery_mode || quote.delivery_mode || 'carrier_pickup';
   const pickupFee = matrix.pickup_fee ?? quote.pickup_fee ?? null;
   const pickupInfo = getPickupDisplayInfo(deliveryMode, pickupFee);
 
-  doc.setFillColor(240, 253, 244); // emerald-50
-  doc.setDrawColor(16, 185, 129); // emerald-500
-  doc.setLineWidth(0.5);
+  yPos = ensureSpace(doc, yPos, 14);
 
-  const pickupBoxHeight = 12;
-  doc.roundedRect(15, yPos, 180, pickupBoxHeight, 2, 2, 'F');
-  doc.line(15, yPos, 15, yPos + pickupBoxHeight);
+  // Sfondo desaturato emerald
+  doc.setFillColor(243, 250, 247);
+  doc.setDrawColor(134, 195, 172);
+  doc.setLineWidth(0.3);
+  const pickupBoxH = 12;
+  doc.roundedRect(ML, yPos, CONTENT_W, pickupBoxH, 1.5, 1.5, 'FD');
+  // Bordo sinistro
+  doc.setFillColor(72, 165, 131);
+  doc.rect(ML, yPos, 2, pickupBoxH, 'F');
 
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(5, 150, 105); // emerald-600
-  doc.text(pickupInfo.title, 20, yPos + 5);
-
-  doc.setFont('helvetica', 'normal');
   doc.setFontSize(9);
-  doc.setTextColor(85, 85, 85);
-  doc.text(pickupInfo.description, 20, yPos + 10);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(46, 125, 95);
+  doc.text(pickupInfo.title, ML + 7, yPos + 5);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
+  doc.text(pickupInfo.description, ML + 7, yPos + 10);
 
-  yPos += pickupBoxHeight + 6;
+  yPos += pickupBoxH + 5;
 
   // ============================================
-  // 4c. LAVORAZIONE MERCE (se attiva)
+  // 4c. LAVORAZIONE MERCE — Corporate ambra desaturato
   // ============================================
 
   const goodsNeedsProcessing =
@@ -253,25 +273,26 @@ export async function generateCommercialQuotePDF(
     const procFee = matrix.processing_fee ?? quote.processing_fee ?? null;
     const procInfo = getProcessingDisplayInfo(procFee);
 
-    doc.setFillColor(254, 249, 195); // yellow-100
-    doc.setDrawColor(234, 179, 8); // yellow-500
-    doc.setLineWidth(0.5);
+    yPos = ensureSpace(doc, yPos, 14);
 
-    const procBoxHeight = 12;
-    doc.roundedRect(15, yPos, 180, procBoxHeight, 2, 2, 'F');
-    doc.line(15, yPos, 15, yPos + procBoxHeight);
+    doc.setFillColor(253, 249, 237);
+    doc.setDrawColor(210, 180, 100);
+    doc.setLineWidth(0.3);
+    const procBoxH = 12;
+    doc.roundedRect(ML, yPos, CONTENT_W, procBoxH, 1.5, 1.5, 'FD');
+    doc.setFillColor(190, 155, 50);
+    doc.rect(ML, yPos, 2, procBoxH, 'F');
 
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(161, 98, 7); // yellow-700
-    doc.text(procInfo.title, 20, yPos + 5);
-
-    doc.setFont('helvetica', 'normal');
     doc.setFontSize(9);
-    doc.setTextColor(85, 85, 85);
-    doc.text(procInfo.description, 20, yPos + 10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(140, 100, 20);
+    doc.text(procInfo.title, ML + 7, yPos + 5);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    doc.text(procInfo.description, ML + 7, yPos + 10);
 
-    yPos += procBoxHeight + 6;
+    yPos += procBoxH + 5;
   }
 
   // ============================================
@@ -284,25 +305,21 @@ export async function generateCommercialQuotePDF(
       const ac = additionalCarriers[acIdx];
       const acMatrix = ac.price_matrix;
 
-      // Verifica spazio pagina
-      if (yPos > 200) {
-        doc.addPage();
-        yPos = 15;
-      }
+      yPos = ensureSpace(doc, yPos, 30);
 
-      // Titolo alternativa
-      doc.setFillColor(107, 114, 128); // gray-500
-      doc.roundedRect(15, yPos, 180, 10, 2, 2, 'F');
-      doc.setFontSize(11);
+      // Titolo alternativa — colore scuro derivato dal primaryColor
+      doc.setFillColor(...primaryDark);
+      doc.roundedRect(ML, yPos, CONTENT_W, 10, 1.5, 1.5, 'F');
+      doc.setFontSize(10);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(255, 255, 255);
       doc.text(
-        `ALTERNATIVA ${String.fromCharCode(66 + acIdx)}: ${acMatrix.carrier_display_name}`,
+        `OPZIONE ${String.fromCharCode(66 + acIdx)}: ${acMatrix.carrier_display_name}`,
         105,
         yPos + 7,
         { align: 'center' }
       );
-      yPos += 14;
+      yPos += 13;
 
       // Tabella prezzi alternativa
       const acTableHead = ['PESO', ...acMatrix.zones];
@@ -310,7 +327,7 @@ export async function generateCommercialQuotePDF(
         const row = [range.label];
         acMatrix.zones.forEach((_, colIdx) => {
           const price = acMatrix.prices[rowIdx]?.[colIdx];
-          row.push(price ? `${price.toFixed(2)} \u20AC` : '-');
+          row.push(price ? `\u20AC ${price.toFixed(2)}` : '-');
         });
         return row;
       });
@@ -319,151 +336,242 @@ export async function generateCommercialQuotePDF(
         startY: yPos,
         head: [acTableHead],
         body: acTableBody,
-        theme: 'grid',
+        theme: 'plain',
         headStyles: {
-          fillColor: [107, 114, 128],
+          fillColor: primaryDark,
           textColor: 255,
           fontStyle: 'bold',
-          fontSize: 9,
+          fontSize: 8,
           halign: 'center',
+          cellPadding: 3.5,
         },
-        bodyStyles: { fontSize: 9, halign: 'center' },
+        bodyStyles: { fontSize: 8, halign: 'center', cellPadding: 3, textColor: DEFAULT_TEXT },
         columnStyles: {
-          0: { fillColor: [245, 245, 245], fontStyle: 'bold', halign: 'left', cellWidth: 35 },
+          0: {
+            fillColor: PREMIUM_LIGHT_BG,
+            fontStyle: 'bold',
+            halign: 'left',
+            cellWidth: 35,
+            textColor: DEFAULT_TEXT,
+          },
         },
-        alternateRowStyles: { fillColor: [249, 249, 249] },
-        margin: { left: 15, right: 15 },
-        styles: { cellPadding: 2.5, lineColor: [221, 221, 221], lineWidth: 0.3 },
+        alternateRowStyles: { fillColor: [252, 252, 253] },
+        margin: { left: ML, right: PAGE_BOTTOM - MR },
+        styles: { lineColor: PREMIUM_BORDER, lineWidth: 0.2 },
       });
 
-      yPos = (doc as any).lastAutoTable.finalY + 8;
+      yPos = (doc as any).lastAutoTable.finalY + 6;
     }
   }
 
   // ============================================
-  // 5. PESO VOLUMETRICO
+  // 5. PESO VOLUMETRICO — Box grigio ghiaccio
   // ============================================
 
-  doc.setFillColor(227, 242, 253);
-  doc.setDrawColor(33, 150, 243);
-  doc.setLineWidth(0.5);
+  yPos = ensureSpace(doc, yPos, 20);
 
-  const volBoxHeight = 18;
-  doc.roundedRect(15, yPos, 180, volBoxHeight, 2, 2, 'F');
-  doc.line(15, yPos, 15, yPos + volBoxHeight); // Bordo sinistro blu
+  doc.setFillColor(...PREMIUM_LIGHT_BG);
+  doc.setDrawColor(...PREMIUM_BORDER);
+  doc.setLineWidth(0.3);
+  const volBoxH = 18;
+  doc.roundedRect(ML, yPos, CONTENT_W, volBoxH, 1.5, 1.5, 'FD');
+  doc.setFillColor(...primaryColor);
+  doc.rect(ML, yPos, 2, volBoxH, 'F');
 
-  doc.setFontSize(10);
+  doc.setFontSize(9);
   doc.setFont('helvetica', 'bold');
-  doc.setTextColor(21, 101, 192);
-  doc.text('PESO VOLUMETRICO', 20, yPos + 6);
+  doc.setTextColor(...primaryColor);
+  doc.text('PESO VOLUMETRICO', ML + 7, yPos + 6);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(9);
-  doc.setTextColor(85, 85, 85);
-  doc.text('Formula: (Lunghezza \u00D7 Larghezza \u00D7 Altezza in cm) / 5000', 20, yPos + 11);
+  doc.setFontSize(8);
+  doc.setTextColor(80, 80, 80);
+  doc.text('Formula: (Lunghezza \u00D7 Larghezza \u00D7 Altezza in cm) / 5000', ML + 7, yPos + 11);
   doc.text(
-    'Esempio: Un pacco di 50\u00D740\u00D730 cm = 60.000 cm\u00B3 / 5000 = 12 kg volumetrici',
-    20,
+    'Esempio: Un pacco 50\u00D740\u00D730 cm = 60.000 cm\u00B3 / 5000 = 12 kg volumetrici',
+    ML + 7,
     yPos + 15.5
   );
 
-  yPos += volBoxHeight + 6;
+  yPos += volBoxH + 5;
 
   // ============================================
-  // 6. CLAUSOLE (Note importanti)
+  // 6. CONDIZIONI (clausole)
   // ============================================
 
   const clauses = quote.clauses || [];
   if (clauses.length > 0) {
-    // Verifica spazio pagina
-    if (yPos > 240) {
-      doc.addPage();
-      yPos = 15;
-    }
+    const clauseH = 8 + clauses.length * 4.5;
+    yPos = ensureSpace(doc, yPos, clauseH + 2);
 
-    doc.setFillColor(255, 249, 230);
-    doc.setDrawColor(255, 193, 7);
-    doc.setLineWidth(0.5);
+    doc.setFillColor(...PREMIUM_LIGHT_BG);
+    doc.setDrawColor(...PREMIUM_BORDER);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, yPos, CONTENT_W, clauseH, 1.5, 1.5, 'FD');
+    doc.setFillColor(...primaryColor);
+    doc.rect(ML, yPos, 2, clauseH, 'F');
 
-    const clauseHeight = 8 + clauses.length * 5;
-    doc.roundedRect(15, yPos, 180, clauseHeight, 2, 2, 'F');
-    doc.line(15, yPos, 15, yPos + clauseHeight);
-
-    doc.setFontSize(11);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(245, 124, 0);
-    doc.text('NOTE IMPORTANTI', 20, yPos + 6);
+    doc.setTextColor(...primaryColor);
+    doc.text('CONDIZIONI', ML + 7, yPos + 5.5);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(85, 85, 85);
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
 
     clauses.forEach((clause, i) => {
-      doc.text(`\u2022 ${clause.text}`, 22, yPos + 11 + i * 5);
+      doc.text(`\u2022  ${clause.text}`, ML + 8, yPos + 10 + i * 4.5);
     });
 
-    yPos += clauseHeight + 6;
+    yPos += clauseH + 5;
   }
 
   // ============================================
   // 7. SERVIZI AGGIUNTIVI
   // ============================================
 
-  if (yPos < 255) {
-    doc.setFillColor(227, 242, 253);
-    const servicesBoxHeight = 20;
-    doc.roundedRect(15, yPos, 180, servicesBoxHeight, 2, 2, 'F');
+  if (yPos < FOOTER_ZONE_START - 22) {
+    const servH = 18;
+    doc.setFillColor(...PREMIUM_LIGHT_BG);
+    doc.setDrawColor(...PREMIUM_BORDER);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(ML, yPos, CONTENT_W, servH, 1.5, 1.5, 'FD');
+    doc.setFillColor(...primaryColor);
+    doc.rect(ML, yPos, 2, servH, 'F');
 
-    doc.setFontSize(10);
+    doc.setFontSize(9);
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(21, 101, 192);
-    doc.text('SERVIZI AGGIUNTIVI DISPONIBILI', 20, yPos + 6);
+    doc.setTextColor(...primaryColor);
+    doc.text('SERVIZI AGGIUNTIVI DISPONIBILI', ML + 7, yPos + 5.5);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    doc.setTextColor(85, 85, 85);
-    doc.text('\u2022 Assicurazione integrativa (oltre 100\u20AC di valore)', 22, yPos + 11);
-    doc.text('\u2022 Consegna al piano / Fermo deposito / Consegna su appuntamento', 22, yPos + 16);
-
-    yPos += servicesBoxHeight + 6;
+    doc.setFontSize(8);
+    doc.setTextColor(80, 80, 80);
+    doc.text('\u2022  Assicurazione integrativa (oltre 100\u20AC di valore)', ML + 8, yPos + 10);
+    doc.text(
+      '\u2022  Consegna al piano / Fermo deposito / Consegna su appuntamento',
+      ML + 8,
+      yPos + 14.5
+    );
   }
 
   // ============================================
-  // 8. FOOTER
+  // 8. FOOTER WHITE-LABEL (tutte le pagine)
   // ============================================
 
-  // Footer sempre in fondo pagina
-  const footerY = 280;
-  doc.setDrawColor(238, 238, 238);
-  doc.setLineWidth(0.5);
-  doc.line(15, footerY - 5, 195, footerY - 5);
+  const totalPages = doc.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    drawFooter(doc, primaryColor, orgInfo || null, p, totalPages);
+  }
 
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.setTextColor(...primaryColor);
-  doc.text('SPEDIRESICURO.IT \u2013 Powered by AI', 105, footerY, {
-    align: 'center',
-  });
-
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.setTextColor(...DEFAULT_MUTED);
-  doc.text('Tel: +39 081 827 6241 | Email: info@spedisci.online', 105, footerY + 5, {
-    align: 'center',
-  });
-  doc.text('P.IVA: 06758621210 | www.spediresicuro.it', 105, footerY + 10, { align: 'center' });
-
-  // Genera buffer
   return Buffer.from(doc.output('arraybuffer'));
+}
+
+// ============================================
+// FOOTER
+// ============================================
+
+function drawFooter(
+  doc: InstanceType<typeof import('jspdf').jsPDF>,
+  primaryColor: number[],
+  orgInfo: OrganizationFooterInfo | null,
+  currentPage: number,
+  totalPages: number
+): void {
+  const footerY = 278;
+
+  // Linea separatore
+  doc.setDrawColor(...PREMIUM_BORDER);
+  doc.setLineWidth(0.3);
+  doc.line(ML, footerY - 4, MR, footerY - 4);
+
+  if (orgInfo) {
+    // --- Footer white-label reseller ---
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...(primaryColor as [number, number, number]));
+    doc.text(orgInfo.name.toUpperCase(), 105, footerY, { align: 'center' });
+
+    // Riga dettagli
+    const details: string[] = [];
+    if (orgInfo.vat_number) details.push(`P.IVA: ${orgInfo.vat_number}`);
+    if (orgInfo.billing_email) details.push(orgInfo.billing_email);
+    if (orgInfo.billing_address) {
+      const addr = orgInfo.billing_address;
+      const parts = [addr.via, addr.cap, addr.citta, addr.provincia].filter(Boolean);
+      if (parts.length > 0) details.push(parts.join(' '));
+    }
+
+    if (details.length > 0) {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(7.5);
+      doc.setTextColor(...DEFAULT_MUTED);
+      doc.text(details.join('  \u00B7  '), 105, footerY + 4, { align: 'center' });
+    }
+
+    // "Powered by SpedireSicuro.it"
+    doc.setFontSize(6.5);
+    doc.setTextColor(180, 180, 180);
+    doc.text('Powered by SpedireSicuro.it', 105, footerY + 8, { align: 'center' });
+  } else {
+    // --- Footer default SpedireSicuro ---
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...(primaryColor as [number, number, number]));
+    doc.text('SPEDIRESICURO.IT', 105, footerY, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(...DEFAULT_MUTED);
+    doc.text(
+      'Tel: +39 081 827 6241  \u00B7  info@spedisci.online  \u00B7  P.IVA: 06758621210',
+      105,
+      footerY + 4,
+      { align: 'center' }
+    );
+  }
+
+  // Numerazione pagine
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.setTextColor(180, 180, 180);
+  doc.text(`${currentPage} / ${totalPages}`, MR, footerY + 8, { align: 'right' });
 }
 
 // ============================================
 // HELPER FUNCTIONS
 // ============================================
 
-/**
- * Parsa un colore CSS (#RRGGBB) in array RGB [r, g, b]
- */
+/** Nome organizzazione nell'header se logo non disponibile */
+function drawOrgNameHeader(
+  doc: InstanceType<typeof import('jspdf').jsPDF>,
+  orgInfo: OrganizationFooterInfo | null | undefined,
+  primaryColor: number[],
+  yPos: number
+): void {
+  const headerName = orgInfo?.name || 'SpedireSicuro.it';
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.setTextColor(...(primaryColor as [number, number, number]));
+  doc.text(headerName, ML, yPos + 10);
+}
+
+/** Verifica spazio e aggiunge pagina se necessario */
+function ensureSpace(
+  doc: InstanceType<typeof import('jspdf').jsPDF>,
+  yPos: number,
+  needed: number
+): number {
+  if (yPos + needed > FOOTER_ZONE_START) {
+    doc.addPage();
+    return 15;
+  }
+  return yPos;
+}
+
+/** Parsa colore CSS (#RRGGBB) in array RGB */
 function parseBrandingColor(color?: string | null): [number, number, number] | null {
   if (!color) return null;
   const hex = color.replace('#', '');
@@ -475,15 +583,29 @@ function parseBrandingColor(color?: string | null): [number, number, number] | n
   return [r, g, b];
 }
 
-/**
- * Scarica un logo da URL e lo converte in base64 per jsPDF.
- * Cache in-memory per 5 minuti.
- */
+/** Schiarisce un colore RGB mescolandolo con bianco */
+function lightenColor(rgb: number[], amount: number): [number, number, number] {
+  return [
+    Math.round(rgb[0] + (255 - rgb[0]) * amount),
+    Math.round(rgb[1] + (255 - rgb[1]) * amount),
+    Math.round(rgb[2] + (255 - rgb[2]) * amount),
+  ];
+}
+
+/** Scurisce un colore RGB */
+function darkenColor(rgb: number[], amount: number): [number, number, number] {
+  return [
+    Math.round(rgb[0] * (1 - amount)),
+    Math.round(rgb[1] * (1 - amount)),
+    Math.round(rgb[2] * (1 - amount)),
+  ];
+}
+
+/** Scarica logo da URL e converte in base64 per jsPDF. Cache 5 min. */
 const logoCache = new Map<string, { data: string; timestamp: number }>();
-const LOGO_CACHE_TTL = 5 * 60 * 1000; // 5 minuti
+const LOGO_CACHE_TTL = 5 * 60 * 1000;
 
 async function fetchLogoAsBase64(url: string): Promise<string | null> {
-  // Check cache
   const cached = logoCache.get(url);
   if (cached && Date.now() - cached.timestamp < LOGO_CACHE_TTL) {
     return cached.data;
@@ -498,18 +620,14 @@ async function fetchLogoAsBase64(url: string): Promise<string | null> {
     const contentType = response.headers.get('content-type') || 'image/png';
     const dataUrl = `data:${contentType};base64,${base64}`;
 
-    // Salva in cache
     logoCache.set(url, { data: dataUrl, timestamp: Date.now() });
-
     return dataUrl;
   } catch {
     return null;
   }
 }
 
-/**
- * Genera titolo e descrizione per la sezione lavorazione merce nel PDF.
- */
+/** Info sezione lavorazione merce */
 function getProcessingDisplayInfo(processingFee: number | null): {
   title: string;
   description: string;
@@ -527,9 +645,7 @@ function getProcessingDisplayInfo(processingFee: number | null): {
   };
 }
 
-/**
- * Genera titolo e descrizione per la sezione ritiro nel PDF.
- */
+/** Info sezione ritiro */
 function getPickupDisplayInfo(
   deliveryMode: DeliveryMode,
   pickupFee: number | null

@@ -12,6 +12,7 @@ import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { generateCommercialQuotePDF } from '@/lib/commercial-quotes/pdf-generator';
 import type { CommercialQuote } from '@/types/commercial-quotes';
+import type { OrganizationFooterInfo } from '@/types/workspace';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -58,9 +59,27 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
       // Se errore download, genera al volo come fallback
     }
 
-    // Genera PDF on-the-fly
+    // Genera PDF on-the-fly con branding + footer white-label
     const branding = wsAuth.workspace.branding || null;
-    const pdfBuffer = await generateCommercialQuotePDF(quote as CommercialQuote, branding);
+    let orgInfo: OrganizationFooterInfo | null = null;
+    try {
+      const { data: orgData } = await supabaseAdmin
+        .from('organizations')
+        .select('name, vat_number, billing_email, billing_address')
+        .eq('id', wsAuth.workspace.organization_id)
+        .single();
+      if (orgData) {
+        orgInfo = {
+          name: orgData.name,
+          vat_number: orgData.vat_number || null,
+          billing_email: orgData.billing_email || '',
+          billing_address: orgData.billing_address || null,
+        };
+      }
+    } catch {
+      /* fallback: footer SpedireSicuro */
+    }
+    const pdfBuffer = await generateCommercialQuotePDF(quote as CommercialQuote, branding, orgInfo);
 
     const fileName = `preventivo_${quote.prospect_company.replace(/[^a-zA-Z0-9]/g, '_')}_rev${quote.revision}.pdf`;
 

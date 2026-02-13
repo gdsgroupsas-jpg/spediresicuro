@@ -1,13 +1,14 @@
 /**
- * Test: PDF Generator preventivi commerciali
+ * Test: PDF Generator preventivi commerciali — Premium Corporate
  *
- * Verifica generazione PDF: buffer valido, branding, clausole.
+ * Verifica generazione PDF: buffer valido, branding, clausole,
+ * footer white-label, numerazione pagine.
  * Mock di jsPDF per test unit (no rendering reale).
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { CommercialQuote } from '@/types/commercial-quotes';
-import type { OrganizationBranding } from '@/types/workspace';
+import type { OrganizationBranding, OrganizationFooterInfo } from '@/types/workspace';
 
 // Mock jsPDF
 const mockText = vi.fn();
@@ -18,9 +19,12 @@ const mockSetDrawColor = vi.fn();
 const mockSetFillColor = vi.fn();
 const mockSetLineWidth = vi.fn();
 const mockLine = vi.fn();
+const mockRect = vi.fn();
 const mockRoundedRect = vi.fn();
 const mockAddImage = vi.fn();
 const mockAddPage = vi.fn();
+const mockSetPage = vi.fn();
+const mockGetNumberOfPages = vi.fn().mockReturnValue(1);
 const mockOutput = vi.fn().mockReturnValue(new ArrayBuffer(100));
 const mockAutoTable = vi.fn();
 
@@ -33,9 +37,12 @@ const mockDoc = {
   setFillColor: mockSetFillColor,
   setLineWidth: mockSetLineWidth,
   line: mockLine,
+  rect: mockRect,
   roundedRect: mockRoundedRect,
   addImage: mockAddImage,
   addPage: mockAddPage,
+  setPage: mockSetPage,
+  getNumberOfPages: mockGetNumberOfPages,
   output: mockOutput,
   autoTable: mockAutoTable,
   lastAutoTable: { finalY: 150 },
@@ -122,10 +129,27 @@ const createMockQuote = (overrides?: Partial<CommercialQuote>): CommercialQuote 
   ...overrides,
 });
 
+// Org info mock per test white-label
+const createMockOrgInfo = (
+  overrides?: Partial<OrganizationFooterInfo>
+): OrganizationFooterInfo => ({
+  name: 'GDS Group SAS',
+  vat_number: '12345678901',
+  billing_email: 'info@gdsgroup.it',
+  billing_address: {
+    via: 'Via Roma 42',
+    cap: '80100',
+    citta: 'Napoli',
+    provincia: 'NA',
+  },
+  ...overrides,
+});
+
 beforeEach(() => {
   vi.clearAllMocks();
   mockOutput.mockReturnValue(new ArrayBuffer(100));
   mockAutoTable.mockImplementation(() => {});
+  mockGetNumberOfPages.mockReturnValue(1);
   (mockDoc as any).lastAutoTable = { finalY: 150 };
 });
 
@@ -136,10 +160,10 @@ describe('generateCommercialQuotePDF', () => {
     expect(result.length).toBeGreaterThan(0);
   });
 
-  it('dovrebbe scrivere il titolo PREVENTIVO', async () => {
+  it('dovrebbe scrivere il titolo PREVENTIVO COMMERCIALE', async () => {
     await generateCommercialQuotePDF(createMockQuote());
     expect(mockText).toHaveBeenCalledWith(
-      'PREVENTIVO',
+      'PREVENTIVO COMMERCIALE',
       expect.any(Number),
       expect.any(Number),
       expect.objectContaining({ align: 'right' })
@@ -168,7 +192,6 @@ describe('generateCommercialQuotePDF', () => {
 
   it('dovrebbe scrivere la data di emissione', async () => {
     await generateCommercialQuotePDF(createMockQuote());
-    // Verifica che almeno un testo contenga "Data:"
     const dateCalls = mockText.mock.calls.filter(
       (call: any) => typeof call[0] === 'string' && call[0].includes('Data:')
     );
@@ -184,6 +207,7 @@ describe('generateCommercialQuotePDF', () => {
 
     vi.clearAllMocks();
     mockOutput.mockReturnValue(new ArrayBuffer(100));
+    mockGetNumberOfPages.mockReturnValue(1);
     (mockDoc as any).lastAutoTable = { finalY: 150 };
 
     await generateCommercialQuotePDF(createMockQuote({ revision: 3 }));
@@ -195,7 +219,6 @@ describe('generateCommercialQuotePDF', () => {
 
   it('dovrebbe includere le clausole nel PDF', async () => {
     await generateCommercialQuotePDF(createMockQuote());
-    // Clausole sono scritte con bullet point
     const clauseCalls = mockText.mock.calls.filter(
       (call: any) => typeof call[0] === 'string' && call[0].includes('\u2022')
     );
@@ -207,7 +230,7 @@ describe('generateCommercialQuotePDF', () => {
     expect(result).toBeInstanceOf(Buffer);
   });
 
-  it('dovrebbe scrivere "SpedireSicuro.it" come fallback senza logo', async () => {
+  it('dovrebbe scrivere "SpedireSicuro.it" come fallback senza logo/orgInfo', async () => {
     await generateCommercialQuotePDF(createMockQuote(), null);
     const logoCalls = mockText.mock.calls.filter(
       (call: any) => typeof call[0] === 'string' && call[0].includes('SpedireSicuro')
@@ -231,7 +254,7 @@ describe('generateCommercialQuotePDF', () => {
     expect(global.fetch).toHaveBeenCalledWith('https://example.com/logo.png', expect.any(Object));
   });
 
-  it('dovrebbe includere il footer con contatti', async () => {
+  it('dovrebbe includere il footer SPEDIRESICURO senza orgInfo', async () => {
     await generateCommercialQuotePDF(createMockQuote());
     const footerCalls = mockText.mock.calls.filter(
       (call: any) => typeof call[0] === 'string' && call[0].includes('SPEDIRESICURO')
@@ -307,10 +330,108 @@ describe('generateCommercialQuotePDF', () => {
   it('dovrebbe NON generare tabelle extra senza corrieri aggiuntivi', async () => {
     vi.clearAllMocks();
     mockOutput.mockReturnValue(new ArrayBuffer(100));
+    mockGetNumberOfPages.mockReturnValue(1);
     (mockDoc as any).lastAutoTable = { finalY: 150 };
 
     await generateCommercialQuotePDF(createMockQuote({ additional_carriers: null }));
     // Solo 1 autoTable per matrice primaria
     expect(mockAutoTable.mock.calls.length).toBe(1);
+  });
+
+  // --- Test Footer White-Label ---
+
+  it('dovrebbe mostrare nome reseller nel footer con orgInfo', async () => {
+    const orgInfo = createMockOrgInfo();
+    await generateCommercialQuotePDF(createMockQuote(), null, orgInfo);
+    const orgNameCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0] === 'GDS GROUP SAS'
+    );
+    expect(orgNameCalls.length).toBeGreaterThan(0);
+  });
+
+  it('dovrebbe mostrare P.IVA reseller nel footer con orgInfo', async () => {
+    const orgInfo = createMockOrgInfo();
+    await generateCommercialQuotePDF(createMockQuote(), null, orgInfo);
+    const pivaCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('P.IVA: 12345678901')
+    );
+    expect(pivaCalls.length).toBeGreaterThan(0);
+  });
+
+  it('dovrebbe mostrare "Powered by SpedireSicuro.it" con orgInfo', async () => {
+    const orgInfo = createMockOrgInfo();
+    await generateCommercialQuotePDF(createMockQuote(), null, orgInfo);
+    const poweredCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('Powered by SpedireSicuro.it')
+    );
+    expect(poweredCalls.length).toBeGreaterThan(0);
+  });
+
+  it('dovrebbe mostrare footer SpedireSicuro senza orgInfo', async () => {
+    await generateCommercialQuotePDF(createMockQuote(), null, null);
+    const spedireCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0] === 'SPEDIRESICURO.IT'
+    );
+    expect(spedireCalls.length).toBeGreaterThan(0);
+
+    const poweredCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('Powered by SpedireSicuro')
+    );
+    expect(poweredCalls.length).toBe(0);
+  });
+
+  it('dovrebbe avere numerazione pagine nel footer', async () => {
+    await generateCommercialQuotePDF(createMockQuote());
+    const pageNumCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('1 / 1')
+    );
+    expect(pageNumCalls.length).toBe(1);
+  });
+
+  it('dovrebbe usare nome organizzazione nell header se orgInfo presente', async () => {
+    const orgInfo = createMockOrgInfo();
+    await generateCommercialQuotePDF(createMockQuote(), null, orgInfo);
+    const headerCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0] === 'GDS Group SAS'
+    );
+    // Nome originale (non uppercase) nell'header
+    expect(headerCalls.length).toBeGreaterThan(0);
+  });
+
+  it('dovrebbe usare DESTINATARIO come label box prospect', async () => {
+    await generateCommercialQuotePDF(createMockQuote());
+    const destCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0] === 'DESTINATARIO'
+    );
+    expect(destCalls.length).toBe(1);
+  });
+
+  it('dovrebbe usare CONDIZIONI come titolo clausole', async () => {
+    await generateCommercialQuotePDF(createMockQuote());
+    const condCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0] === 'CONDIZIONI'
+    );
+    expect(condCalls.length).toBe(1);
+  });
+
+  it('dovrebbe usare OPZIONE B per alternative multi-corriere', async () => {
+    await generateCommercialQuotePDF(
+      createMockQuote({
+        additional_carriers: [
+          {
+            carrier_code: 'brt-BRT-3000',
+            contract_code: 'brt-BRT-3000',
+            price_matrix: {
+              ...createMockQuote().price_matrix,
+              carrier_display_name: 'BRT',
+            },
+          },
+        ],
+      })
+    );
+    const opzioneCalls = mockText.mock.calls.filter(
+      (call: any) => typeof call[0] === 'string' && call[0].includes('OPZIONE B')
+    );
+    expect(opzioneCalls.length).toBe(1);
   });
 });
