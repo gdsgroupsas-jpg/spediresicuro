@@ -958,7 +958,8 @@ export async function listPriceListsAction(filters?: {
     const isSuperAdmin = user.account_type === 'superadmin';
     const isAdmin = user.account_type === 'admin' || isSuperAdmin;
 
-    // Superadmin/admin: query diretta filtrata per workspace corrente
+    // Superadmin/admin: query filtrata per workspace corrente
+    // Include anche listini con workspace_id NULL creati dall'utente (legacy pre-migrazione)
     if (isAdmin) {
       // Recupera anche l'assigned_price_list_id del workspace
       const { data: wsRow } = await supabaseAdmin
@@ -971,11 +972,12 @@ export async function listPriceListsAction(filters?: {
       if (wsRow?.assigned_price_list_id) extraIds.push(wsRow.assigned_price_list_id);
       if (wsRow?.selling_price_list_id) extraIds.push(wsRow.selling_price_list_id);
 
-      // Query principale: listini del workspace corrente
+      // Query: listini del workspace corrente OPPURE creati dall'utente con workspace_id NULL
+      // Questo copre sia i listini nuovi (con workspace_id) sia i legacy (senza workspace_id)
       let query = supabaseAdmin
         .from('price_lists')
         .select('*')
-        .eq('workspace_id', workspaceId)
+        .or(`workspace_id.eq.${workspaceId},and(workspace_id.is.null,created_by.eq.${user.id})`)
         .order('created_at', { ascending: false });
 
       if (filters?.status) query = query.eq('status', filters.status);
@@ -988,7 +990,7 @@ export async function listPriceListsAction(filters?: {
       const results = data || [];
       const resultIds = new Set(results.map((pl: any) => pl.id));
 
-      // Aggiungi listini assegnati al workspace ma con workspace_id diverso (es. master clonati)
+      // Aggiungi listini assegnati al workspace ma non ancora nella lista
       const missingExtraIds = extraIds.filter((id) => !resultIds.has(id));
       if (missingExtraIds.length > 0) {
         let extraQuery = supabaseAdmin.from('price_lists').select('*').in('id', missingExtraIds);
