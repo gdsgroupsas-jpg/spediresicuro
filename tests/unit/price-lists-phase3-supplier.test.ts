@@ -58,7 +58,13 @@ vi.mock('@/lib/safe-auth', () => ({
   getSafeAuth: vi.fn(),
 }));
 
+// Mock getWorkspaceAuth per test (listPriceListsAction e listUsersForAssignmentAction)
+vi.mock('@/lib/workspace-auth', () => ({
+  getWorkspaceAuth: vi.fn(),
+}));
+
 import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 
 describe('Fase 3: Listini Fornitore - Server Actions', () => {
   let resellerUserId: string;
@@ -460,9 +466,10 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         return;
       }
 
-      // Mock auth per Reseller
-      (getSafeAuth as any).mockResolvedValue({
-        actor: { email: `test-reseller-phase3-${Date.now()}@test.local` },
+      // Mock auth per Reseller (listPriceListsAction usa getWorkspaceAuth)
+      (getWorkspaceAuth as any).mockResolvedValue({
+        actor: { id: resellerUserId, email: `test-reseller-phase3-${Date.now()}@test.local` },
+        workspace: { id: 'test-workspace-id' },
       });
 
       // Mock RPC get_user_price_lists - restituisce listini propri + assegnati via assigned_to_user_id

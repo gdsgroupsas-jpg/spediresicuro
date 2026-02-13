@@ -12,6 +12,7 @@ import {
   listMasterPriceListsAction,
   listUsersForAssignmentAction,
   revokePriceListAssignmentAction,
+  updatePriceListAction,
 } from '@/actions/price-lists';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -35,6 +36,7 @@ import {
   Eye,
   GitBranch,
   Loader2,
+  Pencil,
   RefreshCw,
   Search,
   UserPlus,
@@ -66,6 +68,7 @@ export function MasterPriceListsTab() {
   const [showCloneDialog, setShowCloneDialog] = useState(false);
   const [showAssignDialog, setShowAssignDialog] = useState(false);
   const [showAssignmentsDialog, setShowAssignmentsDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
   const [selectedPriceList, setSelectedPriceList] = useState<MasterPriceList | null>(null);
   const [assignments, setAssignments] = useState<PriceListAssignment[]>([]);
 
@@ -75,11 +78,18 @@ export function MasterPriceListsTab() {
   const [assignNotes, setAssignNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Edit dialog state
+  const [editName, setEditName] = useState('');
+  const [editStatus, setEditStatus] = useState('active');
+  const [editVatMode, setEditVatMode] = useState<string>('');
+  const [editVatRate, setEditVatRate] = useState(22.0);
+  const [editDescription, setEditDescription] = useState('');
+
   const loadData = useCallback(async () => {
     try {
       const [listsResult, usersResult] = await Promise.all([
         listMasterPriceListsAction(),
-        listUsersForAssignmentAction(),
+        listUsersForAssignmentAction({ global: true }),
       ]);
 
       if (listsResult.success) {
@@ -195,6 +205,32 @@ export function MasterPriceListsTab() {
     }
   };
 
+  const handleEdit = async () => {
+    if (!selectedPriceList) return;
+    setIsSubmitting(true);
+    try {
+      const result = await updatePriceListAction(selectedPriceList.id, {
+        name: editName,
+        status: editStatus as 'draft' | 'active' | 'archived',
+        vat_mode:
+          editVatMode === 'included' ? 'included' : editVatMode === 'excluded' ? 'excluded' : null,
+        vat_rate: editVatRate,
+        description: editDescription || undefined,
+      });
+      if (result.success) {
+        toast.success(`Listino "${editName}" aggiornato`);
+        setShowEditDialog(false);
+        loadData();
+      } else {
+        toast.error('Errore aggiornamento: ' + result.error);
+      }
+    } catch (error: any) {
+      toast.error('Errore: ' + error.message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const filteredLists = masterLists.filter(
     (list) =>
       list.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -248,6 +284,9 @@ export function MasterPriceListsTab() {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Stato
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                  IVA
+                </th>
                 <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
                   Derivazioni
                 </th>
@@ -262,7 +301,7 @@ export function MasterPriceListsTab() {
             <tbody className="divide-y divide-gray-200">
               {filteredLists.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="text-center py-8">
+                  <td colSpan={8} className="text-center py-8">
                     <AlertCircle className="h-8 w-8 text-gray-400 mx-auto mb-2" />
                     <p className="text-gray-500">Nessun listino master trovato</p>
                   </td>
@@ -307,6 +346,20 @@ export function MasterPriceListsTab() {
                         </Badge>
                       )}
                     </td>
+                    <td className="px-6 py-4">
+                      {list.vat_mode === 'included' ? (
+                        <Badge
+                          variant="outline"
+                          className="text-blue-600 border-blue-200 bg-blue-50"
+                        >
+                          IVA Inclusa
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-gray-500">
+                          IVA Esclusa
+                        </Badge>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-center">
                       <Badge variant="secondary">{list.derived_count || 0}</Badge>
                     </td>
@@ -321,6 +374,22 @@ export function MasterPriceListsTab() {
                     </td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setSelectedPriceList(list);
+                            setEditName(list.name);
+                            setEditStatus(list.status || 'active');
+                            setEditVatMode(list.vat_mode || '');
+                            setEditVatRate(list.vat_rate ?? 22.0);
+                            setEditDescription(list.description || '');
+                            setShowEditDialog(true);
+                          }}
+                          title="Modifica listino"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </Button>
                         <Button
                           size="sm"
                           variant="ghost"
@@ -361,6 +430,79 @@ export function MasterPriceListsTab() {
           </table>
         </div>
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Modifica Listino Master</DialogTitle>
+            <DialogDescription>Modifica &quot;{selectedPriceList?.name}&quot;</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="editName">Nome</Label>
+              <Input id="editName" value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editStatus">Stato</Label>
+              <Select value={editStatus} onChange={(e) => setEditStatus(e.target.value)}>
+                <option value="draft">Bozza</option>
+                <option value="active">Attivo</option>
+                <option value="archived">Archiviato</option>
+              </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="editVatMode">Modalit&agrave; IVA</Label>
+                <Select value={editVatMode} onChange={(e) => setEditVatMode(e.target.value)}>
+                  <option value="">IVA Esclusa (default)</option>
+                  <option value="excluded">IVA Esclusa</option>
+                  <option value="included">IVA Inclusa</option>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editVatRate">Aliquota IVA (%)</Label>
+                <Input
+                  id="editVatRate"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={editVatRate}
+                  onChange={(e) => setEditVatRate(parseFloat(e.target.value) || 22.0)}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editDescription">Descrizione</Label>
+              <Textarea
+                id="editDescription"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                rows={3}
+                placeholder="Descrizione del listino..."
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowEditDialog(false)}
+              disabled={isSubmitting}
+            >
+              Annulla
+            </Button>
+            <Button onClick={handleEdit} disabled={isSubmitting}>
+              {isSubmitting ? (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              ) : (
+                <Pencil className="w-4 h-4 mr-2" />
+              )}
+              Salva
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Clone Dialog */}
       <Dialog open={showCloneDialog} onOpenChange={setShowCloneDialog}>

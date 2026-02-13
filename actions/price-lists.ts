@@ -937,23 +937,75 @@ export async function listPriceListsAction(filters?: {
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    // ✅ FIX ISOLAMENTO: usa getWorkspaceAuth per scoping multi-tenant
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
+
+    const workspaceId = wsContext.workspace.id;
 
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
+      .eq('email', wsContext.actor.email)
       .single();
 
     if (!user) {
       return { success: false, error: 'Utente non trovato' };
     }
 
-    // ✅ FIX P0-1: Usa RPC function sicura invece di .or() con template literals
-    // Previene SQL injection usando parametri typed
+    const isSuperAdmin = user.account_type === 'superadmin';
+    const isAdmin = user.account_type === 'admin' || isSuperAdmin;
+
+    // Superadmin/admin: query diretta filtrata per workspace corrente
+    if (isAdmin) {
+      // Recupera anche l'assigned_price_list_id del workspace
+      const { data: wsRow } = await supabaseAdmin
+        .from('workspaces')
+        .select('assigned_price_list_id, selling_price_list_id')
+        .eq('id', workspaceId)
+        .single();
+
+      const extraIds: string[] = [];
+      if (wsRow?.assigned_price_list_id) extraIds.push(wsRow.assigned_price_list_id);
+      if (wsRow?.selling_price_list_id) extraIds.push(wsRow.selling_price_list_id);
+
+      // Query principale: listini del workspace corrente
+      let query = supabaseAdmin
+        .from('price_lists')
+        .select('*')
+        .eq('workspace_id', workspaceId)
+        .order('created_at', { ascending: false });
+
+      if (filters?.status) query = query.eq('status', filters.status);
+      if (filters?.courierId) query = query.eq('courier_id', filters.courierId);
+      if (filters?.isGlobal !== undefined) query = query.eq('is_global', filters.isGlobal);
+
+      const { data, error } = await query;
+      if (error) return { success: false, error: error.message };
+
+      const results = data || [];
+      const resultIds = new Set(results.map((pl: any) => pl.id));
+
+      // Aggiungi listini assegnati al workspace ma con workspace_id diverso (es. master clonati)
+      const missingExtraIds = extraIds.filter((id) => !resultIds.has(id));
+      if (missingExtraIds.length > 0) {
+        let extraQuery = supabaseAdmin.from('price_lists').select('*').in('id', missingExtraIds);
+        if (filters?.status) extraQuery = extraQuery.eq('status', filters.status);
+        if (filters?.courierId) extraQuery = extraQuery.eq('courier_id', filters.courierId);
+
+        const { data: extraLists } = await extraQuery;
+        if (extraLists?.length) results.push(...extraLists);
+      }
+
+      // Popola dati corriere
+      await enrichWithCourierData(results);
+
+      return { success: true, priceLists: results };
+    }
+
+    // Reseller/altri: usa RPC (gia' filtrato da RLS) + integrazione workspace
     const { data, error } = await supabaseAdmin.rpc('get_user_price_lists', {
       p_user_id: user.id,
       p_courier_id: filters?.courierId || null,
@@ -961,15 +1013,12 @@ export async function listPriceListsAction(filters?: {
       p_is_global: filters?.isGlobal ?? null,
     });
 
-    // Per reseller: se la RPC fallisce (es. search_path rotto), prosegui con query manuali
-    // Per altri utenti: restituisci l'errore
     const isReseller = user.is_reseller === true;
     if (error && !isReseller) {
       return { success: false, error: error.message };
     }
 
-    // Per reseller: integra listini assegnati + globali del superadmin
-    // che la RPC potrebbe non restituire (filtra solo created_by)
+    // Per reseller: integra listini assegnati + workspace
     if (isReseller) {
       const ownedIds = new Set((data || []).map((pl: any) => pl.id));
 
@@ -988,8 +1037,6 @@ export async function listPriceListsAction(filters?: {
         .single();
 
       // Listini assegnati via workspace (sistema multi-tenant attuale)
-      // Il reseller vede i listini assigned_price_list_id e selling_price_list_id
-      // dei workspace di cui e' membro
       const { data: workspaceListIds } = await supabaseAdmin
         .from('workspace_members')
         .select('workspace:workspaces(assigned_price_list_id, selling_price_list_id)')
@@ -1012,14 +1059,12 @@ export async function listPriceListsAction(filters?: {
       ].filter((id) => id && !ownedIds.has(id));
 
       if (missingIds.length > 0) {
-        // Deduplica gli ID
         const uniqueMissingIds = [...new Set(missingIds)];
         let assignedQuery = supabaseAdmin
           .from('price_lists')
           .select('*')
           .in('id', uniqueMissingIds);
 
-        // Applica stessi filtri
         if (filters?.courierId) assignedQuery = assignedQuery.eq('courier_id', filters.courierId);
         if (filters?.status) assignedQuery = assignedQuery.eq('status', filters.status);
 
@@ -1028,33 +1073,11 @@ export async function listPriceListsAction(filters?: {
           data!.push(...assignedLists);
         }
       }
-
-      // Modello OPT-IN: il reseller vede SOLO listini esplicitamente assegnati
-      // (via price_list_assignments, assigned_price_list_id, o workspace).
-      // NON vede tutti i listini globali - il superadmin assegna quelli necessari.
     }
 
-    // Recupera i corrieri separatamente se necessario
-    if (data && data.length > 0) {
-      const courierIds = data
-        .map((pl: any) => pl.courier_id)
-        .filter((id: string | null) => id !== null);
-
-      if (courierIds.length > 0) {
-        const { data: couriers } = await supabaseAdmin
-          .from('couriers')
-          .select('id, code, name')
-          .in('id', courierIds);
-
-        // Aggiungi i dati del corriere ai listini
-        const courierMap = new Map(couriers?.map((c) => [c.id, c]) || []);
-
-        data.forEach((pl: any) => {
-          if (pl.courier_id && courierMap.has(pl.courier_id)) {
-            pl.courier = courierMap.get(pl.courier_id);
-          }
-        });
-      }
+    // Popola dati corriere
+    if (data) {
+      await enrichWithCourierData(data);
     }
 
     return { success: true, priceLists: data || [] };
@@ -1062,6 +1085,30 @@ export async function listPriceListsAction(filters?: {
     console.error('Errore lista listini:', error);
     return { success: false, error: error.message || 'Errore sconosciuto' };
   }
+}
+
+/** Helper: arricchisce listini con dati corriere */
+async function enrichWithCourierData(priceLists: any[]): Promise<void> {
+  if (!priceLists.length) return;
+
+  const courierIds = priceLists
+    .map((pl: any) => pl.courier_id)
+    .filter((id: string | null) => id !== null);
+
+  if (courierIds.length === 0) return;
+
+  const { data: couriers } = await supabaseAdmin
+    .from('couriers')
+    .select('id, code, name')
+    .in('id', courierIds);
+
+  const courierMap = new Map(couriers?.map((c) => [c.id, c]) || []);
+
+  priceLists.forEach((pl: any) => {
+    if (pl.courier_id && courierMap.has(pl.courier_id)) {
+      pl.courier = courierMap.get(pl.courier_id);
+    }
+  });
 }
 
 /**
@@ -1875,7 +1922,7 @@ export async function listMasterPriceListsAction(): Promise<{
  *
  * @returns Array di utenti reseller/BYOC
  */
-export async function listUsersForAssignmentAction(): Promise<{
+export async function listUsersForAssignmentAction(options?: { global?: boolean }): Promise<{
   success: boolean;
   users?: Array<{
     id: string;
@@ -1887,15 +1934,18 @@ export async function listUsersForAssignmentAction(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    // ✅ FIX ISOLAMENTO: usa getWorkspaceAuth per scoping multi-tenant
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
 
+    const workspaceId = wsContext.workspace.id;
+
     // 🧪 TEST MODE: Bypass per E2E tests
     if (
-      context.actor.id === '00000000-0000-0000-0000-000000000000' ||
-      context.actor.id === 'test-user-id'
+      wsContext.actor.id === '00000000-0000-0000-0000-000000000000' ||
+      wsContext.actor.id === 'test-user-id'
     ) {
       console.log('🧪 [TEST MODE] listUsersForAssignmentAction: returning mock data');
       return {
@@ -1922,14 +1972,14 @@ export async function listUsersForAssignmentAction(): Promise<{
     const { data: user } = await supabaseAdmin
       .from('users')
       .select('id, account_type')
-      .eq('email', context.actor.email)
+      .eq('email', wsContext.actor.email)
       .single();
 
     if (!user) {
       return { success: false, error: 'Utente non trovato' };
     }
 
-    // Solo superadmin può vedere la lista utenti
+    // Solo superadmin puo' vedere la lista utenti
     if (user.account_type !== 'superadmin') {
       return {
         success: false,
@@ -1937,19 +1987,38 @@ export async function listUsersForAssignmentAction(): Promise<{
       };
     }
 
-    // Recupera utenti reseller e BYOC (destinatari delle assegnazioni)
-    const { data: users, error } = await supabaseAdmin
-      .from('users')
-      .select('id, email, name, account_type, is_reseller')
-      .or('is_reseller.eq.true,account_type.eq.byoc')
-      .order('name', { ascending: true });
+    // global=true: lista globale (per assegnazione listini master cross-workspace)
+    if (options?.global) {
+      const { data: users, error } = await supabaseAdmin
+        .from('users')
+        .select('id, email, name, account_type, is_reseller')
+        .or('is_reseller.eq.true,account_type.eq.byoc')
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('Errore recupero utenti globale:', error);
+        return { success: false, error: error.message };
+      }
+      return { success: true, users: users || [] };
+    }
+
+    // Default: utenti del workspace corrente (isolamento multi-tenant)
+    const { data: members, error } = await supabaseAdmin
+      .from('workspace_members')
+      .select('user:users(id, email, name, account_type, is_reseller)')
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'active');
 
     if (error) {
-      console.error('Errore recupero utenti:', error);
+      console.error('Errore recupero utenti workspace:', error);
       return { success: false, error: error.message };
     }
 
-    return { success: true, users: users || [] };
+    const users = (members || [])
+      .map((m: any) => m.user)
+      .filter((u: any) => u && (u.is_reseller || u.account_type === 'byoc'));
+
+    return { success: true, users };
   } catch (error: any) {
     console.error('Errore recupero utenti:', error);
     return { success: false, error: error.message || 'Errore sconosciuto' };
