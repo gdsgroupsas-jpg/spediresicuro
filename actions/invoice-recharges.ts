@@ -18,7 +18,7 @@ import {
   generateInvoiceXML,
   validateFatturaPAData,
 } from '@/lib/invoices/xml-generator';
-import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import type { Invoice } from '@/types/invoices';
 
 /**
@@ -44,7 +44,7 @@ export async function generateInvoiceFromRechargesAction(params: {
   error?: string;
 }> {
   try {
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
 
     // Solo admin/superadmin può generare fatture
     const isAdmin =
@@ -419,7 +419,7 @@ export async function generatePeriodicInvoiceAction(params: {
   error?: string;
 }> {
   try {
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
 
     const isAdmin =
       context.actor.account_type === 'admin' || context.actor.account_type === 'superadmin';
@@ -497,7 +497,7 @@ export async function configureInvoiceGenerationRuleAction(params: {
   error?: string;
 }> {
   try {
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
 
     const isAdmin =
       context.actor.account_type === 'admin' || context.actor.account_type === 'superadmin';
@@ -570,7 +570,7 @@ export async function listUninvoicedRechargesAction(userId: string): Promise<{
   error?: string;
 }> {
   try {
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
 
     // Verifica permessi: admin vede tutto, utenti vedono solo proprie
     const isAdmin =
@@ -632,7 +632,7 @@ export async function generatePostpaidMonthlyInvoice(
 }> {
   try {
     // Solo admin/superadmin puo' generare fatture postpaid
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
     const isAdmin =
       context.actor.account_type === 'admin' || context.actor.account_type === 'superadmin';
     const isReseller = (context.actor as unknown as { is_reseller?: boolean }).is_reseller === true;

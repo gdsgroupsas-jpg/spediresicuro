@@ -8,11 +8,12 @@
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Mock requireSafeAuth per simulare webhook (no auth)
-vi.mock('@/lib/safe-auth', () => ({
-  requireSafeAuth: vi.fn(() => {
-    throw new Error('UNAUTHORIZED: No user session');
+// Mock requireWorkspaceAuth per simulare webhook (no auth)
+vi.mock('@/lib/workspace-auth', () => ({
+  requireWorkspaceAuth: vi.fn(() => {
+    throw new Error('UNAUTHORIZED: Workspace access required');
   }),
+  getWorkspaceAuth: vi.fn(() => null),
 }));
 
 describe('Invoice Webhook Authentication Fix', () => {
@@ -31,11 +32,11 @@ describe('Invoice Webhook Authentication Fix', () => {
 
     // Dovrebbe fallire perché richiede autenticazione
     expect(result.success).toBe(false);
-    expect(result.error).toContain('UNAUTHORIZED: No user session');
+    expect(result.error).toContain('UNAUTHORIZED: Workspace access required');
   });
 
   it('dovrebbe permettere generateAutomaticInvoiceForStripeRecharge senza auth', async () => {
-    // Questa funzione NON dovrebbe chiamare requireSafeAuth
+    // Questa funzione NON dovrebbe chiamare requireWorkspaceAuth
     // (usa internalGenerateInvoiceFromRecharges)
     const { generateAutomaticInvoiceForStripeRecharge } =
       await import('@/actions/invoice-recharges');

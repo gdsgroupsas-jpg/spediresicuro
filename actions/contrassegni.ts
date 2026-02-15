@@ -6,6 +6,8 @@
  * Gestisce le azioni sui contrassegni:
  * - Preso in carica
  * - Evaso
+ *
+ * Isolamento multi-tenant: filtra spedizioni per workspace_id
  */
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
@@ -31,14 +33,22 @@ export async function markContrassegnoInCarica(shipmentId: string): Promise<{
       };
     }
 
-    // 2. Recupera spedizione
-    const { data: shipment, error: fetchError } = await supabaseAdmin
+    // 2. Workspace isolation
+    const workspaceId = context.workspace?.id;
+
+    // 3. Recupera spedizione (con filtro workspace per isolamento multi-tenant)
+    let query = supabaseAdmin
       .from('shipments')
       .select('*')
       .eq('id', shipmentId)
       .eq('cash_on_delivery', true)
-      .eq('deleted', false)
-      .single();
+      .eq('deleted', false);
+
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+    }
+
+    const { data: shipment, error: fetchError } = await query.single();
 
     if (fetchError || !shipment) {
       return {
@@ -47,7 +57,7 @@ export async function markContrassegnoInCarica(shipmentId: string): Promise<{
       };
     }
 
-    // 3. Aggiorna con nota interna
+    // 4. Aggiorna con nota interna
     const now = new Date().toISOString();
     const existingNotes = shipment.internal_notes || '';
     const newNote = `[${now}] Contrassegno preso in carica da ${context.actor.email || context.actor.name || 'utente'}\n`;
@@ -102,14 +112,22 @@ export async function markContrassegnoEvaso(shipmentId: string): Promise<{
       };
     }
 
-    // 2. Recupera spedizione
-    const { data: shipment, error: fetchError } = await supabaseAdmin
+    // 2. Workspace isolation
+    const workspaceId = context.workspace?.id;
+
+    // 3. Recupera spedizione (con filtro workspace per isolamento multi-tenant)
+    let query = supabaseAdmin
       .from('shipments')
       .select('*')
       .eq('id', shipmentId)
       .eq('cash_on_delivery', true)
-      .eq('deleted', false)
-      .single();
+      .eq('deleted', false);
+
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+    }
+
+    const { data: shipment, error: fetchError } = await query.single();
 
     if (fetchError || !shipment) {
       return {
@@ -118,7 +136,7 @@ export async function markContrassegnoEvaso(shipmentId: string): Promise<{
       };
     }
 
-    // 3. Verifica che sia consegnata
+    // 4. Verifica che sia consegnata
     if (shipment.status !== 'delivered' && !shipment.delivered_at) {
       return {
         success: false,
@@ -126,7 +144,7 @@ export async function markContrassegnoEvaso(shipmentId: string): Promise<{
       };
     }
 
-    // 4. Aggiorna con nota interna e marca come evaso
+    // 5. Aggiorna con nota interna e marca come evaso
     const now = new Date().toISOString();
     const existingNotes = shipment.internal_notes || '';
     const newNote = `[${now}] Contrassegno EVASO da ${context.actor.email || context.actor.name || 'utente'}\n`;

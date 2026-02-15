@@ -36,23 +36,29 @@ async function hasLDVScannerFeature(userEmail: string): Promise<boolean> {
 
 /**
  * Verifica se esiste già una spedizione con questa LDV
+ * @param workspaceId - Workspace ID per isolamento multi-tenant
  */
 async function checkDuplicateLDV(
   ldvNumber: string,
-  userEmail: string
+  userEmail: string,
+  workspaceId?: string
 ): Promise<{
   exists: boolean;
   shipment?: Shipment;
 }> {
   try {
-    // Cerca per LDV (sia campo ldv che tracking_number)
-    const { data, error } = await supabaseAdmin
+    // Cerca per LDV (sia campo ldv che tracking_number), filtrato per workspace
+    let query = supabaseAdmin
       .from('shipments')
       .select('*')
       .or(`ldv.eq.${ldvNumber},tracking_number.eq.${ldvNumber}`)
-      .eq('deleted', false)
-      .limit(1)
-      .maybeSingle();
+      .eq('deleted', false);
+
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+    }
+
+    const { data, error } = await query.limit(1).maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
       console.error('Errore verifica duplicato LDV:', error);
@@ -125,8 +131,11 @@ export async function importShipmentFromLDV(
 
     const ldvClean = ldvNumber.trim().toUpperCase();
 
-    // 4. Verifica duplicati
-    const duplicateCheck = await checkDuplicateLDV(ldvClean, userEmail);
+    // 4. Workspace isolation
+    const workspaceId = context.workspace?.id;
+
+    // 5. Verifica duplicati (filtrata per workspace)
+    const duplicateCheck = await checkDuplicateLDV(ldvClean, userEmail, workspaceId);
 
     if (duplicateCheck.exists && duplicateCheck.shipment) {
       return {
@@ -213,6 +222,9 @@ export async function importShipmentFromLDV(
 
       // Soft delete
       deleted: false,
+
+      // Workspace isolation: assegna spedizione al workspace corrente
+      workspace_id: workspaceId || null,
     };
 
     // Aggiungi GPS se fornito
@@ -274,7 +286,12 @@ export async function checkLDVDuplicate(ldvNumber: string): Promise<{
       };
     }
 
-    const check = await checkDuplicateLDV(ldvNumber.trim().toUpperCase(), context.actor.email);
+    const wsId = context.workspace?.id;
+    const check = await checkDuplicateLDV(
+      ldvNumber.trim().toUpperCase(),
+      context.actor.email,
+      wsId
+    );
 
     return {
       exists: check.exists,

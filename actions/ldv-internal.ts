@@ -41,12 +41,19 @@ export async function generateInternalLDV(
       };
     }
 
-    // 2. Recupera spedizione
-    const { data: shipment, error: shipmentError } = await supabaseAdmin
-      .from('shipments')
-      .select('*')
-      .eq('id', shipmentId)
-      .single();
+    // 2. Workspace isolation
+    const workspaceId = context.workspace?.id;
+    const actorId = context.actor.id;
+    const actorRole = context.actor.role;
+
+    // 3. Recupera spedizione (con filtro workspace per isolamento multi-tenant)
+    let query = supabaseAdmin.from('shipments').select('*').eq('id', shipmentId);
+
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+    }
+
+    const { data: shipment, error: shipmentError } = await query.single();
 
     if (shipmentError || !shipment) {
       return {
@@ -55,29 +62,15 @@ export async function generateInternalLDV(
       };
     }
 
-    // 3. Verifica che l'utente abbia accesso alla spedizione
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, role')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return {
-        success: false,
-        error: 'Utente non trovato',
-      };
-    }
-
-    // Solo admin o proprietario possono generare LDV
-    if (user.role !== 'admin' && shipment.user_id !== user.id) {
+    // 4. Verifica accesso: admin o proprietario (senza query DB aggiuntiva)
+    if (actorRole !== 'admin' && shipment.user_id !== actorId) {
       return {
         success: false,
         error: 'Accesso negato',
       };
     }
 
-    // 4. Prepara dati per generazione
+    // 5. Prepara dati per generazione
     const spedizioneData = {
       tracking: shipment.tracking_number || shipment.id,
       mittente: {
@@ -118,7 +111,7 @@ export async function generateInternalLDV(
       colli: shipment.packages_count || 1,
     };
 
-    // 5. Genera file
+    // 6. Genera file
     let fileData: Buffer;
     let filename: string;
 

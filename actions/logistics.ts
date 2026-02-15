@@ -13,17 +13,25 @@ import type { Shipment } from '@/types/shipments';
 
 /**
  * Cerca una spedizione per LDV (Lettera di Vettura) o tracking number
+ * @param workspaceId - Workspace ID per isolamento multi-tenant
  */
-async function findShipmentByLDV(ldvNumber: string): Promise<Shipment | null> {
+async function findShipmentByLDV(
+  ldvNumber: string,
+  workspaceId?: string
+): Promise<Shipment | null> {
   try {
     // Cerca prima per LDV
-    let { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('shipments')
       .select('*')
       .eq('ldv', ldvNumber)
-      .eq('deleted', false)
-      .limit(1)
-      .maybeSingle();
+      .eq('deleted', false);
+
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+    }
+
+    let { data, error } = await query.limit(1).maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
       console.error('Errore ricerca spedizione per LDV:', error);
@@ -36,13 +44,17 @@ async function findShipmentByLDV(ldvNumber: string): Promise<Shipment | null> {
     }
 
     // Fallback: cerca per tracking_number
-    const { data: trackingData, error: trackingError } = await supabaseAdmin
+    let trackingQuery = supabaseAdmin
       .from('shipments')
       .select('*')
       .eq('tracking_number', ldvNumber)
-      .eq('deleted', false)
-      .limit(1)
-      .maybeSingle();
+      .eq('deleted', false);
+
+    if (workspaceId) {
+      trackingQuery = trackingQuery.eq('workspace_id', workspaceId);
+    }
+
+    const { data: trackingData, error: trackingError } = await trackingQuery.limit(1).maybeSingle();
 
     if (trackingError && trackingError.code !== 'PGRST116') {
       console.error('Errore ricerca spedizione per tracking:', trackingError);
@@ -92,8 +104,11 @@ export async function confirmPickupScan(
 
     const ldvClean = ldvNumber.trim().toUpperCase();
 
-    // 3. Cerca spedizione per LDV o tracking number
-    const shipment = await findShipmentByLDV(ldvClean);
+    // 3. Workspace isolation
+    const workspaceId = context.workspace?.id;
+
+    // 4. Cerca spedizione per LDV o tracking number (filtrata per workspace)
+    const shipment = await findShipmentByLDV(ldvClean, workspaceId);
 
     if (!shipment) {
       return {

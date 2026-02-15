@@ -13,17 +13,26 @@ import type { Shipment } from '@/types/shipments';
 
 /**
  * Cerca una spedizione per tracking number o LDV
+ * @param trackingNumber - Tracking o LDV da cercare
+ * @param workspaceId - Workspace ID per isolamento multi-tenant (opzionale per backward-compat)
  */
-async function findShipmentByTracking(trackingNumber: string): Promise<Shipment | null> {
+async function findShipmentByTracking(
+  trackingNumber: string,
+  workspaceId?: string
+): Promise<Shipment | null> {
   try {
     // Cerca prima per tracking_number
-    let { data, error } = await supabaseAdmin
+    let query = supabaseAdmin
       .from('shipments')
       .select('*')
       .eq('tracking_number', trackingNumber)
-      .eq('deleted', false)
-      .limit(1)
-      .maybeSingle();
+      .eq('deleted', false);
+
+    if (workspaceId) {
+      query = query.eq('workspace_id', workspaceId);
+    }
+
+    let { data, error } = await query.limit(1).maybeSingle();
 
     if (error && error.code !== 'PGRST116') {
       console.error('Errore ricerca spedizione per tracking:', error);
@@ -36,13 +45,17 @@ async function findShipmentByTracking(trackingNumber: string): Promise<Shipment 
     }
 
     // Fallback: cerca per LDV
-    const { data: ldvData, error: ldvError } = await supabaseAdmin
+    let ldvQuery = supabaseAdmin
       .from('shipments')
       .select('*')
       .eq('ldv', trackingNumber)
-      .eq('deleted', false)
-      .limit(1)
-      .maybeSingle();
+      .eq('deleted', false);
+
+    if (workspaceId) {
+      ldvQuery = ldvQuery.eq('workspace_id', workspaceId);
+    }
+
+    const { data: ldvData, error: ldvError } = await ldvQuery.limit(1).maybeSingle();
 
     if (ldvError && ldvError.code !== 'PGRST116') {
       console.error('Errore ricerca spedizione per LDV:', ldvError);
@@ -113,8 +126,11 @@ export async function processReturnScan(
     const ldvClean = ldvReturnNumber.trim().toUpperCase();
     const trackingClean = originalTracking.trim().toUpperCase();
 
-    // 3. Cerca spedizione originale
-    const originalShipment = await findShipmentByTracking(trackingClean);
+    // 3. Workspace isolation
+    const workspaceId = context.workspace?.id;
+
+    // 4. Cerca spedizione originale (filtrata per workspace)
+    const originalShipment = await findShipmentByTracking(trackingClean, workspaceId);
 
     if (!originalShipment) {
       return {
@@ -230,6 +246,9 @@ export async function processReturnScan(
 
       // Soft delete
       deleted: false,
+
+      // Workspace isolation: eredita workspace dalla spedizione originale
+      workspace_id: (originalShipment as any).workspace_id || workspaceId || null,
     };
 
     // Aggiungi GPS se fornito

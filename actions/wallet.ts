@@ -4,7 +4,7 @@
  * Server Actions per Gestione Wallet Utente
  *
  * CRITICAL: Migrato a Acting Context (Impersonation Support)
- * - Usa requireSafeAuth() per supportare impersonation
+ * - Usa requireWorkspaceAuth() per supportare impersonation
  * - Opera sempre su context.target (chi paga), non su actor (chi clicca)
  * - Audit log completo con actor + target
  *
@@ -188,7 +188,7 @@ export async function rechargeMyWallet(
  * Server Action: Ottieni transazioni wallet dell'utente corrente
  *
  * CRITICAL: Migrato a Acting Context (Impersonation Support)
- * - Usa requireSafeAuth() per supportare impersonation
+ * - Usa requireWorkspaceAuth() per supportare impersonation
  * - Ritorna transazioni del TARGET (non dell'actor se impersonating)
  */
 export async function getMyWalletTransactions(): Promise<{
