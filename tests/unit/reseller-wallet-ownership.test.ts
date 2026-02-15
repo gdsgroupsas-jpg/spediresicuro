@@ -107,6 +107,14 @@ vi.mock('@/lib/safe-auth', () => ({
   getSafeAuth: vi.fn(() => mockAuthResponse),
 }));
 
+vi.mock('@/lib/workspace-auth', () => ({
+  getWorkspaceAuth: vi.fn(() => mockAuthResponse),
+  requireWorkspaceAuth: vi.fn(() => {
+    if (!mockAuthResponse) throw new Error('UNAUTHORIZED: Workspace access required');
+    return mockAuthResponse;
+  }),
+}));
+
 // Import dopo i mock
 import { manageSubUserWallet } from '@/actions/admin-reseller';
 
@@ -129,8 +137,17 @@ describe('manageSubUserWallet - Ownership verification', () => {
 
     // Default: autenticato come reseller
     mockAuthResponse = {
-      actor: { email: RESELLER_EMAIL },
+      actor: {
+        id: RESELLER_ID,
+        email: RESELLER_EMAIL,
+        account_type: 'user',
+        is_reseller: true,
+        role: 'user',
+      },
+      workspace: { id: 'ws-test-123' },
       target: { id: RESELLER_ID, email: RESELLER_EMAIL },
+      isImpersonating: false,
+      metadata: {},
     };
 
     // Default: utente corrente e' reseller
@@ -157,6 +174,11 @@ describe('manageSubUserWallet - Ownership verification', () => {
   });
 
   it("dovrebbe rifiutare se non e' reseller", async () => {
+    // Aggiorna auth context per non-reseller
+    mockAuthResponse = {
+      ...mockAuthResponse,
+      actor: { ...mockAuthResponse.actor, is_reseller: false },
+    };
     // Sovrascrivi: non e' reseller
     queryMatchers = [];
     mockQuery(

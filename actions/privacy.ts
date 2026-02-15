@@ -8,7 +8,7 @@
  * - Cancellazione account con anonimizzazione (Diritto all'Oblio - Art. 17 GDPR)
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 /**
@@ -30,7 +30,7 @@ export async function exportUserData(): Promise<{
 }> {
   try {
     // Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return {
         success: false,
@@ -167,7 +167,7 @@ export async function requestAccountDeletion(confirmation: string): Promise<{
 }> {
   try {
     // Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return {
         success: false,

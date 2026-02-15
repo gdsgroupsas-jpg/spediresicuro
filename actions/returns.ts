@@ -6,7 +6,7 @@
  * Gestisce la scansione e registrazione dei resi con OCR/Barcode
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { generateTrackingNumber } from '@/lib/db/shipments';
 import type { Shipment } from '@/types/shipments';
@@ -79,7 +79,7 @@ export async function processReturnScan(
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {

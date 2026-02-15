@@ -8,7 +8,7 @@
  * - Evaso
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import type { Shipment } from '@/types/shipments';
 
@@ -22,7 +22,7 @@ export async function markContrassegnoInCarica(shipmentId: string): Promise<{
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {
@@ -93,7 +93,7 @@ export async function markContrassegnoEvaso(shipmentId: string): Promise<{
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {

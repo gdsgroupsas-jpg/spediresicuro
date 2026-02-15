@@ -9,7 +9,7 @@
 
 'use server';
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { updatePriceList } from '@/lib/db/price-lists';
 import { PRICING_MATRIX, getZonesForMode } from '@/lib/constants/pricing-matrix';
@@ -30,7 +30,7 @@ export async function approvePriceListAction(
   mode: 'fast' | 'balanced' | 'matrix' = 'balanced'
 ): Promise<ApprovePriceListResult> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }

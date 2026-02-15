@@ -9,7 +9,7 @@
 
 'use server';
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 // ============================================
@@ -90,30 +90,20 @@ async function verifySuperAdmin(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const wsContext = await getWorkspaceAuth();
 
-    if (!context?.actor?.email) {
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
 
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (error || !user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
-
-    if (user.account_type !== 'superadmin') {
+    if (wsContext.actor.account_type !== 'superadmin') {
       return {
         success: false,
         error: 'Accesso non autorizzato: solo SuperAdmin',
       };
     }
 
-    return { success: true, userId: user.id };
+    return { success: true, userId: wsContext.actor.id };
   } catch (error: any) {
     console.error('[PLATFORM_COSTS] verifySuperAdmin error:', error);
     return { success: false, error: error?.message || 'Errore di autenticazione' };

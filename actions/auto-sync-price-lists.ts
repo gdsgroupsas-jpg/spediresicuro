@@ -12,7 +12,7 @@
  */
 
 import { syncPriceListsFromSpedisciOnline } from '@/actions/spedisci-online-rates';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 /**
@@ -32,7 +32,7 @@ export async function autoSyncPriceListsAfterConfig(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       console.log('⚠️ [AUTO-SYNC] Utente non autenticato, salto sincronizzazione');
       return { success: false, error: 'Non autenticato' };

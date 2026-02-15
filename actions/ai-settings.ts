@@ -6,14 +6,15 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
-import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { isSuperAdmin } from '@/lib/safe-auth';
 
 /**
  * Verifica se l'utente corrente è Superadmin
  */
 async function verifySuperAdmin(): Promise<{ isSuperAdmin: boolean; error?: string }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return { isSuperAdmin: false, error: 'Non autenticato' };
@@ -85,7 +86,7 @@ export async function updateAIProviderSetting(
     }
 
     // Ottieni email utente corrente
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     const updatedBy = context?.actor?.email || 'unknown';
 
     // Determina model default se non specificato

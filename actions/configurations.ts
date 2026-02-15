@@ -7,7 +7,7 @@
  * Solo gli admin possono eseguire queste operazioni.
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { findUserByEmail } from '@/lib/database';
 import { supabaseAdmin } from '@/lib/db/client';
 import { logAuditEvent } from '@/lib/security/audit-log';
@@ -74,7 +74,7 @@ async function verifyAdminAccess(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return { isAdmin: false, error: 'Non autenticato' };
@@ -142,7 +142,7 @@ async function verifyConfigAccess(configOwnerUserId: string | null): Promise<{
   userId?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return { canAccess: false, error: 'Non autenticato' };
@@ -273,7 +273,7 @@ export async function saveConfiguration(data: CourierConfigInput): Promise<{
       return { success: false, error: authError };
     }
 
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     const adminEmail = context?.actor?.email || 'system';
 
     // 2. Validazione input
@@ -419,7 +419,7 @@ export async function savePersonalConfiguration(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
@@ -560,7 +560,7 @@ export async function deletePersonalConfiguration(id: string): Promise<{
   message?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
@@ -713,7 +713,7 @@ export async function deleteConfiguration(id: string): Promise<{
 
       if (defaultCheck?.is_default) {
         // Verifica ruolo reseller: solo admin può eliminare config default
-        const context = await getSafeAuth();
+        const context = await getWorkspaceAuth();
         if (context?.actor?.email) {
           const { data: currentUser } = await supabaseAdmin
             .from('users')
@@ -1153,7 +1153,7 @@ export async function setPersonalConfigurationAsDefault(id: string): Promise<{
   message?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
@@ -1239,7 +1239,7 @@ export async function assignConfigurationToUser(
   message?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
@@ -1346,7 +1346,7 @@ export async function listConfigurations(): Promise<{
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }

@@ -6,7 +6,6 @@
 
 'use server';
 
-import { getSafeAuth } from '@/lib/safe-auth';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import {

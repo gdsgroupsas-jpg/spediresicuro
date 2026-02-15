@@ -9,7 +9,7 @@
  * @since Sprint 2 - UX Unification
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 export interface ListinoInfo {
@@ -52,7 +52,7 @@ export async function getResellerClientsWithListino(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
@@ -285,7 +285,7 @@ export async function getChildWorkspaces(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
@@ -362,7 +362,7 @@ export async function getResellerClientsBasic(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }

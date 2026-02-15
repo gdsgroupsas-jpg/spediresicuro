@@ -10,7 +10,7 @@
  * - Verifica stato
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { syncCourierConfig } from '@/lib/automation/spedisci-online-agent';
 import type { AutomationSettings } from '@/lib/automation/spedisci-online-agent';
@@ -21,7 +21,7 @@ import { encryptCredential, decryptCredential } from '@/lib/security/encryption'
  */
 async function verifyAdminAccess(): Promise<{ isAdmin: boolean; error?: string }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { isAdmin: false, error: 'Non autenticato' };
     }
@@ -330,7 +330,7 @@ export async function acquireManualLock(
   durationMinutes: number = 60
 ): Promise<{ success: boolean; lock_id?: string; error?: string }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }

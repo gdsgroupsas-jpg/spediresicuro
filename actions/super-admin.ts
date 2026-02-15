@@ -10,7 +10,7 @@
  * - Visualizzare tutti gli utenti
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendPremiumWelcomeEmail } from '@/lib/email/resend';
 
@@ -20,28 +20,20 @@ import { sendPremiumWelcomeEmail } from '@/lib/email/resend';
 async function isCurrentUserSuperAdmin(): Promise<{
   isSuperAdmin: boolean;
   userId?: string;
+  userEmail?: string;
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const wsContext = await getWorkspaceAuth();
 
-    if (!context?.actor?.email) {
+    if (!wsContext) {
       return { isSuperAdmin: false, error: 'Non autenticato' };
     }
 
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (error || !user) {
-      return { isSuperAdmin: false, error: 'Admin user record not found' };
-    }
-
     return {
-      isSuperAdmin: user.account_type === 'superadmin',
-      userId: user.id,
+      isSuperAdmin: wsContext.actor.account_type === 'superadmin',
+      userId: wsContext.actor.id,
+      userEmail: wsContext.actor.email || undefined,
     };
   } catch (error: any) {
     console.error('Errore verifica Super Admin:', error);
@@ -238,12 +230,11 @@ export async function manageWallet(
 
     // 7. Audit log
     try {
-      const context = await getSafeAuth();
       await supabaseAdmin.from('audit_logs').insert({
         action: amount > 0 ? 'wallet_credit_added' : 'wallet_credit_removed',
         resource_type: 'wallet',
         resource_id: userId,
-        user_email: context?.actor?.email || 'unknown',
+        user_email: superAdminCheck.userEmail || 'unknown',
         user_id: superAdminCheck.userId,
         metadata: {
           amount: Math.abs(amount),
@@ -920,12 +911,11 @@ export async function updateResellerRole(
 
     // 5. Audit log
     try {
-      const context = await getSafeAuth();
       await supabaseAdmin.from('audit_logs').insert({
         action: 'reseller_role_updated',
         resource_type: 'user',
         resource_id: userId,
-        user_email: context?.actor?.email || 'unknown',
+        user_email: superAdminCheck.userEmail || 'unknown',
         user_id: superAdminCheck.userId,
         metadata: {
           target_user_email: targetUser.email,
@@ -1012,12 +1002,11 @@ export async function updateUserAiFeatures(
 
     // 5. Audit log
     try {
-      const context = await getSafeAuth();
       await supabaseAdmin.from('audit_logs').insert({
         action: 'ai_features_updated',
         resource_type: 'user',
         resource_id: userId,
-        user_email: context?.actor?.email || 'unknown',
+        user_email: superAdminCheck.userEmail || 'unknown',
         user_id: superAdminCheck.userId,
         metadata: {
           features: features,

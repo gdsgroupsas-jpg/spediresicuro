@@ -12,7 +12,7 @@
 
 'use server';
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getPriceListById } from '@/lib/db/price-lists';
 import type {
@@ -29,7 +29,7 @@ export async function getSupplierPriceListConfig(priceListId: string): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
@@ -127,7 +127,7 @@ export async function upsertSupplierPriceListConfig(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
@@ -379,7 +379,7 @@ export async function deleteSupplierPriceListConfig(priceListId: string): Promis
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
@@ -436,7 +436,7 @@ export async function listSupplierPriceListConfigs(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }

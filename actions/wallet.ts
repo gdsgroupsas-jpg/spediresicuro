@@ -14,13 +14,14 @@
  * - Visualizzare le proprie transazioni
  */
 
-import { requireSafeAuth, getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
+import { requireWorkspaceAuth, getWorkspaceAuth } from '@/lib/workspace-auth';
+import { isSuperAdmin } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { writeWalletAuditLog } from '@/lib/security/audit-log';
 import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
 
 /**
- * DEPRECATED: Legacy function, migrato a getSafeAuth() + isSuperAdmin()
+ * DEPRECATED: Legacy function, migrato a getWorkspaceAuth() + isSuperAdmin()
  * Mantenuto per compatibilità temporanea, ma NON usare in nuovo codice
  */
 async function isCurrentUserAdmin_DEPRECATED(): Promise<{
@@ -29,11 +30,11 @@ async function isCurrentUserAdmin_DEPRECATED(): Promise<{
   isSuperAdmin?: boolean;
 }> {
   console.warn(
-    '⚠️ [DEPRECATED] isCurrentUserAdmin() is deprecated. Use getSafeAuth() + isSuperAdmin() instead.'
+    '⚠️ [DEPRECATED] isCurrentUserAdmin() is deprecated. Use getWorkspaceAuth() + isSuperAdmin() instead.'
   );
 
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context) {
       return { isAdmin: false };
@@ -74,7 +75,7 @@ export async function rechargeMyWallet(
 }> {
   try {
     // 1. Get Safe Auth (Acting Context)
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
 
     // 2. Extract target and actor (target = who receives credit, actor = who clicked)
     const targetId = context.target.id;
@@ -197,7 +198,7 @@ export async function getMyWalletTransactions(): Promise<{
 }> {
   try {
     // Get Safe Auth (Acting Context)
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
 
     // Extract target ID (who owns the wallet)
     const targetId = context.target.id;

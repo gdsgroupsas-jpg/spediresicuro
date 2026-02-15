@@ -8,7 +8,7 @@
  * @module actions/reseller-fiscal-report
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { computeMargin } from '@/lib/financial';
 import type {
@@ -277,7 +277,7 @@ export async function getResellerFiscalReport(
   filters: FiscalReportFilters
 ): Promise<FiscalReportResult> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
@@ -478,7 +478,7 @@ export async function getResellerMarginByProvider(
   filters: FiscalReportFilters
 ): Promise<{ success: boolean; data?: ResellerProviderMarginData[]; error?: string }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }

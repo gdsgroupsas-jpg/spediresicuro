@@ -6,7 +6,7 @@
  * Gestisce la creazione di sotto-admin e la gestione della gerarchia
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { createUser } from '@/lib/database';
 import type { User } from '@/lib/database';
@@ -56,7 +56,7 @@ export async function createSubAdmin(
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {
@@ -210,7 +210,7 @@ export async function getDirectSubAdmins(parentEmail: string): Promise<{
 }> {
   try {
     // Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email || context.actor.email !== parentEmail) {
       return {
@@ -276,7 +276,7 @@ export async function getHierarchyStats(parentEmail: string): Promise<{
 }> {
   try {
     // Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email || context.actor.email !== parentEmail) {
       return {
@@ -372,7 +372,7 @@ export async function deleteSubAdmin(subAdminId: string): Promise<{
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {

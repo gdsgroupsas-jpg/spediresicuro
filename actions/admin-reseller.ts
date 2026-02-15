@@ -12,7 +12,7 @@
  */
 
 import crypto from 'crypto';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { createUser } from '@/lib/database';
 import bcrypt from 'bcryptjs';
@@ -29,25 +29,15 @@ async function isCurrentUserReseller(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const wsContext = await getWorkspaceAuth();
 
-    if (!context?.actor?.email) {
+    if (!wsContext) {
       return { isReseller: false, error: 'Non autenticato' };
     }
 
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('id, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (error || !user) {
-      return { isReseller: false, error: 'Utente non trovato' };
-    }
-
     return {
-      isReseller: user.is_reseller === true,
-      userId: user.id,
+      isReseller: wsContext.actor.is_reseller === true,
+      userId: wsContext.actor.id,
     };
   } catch (error: any) {
     console.error('Errore verifica Reseller:', error);
@@ -60,55 +50,39 @@ async function isCurrentUserReseller(): Promise<{
  */
 async function canViewAllClients(): Promise<{ canView: boolean; userId?: string; error?: string }> {
   try {
-    const context = await getSafeAuth();
+    const wsContext = await getWorkspaceAuth();
 
-    if (!context?.actor?.email) {
+    if (!wsContext) {
       console.error('❌ [canViewAllClients] Non autenticato');
       return { canView: false, error: 'Non autenticato' };
     }
 
-    console.log('🔍 [canViewAllClients] Verifica per:', context.actor.email);
+    const actorId = wsContext.actor.id;
+    const accountType = wsContext.actor.account_type;
+    const role = wsContext.actor.role;
 
-    const { data: user, error } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, role')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (error || !user) {
-      console.error('❌ [canViewAllClients] Utente non trovato:', {
-        error: error?.message,
-        email: context.actor.email,
-      });
-      return { canView: false, error: 'Utente non trovato' };
-    }
-
-    console.log('✅ [canViewAllClients] Utente trovato:', {
-      id: user.id,
-      account_type: user.account_type,
-      role: user.role,
-    });
+    console.log('🔍 [canViewAllClients] Verifica per:', wsContext.actor.email);
 
     // Superadmin può sempre vedere tutto
-    if (user.account_type === 'superadmin') {
+    if (accountType === 'superadmin') {
       console.log('✅ [canViewAllClients] Superadmin - accesso concesso');
-      return { canView: true, userId: user.id };
+      return { canView: true, userId: actorId };
     }
 
     // Verifica capability can_view_all_clients
-    const hasCap = await hasCapability(user.id, 'can_view_all_clients', {
-      account_type: user.account_type,
-      role: user.role,
+    const hasCap = await hasCapability(actorId, 'can_view_all_clients', {
+      account_type: accountType,
+      role,
     });
 
     console.log('🔍 [canViewAllClients] Capability check:', {
       hasCap,
-      account_type: user.account_type,
+      account_type: accountType,
     });
 
     return {
       canView: hasCap,
-      userId: user.id,
+      userId: actorId,
     };
   } catch (error: any) {
     console.error('❌ [canViewAllClients] Errore critico:', {
@@ -141,7 +115,7 @@ export async function createSubUser(data: {
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {
@@ -359,7 +333,7 @@ export async function getSubUsers(): Promise<{
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {
@@ -450,7 +424,7 @@ export async function getSubUsersStats(): Promise<{
 }> {
   try {
     // 1. Verifica autenticazione e Reseller status
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {
@@ -553,7 +527,7 @@ export async function manageSubUserWallet(
 }> {
   try {
     // 1. Verifica autenticazione e Reseller status
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {
@@ -691,7 +665,7 @@ export async function manageSubUserWallet(
 
     // 5. Audit log
     try {
-      const auditContext = await getSafeAuth();
+      const auditContext = await getWorkspaceAuth();
       await supabaseAdmin.from('audit_logs').insert({
         action: 'reseller_transfer_credit',
         resource_type: 'wallet',
@@ -747,7 +721,7 @@ export async function updateSubUserBillingMode(
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato.' };
     }
@@ -915,7 +889,7 @@ export async function getSubUsersShipments(limit: number = 50): Promise<{
 }> {
   try {
     // 1. Verifica autenticazione e Reseller status
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {
@@ -1035,7 +1009,7 @@ export async function getAllClientsForUser(): Promise<{
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       console.error('❌ [getAllClientsForUser] Non autenticato');

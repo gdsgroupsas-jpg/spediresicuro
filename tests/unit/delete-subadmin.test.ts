@@ -11,6 +11,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
+// Shared mock function accessibile da tutte le factory hoistate
+const { sharedMockGetAuth } = vi.hoisted(() => ({
+  sharedMockGetAuth: vi.fn(),
+}));
+
 // Mock modules PRIMA di qualsiasi altra cosa
 // Le factory functions vengono hoistate, quindi non possono usare variabili esterne
 vi.mock('@/lib/db/client', () => {
@@ -39,22 +44,27 @@ vi.mock('@/lib/db/client', () => {
   return { supabaseAdmin: chain };
 });
 
-vi.mock('@/lib/safe-auth', () => {
-  const mockGetSafeAuth = vi.fn();
-  return {
-    getSafeAuth: mockGetSafeAuth,
-    __mockGetSafeAuth: mockGetSafeAuth,
-  };
-});
+vi.mock('@/lib/safe-auth', () => ({
+  getSafeAuth: sharedMockGetAuth,
+  __mockGetSafeAuth: sharedMockGetAuth,
+}));
+
+vi.mock('@/lib/workspace-auth', () => ({
+  getWorkspaceAuth: sharedMockGetAuth,
+  requireWorkspaceAuth: vi.fn(async () => {
+    const result = await sharedMockGetAuth();
+    if (!result) throw new Error('UNAUTHORIZED: Workspace access required');
+    return result;
+  }),
+}));
 
 // Import dopo i mock
 import { deleteSubAdmin } from '@/actions/admin';
 import { supabaseAdmin } from '@/lib/db/client';
-import * as safeAuthModule from '@/lib/safe-auth';
 
 // Accesso ai mock
 const mockSupabase = supabaseAdmin as any;
-const mockGetSafeAuth = (safeAuthModule as any).__mockGetSafeAuth as ReturnType<typeof vi.fn>;
+const mockGetSafeAuth = sharedMockGetAuth;
 const { singleMock, eqMock, insertMock } = mockSupabase.__mocks;
 
 describe('deleteSubAdmin', () => {

@@ -10,7 +10,7 @@
  * - Si vuole evitare costi API
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { generateShipmentPDF, generateShipmentCSV } from '@/lib/generate-shipment-document';
 import type { Shipment } from '@/types/shipments';
@@ -33,7 +33,7 @@ export async function generateInternalLDV(
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return {
         success: false,

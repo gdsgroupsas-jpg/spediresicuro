@@ -11,7 +11,7 @@
 
 'use server';
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { testSpedisciOnlineRates } from './spedisci-online-rates';
 import { PRICING_MATRIX, getZonesForMode, getWeightsForMode } from '@/lib/constants/pricing-matrix';
@@ -45,7 +45,7 @@ export async function syncIncrementalPriceListEntries(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return {
         success: false,
@@ -362,7 +362,7 @@ export async function getExistingZonesForPriceListAction(priceListId: string): P
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }

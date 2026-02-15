@@ -1,4 +1,4 @@
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { PRICING_MATRIX } from '@/lib/constants/pricing-matrix';
 import { supabaseAdmin } from '@/lib/db/client';
 import { createPriceList } from '@/lib/db/price-lists';
@@ -29,7 +29,7 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
   };
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }

@@ -7,7 +7,7 @@
  * tramite la tabella price_list_assignments (relazione N:N).
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { findUserByEmail } from '@/lib/database';
 
@@ -20,7 +20,7 @@ async function verifySuperAdminAccess(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return { isAuthorized: false, error: 'Non autenticato' };

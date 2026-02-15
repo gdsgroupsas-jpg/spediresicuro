@@ -6,7 +6,7 @@
  * Gestisce la scansione LDV e il ritiro dei pacchi con geolocalizzazione
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { createServerActionClient } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/db/client';
 import type { Shipment } from '@/types/shipments';
@@ -73,7 +73,7 @@ export async function confirmPickupScan(
 }> {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return {

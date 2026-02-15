@@ -11,7 +11,7 @@
 
 import { getSpedisciOnlineCredentials } from '@/lib/actions/spedisci-online';
 import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { getQuoteWithCache, type QuoteCacheParams } from '@/lib/cache/quote-cache';
 import { supabaseAdmin } from '@/lib/db/client';
 import { addPriceListEntries, createPriceList, upsertPriceListEntries } from '@/lib/db/price-lists';
@@ -74,7 +74,7 @@ export async function testSpedisciOnlineRates(testParams?: {
   };
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
@@ -248,7 +248,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
   let lockKey: string | null = null;
 
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return { success: false, error: 'Non autenticato' };
     }
