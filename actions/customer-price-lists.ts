@@ -7,7 +7,7 @@
 
 'use server';
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { createPriceList } from '@/lib/db/price-lists';
 import type { CreatePriceListInput } from '@/types/listini';
@@ -30,20 +30,16 @@ export async function createCustomerPriceListAction(data: {
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     const isReseller = user.is_reseller === true;
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
@@ -102,7 +98,7 @@ export async function createCustomerPriceListAction(data: {
       priority: 'client', // Priorità per listini cliente
     };
 
-    const priceList = await createPriceList(priceListData, user.id);
+    const priceList = await createPriceList(priceListData, user.id, workspaceId);
 
     return { success: true, priceList };
   } catch (error: any) {
@@ -122,20 +118,16 @@ export async function getResellerSubUsersAction(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     const isReseller = user.is_reseller === true;
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
@@ -193,20 +185,16 @@ export async function updateCustomerPriceListMarginAction(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi sul listino
     const { getPriceListById } = await import('@/lib/db/price-lists');
@@ -276,20 +264,16 @@ export async function assignCustomerPriceListToMultipleUsersAction(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     const isReseller = user.is_reseller === true;
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';

@@ -53,12 +53,12 @@ import {
 } from '@/actions/price-lists';
 import { getAvailableCouriersForUser } from '@/lib/db/price-lists';
 
-// Mock getSafeAuth per test (le Server Actions usano getSafeAuth, non auth diretto)
+// Mock getSafeAuth per test (mantenuto per compatibilita', non piu' usato dalle actions migrate)
 vi.mock('@/lib/safe-auth', () => ({
   getSafeAuth: vi.fn(),
 }));
 
-// Mock getWorkspaceAuth per test (listPriceListsAction e listUsersForAssignmentAction)
+// Mock getWorkspaceAuth per test (tutte le actions ora usano getWorkspaceAuth)
 vi.mock('@/lib/workspace-auth', () => ({
   getWorkspaceAuth: vi.fn(),
 }));
@@ -217,30 +217,21 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         console.log('⏭️  Test saltato: Supabase non configurato');
         return;
       }
-      // Mock auth per Reseller
-      (getSafeAuth as any).mockResolvedValue({
-        actor: { email: `test-reseller-phase3-${Date.now()}@test.local` },
+      // Mock auth per Reseller (getWorkspaceAuth)
+      (getWorkspaceAuth as any).mockResolvedValue({
+        actor: {
+          id: resellerUserId,
+          email: `test-reseller-phase3-${Date.now()}@test.local`,
+          account_type: 'user',
+          is_reseller: true,
+        },
+        workspace: { id: 'test-workspace-id' },
       });
 
       const mockPriceListId = `test-pricelist-${Date.now()}`;
 
-      // Mock completo per users e price_lists
+      // Mock completo per price_lists
       vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
-        if (table === 'users') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: {
-                    id: resellerUserId,
-                    account_type: 'user',
-                    is_reseller: true,
-                  },
-                }),
-              }),
-            }),
-          } as any;
-        }
         if (table === 'price_lists') {
           return {
             insert: vi.fn().mockReturnValue({
@@ -288,30 +279,21 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
         console.log('⏭️  Test saltato: Supabase non configurato');
         return;
       }
-      // Mock auth per BYOC
-      (getSafeAuth as any).mockResolvedValue({
-        actor: { email: `test-byoc-phase3-${Date.now()}@test.local` },
+      // Mock auth per BYOC (getWorkspaceAuth)
+      (getWorkspaceAuth as any).mockResolvedValue({
+        actor: {
+          id: byocUserId,
+          email: `test-byoc-phase3-${Date.now()}@test.local`,
+          account_type: 'byoc',
+          is_reseller: false,
+        },
+        workspace: { id: 'test-workspace-id' },
       });
 
       const mockPriceListId = `test-pricelist-byoc-${Date.now()}`;
 
-      // Mock completo per users e price_lists
+      // Mock completo per price_lists
       vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
-        if (table === 'users') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: {
-                    id: byocUserId,
-                    account_type: 'byoc',
-                    is_reseller: false,
-                  },
-                }),
-              }),
-            }),
-          } as any;
-        }
         if (table === 'price_lists') {
           return {
             insert: vi.fn().mockReturnValue({
@@ -350,29 +332,15 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
     });
 
     it('Utente normale NON può creare listino fornitore', async () => {
-      // Mock auth per utente normale
-      (getSafeAuth as any).mockResolvedValue({
-        actor: { email: `test-user-phase3-${Date.now()}@test.local` },
-      });
-
-      // Mock recupero utente normale
-      vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
-        if (table === 'users') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: {
-                    id: 'user-normal-id',
-                    account_type: 'user',
-                    is_reseller: false,
-                  },
-                }),
-              }),
-            }),
-          } as any;
-        }
-        return originalSupabaseFrom(table);
+      // Mock auth per utente normale (getWorkspaceAuth)
+      (getWorkspaceAuth as any).mockResolvedValue({
+        actor: {
+          id: 'user-normal-id',
+          email: `test-user-phase3-${Date.now()}@test.local`,
+          account_type: 'user',
+          is_reseller: false,
+        },
+        workspace: { id: 'test-workspace-id' },
       });
 
       const result = await createSupplierPriceListAction({
@@ -396,28 +364,19 @@ describe('Fase 3: Listini Fornitore - Server Actions', () => {
 
       const mockPriceListId = `test-pricelist-list-${Date.now()}`;
 
-      // Mock auth per Reseller
-      (getSafeAuth as any).mockResolvedValue({
-        actor: { email: `test-reseller-phase3-${Date.now()}@test.local` },
+      // Mock auth per Reseller (getWorkspaceAuth)
+      (getWorkspaceAuth as any).mockResolvedValue({
+        actor: {
+          id: resellerUserId,
+          email: `test-reseller-phase3-${Date.now()}@test.local`,
+          account_type: 'user',
+          is_reseller: true,
+        },
+        workspace: { id: 'test-workspace-id' },
       });
 
-      // Mock completo per users e price_lists
+      // Mock completo per price_lists
       vi.spyOn(supabaseAdmin, 'from').mockImplementation((table: string) => {
-        if (table === 'users') {
-          return {
-            select: vi.fn().mockReturnValue({
-              eq: vi.fn().mockReturnValue({
-                single: vi.fn().mockResolvedValue({
-                  data: {
-                    id: resellerUserId,
-                    account_type: 'user',
-                    is_reseller: true,
-                  },
-                }),
-              }),
-            }),
-          } as any;
-        }
         if (table === 'price_lists') {
           return {
             select: vi.fn().mockReturnValue({

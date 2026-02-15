@@ -10,7 +10,7 @@
 
 'use server';
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { assertValidUserId } from '@/lib/validators';
 import type { PriceList, PriceListEntry } from '@/types/listini';
@@ -39,21 +39,15 @@ export async function resellerCloneSupplierPriceListAction(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    // Recupera utente per verifica
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, is_reseller, account_type')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
 
     const isReseller = user.is_reseller === true;
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
@@ -154,19 +148,17 @@ export async function resellerAssignPriceListAction(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
 
-    // Recupera utente per verifica
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user || !user.is_reseller) {
+    if (!user.is_reseller) {
       return {
         success: false,
         error: 'Non autorizzato: solo reseller possono assegnare listini',
@@ -221,18 +213,16 @@ export async function getResellerSubUsersAction(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
+    const user = {
+      id: wsContext.actor.id,
+      is_reseller: wsContext.actor.is_reseller,
+    };
 
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user || !user.is_reseller) {
+    if (!user.is_reseller) {
       return {
         success: false,
         error: 'Non autorizzato: solo reseller possono vedere sub-users',
@@ -287,20 +277,15 @@ export async function getResellerSupplierPriceListsAction(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, is_reseller, account_type')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
 
     const isReseller = user.is_reseller === true;
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
@@ -357,18 +342,16 @@ export async function updateResellerPriceListMarginAction(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
+    const user = {
+      id: wsContext.actor.id,
+      is_reseller: wsContext.actor.is_reseller,
+    };
 
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user || !user.is_reseller) {
+    if (!user.is_reseller) {
       return {
         success: false,
         error: 'Non autorizzato: solo reseller possono modificare margini',
@@ -468,18 +451,16 @@ export async function activateResellerPriceListAction(priceListId: string): Prom
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
+    const user = {
+      id: wsContext.actor.id,
+      is_reseller: wsContext.actor.is_reseller,
+    };
 
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user || !user.is_reseller) {
+    if (!user.is_reseller) {
       return {
         success: false,
         error: 'Non autorizzato',
@@ -555,18 +536,16 @@ export async function importPriceListEntriesAction(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
+    const user = {
+      id: wsContext.actor.id,
+      is_reseller: wsContext.actor.is_reseller,
+    };
 
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user || !user.is_reseller) {
+    if (!user.is_reseller) {
       return {
         success: false,
         error: 'Non autorizzato: solo reseller possono importare entries',

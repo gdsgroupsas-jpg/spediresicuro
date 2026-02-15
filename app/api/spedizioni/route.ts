@@ -8,7 +8,6 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { addSpedizione, getSpedizioni } from '@/lib/database';
 import type { AuthContext } from '@/lib/auth-context';
@@ -146,7 +145,7 @@ export async function GET(request: NextRequest) {
     logger.info('GET /api/spedizioni - Richiesta lista spedizioni');
 
     // Autenticazione
-    session = await getSafeAuth();
+    session = await getWorkspaceAuth();
 
     if (!session?.actor?.email) {
       logger.warn('GET /api/spedizioni - Non autenticato');
@@ -416,7 +415,7 @@ export async function POST(request: NextRequest) {
     logger.info('POST /api/spedizioni - Richiesta creazione spedizione');
 
     // Autenticazione
-    session = await getSafeAuth();
+    session = await getWorkspaceAuth();
 
     if (!session?.actor?.email) {
       logger.warn('POST /api/spedizioni - Non autenticato');
@@ -502,9 +501,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // ✨ M3: Recupera workspace per pricing
-      const wsContext = await getWorkspaceAuth();
-      const workspaceId = wsContext?.workspace?.id || '';
+      // ✨ M3: Workspace per pricing (già disponibile in session)
+      const workspaceId = session?.workspace?.id || '';
 
       const priceResult = await calculatePriceFromPriceList({
         userId,
@@ -1272,7 +1270,7 @@ export async function DELETE(request: NextRequest) {
     logger.info('DELETE /api/spedizioni - Richiesta eliminazione spedizione');
 
     // Autenticazione
-    session = await getSafeAuth();
+    session = await getWorkspaceAuth();
 
     if (!session?.actor?.email) {
       logger.warn('DELETE /api/spedizioni - Non autenticato');

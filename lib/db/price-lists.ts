@@ -19,18 +19,29 @@ export { calculatePriceWithRules, getApplicablePriceList } from './price-lists-a
 
 /**
  * Crea nuovo listino
+ * @param data - Dati listino
+ * @param userId - ID utente creatore
+ * @param workspaceId - ID workspace (obbligatorio per isolamento multi-tenant)
  */
 export async function createPriceList(
   data: CreatePriceListInput,
-  userId: string
+  userId: string,
+  workspaceId?: string
 ): Promise<PriceList> {
   // Metadata ora esiste (migration 059 applicata), possiamo includerlo direttamente
+  const insertData: Record<string, any> = {
+    ...data,
+    created_by: userId,
+  };
+
+  // Setta workspace_id se fornito (obbligatorio per isolamento multi-tenant)
+  if (workspaceId) {
+    insertData.workspace_id = workspaceId;
+  }
+
   const { data: priceList, error } = await supabaseAdmin
     .from('price_lists')
-    .insert({
-      ...data,
-      created_by: userId,
-    })
+    .insert(insertData)
     .select()
     .single();
 

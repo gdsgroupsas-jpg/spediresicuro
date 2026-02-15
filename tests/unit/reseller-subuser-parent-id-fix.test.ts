@@ -131,6 +131,10 @@ vi.mock('@/lib/safe-auth', () => ({
   getSafeAuth: vi.fn(() => mockAuthResponse),
 }));
 
+vi.mock('@/lib/workspace-auth', () => ({
+  getWorkspaceAuth: vi.fn(() => mockAuthResponse),
+}));
+
 vi.mock('@/lib/database', () => ({
   createUser: vi.fn(() => Promise.resolve({ id: 'new-user-id' })),
 }));
@@ -166,7 +170,16 @@ describe('Reseller Sub-User Parent ID Fix', () => {
     queryCallIndex = 0;
     queryResults = new Map();
     mockAuthResponse = {
-      actor: { email: RESELLER_EMAIL },
+      actor: {
+        id: RESELLER_ID,
+        email: RESELLER_EMAIL,
+        account_type: 'reseller',
+        is_reseller: true,
+      },
+      workspace: { id: 'ws-test-123' },
+      target: { id: RESELLER_ID, email: RESELLER_EMAIL },
+      isImpersonating: false,
+      metadata: {},
     };
   });
 

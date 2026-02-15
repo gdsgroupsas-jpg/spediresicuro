@@ -68,21 +68,16 @@ export async function createPriceListAction(data: CreatePriceListInput): Promise
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    // Recupera user ID
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
@@ -129,7 +124,7 @@ export async function createPriceListAction(data: CreatePriceListInput): Promise
       };
     }
 
-    const priceList = await createPriceList(data, user.id);
+    const priceList = await createPriceList(data, user.id, workspaceId);
 
     return { success: true, priceList };
   } catch (error: any) {
@@ -150,20 +145,16 @@ export async function updatePriceListAction(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Recupera listino esistente
     const existingPriceList = await getPriceListById(id);
@@ -460,20 +451,16 @@ export async function assignPriceListToUserAction(
       return { success: false, error: 'ID non valido' };
     }
 
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: currentUser } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!currentUser) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const currentUser = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi: admin, superadmin, o reseller
     const isAdmin =
@@ -555,7 +542,7 @@ export async function assignPriceListToUserAction(
 
     // Audit log (fail-open)
     await writeAuditLog({
-      context,
+      context: wsContext as any,
       action: AUDIT_ACTIONS.PRICE_LIST_ASSIGNED,
       resourceType: AUDIT_RESOURCE_TYPES.PRICE_LIST_ASSIGNMENT,
       resourceId: priceListId,
@@ -585,20 +572,16 @@ export async function revokePriceListFromUserAction(
       return { success: false, error: 'ID non valido' };
     }
 
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: currentUser } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!currentUser) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const currentUser = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     const isAdmin =
       currentUser.account_type === 'admin' || currentUser.account_type === 'superadmin';
@@ -637,7 +620,7 @@ export async function revokePriceListFromUserAction(
 
     // Audit log (fail-open)
     await writeAuditLog({
-      context,
+      context: wsContext as any,
       action: AUDIT_ACTIONS.PRICE_LIST_REVOKED,
       resourceType: AUDIT_RESOURCE_TYPES.PRICE_LIST_ASSIGNMENT,
       resourceId: priceListId,
@@ -675,20 +658,16 @@ export async function bulkUpdateUserListiniAction(
       }
     }
 
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, added: 0, removed: 0, error: 'Non autenticato' };
     }
-
-    const { data: currentUser } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!currentUser) {
-      return { success: false, added: 0, removed: 0, error: 'Utente non trovato' };
-    }
+    const currentUser = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     const isAdmin =
       currentUser.account_type === 'admin' || currentUser.account_type === 'superadmin';
@@ -770,7 +749,7 @@ export async function bulkUpdateUserListiniAction(
     // Audit log
     if (added > 0 || removed > 0) {
       await writeAuditLog({
-        context,
+        context: wsContext as any,
         action: added > 0 ? AUDIT_ACTIONS.PRICE_LIST_ASSIGNED : AUDIT_ACTIONS.PRICE_LIST_REVOKED,
         resourceType: AUDIT_RESOURCE_TYPES.PRICE_LIST_ASSIGNMENT,
         resourceId: userId,
@@ -794,21 +773,16 @@ export async function getPriceListByIdAction(id: string): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    // Recupera user ID
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // ✅ FIX P0-2: Verifica authorization PRIMA di recuperare listino
     // Previene information disclosure
@@ -872,20 +846,16 @@ export async function deletePriceListAction(id: string): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Recupera listino esistente
     const existingPriceList = await getPriceListById(id);
@@ -1135,20 +1105,16 @@ export async function createSupplierPriceListAction(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     const isReseller = user.is_reseller === true;
     const isBYOC = user.account_type === 'byoc';
@@ -1199,7 +1165,7 @@ export async function createSupplierPriceListAction(
       is_global: false,
     };
 
-    const priceList = await createPriceList(priceListData, user.id);
+    const priceList = await createPriceList(priceListData, user.id, workspaceId);
 
     return { success: true, priceList };
   } catch (error: any) {
@@ -1219,15 +1185,21 @@ export async function listSupplierPriceListsAction(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // 🧪 TEST MODE: Bypass per E2E tests
     if (
-      context.actor.id === '00000000-0000-0000-0000-000000000000' ||
-      context.actor.id === 'test-user-id'
+      wsContext.actor.id === '00000000-0000-0000-0000-000000000000' ||
+      wsContext.actor.id === 'test-user-id'
     ) {
       console.log('🧪 [TEST MODE] listSupplierPriceListsAction: returning mock data');
       return {
@@ -1246,16 +1218,6 @@ export async function listSupplierPriceListsAction(): Promise<{
           },
         ],
       };
-    }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
     }
 
     const isReseller = user.is_reseller === true;
@@ -1367,20 +1329,16 @@ export async function getSupplierPriceListForCourierAction(courierId: string): P
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     const isReseller = user.is_reseller === true;
     const isBYOC = user.account_type === 'byoc';
@@ -1446,20 +1404,16 @@ export async function clonePriceListAction(input: ClonePriceListInput): Promise<
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Solo superadmin può clonare
     if (user.account_type !== 'superadmin') {
@@ -1515,20 +1469,16 @@ export async function assignPriceListToUserViaTableAction(input: AssignPriceList
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Solo superadmin può assegnare
     if (user.account_type !== 'superadmin') {
@@ -1590,20 +1540,16 @@ export async function revokePriceListAssignmentAction(assignmentId: string): Pro
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Solo superadmin può revocare
     if (user.account_type !== 'superadmin') {
@@ -1645,20 +1591,16 @@ export async function listAssignmentsForPriceListAction(priceListId: string): Pr
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Solo superadmin può vedere tutte le assegnazioni
     if (user.account_type !== 'superadmin' && user.account_type !== 'admin') {
@@ -1704,20 +1646,16 @@ export async function listAssignedPriceListsAction(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Recupera listini assegnati via tabella price_list_assignments
     const { data: assignments, error: assignmentsError } = await supabaseAdmin
@@ -1791,15 +1729,21 @@ export async function listMasterPriceListsAction(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // 🧪 TEST MODE: Bypass per E2E tests
     if (
-      context.actor.id === '00000000-0000-0000-0000-000000000000' ||
-      context.actor.id === 'test-user-id'
+      wsContext.actor.id === '00000000-0000-0000-0000-000000000000' ||
+      wsContext.actor.id === 'test-user-id'
     ) {
       console.log('🧪 [TEST MODE] listMasterPriceListsAction: returning mock data');
       return {
@@ -1821,16 +1765,6 @@ export async function listMasterPriceListsAction(): Promise<{
           },
         ],
       };
-    }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
     }
 
     // Solo superadmin può vedere i listini master
@@ -2046,20 +1980,16 @@ export async function getAssignablePriceListsAction(options?: {
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi: admin, superadmin, o reseller
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
@@ -2140,21 +2070,16 @@ export async function getAvailableCouriersForUserAction(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    // Recupera user ID
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Import dinamico per evitare problemi di bundling
     const { getAvailableCouriersForUser } = await import('@/lib/db/price-lists');
@@ -2197,20 +2122,16 @@ export async function getPriceListAuditEventsAction(
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
-    if (!context?.actor?.email) {
+    const wsContext = await getWorkspaceAuth();
+    if (!wsContext) {
       return { success: false, error: 'Non autenticato' };
     }
-
-    const { data: user } = await supabaseAdmin
-      .from('users')
-      .select('id, account_type, is_reseller')
-      .eq('email', context.actor.email)
-      .single();
-
-    if (!user) {
-      return { success: false, error: 'Utente non trovato' };
-    }
+    const user = {
+      id: wsContext.actor.id,
+      account_type: wsContext.actor.account_type,
+      is_reseller: wsContext.actor.is_reseller,
+    };
+    const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi sul listino
     const priceList = await getPriceListById(priceListId);
