@@ -11,7 +11,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { findUserByEmail } from '@/lib/database';
 import {
   setWebhook,
@@ -28,7 +28,7 @@ const ALLOWED_ROLES = ['admin', 'superadmin', 'SUPERADMIN'];
  */
 async function verifyAdmin(): Promise<{ authorized: boolean; error?: string }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return { authorized: false, error: 'No session' };

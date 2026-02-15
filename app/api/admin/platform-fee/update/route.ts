@@ -11,15 +11,15 @@
  */
 
 import { NextResponse } from 'next/server';
-// eslint-disable-next-line
-import { getSafeAuth } from '@/lib/safe-auth';
+ 
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { updatePlatformFee } from '@/lib/services/pricing/platform-fee';
 
 export async function POST(request: Request) {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });

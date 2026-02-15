@@ -9,12 +9,12 @@ export const dynamic = 'force-dynamic';
  * - Confidence media
  *
  * ⚠️ SICUREZZA:
- * - RLS enforcement: usa requireSafeAuth()
+ * - RLS enforcement: usa requireWorkspaceAuth()
  * - NO PII: solo aggregazioni, mai dati raw
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import { calculateValueStats } from '@/lib/services/value-stats';
 
 /**
@@ -24,8 +24,8 @@ import { calculateValueStats } from '@/lib/services/value-stats';
  */
 export async function GET(request: NextRequest) {
   try {
-    // ⚠️ SICUREZZA: Usa requireSafeAuth() per Acting Context
-    const context = await requireSafeAuth();
+    // ⚠️ SICUREZZA: Usa requireWorkspaceAuth() per Acting Context
+    const context = await requireWorkspaceAuth();
     const userId = context.target.id;
 
     // Calcola statistiche

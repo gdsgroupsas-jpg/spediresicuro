@@ -48,6 +48,12 @@ vi.mock('@/lib/safe-auth', () => ({
   getSafeAuth: vi.fn(),
 }));
 
+vi.mock('@/lib/workspace-auth', () => ({
+  getWorkspaceAuth: vi.fn(),
+  requireWorkspaceAuth: vi.fn(),
+  isSuperAdmin: vi.fn(),
+}));
+
 describe('Multi-Account Security - Isolamento Configurazioni', () => {
   beforeEach(() => {
     vi.clearAllMocks();

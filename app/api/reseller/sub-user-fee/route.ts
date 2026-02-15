@@ -11,7 +11,7 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { setParentImposedFee, getSubUsersWithFees } from '@/lib/services/pricing/platform-fee';
 
 /**
@@ -22,7 +22,7 @@ import { setParentImposedFee, getSubUsersWithFees } from '@/lib/services/pricing
  */
 export async function GET() {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -54,7 +54,7 @@ export async function GET() {
  */
 export async function PUT(request: NextRequest) {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.id) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

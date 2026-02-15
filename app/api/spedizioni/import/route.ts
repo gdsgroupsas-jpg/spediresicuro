@@ -7,14 +7,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { addSpedizione } from '@/lib/database';
 import type { AuthContext } from '@/lib/auth-context';
 
 export async function POST(request: NextRequest) {
   try {
     // Autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });

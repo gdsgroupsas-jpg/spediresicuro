@@ -1,5 +1,5 @@
 import { supabaseAdmin } from '@/lib/db/client';
-import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
 import { writeShipmentAuditLog } from '@/lib/security/audit-log';
 import { createShipmentSchema } from '@/lib/validations/shipment';
@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   // ============================================
   // AUTH (con supporto impersonation)
   // ============================================
-  const context = await requireSafeAuth();
+  const context = await requireWorkspaceAuth();
 
   try {
     const body = await request.json();

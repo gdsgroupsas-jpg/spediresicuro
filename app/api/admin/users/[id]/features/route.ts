@@ -6,7 +6,7 @@
  * ⚠️ SOLO PER ADMIN: Verifica che l'utente sia admin prima di eseguire operazioni
  */
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { findUserByEmail } from '@/lib/database';
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context || !context.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });

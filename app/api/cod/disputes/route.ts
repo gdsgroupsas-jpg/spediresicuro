@@ -7,14 +7,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-actions';
 
 async function requireAdmin() {
-  const auth = await getSafeAuth();
+  const auth = await getWorkspaceAuth();
   if (!auth) return null;
   const role = auth.target.role;
   if (role !== 'admin' && role !== 'superadmin') return null;

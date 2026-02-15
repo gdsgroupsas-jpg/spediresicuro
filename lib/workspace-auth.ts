@@ -41,6 +41,9 @@ import {
 // Re-export constants for backward compatibility
 export { WORKSPACE_COOKIE, WORKSPACE_STORAGE_KEY } from '@/lib/workspace-constants';
 
+// Re-export auth helpers per evitare import duali da safe-auth
+export { isSuperAdmin } from '@/lib/safe-auth';
+
 // ============================================
 // WORKSPACE AUTH FUNCTIONS
 // ============================================

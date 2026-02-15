@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth as getLegacySafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth as getLegacyWorkspaceAuth } from '@/lib/workspace-auth';
 import { buildContext, formatContextForPrompt } from '@/lib/ai/context-builder';
 import { runLocalCopilot } from '@/lib/agent/copilot';
 import { buildSystemPrompt, getVoicePrompt, getBasePrompt, getAdminPrompt } from '@/lib/ai/prompts';
@@ -19,7 +19,7 @@ import {
   supervisorRouter,
   formatPricingResponse,
 } from '@/lib/agent/orchestrator/supervisor-router';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import {
   createAIClient,
   getConfiguredAIProvider,
@@ -97,8 +97,8 @@ export async function POST(request: NextRequest) {
   let anthropicApiKey: string | undefined = undefined;
 
   try {
-    // ⚠️ AI AGENT: Usa getSafeAuth() per ActingContext (supporta impersonation)
-    const actingContext = await getSafeAuth();
+    // ⚠️ AI AGENT: Usa getWorkspaceAuth() per ActingContext (supporta impersonation)
+    const actingContext = await getWorkspaceAuth();
     if (!actingContext) {
       return NextResponse.json(
         {
@@ -133,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Mantieni session per compatibilità con codice legacy
-    const legacyContext = await getLegacySafeAuth();
+    const legacyContext = await getLegacyWorkspaceAuth();
     session = legacyContext ? { user: legacyContext.actor } : null;
 
     // Rate limiting distribuito (Upstash Redis con fallback in-memory)

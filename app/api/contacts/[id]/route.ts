@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
@@ -22,7 +22,7 @@ function sanitizeString(s: string | undefined | null, maxLen: number): string {
 }
 
 async function requireSuperadmin() {
-  const context = await getSafeAuth();
+  const context = await getWorkspaceAuth();
   if (!context) return { error: 'Unauthorized', status: 401 };
   if (context.actor.account_type !== 'superadmin') return { error: 'Forbidden', status: 403 };
   return { context };

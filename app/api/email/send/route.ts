@@ -7,7 +7,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { Resend } from 'resend';
 
@@ -15,7 +15,7 @@ const resend = new Resend(process.env.RESEND_API_KEY || 'placeholder');
 
 export async function POST(request: NextRequest) {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

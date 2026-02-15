@@ -25,7 +25,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
+import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { isValidUUID } from '@/lib/workspace-constants';
 import {
@@ -53,7 +53,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     }
 
     // 2. Autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -155,7 +155,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // 2. Autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -273,7 +273,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // 2. Autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

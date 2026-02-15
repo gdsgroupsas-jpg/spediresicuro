@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getRequestId, createApiLogger } from '@/lib/api-helpers';
 import { handleApiError } from '@/lib/api-responses';
@@ -26,7 +26,7 @@ export async function GET(request: NextRequest) {
     logger.info('GET /api/spedizioni/cancellate - Richiesta spedizioni cancellate');
 
     // Autenticazione
-    session = await getSafeAuth();
+    session = await getWorkspaceAuth();
 
     if (!session?.actor?.email) {
       logger.warn('GET /api/spedizioni/cancellate - Non autenticato');

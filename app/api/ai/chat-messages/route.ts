@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { saveChatMessage, loadChatHistory, clearChatHistory } from '@/lib/services/anne-chat';
 import { rateLimit } from '@/lib/security/rate-limit';
 
@@ -23,7 +23,7 @@ async function checkRateLimit(userId: string, action: string, limit: number) {
 }
 
 export async function GET() {
-  const ctx = await getSafeAuth();
+  const ctx = await getWorkspaceAuth();
   if (!ctx) {
     return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
   }
@@ -43,7 +43,7 @@ export async function GET() {
 }
 
 export async function POST(request: NextRequest) {
-  const ctx = await getSafeAuth();
+  const ctx = await getWorkspaceAuth();
   if (!ctx) {
     return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
   }
@@ -100,7 +100,7 @@ export async function POST(request: NextRequest) {
 }
 
 export async function DELETE() {
-  const ctx = await getSafeAuth();
+  const ctx = await getWorkspaceAuth();
   if (!ctx) {
     return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
   }

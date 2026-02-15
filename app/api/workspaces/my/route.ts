@@ -15,7 +15,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
+import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { getUserWorkspaces } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import type { UserWorkspaceInfo } from '@/types/workspace';
@@ -25,7 +25,7 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

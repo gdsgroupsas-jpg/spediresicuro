@@ -8,12 +8,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import { generateInvoiceForShipment } from '@/app/actions/invoices';
 
 export async function POST(request: NextRequest) {
   try {
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
     const body = await request.json();
     const { shipmentId } = body;
 

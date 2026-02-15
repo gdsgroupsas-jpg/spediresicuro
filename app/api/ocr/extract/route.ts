@@ -12,7 +12,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createOCRAdapter } from '@/lib/adapters/ocr';
-import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import crypto from 'crypto';
 
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     // ============================================
     // AUTHENTICATION (required)
     // ============================================
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
     const userId = context.target.id;
 
     // ============================================

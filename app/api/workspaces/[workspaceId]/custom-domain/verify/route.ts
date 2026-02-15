@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
+import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { isValidUUID } from '@/lib/workspace-constants';
 import { rateLimit } from '@/lib/security/rate-limit';
@@ -30,7 +30,7 @@ export async function POST(_request: NextRequest, { params }: RouteParams) {
       return NextResponse.json({ error: 'Invalid workspace ID' }, { status: 400 });
     }
 
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

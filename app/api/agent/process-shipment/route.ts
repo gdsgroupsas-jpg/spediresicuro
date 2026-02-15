@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { logisticsGraph } from '@/lib/agent/orchestrator/graph';
 import { HumanMessage } from '@langchain/core/messages';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 
 export const maxDuration = 60; // Allow longer timeout for agent execution (OCR + LLM)
 
 export async function POST(request: NextRequest) {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }

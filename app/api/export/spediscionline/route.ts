@@ -12,7 +12,7 @@
 
 import { NextResponse } from 'next/server';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { getSpedizioni } from '@/lib/database';
 import type { AuthContext } from '@/lib/auth-context';
 
@@ -74,7 +74,7 @@ function formatNumber(value: number | null | undefined): string {
 export async function GET() {
   try {
     // Autenticazione: solo utenti autenticati possono esportare
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }

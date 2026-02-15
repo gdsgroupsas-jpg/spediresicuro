@@ -10,11 +10,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerActionClient } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/db/client';
-import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
     const { id: invoiceId } = await params;
 
     // 1. Recupera fattura

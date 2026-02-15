@@ -9,8 +9,8 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { NextRequest } from 'next/server';
 
 // Mock dependencies before imports
-vi.mock('@/lib/safe-auth', () => ({
-  getSafeAuth: vi.fn(),
+vi.mock('@/lib/workspace-auth', () => ({
+  getWorkspaceAuth: vi.fn(),
 }));
 
 vi.mock('@/lib/services/anne-chat', () => ({
@@ -23,7 +23,7 @@ vi.mock('@/lib/security/rate-limit', () => ({
   rateLimit: vi.fn().mockResolvedValue({ allowed: true }),
 }));
 
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { saveChatMessage, loadChatHistory, clearChatHistory } from '@/lib/services/anne-chat';
 import { rateLimit } from '@/lib/security/rate-limit';
 
@@ -44,14 +44,14 @@ beforeEach(async () => {
 });
 
 const mockAuth = (userId = 'user-123') => {
-  (getSafeAuth as any).mockResolvedValue({
+  (getWorkspaceAuth as any).mockResolvedValue({
     target: { id: userId },
     actor: { id: userId },
   });
 };
 
 const mockUnauth = () => {
-  (getSafeAuth as any).mockResolvedValue(null);
+  (getWorkspaceAuth as any).mockResolvedValue(null);
 };
 
 describe('Chat Messages API', () => {

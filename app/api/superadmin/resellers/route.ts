@@ -8,7 +8,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createReseller } from '@/actions/super-admin';
 
@@ -21,7 +21,7 @@ async function verifySuperAdmin(): Promise<{
   error?: string;
 }> {
   try {
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return { authorized: false, error: 'Non autenticato' };

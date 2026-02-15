@@ -10,7 +10,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
-import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import { NextRequest, NextResponse } from 'next/server';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +18,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // Autenticazione - ActingContext ha actor (chi agisce) e target (per chi)
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
     const userId = context.target.id;
 
     // Recupera configurazioni attive dell'utente

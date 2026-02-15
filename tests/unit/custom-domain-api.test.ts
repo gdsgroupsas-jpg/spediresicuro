@@ -33,6 +33,11 @@ vi.mock('@/lib/safe-auth', () => ({
   isSuperAdmin: (ctx: unknown) => mockIsSuperAdmin(ctx),
 }));
 
+vi.mock('@/lib/workspace-auth', () => ({
+  getWorkspaceAuth: () => mockGetSafeAuth(),
+  isSuperAdmin: (ctx: unknown) => mockIsSuperAdmin(ctx),
+}));
+
 vi.mock('@/lib/workspace-constants', () => ({
   isValidUUID: (v: string) =>
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(v),

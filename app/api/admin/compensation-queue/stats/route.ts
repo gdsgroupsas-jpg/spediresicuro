@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 export const dynamic = 'force-dynamic';
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
     // ============================================
     // AUTHORIZATION: Admin/SuperAdmin only
     // ============================================
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
 
     // Check if user is admin/superadmin
     const { data: user } = await supabaseAdmin

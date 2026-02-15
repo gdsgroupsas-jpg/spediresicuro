@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { analyzeCorrieriPerformance, generateRoutingSuggestion } from '@/lib/corrieri-performance';
 import { Corriere } from '@/types/corrieri';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import type { AuthContext } from '@/lib/auth-context';
 
 // Forza rendering dinamico (usa nextUrl.searchParams)
@@ -16,7 +16,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }
@@ -68,7 +68,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
     if (!context?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }

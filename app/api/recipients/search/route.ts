@@ -6,13 +6,13 @@
  * Cerca tra i destinatari delle spedizioni precedenti dell'utente.
  * Restituisce destinatari unici ordinati per utilizzo piu recente.
  *
- * Sicurezza: requireSafeAuth() - restituisce solo destinatari dell'utente
+ * Sicurezza: requireWorkspaceAuth() - restituisce solo destinatari dell'utente
  * Cache: 5 min (dati cambiano con nuove spedizioni)
  */
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
-import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import type { SavedRecipient, RecipientSearchResponse } from '@/types/recipients';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +31,7 @@ interface ShipmentRecipientRow {
 export async function GET(request: NextRequest) {
   try {
     // 1. Auth check
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
     const userId = context.target.id;
 
     // 2. Parse query params

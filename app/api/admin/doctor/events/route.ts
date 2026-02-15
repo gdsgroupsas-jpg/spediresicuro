@@ -8,12 +8,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 export async function GET(request: NextRequest) {
   try {
-    const context = await requireSafeAuth();
+    const context = await requireWorkspaceAuth();
 
     // Verifica permessi admin
     const isAdmin = context.actor.role === 'admin' || context.actor.role === 'superadmin';

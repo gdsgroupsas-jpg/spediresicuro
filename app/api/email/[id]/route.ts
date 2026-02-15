@@ -9,11 +9,11 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 async function requireSuperadmin() {
-  const context = await getSafeAuth();
+  const context = await getWorkspaceAuth();
   if (!context) return { error: 'Unauthorized', status: 401 };
   if (context.actor.account_type !== 'superadmin') return { error: 'Forbidden', status: 403 };
   return { context };

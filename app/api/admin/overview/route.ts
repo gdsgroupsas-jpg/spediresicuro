@@ -10,8 +10,8 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-// eslint-disable-next-line
-import { getSafeAuth } from '@/lib/safe-auth';
+ 
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { findUserByEmail } from '@/lib/database';
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
 import { createUserMap, isTestShipment } from '@/lib/utils/test-data-detection';
@@ -23,7 +23,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const context = await getSafeAuth();
+    const context = await getWorkspaceAuth();
 
     if (!context || !context.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });

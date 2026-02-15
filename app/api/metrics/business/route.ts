@@ -14,7 +14,7 @@ export const dynamic = 'force-dynamic';
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { findUserByEmail } from '@/lib/database';
 import { getBusinessMetrics, getQuickStats } from '@/lib/metrics/business-metrics';
 import { createLogger } from '@/lib/logger';
@@ -29,8 +29,8 @@ async function verifyAdminAccess(): Promise<{
   error?: string;
 }> {
   try {
-    // Use getSafeAuth for authentication (supports impersonation)
-    const context = await getSafeAuth();
+    // Use getWorkspaceAuth for authentication (supports impersonation)
+    const context = await getWorkspaceAuth();
 
     if (!context?.actor?.email) {
       return { authorized: false, error: 'No session found' };

@@ -6,12 +6,12 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { rateLimit } from '@/lib/security/rate-limit';
 
 export async function GET(request: NextRequest) {
-  const auth = await getSafeAuth();
+  const auth = await getWorkspaceAuth();
   if (!auth) {
     return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
   }
@@ -51,7 +51,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function PATCH(request: NextRequest) {
-  const auth = await getSafeAuth();
+  const auth = await getWorkspaceAuth();
   if (!auth) {
     return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
   }

@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import {
   supervisorRouter,
   formatPricingResponse,
@@ -22,8 +22,8 @@ export async function POST(request: NextRequest) {
   const traceId = generateTraceId();
 
   try {
-    // ⚠️ AI AGENT: Usa getSafeAuth() per ActingContext (supporta impersonation)
-    const actingContext = await getSafeAuth();
+    // ⚠️ AI AGENT: Usa getWorkspaceAuth() per ActingContext (supporta impersonation)
+    const actingContext = await getWorkspaceAuth();
     if (!actingContext) {
       return NextResponse.json(
         {
