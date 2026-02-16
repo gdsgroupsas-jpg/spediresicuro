@@ -207,6 +207,33 @@ export async function deleteUser(id: string): Promise<boolean> {
 }
 
 /**
+ * Ottiene il primary_workspace_id di un utente
+ *
+ * Usato per passare workspace_id alle RPC wallet (dual-write).
+ * Ritorna null se l'utente non ha un workspace assegnato (non blocca il flusso).
+ *
+ * @param userId - ID dell'utente
+ * @returns workspace_id o null
+ */
+export async function getUserWorkspaceId(userId: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .select('primary_workspace_id')
+      .eq('id', userId)
+      .single();
+
+    if (error || !data) {
+      return null;
+    }
+
+    return data.primary_workspace_id || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Cerca utenti con filtri
  *
  * @param filters - Filtri da applicare

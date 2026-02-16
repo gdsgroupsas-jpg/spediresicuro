@@ -13,6 +13,7 @@
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendPremiumWelcomeEmail } from '@/lib/email/resend';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 
 /**
  * Verifica se l'utente corrente è Super Admin
@@ -188,6 +189,9 @@ export async function manageWallet(
     // 6. Crea transazione wallet (usa funzione SQL se disponibile, altrimenti insert diretto)
     let transactionId: string;
 
+    // Lookup workspace_id per dual-write
+    const targetWorkspaceId = await getUserWorkspaceId(userId);
+
     if (amount > 0) {
       // Aggiungi credito usando funzione SQL
       const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit', {
@@ -195,6 +199,7 @@ export async function manageWallet(
         p_amount: amount,
         p_description: reason,
         p_created_by: superAdminCheck.userId,
+        p_workspace_id: targetWorkspaceId,
       });
 
       if (txError) {

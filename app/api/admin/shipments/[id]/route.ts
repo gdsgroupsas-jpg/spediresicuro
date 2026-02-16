@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { findUserByEmail } from '@/lib/database';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 
 export async function DELETE(
   request: NextRequest,
@@ -103,6 +104,7 @@ export async function DELETE(
           const refundDescription =
             `Rimborso cancellazione spedizione ${trackingRef} (admin: ${context.actor.email})`.trim();
 
+          const refundWorkspaceId = await getUserWorkspaceId(shipment.user_id);
           const { data: refundResult, error: refundError } = await supabaseAdmin.rpc(
             'refund_wallet_balance',
             {
@@ -111,6 +113,7 @@ export async function DELETE(
               p_idempotency_key: idempotencyKey,
               p_description: refundDescription,
               p_shipment_id: shipmentId,
+              p_workspace_id: refundWorkspaceId,
             }
           );
 

@@ -4,6 +4,7 @@ import type { ActingContext } from '@/lib/safe-auth';
 import type { CreateShipmentInput } from '@/lib/validations/shipment';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
 import { getPlatformFeeSafe } from '@/lib/services/pricing/platform-fee';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 // Sprint 1: Financial Tracking
 import {
   recordPlatformCost,
@@ -305,6 +306,11 @@ export async function createShipmentCore(params: {
   }
 
   // ============================================
+  // LOOKUP WORKSPACE_ID PER DUAL-WRITE
+  // ============================================
+  const targetWorkspaceId = await getUserWorkspaceId(targetId);
+
+  // ============================================
   // WALLET DEBIT PRIMA DELLA CHIAMATA CORRIERE
   // ============================================
   /**
@@ -370,12 +376,14 @@ export async function createShipmentCore(params: {
 
     // P0: Passa idempotency_key a wallet function (standalone idempotent)
     // ✅ REFACTOR: Debit diretto di walletChargeAmount (no stima + conguaglio)
+    // Dual-write: passa workspace_id per sincronizzare workspaces.wallet_balance
     const { data: walletResult, error: walletError } = await withConcurrencyRetry(
       async () =>
         await supabaseAdmin.rpc('decrement_wallet_balance', {
           p_user_id: targetId,
           p_amount: walletChargeAmount,
           p_idempotency_key: idempotencyKey, // P0: Wallet-level idempotency
+          p_workspace_id: targetWorkspaceId,
         }),
       { operationName: 'shipment_debit_final' }
     );
@@ -486,6 +494,7 @@ export async function createShipmentCore(params: {
               p_amount: amount,
               p_idempotency_key: `${idempotencyKey}-refund`,
               p_description: 'Rimborso automatico: errore creazione etichetta corriere',
+              p_workspace_id: targetWorkspaceId,
             });
             return { error: error ? { message: error.message, code: error.code } : null };
           });
@@ -829,6 +838,7 @@ export async function createShipmentCore(params: {
               p_amount: amount,
               p_idempotency_key: `${idempotencyKey}-refund`,
               p_description: 'Rimborso automatico: errore creazione etichetta corriere',
+              p_workspace_id: targetWorkspaceId,
             });
             return { error: error ? { message: error.message, code: error.code } : null };
           });

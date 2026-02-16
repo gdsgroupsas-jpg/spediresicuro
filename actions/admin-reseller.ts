@@ -17,7 +17,7 @@ import { supabaseAdmin } from '@/lib/db/client';
 import { createUser } from '@/lib/database';
 import bcrypt from 'bcryptjs';
 import { validateEmail } from '@/lib/validators';
-import { userExists } from '@/lib/db/user-helpers';
+import { userExists, getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { hasCapability } from '@/lib/db/capability-helpers';
 
 /**
@@ -630,6 +630,10 @@ export async function manageSubUserWallet(
         .digest('hex')
         .substring(0, 16)}`;
 
+      // Lookup workspace_id per dual-write (entrambi gli utenti)
+      const resellerWorkspaceId = await getUserWorkspaceId(resellerCheck.userId);
+      const subUserWorkspaceId = await getUserWorkspaceId(subUserId);
+
       const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
         'reseller_transfer_credit',
         {
@@ -638,6 +642,8 @@ export async function manageSubUserWallet(
           p_amount: amount,
           p_description: reason,
           p_idempotency_key: idempotencyKey,
+          p_reseller_workspace_id: resellerWorkspaceId,
+          p_sub_user_workspace_id: subUserWorkspaceId,
         }
       );
 

@@ -11,6 +11,7 @@ import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
 import { requireSafeAuth } from '@/lib/safe-auth';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import {
   sendWalletTopUp,
   sendTopUpRejectedEmail,
@@ -675,6 +676,7 @@ export async function approveTopUpRequest(
 
         // 7. Accredita wallet usando RPC (no fallback manuale)
         // Smart retry per lock contention (55P03)
+        const fallbackWorkspaceId = await getUserWorkspaceId(refreshedRequest.user_id);
         const { data: txId, error: creditError } = await withConcurrencyRetry(
           async () =>
             await supabaseAdmin.rpc('add_wallet_credit', {
@@ -682,6 +684,7 @@ export async function approveTopUpRequest(
               p_amount: refreshedRequest.approved_amount, // Usa quello salvato nel DB
               p_description: `Approvazione richiesta ricarica #${requestId}`,
               p_created_by: adminCheck.userId,
+              p_workspace_id: fallbackWorkspaceId,
             }),
           { operationName: 'topup_credit_fallback' }
         );
@@ -735,6 +738,7 @@ export async function approveTopUpRequest(
 
     // 7. Accredita wallet usando RPC (no fallback manuale)
     // Smart retry per lock contention (55P03)
+    const mainWorkspaceId = await getUserWorkspaceId(updatedRequest.user_id);
     const { data: txId, error: creditError } = await withConcurrencyRetry(
       async () =>
         await supabaseAdmin.rpc('add_wallet_credit', {
@@ -742,6 +746,7 @@ export async function approveTopUpRequest(
           p_amount: amountToCredit,
           p_description: `Approvazione richiesta ricarica #${requestId}`,
           p_created_by: adminCheck.userId,
+          p_workspace_id: mainWorkspaceId,
         }),
       { operationName: 'topup_credit' }
     );

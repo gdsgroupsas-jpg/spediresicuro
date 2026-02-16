@@ -17,6 +17,7 @@
 import { supabaseAdmin } from '@/lib/db/client';
 import { getPaymentTransaction, stripe, updatePaymentTransaction } from '@/lib/payments/stripe';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -155,7 +156,8 @@ async function handleCheckoutSessionCompleted(session: any) {
     })
   );
 
-  // Use VAT-aware RPC function
+  // Use VAT-aware RPC function (con dual-write workspace)
+  const stripeWorkspaceId = await getUserWorkspaceId(userId);
   const { data: txId, error: creditError } = await withConcurrencyRetry(
     async () =>
       await supabaseAdmin.rpc('add_wallet_credit_with_vat', {
@@ -166,6 +168,7 @@ async function handleCheckoutSessionCompleted(session: any) {
         p_description: `Ricarica Stripe #${transactionId} (${vatMode === 'included' ? 'IVA inclusa' : 'IVA esclusa'})`,
         p_created_by: null, // System operation
         p_idempotency_key: `stripe_${transactionId}`,
+        p_workspace_id: stripeWorkspaceId,
       }),
     { operationName: 'stripe_webhook_credit' }
   );

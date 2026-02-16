@@ -15,6 +15,7 @@ import { createApiLogger, getRequestId } from '@/lib/api-helpers';
 import { handleApiError } from '@/lib/api-responses';
 import { supabaseAdmin } from '@/lib/db/client';
 import { withRateLimit } from '@/lib/security/rate-limit-middleware';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 
 /**
  * Sanitizza payload spedizione in base al ruolo utente
@@ -1690,6 +1691,7 @@ export async function DELETE(request: NextRequest) {
           const trackingRef = shipmentData.tracking_number || shipmentData.ldv || '';
           const refundDescription = `Rimborso cancellazione spedizione ${trackingRef}`.trim();
 
+          const cancelRefundWorkspaceId = await getUserWorkspaceId(shipmentData.user_id);
           const { data: refundResult, error: refundError } = await supabaseAdmin.rpc(
             'refund_wallet_balance',
             {
@@ -1698,6 +1700,7 @@ export async function DELETE(request: NextRequest) {
               p_idempotency_key: idempotencyKey,
               p_description: refundDescription,
               p_shipment_id: id,
+              p_workspace_id: cancelRefundWorkspaceId,
             }
           );
 

@@ -17,6 +17,7 @@
 import { requireWorkspaceAuth, getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { writeWalletAuditLog } from '@/lib/security/audit-log';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
 
 /**
@@ -94,12 +95,14 @@ export async function rechargeMyWallet(
 
     // 5. Se l'actor è admin/superadmin, ricarica direttamente il wallet del target
     if (isAdmin) {
-      // Usa la funzione SQL per aggiungere credito
+      // Usa la funzione SQL per aggiungere credito (con dual-write workspace)
+      const walletWorkspaceId = await getUserWorkspaceId(targetId);
       const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit', {
         p_user_id: targetId, // Target ID (who receives credit)
         p_amount: amount,
         p_description: reason,
         p_created_by: actorId, // Actor ID (who clicked)
+        p_workspace_id: walletWorkspaceId,
       });
 
       if (txError) {
