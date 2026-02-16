@@ -9,7 +9,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { requireWorkspaceAuth } from '@/lib/workspace-auth';
+import { requireSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 /**
@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     // ============================================
     // AUTHENTICATION
     // ============================================
-    const context = await requireWorkspaceAuth();
+    const context = await requireSafeAuth();
     const userId = context.target.id;
 
     // ============================================
@@ -82,7 +82,7 @@ export async function DELETE(request: NextRequest) {
     // ============================================
     // AUTHENTICATION
     // ============================================
-    const context = await requireWorkspaceAuth();
+    const context = await requireSafeAuth();
     const userId = context.target.id;
 
     // ============================================
@@ -134,7 +134,7 @@ export async function GET(request: NextRequest) {
     // ============================================
     // AUTHENTICATION
     // ============================================
-    const context = await requireWorkspaceAuth();
+    const context = await requireSafeAuth();
     const userId = context.target.id;
 
     // ============================================

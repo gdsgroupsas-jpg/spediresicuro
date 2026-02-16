@@ -20,7 +20,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { sendInvitationAcceptedEmail } from '@/lib/email/resend';
 
@@ -141,7 +141,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // 2. Autenticazione
-    const context = await getWorkspaceAuth();
+    const context = await getSafeAuth();
     if (!context) {
       return NextResponse.json(
         { error: "Devi effettuare il login per accettare l'invito" },

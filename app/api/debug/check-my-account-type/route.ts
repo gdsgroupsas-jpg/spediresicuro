@@ -6,7 +6,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 
 // Forza rendering dinamico (usa headers())
@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request: NextRequest) {
   try {
     // 1. Verifica autenticazione
-    const context = await getWorkspaceAuth();
+    const context = await getSafeAuth();
 
     if (!context || !context.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });

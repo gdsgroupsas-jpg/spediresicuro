@@ -20,6 +20,16 @@ vi.mock('@/lib/safe-auth', () => ({
   getSafeAuth: mockGetSafeAuth,
 }));
 
+// Mock workspace-auth (le route ora importano da workspace-auth)
+vi.mock('@/lib/workspace-auth', () => ({
+  getWorkspaceAuth: () => mockGetSafeAuth(),
+  requireWorkspaceAuth: async () => {
+    const ctx = await mockGetSafeAuth();
+    if (!ctx) throw new Error('UNAUTHORIZED: Workspace access required');
+    return ctx;
+  },
+}));
+
 // Mock supervisor-router (entry point unico)
 const mockSupervisorRouter = vi.fn();
 const mockFormatPricingResponse = vi.fn();

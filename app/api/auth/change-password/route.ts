@@ -9,14 +9,14 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
-import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendPasswordChangedEmail } from '@/lib/email/resend';
 
 export async function POST(request: NextRequest) {
   try {
     // Verifica autenticazione
-    const context = await getWorkspaceAuth();
+    const context = await getSafeAuth();
     if (!context?.actor?.email) {
       return NextResponse.json({ error: 'Non autenticato' }, { status: 401 });
     }

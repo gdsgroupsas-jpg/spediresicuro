@@ -15,7 +15,7 @@ export async function GET(request: NextRequest) {
     if (errorMessage.includes('UNAUTHORIZED')) {
       return NextResponse.json({ success: false, error: 'Non autenticato' }, { status: 401 });
     }
-    console.error('âŒ [Smart Suggestions] Errore:', errorMessage);
+    console.error('❌ [Smart Suggestions] Errore:', errorMessage);
     return NextResponse.json(
       { success: false, error: 'Errore generazione suggerimento' },
       { status: 500 }
