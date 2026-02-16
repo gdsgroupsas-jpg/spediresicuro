@@ -183,4 +183,21 @@ describe('Wallet Workspace ID Passing (STEP 3)', () => {
       expect(content).toContain('p_workspace_id: refundWorkspaceId');
     });
   });
+
+  // =========================================
+  // Caller: lib/services/giacenze/giacenze-service.ts (debit giacenza)
+  // =========================================
+  describe('lib/services/giacenze/giacenze-service.ts', () => {
+    let content: string;
+
+    it('importa getUserWorkspaceId', () => {
+      const filePath = path.join(process.cwd(), 'lib/services/giacenze/giacenze-service.ts');
+      content = fs.readFileSync(filePath, 'utf-8');
+      expect(content).toContain('getUserWorkspaceId');
+    });
+
+    it('passa p_workspace_id a decrement_wallet_balance', () => {
+      expect(content).toContain('p_workspace_id: giacenzaWorkspaceId');
+    });
+  });
 });

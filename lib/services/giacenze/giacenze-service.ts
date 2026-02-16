@@ -8,6 +8,7 @@
 import { supabaseAdmin } from '@/lib/db/client';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
 import { checkCreditBeforeBooking } from '@/lib/wallet/credit-check';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import type { ShipmentHold, HoldActionType, HoldActionOption, HoldStatus } from '@/types/giacenze';
 import type { StorageConfig, StorageServiceConfig } from '@/types/supplier-price-list-config';
 import { HOLD_ACTION_LABELS } from '@/types/giacenze';
@@ -278,12 +279,16 @@ export async function executeAction(
     const actionLabel = HOLD_ACTION_LABELS[actionType]?.label || actionType;
     const description = `Giacenza: ${actionLabel} - ${hold.shipment?.tracking_number || ''}`;
 
+    // Lookup workspace per tracking in wallet_transactions
+    const giacenzaWorkspaceId = await getUserWorkspaceId(userId);
+
     const result = await withConcurrencyRetry(
       async () =>
         await supabaseAdmin.rpc('decrement_wallet_balance', {
           p_user_id: userId,
           p_amount: cost,
           p_idempotency_key: idempotencyKey,
+          p_workspace_id: giacenzaWorkspaceId,
         }),
       { operationName: 'giacenza_action_debit' }
     );
