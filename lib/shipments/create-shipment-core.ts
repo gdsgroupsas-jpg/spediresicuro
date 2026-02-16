@@ -342,6 +342,7 @@ export async function createShipmentCore(params: {
 
     const { error: postpaidError } = await supabaseAdmin.from('wallet_transactions').insert({
       user_id: targetId,
+      workspace_id: targetWorkspaceId,
       amount: -walletChargeAmount, // Negativo per coerenza con SHIPMENT_CHARGE
       type: 'POSTPAID_CHARGE',
       description: `Spedizione postpagata - ${validated.carrier || 'corriere'}`,

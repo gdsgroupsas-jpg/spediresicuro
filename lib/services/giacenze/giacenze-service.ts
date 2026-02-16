@@ -302,6 +302,7 @@ export async function executeAction(
       .from('wallet_transactions')
       .insert({
         user_id: userId,
+        workspace_id: giacenzaWorkspaceId,
         amount: -cost,
         type: 'GIACENZA_ACTION',
         description,
