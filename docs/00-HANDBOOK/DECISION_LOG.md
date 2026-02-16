@@ -5,7 +5,7 @@ audience: all
 owner: engineering
 status: active
 source_of_truth: true
-updated: 2026-02-02
+updated: 2026-02-16
 ---
 
 # Decision Log
@@ -101,6 +101,17 @@ Record structural and process decisions for fast AI retrieval.
 - Security: Auth via `getSafeAuth()`, verified `is_reseller || superadmin`, data scoped to `parent_id` sub-users + reseller's own shipments
 - Impact: reseller-fiscal-report.ts, report-fiscale/page.tsx, reseller-provider-chart.tsx, reseller-fiscal.ts
 - Tests: TypeScript build clean, 9 unit tests (reseller-provider-analytics.test.ts)
+
+## 2026-02-16 - Fix Wallet Balance Desync (users vs workspaces)
+
+- Decision: Dashboard banner reads `users.wallet_balance` (source of truth) instead of `workspaces.wallet_balance` (stale snapshot)
+- Problem: All wallet RPC functions (`increment_wallet_balance`, `decrement_wallet_balance`, `add_wallet_credit`, `refund_wallet_balance`, `reseller_transfer_credit`) write to `users.wallet_balance`. But the dashboard banner read from `workspaces.wallet_balance`, which was only populated once during the workspace migration (2026-02-03) and never updated after.
+  - Result: "Saldo esaurito" shown even with real credit on the account
+- Fix: Derived variable `walletBalance = user?.wallet_balance ?? workspace?.wallet_balance ?? 0` in `app/dashboard/page.tsx`
+- Scope: 1 file changed (`page.tsx`), 7 occurrences replaced
+- Future: Full migration wallet→workspace planned as Phase 2 (sync trigger, RPC dual-write, source of truth flip)
+- Impact: app/dashboard/page.tsx
+- Tests: 8 new unit tests (dashboard-wallet-balance-source.test.ts), 2874 total tests green, build clean
 
 ## 2026-02-02 - Unified Listini UI (4→1 sidebar entry per role)
 

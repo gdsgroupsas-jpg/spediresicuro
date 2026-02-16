@@ -199,6 +199,10 @@ export default function DashboardPage() {
   // Workspace context
   const { workspace } = useWorkspaceContext();
 
+  // Saldo reale: usa users.wallet_balance (source of truth) con fallback a workspace
+  // NOTA: workspaces.wallet_balance e' statico (mai aggiornato dopo migrazione iniziale)
+  const walletBalance = user?.wallet_balance ?? workspace?.wallet_balance ?? 0;
+
   // WelcomeGate: primo accesso in assoluto
   const [showWelcome, setShowWelcome] = useState(false);
   useEffect(() => {
@@ -412,7 +416,7 @@ export default function DashboardPage() {
                     {new Intl.NumberFormat('it-IT', {
                       style: 'currency',
                       currency: 'EUR',
-                    }).format(workspace.wallet_balance)}
+                    }).format(walletBalance)}
                   </p>
                 </div>
               </div>
@@ -422,31 +426,31 @@ export default function DashboardPage() {
       )}
 
       {/* Wallet depletion warning */}
-      {workspace && workspace.wallet_balance < 10 && !isLoading && (
+      {workspace && walletBalance < 10 && !isLoading && (
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-4">
           <div
             className={`flex items-center gap-3 p-4 rounded-xl border ${
-              workspace.wallet_balance <= 0
+              walletBalance <= 0
                 ? 'bg-red-50 border-red-200 text-red-800'
                 : 'bg-amber-50 border-amber-200 text-amber-800'
             }`}
           >
             <AlertTriangle
               className={`w-5 h-5 flex-shrink-0 ${
-                workspace.wallet_balance <= 0 ? 'text-red-500' : 'text-amber-500'
+                walletBalance <= 0 ? 'text-red-500' : 'text-amber-500'
               }`}
             />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium">
-                {workspace.wallet_balance <= 0
+                {walletBalance <= 0
                   ? 'Saldo esaurito — non puoi creare nuove spedizioni'
-                  : `Saldo basso: ${new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(workspace.wallet_balance)} rimasti`}
+                  : `Saldo basso: ${new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(walletBalance)} rimasti`}
               </p>
             </div>
             <Link
               href="/dashboard/wallet"
               className={`text-sm font-semibold whitespace-nowrap px-3 py-1.5 rounded-lg transition-colors ${
-                workspace.wallet_balance <= 0
+                walletBalance <= 0
                   ? 'bg-red-600 text-white hover:bg-red-700'
                   : 'bg-amber-600 text-white hover:bg-amber-700'
               }`}
