@@ -11,8 +11,8 @@
  * @module app/actions/outreach
  */
 
-import { requireSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
-import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { requireSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getOutreachMetrics } from '@/lib/outreach/outreach-analytics';
 import { getSequences } from '@/lib/outreach/outreach-data-service';

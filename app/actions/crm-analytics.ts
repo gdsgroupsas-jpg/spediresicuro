@@ -12,8 +12,8 @@
  * @module app/actions/crm-analytics
  */
 
-import { requireSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
-import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { requireSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { computeCrmAnalytics } from '@/lib/crm/analytics';
 import type { CrmAnalyticsData } from '@/lib/crm/analytics';

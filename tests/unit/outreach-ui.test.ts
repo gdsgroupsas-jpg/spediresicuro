@@ -93,7 +93,6 @@ vi.mock('@/lib/safe-auth', () => ({
     actor: { id: 'admin-1' },
     target: { id: 'admin-1' },
   }),
-  isSuperAdmin: vi.fn().mockReturnValue(true),
 }));
 
 vi.mock('@/lib/workspace-auth', () => ({
@@ -101,6 +100,7 @@ vi.mock('@/lib/workspace-auth', () => ({
     workspace: { id: 'ws-test-1' },
     user: { id: 'user-1' },
   }),
+  isSuperAdmin: vi.fn().mockReturnValue(true),
 }));
 
 vi.mock('@/lib/outreach/outreach-analytics', () => ({

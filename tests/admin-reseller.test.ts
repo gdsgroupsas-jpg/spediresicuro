@@ -21,6 +21,10 @@ vi.mock('@/lib/safe-auth', () => ({
   getSafeAuth: vi.fn(),
 }));
 
+vi.mock('@/lib/workspace-auth', () => ({
+  isSuperAdmin: vi.fn().mockReturnValue(false),
+}));
+
 vi.mock('@/lib/db/capability-helpers', () => ({
   hasCapability: vi.fn(),
 }));

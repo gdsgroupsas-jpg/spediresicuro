@@ -16,8 +16,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/db/client';
-import { requireSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
-import { requireWorkspaceAuth, logWorkspaceAudit } from '@/lib/workspace-auth';
+import { requireSafeAuth } from '@/lib/safe-auth';
+import { requireWorkspaceAuth, logWorkspaceAudit, isSuperAdmin } from '@/lib/workspace-auth';
 import type {
   CreateOrganizationInput,
   CreateWorkspaceInput,

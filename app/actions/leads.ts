@@ -12,7 +12,8 @@
  * @module app/actions/leads
  */
 
-import { requireSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
+import { requireSafeAuth } from '@/lib/safe-auth';
+import { isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { calculateLeadScore } from '@/lib/crm/lead-scoring';
 import type { LeadScoreInput } from '@/lib/crm/lead-scoring';

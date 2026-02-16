@@ -14,8 +14,7 @@
  * - Visualizzare le proprie transazioni
  */
 
-import { requireWorkspaceAuth, getWorkspaceAuth } from '@/lib/workspace-auth';
-import { isSuperAdmin } from '@/lib/safe-auth';
+import { requireWorkspaceAuth, getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { writeWalletAuditLog } from '@/lib/security/audit-log';
 import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';

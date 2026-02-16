@@ -6,8 +6,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
-import { getWorkspaceAuth } from '@/lib/workspace-auth';
-import { isSuperAdmin } from '@/lib/safe-auth';
+import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 
 /**
  * Verifica se l'utente corrente è Superadmin

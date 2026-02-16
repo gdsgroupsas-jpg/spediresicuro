@@ -30,6 +30,10 @@ vi.mock('@/lib/safe-auth', () => ({
   },
 }));
 
+vi.mock('@/lib/workspace-auth', () => ({
+  isSuperAdmin: vi.fn().mockReturnValue(false),
+}));
+
 describe('Audit Fixes Comprehensive Tests', () => {
   let testUser: any;
   let testConfig: any;

@@ -12,8 +12,8 @@
  * @module app/actions/crm-health
  */
 
-import { requireSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
-import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { requireSafeAuth } from '@/lib/safe-auth';
+import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { evaluateHealthRules, type CrmAlert, type HealthCheckEntity } from '@/lib/crm/health-rules';
 
