@@ -76,15 +76,16 @@ export const metadata: Metadata = {
 import { headers } from 'next/headers';
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  // Detect test mode to disable interfereing components (Anne, etc.)
+  // Detect test mode to disable interfering components (Anne, etc.)
+  // Logica centralizzata in lib/test-mode.ts
   let isTestMode = false;
-  let testModeHeader = null;
+  let testModeHeader: string | null = null;
 
   try {
-    // Solo se non siamo in build time static generation
+    const { isE2ETestMode } = await import('@/lib/test-mode');
     const headersList = await headers();
     testModeHeader = headersList.get('x-test-mode');
-    isTestMode = testModeHeader === 'playwright' || process.env.PLAYWRIGHT_TEST_MODE === 'true';
+    isTestMode = isE2ETestMode(headersList);
   } catch (e) {
     // Ignore error (e.g. during static build)
   }

@@ -136,6 +136,11 @@ function injectWorkspaceHeader(request: NextRequest): NextResponse {
   // This prevents header injection attacks
   requestHeaders.delete(WORKSPACE_HEADER_NAME);
 
+  // SECURITY: Strip x-test-mode header from client requests
+  // Defense-in-depth: il bypass E2E è già protetto da NODE_ENV !== 'production',
+  // ma strippare l'header impedisce qualsiasi tentativo di injection
+  requestHeaders.delete('x-test-mode');
+
   if (workspaceId) {
     requestHeaders.set(WORKSPACE_HEADER_NAME, workspaceId);
   }

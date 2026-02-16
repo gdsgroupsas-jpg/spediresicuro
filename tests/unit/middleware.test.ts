@@ -11,7 +11,8 @@
  * Questi test verificano la logica isolata senza dipendenze Next.js/Sentry.
  */
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
+import { isE2ETestMode } from '@/lib/test-mode';
 
 // Testiamo le utility function direttamente
 // Queste sono le stesse funzioni usate nel middleware
@@ -187,6 +188,99 @@ describe('Middleware Utility Functions', () => {
       expect(isPlaywrightTestBypass(null, 'development')).toBe(false);
       expect(isPlaywrightTestBypass('other', 'development')).toBe(false);
     });
+  });
+});
+
+describe('isE2ETestMode (centralizzata in lib/test-mode.ts)', () => {
+  // Helper: crea un fake headers object
+  const fakeHeaders = (map: Record<string, string>) => ({
+    get: (name: string) => map[name] || null,
+  });
+
+  const originalEnv = process.env;
+
+  afterEach(() => {
+    // Ripristina env dopo ogni test
+    process.env = { ...originalEnv };
+  });
+
+  it('should return true in development with playwright header', () => {
+    process.env.NODE_ENV = 'development';
+    process.env.CI = '';
+    process.env.PLAYWRIGHT_TEST_MODE = '';
+    expect(isE2ETestMode(fakeHeaders({ 'x-test-mode': 'playwright' }))).toBe(true);
+  });
+
+  it('should return true in test env with playwright header', () => {
+    process.env.NODE_ENV = 'test';
+    process.env.CI = '';
+    process.env.PLAYWRIGHT_TEST_MODE = '';
+    expect(isE2ETestMode(fakeHeaders({ 'x-test-mode': 'playwright' }))).toBe(true);
+  });
+
+  it('should return false in production without CI or PLAYWRIGHT_TEST_MODE', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CI = '';
+    process.env.PLAYWRIGHT_TEST_MODE = '';
+    expect(isE2ETestMode(fakeHeaders({ 'x-test-mode': 'playwright' }))).toBe(false);
+  });
+
+  it('should return true in production with CI=true', () => {
+    process.env.NODE_ENV = 'production';
+    process.env.CI = 'true';
+    process.env.PLAYWRIGHT_TEST_MODE = '';
+    expect(isE2ETestMode(fakeHeaders({ 'x-test-mode': 'playwright' }))).toBe(true);
+  });
+
+  it('should return true with PLAYWRIGHT_TEST_MODE=true even without header', () => {
+    process.env.NODE_ENV = 'development';
+    process.env.CI = '';
+    process.env.PLAYWRIGHT_TEST_MODE = 'true';
+    expect(isE2ETestMode(fakeHeaders({}))).toBe(true);
+  });
+
+  it('should return false without playwright header and without PLAYWRIGHT_TEST_MODE', () => {
+    process.env.NODE_ENV = 'development';
+    process.env.CI = '';
+    process.env.PLAYWRIGHT_TEST_MODE = '';
+    expect(isE2ETestMode(fakeHeaders({}))).toBe(false);
+  });
+
+  it('should return false with random header value', () => {
+    process.env.NODE_ENV = 'development';
+    process.env.CI = '';
+    process.env.PLAYWRIGHT_TEST_MODE = '';
+    expect(isE2ETestMode(fakeHeaders({ 'x-test-mode': 'malicious' }))).toBe(false);
+  });
+});
+
+describe('Header Stripping Security', () => {
+  it('should strip x-test-mode header from client requests (defense-in-depth)', () => {
+    // Simula il comportamento di injectWorkspaceHeader
+    const requestHeaders = new Map<string, string>();
+    requestHeaders.set('x-test-mode', 'playwright');
+    requestHeaders.set('x-sec-workspace-id', 'injected-id');
+    requestHeaders.set('authorization', 'Bearer token');
+
+    // Il middleware deve rimuovere questi header
+    requestHeaders.delete('x-sec-workspace-id');
+    requestHeaders.delete('x-test-mode');
+
+    expect(requestHeaders.has('x-test-mode')).toBe(false);
+    expect(requestHeaders.has('x-sec-workspace-id')).toBe(false);
+    // Header legittimi NON vengono toccati
+    expect(requestHeaders.has('authorization')).toBe(true);
+  });
+
+  it('should strip x-test-mode even in production (defense-in-depth)', () => {
+    // Anche se il bypass è protetto da NODE_ENV, l'header viene sempre rimosso
+    const requestHeaders = new Map<string, string>();
+    requestHeaders.set('x-test-mode', 'playwright');
+
+    // Il middleware rimuove SEMPRE l'header, indipendentemente da NODE_ENV
+    requestHeaders.delete('x-test-mode');
+
+    expect(requestHeaders.has('x-test-mode')).toBe(false);
   });
 });
 

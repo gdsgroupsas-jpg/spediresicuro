@@ -726,37 +726,30 @@ export const { handlers, signIn, signOut } = nextAuthResult;
 
 // Wrap auth to support E2E test bypass
 export const auth = async (...args: any[]) => {
-  // ⚠️ E2E TEST BYPASS (Solo CI/Test Environment)
-  const isCI = process.env.CI === 'true';
-  const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
+  // ⚠️ E2E TEST BYPASS — logica centralizzata in lib/test-mode.ts
+  try {
+    const { headers } = await import('next/headers');
+    const { isE2ETestMode } = await import('@/lib/test-mode');
+    const headersList = await headers();
 
-  if (process.env.NODE_ENV !== 'production' || isCI || isPlaywrightMode) {
-    try {
-      const { headers } = await import('next/headers');
-      const headersList = await headers();
-      const testHeader = headersList.get('x-test-mode');
-
-      if (testHeader === 'playwright' || isPlaywrightMode) {
-        // console.log('🧪 [AUTH CONFIG] Test mode bypass active via wrapper');
-        return {
-          user: {
-            id: '00000000-0000-0000-0000-000000000000', // Valid Nil UUID
-            email: process.env.TEST_USER_EMAIL || 'test@example.com',
-            name: 'Test User E2E',
-            role: 'admin', // Force admin role
-            image: null,
-            // Mock extended fields potentially used
-            is_reseller: true,
-            reseller_role: 'admin',
-            account_type: 'superadmin', // Force superadmin for permissions
-            onboarding_complete: true, // ✅ Bypass onboarding redirect for E2E tests
-          },
-          expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
-        };
-      }
-    } catch (e) {
-      // Ignore error if headers() not available
+    if (isE2ETestMode(headersList)) {
+      return {
+        user: {
+          id: '00000000-0000-0000-0000-000000000000', // Valid Nil UUID
+          email: process.env.TEST_USER_EMAIL || 'test@example.com',
+          name: 'Test User E2E',
+          role: 'admin',
+          image: null,
+          is_reseller: true,
+          reseller_role: 'admin',
+          account_type: 'superadmin',
+          onboarding_complete: true,
+        },
+        expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      };
     }
+  } catch (e) {
+    // Ignore error if headers() not available
   }
 
   return (nextAuthResult.auth as any)(...args);

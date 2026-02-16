@@ -90,52 +90,47 @@ export async function getWorkspaceAuth(): Promise<WorkspaceActingContext | null>
       workspaceId = userData?.primary_workspace_id || null;
     }
 
-    // 3b. E2E Test Mode bypass: se siamo in test mode e non c'e' workspace,
-    // ritorna un context finto (stesso pattern di auth() in auth-config.ts)
+    // 3b. E2E Test Mode bypass — logica centralizzata in lib/test-mode.ts
     if (!workspaceId) {
-      const isCI = process.env.CI === 'true';
-      const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
+      const { isE2ETestMode } = await import('@/lib/test-mode');
 
-      if (process.env.NODE_ENV !== 'production' || isCI || isPlaywrightMode) {
-        const testHeader = headersList.get('x-test-mode');
-        if (testHeader === 'playwright' || isPlaywrightMode) {
-          const testWorkspace: WorkspaceContextInfo = {
-            id: '00000000-0000-0000-0000-000000000001',
-            name: 'Test Workspace E2E',
-            slug: 'test-workspace-e2e',
-            type: 'reseller' as WorkspaceType,
-            depth: 0 as WorkspaceDepth,
-            organization_id: '00000000-0000-0000-0000-000000000002',
-            organization_name: 'Test Organization E2E',
-            organization_slug: 'test-org-e2e',
-            wallet_balance: 1000,
-            role: 'owner' as WorkspaceMemberRole,
-            permissions: [],
-            branding: {} as OrganizationBranding,
-          };
+      if (isE2ETestMode(headersList)) {
+        const testWorkspace: WorkspaceContextInfo = {
+          id: '00000000-0000-0000-0000-000000000001',
+          name: 'Test Workspace E2E',
+          slug: 'test-workspace-e2e',
+          type: 'reseller' as WorkspaceType,
+          depth: 0 as WorkspaceDepth,
+          organization_id: '00000000-0000-0000-0000-000000000002',
+          organization_name: 'Test Organization E2E',
+          organization_slug: 'test-org-e2e',
+          wallet_balance: 1000,
+          role: 'owner' as WorkspaceMemberRole,
+          permissions: [],
+          branding: {} as OrganizationBranding,
+        };
 
-          return {
-            actor: {
-              id: baseContext.actor.id,
-              email: baseContext.actor.email,
-              name: baseContext.actor.name,
-              role: baseContext.actor.role,
-              account_type: baseContext.actor.account_type,
-              is_reseller: baseContext.actor.is_reseller,
-            },
-            target: {
-              id: baseContext.target.id,
-              email: baseContext.target.email,
-              name: baseContext.target.name,
-              role: baseContext.target.role,
-              account_type: baseContext.target.account_type,
-              is_reseller: baseContext.target.is_reseller,
-            },
-            workspace: testWorkspace,
-            isImpersonating: baseContext.isImpersonating,
-            metadata: baseContext.metadata,
-          };
-        }
+        return {
+          actor: {
+            id: baseContext.actor.id,
+            email: baseContext.actor.email,
+            name: baseContext.actor.name,
+            role: baseContext.actor.role,
+            account_type: baseContext.actor.account_type,
+            is_reseller: baseContext.actor.is_reseller,
+          },
+          target: {
+            id: baseContext.target.id,
+            email: baseContext.target.email,
+            name: baseContext.target.name,
+            role: baseContext.target.role,
+            account_type: baseContext.target.account_type,
+            is_reseller: baseContext.target.is_reseller,
+          },
+          workspace: testWorkspace,
+          isImpersonating: baseContext.isImpersonating,
+          metadata: baseContext.metadata,
+        };
       }
     }
 

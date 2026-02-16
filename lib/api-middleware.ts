@@ -37,22 +37,17 @@ export interface AdminAuthResult extends AuthResult {
  * // Usa context.actor per chi esegue, context.target per chi è target
  */
 export async function requireAuth(): Promise<AuthResult> {
-  // ⚠️ E2E TEST BYPASS (Solo CI/Test Environment)
+  // ⚠️ E2E TEST BYPASS — logica centralizzata in lib/test-mode.ts
   try {
+    const { isE2ETestMode } = await import('@/lib/test-mode');
     const headersList = await headers();
-    const testHeader = headersList.get('x-test-mode');
-    const isPlaywrightMode = process.env.PLAYWRIGHT_TEST_MODE === 'true';
 
-    if (
-      (testHeader === 'playwright' || isPlaywrightMode) &&
-      process.env.NODE_ENV !== 'production'
-    ) {
-      console.log('🧪 [API AUTH] Test mode bypass active');
+    if (isE2ETestMode(headersList)) {
       const testUser: ActingUser = {
         id: '00000000-0000-0000-0000-000000000000',
         email: process.env.TEST_USER_EMAIL || 'test@example.com',
         name: 'Test User E2E',
-        role: 'admin', // Force admin role for tests
+        role: 'admin',
         account_type: 'superadmin',
         is_reseller: true,
       };
