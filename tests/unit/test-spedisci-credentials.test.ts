@@ -115,8 +115,10 @@ describe('getEncryptionKey .trim() safety', () => {
     expect(encContent).toContain('process.env.ENCRYPTION_KEY?.trim()');
   });
 
-  it('getLegacyEncryptionKey fa .trim() sulla env var', () => {
-    expect(encContent).toContain('process.env.ENCRYPTION_KEY_LEGACY?.trim()');
+  it('getLegacyEncryptionKey supporta prefisso raw: per chiave master diretta', () => {
+    // Permette di salvare il master key derivato direttamente, senza ri-derivazione
+    expect(encContent).toContain("envKey.startsWith('raw:')");
+    expect(encContent).toContain('envKey.substring(4)');
   });
 
   it('encryptCredential usa .trim() nel check fail-closed', () => {

@@ -44,18 +44,24 @@ function getEncryptionKey(): Buffer {
  * Supporta ENCRYPTION_KEY_LEGACY per decrypt con chiave vecchia
  */
 function getLegacyEncryptionKey(): Buffer | null {
-  const envKey = process.env.ENCRYPTION_KEY_LEGACY?.trim();
+  const envKey = process.env.ENCRYPTION_KEY_LEGACY;
 
   if (!envKey) {
     return null;
   }
 
-  // La chiave può essere una stringa esadecimale o base64
-  if (envKey.length === 64) {
-    // Esadecimale (32 bytes * 2)
-    return Buffer.from(envKey, 'hex');
+  // Supporta prefisso "raw:" per chiave master già derivata (32 byte in hex = 68 chars con prefisso)
+  // Usato per recuperare credenziali crittate con chiave corrotta (es. \r\n)
+  if (envKey.startsWith('raw:')) {
+    const hexKey = envKey.substring(4).trim();
+    return Buffer.from(hexKey, 'hex');
+  }
+
+  const trimmed = envKey.trim();
+  if (trimmed.length === 64 && /^[0-9a-fA-F]{64}$/.test(trimmed)) {
+    return Buffer.from(trimmed, 'hex');
   } else {
-    // Base64 o stringa diretta - deriviamo con scrypt
+    // Stringa diretta — deriviamo con scrypt (preserva whitespace originale)
     return crypto.scryptSync(envKey, 'spediresicuro-salt', KEY_LENGTH);
   }
 }
