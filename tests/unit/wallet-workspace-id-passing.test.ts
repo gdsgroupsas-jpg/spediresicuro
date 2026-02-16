@@ -213,12 +213,19 @@ describe('Wallet Workspace ID Passing (STEP 3)', () => {
       expect(content).toContain('getUserWorkspaceId');
     });
 
-    it('passa p_workspace_id a increment_wallet_balance', () => {
+    it('usa refund_wallet_balance (RPC atomica, non increment + INSERT manuale)', () => {
+      expect(content).toContain('refund_wallet_balance');
       expect(content).toContain('p_workspace_id: refundWorkspaceId');
+      expect(content).toContain('p_shipment_id: shipment_id');
     });
 
-    it('passa workspace_id anche nella insert manuale wallet_transactions', () => {
-      expect(content).toContain('workspace_id: refundWorkspaceId');
+    it('NON ha INSERT manuale ridondante in wallet_transactions', () => {
+      // La RPC refund_wallet_balance crea gia il record wallet_transaction
+      const refundSection = content.substring(
+        content.indexOf('Esegui rimborso'),
+        content.indexOf('rimborsato: true')
+      );
+      expect(refundSection).not.toContain("from('wallet_transactions').insert");
     });
   });
 

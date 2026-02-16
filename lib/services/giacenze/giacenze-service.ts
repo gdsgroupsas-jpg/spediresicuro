@@ -264,6 +264,8 @@ export async function executeAction(
   const cost = selectedAction.total_cost;
   const idempotencyKey = `giacenza_${holdId}_${actionType}_${Date.now()}`;
   let walletTransactionId: string | undefined;
+  // Lookup workspace per tracking in wallet_transactions (fuori dal blocco if per uso nel refund compensativo)
+  const giacenzaWorkspaceId = cost > 0 ? await getUserWorkspaceId(userId) : null;
 
   // Charge wallet if cost > 0
   if (cost > 0) {
@@ -278,9 +280,6 @@ export async function executeAction(
     // Debit wallet with retry
     const actionLabel = HOLD_ACTION_LABELS[actionType]?.label || actionType;
     const description = `Giacenza: ${actionLabel} - ${hold.shipment?.tracking_number || ''}`;
-
-    // Lookup workspace per tracking in wallet_transactions
-    const giacenzaWorkspaceId = await getUserWorkspaceId(userId);
 
     const result = await withConcurrencyRetry(
       async () =>
@@ -343,6 +342,22 @@ export async function executeAction(
 
   if (updateError) {
     console.error('[GIACENZE] Error updating hold:', updateError);
+    // Refund compensativo: wallet scalato ma hold non aggiornato
+    if (cost > 0) {
+      const refundKey = `${idempotencyKey}-refund`;
+      await supabaseAdmin
+        .rpc('increment_wallet_balance', {
+          p_user_id: userId,
+          p_amount: cost,
+          p_idempotency_key: refundKey,
+          p_workspace_id: giacenzaWorkspaceId,
+        })
+        .then(({ error: refundErr }) => {
+          if (refundErr) {
+            console.error('[GIACENZE] CRITICAL: refund compensativo fallito:', refundErr);
+          }
+        });
+    }
     throw new Error(`Errore aggiornamento giacenza: ${updateError.message}`);
   }
 

@@ -566,31 +566,14 @@ async function handleProcessRefund(args: Record<string, any>, userId: string) {
     };
   }
 
-  // Esegui rimborso
+  // Esegui rimborso (RPC atomica: lock + UPDATE users + INSERT wallet_transaction)
   const refundWorkspaceId = await getUserWorkspaceId(userId);
-  const { error: walletError } = await supabaseAdmin.rpc('increment_wallet_balance', {
+  const { error: walletError } = await supabaseAdmin.rpc('refund_wallet_balance', {
     p_user_id: userId,
     p_amount: refundAmount,
+    p_description: `Rimborso: ${reason || refundReason} (${shipment.tracking_number})`,
+    p_shipment_id: shipment_id,
     p_workspace_id: refundWorkspaceId,
-  });
-
-  if (walletError) {
-    return {
-      success: false,
-      result: null,
-      error: `Errore rimborso wallet: ${walletError.message}`,
-    };
-  }
-
-  // Registra transazione
-  await supabaseAdmin.from('wallet_transactions').insert({
-    user_id: userId,
-    workspace_id: refundWorkspaceId,
-    amount: refundAmount,
-    type: 'REFUND',
-    description: `Rimborso: ${reason || refundReason} (${shipment.tracking_number})`,
-    reference_type: 'shipment',
-    reference_id: shipment_id,
   });
 
   return {
