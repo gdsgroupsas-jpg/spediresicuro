@@ -102,6 +102,21 @@ Record structural and process decisions for fast AI retrieval.
 - Impact: reseller-fiscal-report.ts, report-fiscale/page.tsx, reseller-provider-chart.tsx, reseller-fiscal.ts
 - Tests: TypeScript build clean, 9 unit tests (reseller-provider-analytics.test.ts)
 
+## 2026-02-16 - Audit Enterprise: Rate Limit, Resilience, Observability
+
+- Decision: Implement full enterprise hardening across 3 phases (score 7.5→9.2/10)
+- Problem: Rate limiter existed but was not connected to routes; no retry/circuit breaker for external APIs; no client-side Sentry; health check only checked Supabase
+- Changes:
+  - **FASE 1 - Fondamenta**: Rate limit middleware (fail-open) on spedizioni/quotes/register; log levels (console.log→console.debug) in factory.ts/encryption.ts; Sentry client config with replay
+  - **FASE 2 - Resilienza**: Generic withRetry() with exponential backoff+jitter; Circuit Breaker (Redis+in-memory fallback); Resilient Provider decorator wrapper in factory.ts (1 line change)
+  - **FASE 3 - Observability**: Sentry business metrics (shipment, API, CB, wallet); Health check expanded with Redis ping + circuit breaker states + uptime/version
+- Feature flags: RATE_LIMIT_ENABLED, RETRY_ENABLED, CIRCUIT_BREAKER_ENABLED (all true, set false for instant rollback)
+- New files: lib/security/rate-limit-middleware.ts, lib/resilience/{retry,circuit-breaker,resilient-provider}.ts, lib/observability/metrics.ts, sentry.client.config.ts
+- Modified: factory.ts (import+3 lines), encryption.ts (2 log levels), health/route.ts (+25 lines), 3 API routes (+2 lines each)
+- Impact: 18 files changed, 1984 insertions
+- Tests: 2925 total tests green (+23 new), build clean
+- Env vars: RATE_LIMIT_ENABLED, RETRY_ENABLED, CIRCUIT_BREAKER_ENABLED added to Vercel (prod/preview/dev)
+
 ## 2026-02-16 - Fix Wallet Balance Desync (users vs workspaces)
 
 - Decision: Dashboard banner reads `users.wallet_balance` (source of truth) instead of `workspaces.wallet_balance` (stale snapshot)
