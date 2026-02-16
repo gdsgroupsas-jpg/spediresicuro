@@ -18,7 +18,8 @@ const KEY_LENGTH = 32; // 32 bytes per AES-256
  * Se non presente, genera una chiave (solo per sviluppo)
  */
 function getEncryptionKey(): Buffer {
-  const envKey = process.env.ENCRYPTION_KEY;
+  // .trim() previene mismatch da \r\n su Windows / copia-incolla Vercel
+  const envKey = process.env.ENCRYPTION_KEY?.trim();
 
   if (!envKey) {
     // ⚠️ SOLO PER SVILUPPO - In produzione DEVE essere configurata
@@ -43,7 +44,7 @@ function getEncryptionKey(): Buffer {
  * Supporta ENCRYPTION_KEY_LEGACY per decrypt con chiave vecchia
  */
 function getLegacyEncryptionKey(): Buffer | null {
-  const envKey = process.env.ENCRYPTION_KEY_LEGACY;
+  const envKey = process.env.ENCRYPTION_KEY_LEGACY?.trim();
 
   if (!envKey) {
     return null;
@@ -77,7 +78,7 @@ export function encryptCredential(plaintext: string): string {
 
   // ⚠️ P0 AUDIT FIX: Fail-closed in produzione
   // Non permettere MAI salvataggio credenziali in chiaro in produzione
-  if (!process.env.ENCRYPTION_KEY) {
+  if (!process.env.ENCRYPTION_KEY?.trim()) {
     if (process.env.NODE_ENV === 'production') {
       // 🔒 FAIL-CLOSED: Blocca operazione invece di salvare in chiaro
       console.error(

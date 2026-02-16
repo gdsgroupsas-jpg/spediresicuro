@@ -355,6 +355,12 @@ async function testSpedisciOnlineCredentials(
     });
 
     if (response.ok) {
+      // Verifica che la risposta sia JSON — Spedisci.Online restituisce HTML 200
+      // (pagina di login) se l'API key è invalida, causando false positive
+      const contentType = response.headers.get('content-type') || '';
+      if (!contentType.includes('application/json')) {
+        return { success: false, error: 'Risposta non JSON: credenziali probabilmente non valide' };
+      }
       return { success: true };
     } else if (response.status === 401) {
       return { success: false, error: 'API key non valida o scaduta' };
