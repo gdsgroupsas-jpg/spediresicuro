@@ -299,6 +299,9 @@ export async function testCarrierCredentials(configId: string): Promise<{
 
 /**
  * Testa credenziali Spedisci.Online
+ *
+ * Usa POST /shipping/rates con payload minimo (l'unico endpoint
+ * leggero disponibile nell'API Spedisci.Online — non esiste /auth/test).
  */
 async function testSpedisciOnlineCredentials(
   config: any
@@ -311,21 +314,52 @@ async function testSpedisciOnlineCredentials(
       apiKey = decryptCredential(apiKey);
     }
 
-    const baseUrl = config.base_url || 'https://api.spedisci.online/api/v2';
-    const testUrl = `${baseUrl}/v1/auth/test`;
+    const rawBaseUrl = (config.base_url || 'https://api.spedisci.online/api/v2')
+      .trim()
+      .replace(/\/$/, '');
+    // Costruisci URL correttamente: se base_url include /api/v2 NON duplicare
+    const testUrl = rawBaseUrl.includes('/api/v2')
+      ? `${rawBaseUrl}/shipping/rates`
+      : `${rawBaseUrl}/api/v2/shipping/rates`;
+
+    // Payload minimo per validare credenziali (come validate-spedisci-online)
+    const testPayload = {
+      packages: [{ length: 10, width: 10, height: 10, weight: 1 }],
+      shipFrom: {
+        name: 'Test',
+        company: 'Test',
+        street1: 'Via Test 1',
+        city: 'Roma',
+        state: 'RM',
+        postalCode: '00100',
+        country: 'IT',
+      },
+      shipTo: {
+        name: 'Test',
+        company: '',
+        street1: 'Via Test 2',
+        city: 'Milano',
+        state: 'MI',
+        postalCode: '20100',
+        country: 'IT',
+      },
+    };
 
     const response = await fetch(testUrl, {
-      method: 'GET',
+      method: 'POST',
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
+      body: JSON.stringify(testPayload),
     });
 
     if (response.ok) {
       return { success: true };
     } else if (response.status === 401) {
       return { success: false, error: 'API key non valida o scaduta' };
+    } else if (response.status === 403) {
+      return { success: false, error: "Accesso negato. Verifica i permessi dell'API Key." };
     } else {
       return { success: false, error: `HTTP ${response.status}: ${response.statusText}` };
     }
