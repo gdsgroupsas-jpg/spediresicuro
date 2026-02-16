@@ -466,6 +466,7 @@ Gestione domini custom via Resend API (SPF, DKIM, MX).
 | 17. Gestione Contratti UI           | ✅ Completato  | 2026-02-12 |
 | 18. Fattura a Fine Mese (Postpaid)  | ✅ Completato  | 2026-02-12 |
 | 19. Wallet UI & Admin Notifications | ✅ Completato  | 2026-02-12 |
+| 20. Auth Migration & Security DRY   | ✅ Completato  | 2026-02-13 |
 
 ---
 
@@ -527,6 +528,70 @@ Sub-user postpagato spedisce senza saldo. `POSTPAID_CHARGE` traccia consumo senz
 - `supabase/migrations/20260217110000_reset_wallet_pilot_gdsgroupsas.sql` (nuovo)
 - `tests/unit/topup-requests-notifications.test.ts` (22 nuovi test)
 - `tests/unit/manage-wallet-card.test.ts` (6 nuovi test)
+
+---
+
+### Milestone 20: Auth Migration & Security DRY ✅
+
+**Commits:** `d653f0a`, `62b2546`, `6fa690e`, `3563cdc`, `d1a003f` | **Completato:** 2026-02-13
+
+Migrazione completa dell'architettura auth da `getSafeAuth` a `getWorkspaceAuth` per
+isolamento multi-tenant, con refactor DRY del bypass E2E e defense-in-depth.
+
+#### Architettura Auth (post-migrazione)
+
+| Funzione             | Uso corretto                                                   | File                             |
+| -------------------- | -------------------------------------------------------------- | -------------------------------- |
+| `getWorkspaceAuth()` | Operazioni workspace-scoped (listini, spedizioni, team)        | `lib/workspace-auth.ts`          |
+| `getSafeAuth()`      | Operazioni globali (auth, wallet, debug, invite, integrazioni) | `lib/safe-auth.ts`               |
+| `isSuperAdmin()`     | Check permessi admin — importare SEMPRE da `workspace-auth`    | Re-export da `workspace-auth.ts` |
+| `isE2ETestMode()`    | Bypass E2E centralizzato — unico punto di verifica             | `lib/test-mode.ts`               |
+
+#### Fasi completate
+
+##### P0-P3: Migrazione Auth (151 file auditati)
+
+- 113 file migrati a `getWorkspaceAuth()` (API routes + server actions)
+- 31 file confermati legittimi su `getSafeAuth()` (wallet, auth, debug, invite)
+- 7 file con entrambi (admin overview, impersonation — corretto by design)
+- Zero violazioni `isSuperAdmin` (tutti importano da workspace-auth)
+
+##### Defense-in-depth: Strip x-test-mode header
+
+- `middleware.ts`: strippa `x-test-mode` da tutte le request client
+- Stessa logica di `x-sec-workspace-id` — impedisce header injection
+
+##### DRY: isE2ETestMode centralizzato
+
+- `lib/test-mode.ts`: funzione unica per bypass E2E
+- Sostituisce logica duplicata in 4 file (auth-config, workspace-auth, api-middleware, layout)
+- Gate 1: `NODE_ENV !== 'production'` (o CI/Playwright env)
+- Gate 2: header `x-test-mode=playwright` (o PLAYWRIGHT_TEST_MODE env)
+
+##### E2E fix: workspace context in test mode
+
+- `workspace-auth.ts`: crea fake WorkspaceActingContext quando in test mode
+- Risolve regressione E2E causata dalla migrazione P1/P2
+- 14/14 E2E test passati (prima 4 fallivano)
+
+#### Test
+
+- 2866 unit test verdi (+47 rispetto a pre-migrazione)
+- 7 test `isE2ETestMode` (tutte le combinazioni env/header/production)
+- 21 test isolamento workspace listini (unit + security)
+- 4 pipeline CI GREEN (CI Gate, E2E, Security Scanning, Release Guard)
+
+#### File chiave
+
+- `lib/test-mode.ts` (NUOVO — centralizzazione bypass E2E)
+- `lib/workspace-auth.ts` (E2E bypass + re-export isSuperAdmin)
+- `lib/auth-config.ts` (refactored per usare isE2ETestMode)
+- `lib/api-middleware.ts` (refactored per usare isE2ETestMode)
+- `middleware.ts` (strip x-test-mode header)
+- `app/layout.tsx` (refactored per usare isE2ETestMode)
+- `tests/unit/middleware.test.ts` (9 nuovi test security)
+- `tests/unit/price-lists-workspace-isolation.test.ts` (9 test isolamento)
+- `tests/security/price-lists-isolation.test.ts` (12 test security)
 
 ---
 
