@@ -219,6 +219,7 @@ export async function manageWallet(
         p_amount: Math.abs(amount),
         p_type: transactionType,
         p_description: reason,
+        p_workspace_id: targetWorkspaceId,
       });
 
       if (txError) {

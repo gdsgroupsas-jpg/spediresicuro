@@ -4603,6 +4603,7 @@ export type Database = {
           p_reference_type?: string;
           p_type: string;
           p_user_id: string;
+          p_workspace_id?: string;
         };
         Returns: string;
       };

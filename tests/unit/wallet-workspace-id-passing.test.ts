@@ -200,4 +200,43 @@ describe('Wallet Workspace ID Passing (STEP 3)', () => {
       expect(content).toContain('p_workspace_id: giacenzaWorkspaceId');
     });
   });
+
+  // =========================================
+  // Caller: lib/ai/tools/support-tools.ts (Anne AI refund)
+  // =========================================
+  describe('lib/ai/tools/support-tools.ts', () => {
+    let content: string;
+
+    it('importa getUserWorkspaceId', () => {
+      const filePath = path.join(process.cwd(), 'lib/ai/tools/support-tools.ts');
+      content = fs.readFileSync(filePath, 'utf-8');
+      expect(content).toContain('getUserWorkspaceId');
+    });
+
+    it('passa p_workspace_id a increment_wallet_balance', () => {
+      expect(content).toContain('p_workspace_id: refundWorkspaceId');
+    });
+
+    it('passa workspace_id anche nella insert manuale wallet_transactions', () => {
+      expect(content).toContain('workspace_id: refundWorkspaceId');
+    });
+  });
+
+  // =========================================
+  // Caller: actions/super-admin.ts (deduct_wallet_credit)
+  // =========================================
+  describe('actions/super-admin.ts (deduct_wallet_credit)', () => {
+    let content: string;
+
+    it('passa p_workspace_id a deduct_wallet_credit', () => {
+      const filePath = path.join(process.cwd(), 'actions/super-admin.ts');
+      content = fs.readFileSync(filePath, 'utf-8');
+      // Cerca la chiamata deduct_wallet_credit con p_workspace_id
+      const deductSection = content.substring(
+        content.indexOf('deduct_wallet_credit'),
+        content.indexOf('deduct_wallet_credit') + 300
+      );
+      expect(deductSection).toContain('p_workspace_id: targetWorkspaceId');
+    });
+  });
 });

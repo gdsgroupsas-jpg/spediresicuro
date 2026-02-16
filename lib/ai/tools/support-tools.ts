@@ -18,6 +18,7 @@ import {
   executeAction,
 } from '@/lib/services/giacenze/giacenze-service';
 import { sendAlert } from '@/lib/services/telegram-bot';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import type { ToolDefinition, ToolCall } from '../tools';
 
 // ============================================
@@ -566,9 +567,11 @@ async function handleProcessRefund(args: Record<string, any>, userId: string) {
   }
 
   // Esegui rimborso
+  const refundWorkspaceId = await getUserWorkspaceId(userId);
   const { error: walletError } = await supabaseAdmin.rpc('increment_wallet_balance', {
     p_user_id: userId,
     p_amount: refundAmount,
+    p_workspace_id: refundWorkspaceId,
   });
 
   if (walletError) {
@@ -582,6 +585,7 @@ async function handleProcessRefund(args: Record<string, any>, userId: string) {
   // Registra transazione
   await supabaseAdmin.from('wallet_transactions').insert({
     user_id: userId,
+    workspace_id: refundWorkspaceId,
     amount: refundAmount,
     type: 'REFUND',
     description: `Rimborso: ${reason || refundReason} (${shipment.tracking_number})`,
