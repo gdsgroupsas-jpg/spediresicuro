@@ -26,7 +26,6 @@ vi.mock('@/lib/db/client', () => ({
 
 vi.mock('@/lib/safe-auth', () => ({
   getSafeAuth: () => mockGetSafeAuth(),
-  isSuperAdmin: (ctx: unknown) => mockIsSuperAdmin(ctx),
 }));
 
 vi.mock('@/lib/workspace-auth', () => ({
