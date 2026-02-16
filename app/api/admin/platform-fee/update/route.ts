@@ -11,7 +11,7 @@
  */
 
 import { NextResponse } from 'next/server';
- 
+
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { updatePlatformFee } from '@/lib/services/pricing/platform-fee';

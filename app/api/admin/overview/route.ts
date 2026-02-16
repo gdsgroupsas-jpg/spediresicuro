@@ -10,7 +10,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
- 
+
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { findUserByEmail } from '@/lib/database';
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
