@@ -14,6 +14,7 @@ import type { AuthContext } from '@/lib/auth-context';
 import { createApiLogger, getRequestId } from '@/lib/api-helpers';
 import { handleApiError } from '@/lib/api-responses';
 import { supabaseAdmin } from '@/lib/db/client';
+import { withRateLimit } from '@/lib/security/rate-limit-middleware';
 
 /**
  * Sanitizza payload spedizione in base al ruolo utente
@@ -407,6 +408,10 @@ export async function GET(request: NextRequest) {
  * Handler POST - Crea una nuova spedizione
  */
 export async function POST(request: NextRequest) {
+  // Rate limit: 60 req/min per utente (write operation costosa)
+  const rl = await withRateLimit(request, 'spedizioni-create', { limit: 60, windowSeconds: 60 });
+  if (rl) return rl;
+
   const requestId = getRequestId(request);
   const logger = await createApiLogger(request);
   let session: any = null;

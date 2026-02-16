@@ -10,8 +10,13 @@ import { findUserByEmail } from '@/lib/database';
 import { validateEmail, validatePassword } from '@/lib/validators';
 import { ApiErrors, handleApiError } from '@/lib/api-responses';
 import { supabase, supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
+import { withRateLimit } from '@/lib/security/rate-limit-middleware';
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 5 req/min per IP (spam/abuse protection)
+  const rl = await withRateLimit(request, 'auth-register', { limit: 5, windowSeconds: 60 });
+  if (rl) return rl;
+
   try {
     const body = await request.json();
     const { email, password, name, accountType } = body;

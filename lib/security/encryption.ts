@@ -199,7 +199,7 @@ export function decryptCredential(encryptedData: string): string {
     const decrypted = decryptWithKey(encryptedData, key);
 
     // ✅ Decrypt riuscito con chiave corrente
-    console.log(`✅ [ENCRYPTION] Decrypt riuscito (chiave corrente) - hash: ${dataHash}`);
+    console.debug(`✅ [ENCRYPTION] Decrypt riuscito (chiave corrente) - hash: ${dataHash}`);
     return decrypted;
   } catch (error: any) {
     const errorMessage = error?.message || 'Unknown decryption error';
@@ -229,7 +229,7 @@ export function decryptCredential(encryptedData: string): string {
         const decrypted = decryptWithKey(encryptedData, legacyKey);
 
         // ✅ Decrypt riuscito con chiave legacy
-        console.log(`✅ [ENCRYPTION] Decrypt riuscito (chiave legacy) - hash: ${dataHash}`);
+        console.debug(`✅ [ENCRYPTION] Decrypt riuscito (chiave legacy) - hash: ${dataHash}`);
         console.warn(
           `⚠️ [ENCRYPTION] ATTENZIONE: Credenziale decriptata con ENCRYPTION_KEY_LEGACY. Considera re-criptare con chiave corrente.`
         );

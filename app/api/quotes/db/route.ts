@@ -21,8 +21,13 @@ import {
   calculatePriceWithRules,
 } from '@/lib/db/price-lists-advanced';
 import { NextRequest, NextResponse } from 'next/server';
+import { withRateLimit } from '@/lib/security/rate-limit-middleware';
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 120 req/min per utente (chiama DB, no API esterne)
+  const rl = await withRateLimit(request, 'quotes-db', { limit: 120, windowSeconds: 60 });
+  if (rl) return rl;
+
   try {
     // ✨ M3: Usa getWorkspaceAuth per avere context con workspace
     const wsContext = await getWorkspaceAuth();

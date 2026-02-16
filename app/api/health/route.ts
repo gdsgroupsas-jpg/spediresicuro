@@ -9,6 +9,8 @@
  */
 import { NextResponse } from 'next/server';
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
+import { getRedis } from '@/lib/db/redis';
+import { getAllCircuitStates } from '@/lib/resilience/resilient-provider';
 
 export async function GET() {
   const healthStatus: any = {
@@ -53,6 +55,31 @@ export async function GET() {
     healthStatus.database.working = true; // JSON locale sempre disponibile
     healthStatus.database.message = 'Supabase non configurato, uso database JSON locale';
   }
+
+  // Check Redis
+  const redis = getRedis();
+  if (redis) {
+    try {
+      await redis.ping();
+      healthStatus.redis = { working: true, message: 'Redis connesso' };
+    } catch (error: any) {
+      healthStatus.redis = { working: false, message: error.message };
+      healthStatus.status = 'degraded';
+    }
+  } else {
+    healthStatus.redis = { working: false, message: 'Redis non configurato' };
+  }
+
+  // Circuit breaker states
+  try {
+    healthStatus.circuitBreakers = await getAllCircuitStates();
+  } catch {
+    healthStatus.circuitBreakers = {};
+  }
+
+  // Uptime e versione
+  healthStatus.uptime = process.uptime();
+  healthStatus.version = process.env.VERCEL_GIT_COMMIT_SHA?.substring(0, 7) || 'dev';
 
   const statusCode = healthStatus.status === 'ok' ? 200 : 503;
 

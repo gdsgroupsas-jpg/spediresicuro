@@ -11,6 +11,7 @@
  */
 
 import { CourierAdapter } from '@/lib/adapters/couriers/base';
+import { withResilience } from '@/lib/resilience/resilient-provider';
 import { PosteAdapter } from '@/lib/adapters/couriers/poste';
 import {
   SpedisciOnlineAdapter,
@@ -158,7 +159,7 @@ export async function getCourierConfigForUser(
 
       // 🔧 FIX: Cerca prima configurazione personale (owner_user_id = userId)
       // Questa è la priorità più alta, come nella RPC migration 053
-      console.log(
+      console.debug(
         `🔍 [FACTORY] Fallback query: cerco config per userId=${sanitizeIdForLog(userId)}, provider=${normalizedProviderId}`
       );
 
@@ -172,7 +173,7 @@ export async function getCourierConfigForUser(
         .single();
 
       if (!personalError && personalConfig) {
-        console.log(`✅ [FACTORY] Trovata config personale (owner_user_id match):`, {
+        console.debug(`✅ [FACTORY] Trovata config personale (owner_user_id match):`, {
           id: sanitizeIdForLog(personalConfig.id),
           name: sanitizeNameForLog(personalConfig.name),
           owner_user_id: sanitizeIdForLog(personalConfig.owner_user_id),
@@ -191,7 +192,7 @@ export async function getCourierConfigForUser(
           .single();
 
         if (!assignedError && assignedConfig) {
-          console.log(`✅ [FACTORY] Trovata config assegnata (assigned_config_id):`, {
+          console.debug(`✅ [FACTORY] Trovata config assegnata (assigned_config_id):`, {
             id: sanitizeIdForLog(assignedConfig.id),
             name: sanitizeNameForLog(assignedConfig.name),
           });
@@ -209,7 +210,7 @@ export async function getCourierConfigForUser(
         .single();
 
       if (!defaultError && defaultConfig) {
-        console.log(`ℹ️ [FACTORY] Nessuna config personale/assegnata, uso config default:`, {
+        console.debug(`ℹ️ [FACTORY] Nessuna config personale/assegnata, uso config default:`, {
           id: sanitizeIdForLog(defaultConfig.id),
           name: sanitizeNameForLog(defaultConfig.name),
         });
@@ -269,8 +270,10 @@ export async function getShippingProvider(
 
     if (!config) return null;
 
-    // Istanzia provider dalla configurazione DB
-    return instantiateProviderFromConfig(providerId, config);
+    // Istanzia provider dalla configurazione DB e wrappa con resilienza
+    const adapter = instantiateProviderFromConfig(providerId, config);
+    if (!adapter) return null;
+    return withResilience(adapter, providerId);
   } catch (error: any) {
     console.error('❌ Errore getShippingProvider:', error);
     return null;
@@ -307,7 +310,7 @@ function instantiateProviderFromConfig(
         // FIX: Decripta API key se criptata, poi trim
         let rawApiKey = config.api_key || '';
         if (rawApiKey && isEncrypted(rawApiKey)) {
-          console.log('🔐 [FACTORY] API key è criptata, decripto...');
+          console.debug('🔐 [FACTORY] API key è criptata, decripto...');
           rawApiKey = decryptCredential(rawApiKey);
         }
         const trimmedApiKey = rawApiKey.trim();
@@ -339,7 +342,7 @@ function instantiateProviderFromConfig(
 
         // Log sicuro: sempre (dev + production)
         // AUDIT FIX P1-3: Sanitizza configId e configName
-        console.log(`🔑 [FACTORY] Spedisci.Online config loaded:`, {
+        console.debug(`🔑 [FACTORY] Spedisci.Online config loaded:`, {
           configId: sanitizeIdForLog(config.id),
           configName: sanitizeNameForLog(config.name),
           providerId: config.provider_id,
@@ -353,7 +356,7 @@ function instantiateProviderFromConfig(
 
         // 🔍 AUDIT: Log dettagliato contract_mapping (solo in development)
         if (process.env.NODE_ENV === 'development') {
-          console.log(`🔍 [FACTORY] Contract mapping dettaglio:`, contractMapping);
+          console.debug(`🔍 [FACTORY] Contract mapping dettaglio:`, contractMapping);
         }
 
         const credentials: SpedisciOnlineCredentials = {
@@ -387,11 +390,11 @@ function instantiateProviderFromConfig(
         let posteApiKey = config.api_key || '';
         let posteApiSecret = config.api_secret || '';
         if (posteApiKey && isEncrypted(posteApiKey)) {
-          console.log('🔐 [FACTORY] Poste API key è criptata, decripto...');
+          console.debug('🔐 [FACTORY] Poste API key è criptata, decripto...');
           posteApiKey = decryptCredential(posteApiKey);
         }
         if (posteApiSecret && isEncrypted(posteApiSecret)) {
-          console.log('🔐 [FACTORY] Poste API secret è criptato, decripto...');
+          console.debug('🔐 [FACTORY] Poste API secret è criptato, decripto...');
           posteApiSecret = decryptCredential(posteApiSecret);
         }
 
