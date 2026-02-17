@@ -3,9 +3,10 @@
  *
  * Verifica che getInvoices():
  * 1. Usa getWorkspaceAuth per autenticazione
- * 2. Filtra per workspace tramite membership (workspace_members)
+ * 2. Filtra per workspace_id diretto (colonna su invoices)
  * 3. NON ritorna tutte le fatture senza filtro
  * 4. getUserInvoices filtra per user_id (già ok)
+ * 5. generateInvoiceForShipment include workspace_id nell'INSERT
  */
 
 import { describe, it, expect } from 'vitest';
@@ -37,22 +38,16 @@ describe('Fatture — isolamento multi-tenant', () => {
       expect(fnBlock).toContain('getWorkspaceAuth');
     });
 
-    it('filtra per workspace via workspace_members', () => {
+    it('filtra per workspace_id diretto (no bridge)', () => {
       const fnStart = code.indexOf('export async function getInvoices');
       const fnEnd = code.indexOf('export async function', fnStart + 1);
       const fnBlock = code.substring(fnStart, fnEnd > 0 ? fnEnd : fnStart + 3000);
 
-      // Deve fare query su workspace_members per ottenere i member ids
-      expect(fnBlock).toContain('workspace_members');
-      expect(fnBlock).toContain('workspace_id');
-    });
-
-    it('usa .in(user_id, memberIds) per filtrare fatture', () => {
-      const fnStart = code.indexOf('export async function getInvoices');
-      const fnEnd = code.indexOf('export async function', fnStart + 1);
-      const fnBlock = code.substring(fnStart, fnEnd > 0 ? fnEnd : fnStart + 3000);
-
-      expect(fnBlock).toContain("in('user_id'");
+      // Deve usare filtro diretto workspace_id
+      expect(fnBlock).toContain("eq('workspace_id'");
+      // NON deve più usare workspace_members bridge
+      expect(fnBlock).not.toContain('workspace_members');
+      expect(fnBlock).not.toContain('memberIds');
     });
 
     it('NON fa select * senza filtro su invoices', () => {
@@ -60,10 +55,8 @@ describe('Fatture — isolamento multi-tenant', () => {
       const fnEnd = code.indexOf('export async function', fnStart + 1);
       const fnBlock = code.substring(fnStart, fnEnd > 0 ? fnEnd : fnStart + 3000);
 
-      // La query NON deve essere solo .select().order().limit() senza filtro
-      // Deve avere ALMENO un .in() o .eq() per filtrare
-      const hasFilter = fnBlock.includes('.in(') || fnBlock.includes(".eq('workspace_id");
-      expect(hasFilter).toBe(true);
+      // La query DEVE avere un filtro workspace_id
+      expect(fnBlock).toContain(".eq('workspace_id");
     });
 
     it('ritorna errore se workspace non trovato', () => {
@@ -84,6 +77,19 @@ describe('Fatture — isolamento multi-tenant', () => {
       const fnBlock = code.substring(fnStart, fnEnd > 0 ? fnEnd : fnStart + 3000);
 
       expect(fnBlock).toContain("eq('user_id'");
+    });
+  });
+
+  describe('generateInvoiceForShipment', () => {
+    it('include workspace_id nell INSERT fattura', () => {
+      const fnStart = code.indexOf('export async function generateInvoiceForShipment');
+      expect(fnStart).toBeGreaterThan(-1);
+
+      const fnEnd = code.indexOf('export async function', fnStart + 1);
+      const fnBlock = code.substring(fnStart, fnEnd > 0 ? fnEnd : fnStart + 3000);
+
+      // Deve passare workspace_id nella insert della fattura
+      expect(fnBlock).toContain('workspace_id');
     });
   });
 });

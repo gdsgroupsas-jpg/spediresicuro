@@ -2,10 +2,12 @@
  * Test: Isolamento multi-tenant Contrassegni (COD)
  *
  * Verifica che le API COD:
- * 1. /api/cod/items — filtrano per workspace_members
- * 2. /api/cod/distinte GET — filtrano per workspace_members
- * 3. /api/cod/distinte POST — validano ownership workspace
- * 4. actions/contrassegni.ts — già filtra per workspace_id (verifica non regredito)
+ * 1. /api/cod/items — filtra per workspace_id diretto
+ * 2. /api/cod/distinte GET — filtra per workspace_id diretto
+ * 3. /api/cod/distinte POST — filtra items per workspace_id + inserisce workspace_id
+ * 4. /api/cod/distinte PATCH — filtra per workspace_id
+ * 5. /api/cod/distinte DELETE — filtra per workspace_id
+ * 6. actions/contrassegni.ts — già filtra per workspace_id (verifica non regredito)
  */
 
 import { describe, it, expect } from 'vitest';
@@ -30,13 +32,12 @@ describe('COD Items API — isolamento multi-tenant', () => {
     expect(code).toContain('Workspace non trovato');
   });
 
-  it('filtra per workspace_members', () => {
-    expect(code).toContain('workspace_members');
+  it('filtra cod_items per workspace_id diretto (no bridge)', () => {
+    // Deve usare .eq('workspace_id', workspaceId) direttamente sulla query cod_items
     expect(code).toContain("eq('workspace_id', workspaceId)");
-  });
-
-  it('usa .in(client_id, memberIds) per filtrare cod_items', () => {
-    expect(code).toContain("in('client_id', memberIds)");
+    // NON deve più usare workspace_members bridge
+    expect(code).not.toContain('workspace_members');
+    expect(code).not.toContain('memberIds');
   });
 });
 
@@ -49,32 +50,92 @@ describe('COD Distinte API — isolamento multi-tenant', () => {
     code = fs.readFileSync(ROUTE_PATH, 'utf-8');
   });
 
-  it('GET: filtra distinte per workspace_members', () => {
-    // Il blocco GET deve avere filtro workspace
-    const getBlock = code.substring(
-      code.indexOf('export async function GET'),
-      code.indexOf('export async function PATCH')
-    );
-    expect(getBlock).toContain('workspace_members');
-    expect(getBlock).toContain("in('client_id', memberIds)");
+  it('NON usa workspace_members bridge (pattern diretto)', () => {
+    expect(code).not.toContain('workspace_members');
+    expect(code).not.toContain('memberIds');
   });
 
-  it('POST: valida ownership items per workspace', () => {
-    const postBlock = code.substring(
-      code.indexOf('export async function POST'),
-      code.indexOf('export async function GET')
-    );
-    expect(postBlock).toContain('workspace_members');
-    expect(postBlock).toContain("in('client_id', memberIds)");
+  describe('GET', () => {
+    it('filtra distinte per workspace_id diretto', () => {
+      const getBlock = code.substring(
+        code.indexOf('export async function GET'),
+        code.indexOf('export async function PATCH')
+      );
+      expect(getBlock).toContain("eq('workspace_id', workspaceId)");
+    });
+
+    it('ritorna 403 senza workspace', () => {
+      const getBlock = code.substring(
+        code.indexOf('export async function GET'),
+        code.indexOf('export async function PATCH')
+      );
+      expect(getBlock).toContain('Workspace non trovato');
+      expect(getBlock).toContain('403');
+    });
   });
 
-  it('GET: ritorna 403 senza workspace', () => {
-    const getBlock = code.substring(
-      code.indexOf('export async function GET'),
-      code.indexOf('export async function PATCH')
-    );
-    expect(getBlock).toContain('Workspace non trovato');
-    expect(getBlock).toContain('403');
+  describe('POST', () => {
+    it('filtra items per workspace_id diretto', () => {
+      const postBlock = code.substring(
+        code.indexOf('export async function POST'),
+        code.indexOf('export async function GET')
+      );
+      expect(postBlock).toContain("eq('workspace_id', workspaceId)");
+    });
+
+    it('inserisce workspace_id nella nuova distinta', () => {
+      const postBlock = code.substring(
+        code.indexOf('export async function POST'),
+        code.indexOf('export async function GET')
+      );
+      expect(postBlock).toContain('workspace_id: workspaceId');
+    });
+
+    it('ritorna 403 senza workspace', () => {
+      const postBlock = code.substring(
+        code.indexOf('export async function POST'),
+        code.indexOf('export async function GET')
+      );
+      expect(postBlock).toContain('Workspace non trovato');
+    });
+  });
+
+  describe('PATCH', () => {
+    it('filtra distinta per workspace_id prima di aggiornare', () => {
+      const patchBlock = code.substring(
+        code.indexOf('export async function PATCH'),
+        code.indexOf('export async function DELETE')
+      );
+      expect(patchBlock).toContain("eq('workspace_id', workspaceId)");
+    });
+
+    it('ritorna 403 senza workspace', () => {
+      const patchBlock = code.substring(
+        code.indexOf('export async function PATCH'),
+        code.indexOf('export async function DELETE')
+      );
+      expect(patchBlock).toContain('Workspace non trovato');
+    });
+  });
+
+  describe('DELETE', () => {
+    it('filtra distinta per workspace_id prima di eliminare', () => {
+      const deleteBlock = code.substring(code.indexOf('export async function DELETE'));
+      expect(deleteBlock).toContain("eq('workspace_id', workspaceId)");
+    });
+
+    it('filtra anche cod_items per workspace_id nello scollega', () => {
+      const deleteBlock = code.substring(code.indexOf('export async function DELETE'));
+      // Deve avere workspace_id sia su cod_items.update che su cod_distinte.delete
+      const wsMatches = deleteBlock.match(/eq\('workspace_id', workspaceId\)/g);
+      expect(wsMatches).not.toBeNull();
+      expect(wsMatches!.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('ritorna 403 senza workspace', () => {
+      const deleteBlock = code.substring(code.indexOf('export async function DELETE'));
+      expect(deleteBlock).toContain('Workspace non trovato');
+    });
   });
 });
 

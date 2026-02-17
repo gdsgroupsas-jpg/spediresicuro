@@ -102,37 +102,18 @@ export async function updateInvoiceStatus(id: string, status: InvoiceStatus) {
 
 /**
  * Get fatture per admin table — filtrate per workspace corrente.
- *
- * La tabella invoices non ha ancora workspace_id (TODO: migration).
- * Per ora filtriamo via workspace_members: solo fatture di utenti
- * che appartengono al workspace corrente dell'admin.
+ * Usa filtro diretto workspace_id (colonna aggiunta con migration 20260217100000).
  */
 export async function getInvoices(limit = 50) {
-  // Verifica autenticazione workspace
   const context = await getWorkspaceAuth();
   if (!context?.workspace?.id) {
     throw new Error('Non autenticato o workspace non trovato');
   }
 
-  const workspaceId = context.workspace.id;
-
-  // Recupera user_id dei membri del workspace
-  const { data: members, error: membersError } = await supabaseAdmin
-    .from('workspace_members')
-    .select('user_id')
-    .eq('workspace_id', workspaceId)
-    .eq('status', 'active');
-
-  if (membersError) throw new Error(membersError.message);
-
-  const memberIds = (members || []).map((m: any) => m.user_id);
-  if (memberIds.length === 0) return [] as Invoice[];
-
-  // Filtra fatture solo per utenti del workspace
   const { data, error } = await supabaseAdmin
     .from('invoices')
     .select('*, user:users(name, email, company_name)')
-    .in('user_id', memberIds)
+    .eq('workspace_id', context.workspace.id)
     .order('created_at', { ascending: false })
     .limit(limit);
 
@@ -311,11 +292,12 @@ export async function generateInvoiceForShipment(shipmentId: string) {
     data: { publicUrl },
   } = supabaseAdmin.storage.from('documents').getPublicUrl(filePath);
 
-  // 8. Crea record fattura in DB
+  // 8. Crea record fattura in DB (con workspace_id dalla spedizione)
   const { data: invoice, error: invoiceError } = await supabaseAdmin
     .from('invoices')
     .insert({
       user_id: shipment.user_id,
+      workspace_id: shipment.workspace_id || null,
       invoice_number: invoiceNumber,
       invoice_date: new Date().toISOString(),
       due_date: dueDate.toISOString(),

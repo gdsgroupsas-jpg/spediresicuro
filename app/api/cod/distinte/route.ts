@@ -45,26 +45,18 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Seleziona almeno un contrassegno' }, { status: 400 });
     }
 
-    // Isolamento multi-tenant: verifica che items appartengano al workspace
+    // Isolamento multi-tenant: filtro diretto workspace_id
     const workspaceId = auth.workspace?.id;
     if (!workspaceId) {
       return NextResponse.json({ error: 'Workspace non trovato' }, { status: 403 });
     }
-
-    const { data: members } = await supabaseAdmin
-      .from('workspace_members')
-      .select('user_id')
-      .eq('workspace_id', workspaceId)
-      .eq('status', 'active');
-
-    const memberIds = (members || []).map((m: any) => m.user_id);
 
     // Fetch items selezionati — solo quelli del workspace corrente
     const { data: items, error: fetchError } = await supabaseAdmin
       .from('cod_items')
       .select('id, client_id, pagato, ldv')
       .in('id', itemIds)
-      .in('client_id', memberIds)
+      .eq('workspace_id', workspaceId)
       .is('distinta_id', null);
 
     if (fetchError || !items) {
@@ -107,7 +99,7 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // Crea distinta
+      // Crea distinta (con workspace_id per isolamento multi-tenant)
       const { data: distinta, error: createError } = await supabaseAdmin
         .from('cod_distinte')
         .insert({
@@ -115,6 +107,7 @@ export async function POST(request: NextRequest) {
           client_name: clientName,
           total_initial: Math.round(totalInitial * 100) / 100,
           created_by: auth.actor.id,
+          workspace_id: workspaceId,
         })
         .select('id')
         .single();
@@ -177,21 +170,10 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    // Isolamento multi-tenant: solo distinte dei membri del workspace corrente
+    // Isolamento multi-tenant: filtro diretto workspace_id
     const workspaceId = auth.workspace?.id;
     if (!workspaceId) {
       return NextResponse.json({ error: 'Workspace non trovato' }, { status: 403 });
-    }
-
-    const { data: members } = await supabaseAdmin
-      .from('workspace_members')
-      .select('user_id')
-      .eq('workspace_id', workspaceId)
-      .eq('status', 'active');
-
-    const memberIds = (members || []).map((m: any) => m.user_id);
-    if (memberIds.length === 0) {
-      return NextResponse.json({ success: true, distinte: [], total: 0, page: 1, limit: 50 });
     }
 
     const { searchParams } = new URL(request.url);
@@ -203,7 +185,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from('cod_distinte')
       .select('*', { count: 'exact' })
-      .in('client_id', memberIds)
+      .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 
@@ -260,7 +242,13 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: 'Metodo pagamento non valido' }, { status: 400 });
     }
 
-    // Aggiorna distinta
+    // Isolamento multi-tenant: filtro workspace_id
+    const workspaceId = auth.workspace?.id;
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace non trovato' }, { status: 403 });
+    }
+
+    // Aggiorna distinta (filtro workspace_id per isolamento)
     const { data, error } = await supabaseAdmin
       .from('cod_distinte')
       .update({
@@ -269,6 +257,7 @@ export async function PATCH(request: NextRequest) {
         payment_date: new Date().toISOString(),
       })
       .eq('id', id)
+      .eq('workspace_id', workspaceId)
       .select()
       .single();
 
@@ -369,14 +358,25 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'ID distinta richiesto' }, { status: 400 });
     }
 
-    // Scollega items dalla distinta
+    // Isolamento multi-tenant: filtro workspace_id
+    const workspaceId = auth.workspace?.id;
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace non trovato' }, { status: 403 });
+    }
+
+    // Scollega items dalla distinta (filtro workspace per sicurezza)
     await supabaseAdmin
       .from('cod_items')
       .update({ distinta_id: null, status: 'in_attesa' })
-      .eq('distinta_id', id);
+      .eq('distinta_id', id)
+      .eq('workspace_id', workspaceId);
 
-    // Elimina distinta
-    const { error } = await supabaseAdmin.from('cod_distinte').delete().eq('id', id);
+    // Elimina distinta (filtro workspace per isolamento)
+    const { error } = await supabaseAdmin
+      .from('cod_distinte')
+      .delete()
+      .eq('id', id)
+      .eq('workspace_id', workspaceId);
 
     if (error) {
       console.error('[COD Distinte] Errore eliminazione:', error.message);

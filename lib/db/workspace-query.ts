@@ -15,7 +15,8 @@
  *   outreach_*, workspace_email_addresses, workspace_announcements,
  *   workspace_custom_domains, suppliers, products, product_suppliers,
  *   warehouses, inventory, warehouse_movements, purchase_orders,
- *   purchase_order_items
+ *   purchase_order_items, invoices, invoice_items,
+ *   cod_files, cod_items, cod_distinte
  *
  * TABELLE NON FILTRATE (globali o user-scoped):
  *   users, workspaces, workspace_members, couriers, courier_configs,
@@ -57,6 +58,11 @@ const WORKSPACE_SCOPED_TABLES = new Set([
   'warehouse_movements',
   'purchase_orders',
   'purchase_order_items',
+  'invoices',
+  'invoice_items',
+  'cod_files',
+  'cod_items',
+  'cod_distinte',
 ]);
 
 // Esportato per test e verifiche
