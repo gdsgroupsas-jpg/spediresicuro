@@ -91,6 +91,7 @@ export async function POST(request: NextRequest) {
       headers: {
         Authorization: `Bearer ${apiKey.trim()}`,
         'Content-Type': 'application/json',
+        Accept: 'application/json',
       },
       body: JSON.stringify(testPayload),
     });

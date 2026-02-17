@@ -350,6 +350,9 @@ async function testSpedisciOnlineCredentials(
       headers: {
         Authorization: `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
+        // Accept JSON obbligatorio: senza, Laravel fa 302 redirect alla pagina di login
+        // invece di restituire errore JSON (es. 401 {"message":"Unauthenticated."})
+        Accept: 'application/json',
       },
       body: JSON.stringify(testPayload),
     });
