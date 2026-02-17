@@ -150,12 +150,12 @@ describe('V5 (P2): createReseller usa RPC (no INSERT diretto)', () => {
     code = fs.readFileSync(filePath, 'utf-8');
   });
 
-  it('usa add_wallet_credit RPC per credito iniziale', () => {
+  it('usa add_wallet_credit_v2 RPC per credito iniziale', () => {
     const creditSection = code.substring(
       code.indexOf('credito iniziale'),
       code.indexOf('credito iniziale') + 600
     );
-    expect(creditSection).toContain("rpc('add_wallet_credit'");
+    expect(creditSection).toContain("rpc('add_wallet_credit_v2'");
   });
 
   it('NON usa INSERT diretto in wallet_transactions per credito iniziale', () => {

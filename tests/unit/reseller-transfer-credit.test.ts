@@ -176,7 +176,7 @@ describe('manageSubUserWallet - Reseller Transfer Credit (M2)', () => {
     );
 
     // Default: RPC reseller_transfer_credit OK
-    rpcResults['reseller_transfer_credit'] = {
+    rpcResults['reseller_transfer_credit_v2'] = {
       data: {
         success: true,
         idempotent_replay: false,
@@ -199,7 +199,7 @@ describe('manageSubUserWallet - Reseller Transfer Credit (M2)', () => {
       expect(result.success).toBe(true);
 
       // Verifica che sia stata chiamata la nuova RPC
-      const transferCall = rpcCalls.find((c) => c.name === 'reseller_transfer_credit');
+      const transferCall = rpcCalls.find((c) => c.name === 'reseller_transfer_credit_v2');
       expect(transferCall).toBeDefined();
       expect(transferCall!.params.p_reseller_id).toBe(RESELLER_ID);
       expect(transferCall!.params.p_sub_user_id).toBe(SUB_USER_ID);
@@ -214,7 +214,7 @@ describe('manageSubUserWallet - Reseller Transfer Credit (M2)', () => {
     it('dovrebbe passare idempotency_key stabile alla RPC', async () => {
       await manageSubUserWallet(SUB_USER_ID, 50, 'Test');
 
-      const transferCall = rpcCalls.find((c) => c.name === 'reseller_transfer_credit');
+      const transferCall = rpcCalls.find((c) => c.name === 'reseller_transfer_credit_v2');
       expect(transferCall!.params.p_idempotency_key).toBeDefined();
       expect(transferCall!.params.p_idempotency_key).toMatch(/^reseller-transfer-[a-f0-9]{16}$/);
     });
@@ -222,13 +222,13 @@ describe('manageSubUserWallet - Reseller Transfer Credit (M2)', () => {
     it('dovrebbe generare la stessa key per la stessa operazione (anti double-click)', async () => {
       // Prima chiamata
       await manageSubUserWallet(SUB_USER_ID, 50, 'Test');
-      const key1 = rpcCalls.find((c) => c.name === 'reseller_transfer_credit')!.params
+      const key1 = rpcCalls.find((c) => c.name === 'reseller_transfer_credit_v2')!.params
         .p_idempotency_key;
 
       // Reset e seconda chiamata (stessi parametri, stessa finestra temporale)
       rpcCalls = [];
       await manageSubUserWallet(SUB_USER_ID, 50, 'Test');
-      const key2 = rpcCalls.find((c) => c.name === 'reseller_transfer_credit')!.params
+      const key2 = rpcCalls.find((c) => c.name === 'reseller_transfer_credit_v2')!.params
         .p_idempotency_key;
 
       // Stessa operazione nella stessa finestra = stessa key
@@ -237,12 +237,12 @@ describe('manageSubUserWallet - Reseller Transfer Credit (M2)', () => {
 
     it('dovrebbe generare key diverse per importi diversi', async () => {
       await manageSubUserWallet(SUB_USER_ID, 50, 'Test');
-      const key50 = rpcCalls.find((c) => c.name === 'reseller_transfer_credit')!.params
+      const key50 = rpcCalls.find((c) => c.name === 'reseller_transfer_credit_v2')!.params
         .p_idempotency_key;
 
       rpcCalls = [];
       await manageSubUserWallet(SUB_USER_ID, 100, 'Test');
-      const key100 = rpcCalls.find((c) => c.name === 'reseller_transfer_credit')!.params
+      const key100 = rpcCalls.find((c) => c.name === 'reseller_transfer_credit_v2')!.params
         .p_idempotency_key;
 
       expect(key50).not.toBe(key100);
@@ -251,7 +251,7 @@ describe('manageSubUserWallet - Reseller Transfer Credit (M2)', () => {
 
   describe('Gestione errori RPC', () => {
     it('dovrebbe mostrare messaggio user-friendly per saldo insufficiente', async () => {
-      rpcResults['reseller_transfer_credit'] = {
+      rpcResults['reseller_transfer_credit_v2'] = {
         data: null,
         error: {
           message:
@@ -267,7 +267,7 @@ describe('manageSubUserWallet - Reseller Transfer Credit (M2)', () => {
     });
 
     it('dovrebbe propagare errori generici dalla RPC', async () => {
-      rpcResults['reseller_transfer_credit'] = {
+      rpcResults['reseller_transfer_credit_v2'] = {
         data: null,
         error: { message: 'Connection timeout' },
       };

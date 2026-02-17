@@ -270,7 +270,12 @@ export async function executeAction(
   // Charge wallet if cost > 0
   if (cost > 0) {
     // Pre-check balance
-    const creditCheck = await checkCreditBeforeBooking(userId, cost);
+    const creditCheck = await checkCreditBeforeBooking(
+      userId,
+      cost,
+      undefined,
+      giacenzaWorkspaceId || undefined
+    );
     if (!creditCheck.sufficient) {
       throw new Error(
         `Credito insufficiente. Disponibile: €${creditCheck.currentBalance.toFixed(2)}, Richiesto: €${cost.toFixed(2)}`
@@ -283,14 +288,14 @@ export async function executeAction(
 
     const result = await withConcurrencyRetry(
       async () =>
-        await supabaseAdmin.rpc('deduct_wallet_credit', {
+        await supabaseAdmin.rpc('deduct_wallet_credit_v2', {
+          p_workspace_id: giacenzaWorkspaceId,
           p_user_id: userId,
           p_amount: cost,
           p_type: 'GIACENZA_ACTION',
           p_description: description,
           p_reference_id: holdId,
           p_reference_type: 'giacenza_action',
-          p_workspace_id: giacenzaWorkspaceId,
         }),
       { operationName: 'giacenza_action_debit' }
     );
@@ -334,11 +339,11 @@ export async function executeAction(
     if (cost > 0) {
       const refundKey = `${idempotencyKey}-refund`;
       await supabaseAdmin
-        .rpc('increment_wallet_balance', {
+        .rpc('add_wallet_credit_v2', {
+          p_workspace_id: giacenzaWorkspaceId,
           p_user_id: userId,
           p_amount: cost,
           p_idempotency_key: refundKey,
-          p_workspace_id: giacenzaWorkspaceId,
         })
         .then(({ error: refundErr }) => {
           if (refundErr) {

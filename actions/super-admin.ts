@@ -195,12 +195,12 @@ export async function manageWallet(
 
     if (amount > 0) {
       // Aggiungi credito usando funzione SQL
-      const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit', {
+      const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit_v2', {
+        p_workspace_id: targetWorkspaceId,
         p_user_id: userId,
         p_amount: amount,
         p_description: reason,
         p_created_by: superAdminCheck.userId,
-        p_workspace_id: targetWorkspaceId,
       });
 
       if (txError) {
@@ -215,12 +215,12 @@ export async function manageWallet(
       }
     } else {
       // Rimuovi credito (usa funzione SQL se disponibile)
-      const { data: txData, error: txError } = await supabaseAdmin.rpc('deduct_wallet_credit', {
+      const { data: txData, error: txError } = await supabaseAdmin.rpc('deduct_wallet_credit_v2', {
+        p_workspace_id: targetWorkspaceId,
         p_user_id: userId,
         p_amount: Math.abs(amount),
         p_type: transactionType,
         p_description: reason,
-        p_workspace_id: targetWorkspaceId,
       });
 
       if (txError) {
@@ -801,12 +801,12 @@ export async function createReseller(data: {
     // 6. Se c'è credito iniziale, accredita wallet tramite RPC (atomico + workspace tracking)
     if (data.initialCredit && data.initialCredit > 0) {
       const newResellerWorkspaceId = await getUserWorkspaceId(userId);
-      await supabaseAdmin.rpc('add_wallet_credit', {
+      await supabaseAdmin.rpc('add_wallet_credit_v2', {
+        p_workspace_id: newResellerWorkspaceId,
         p_user_id: userId,
         p_amount: data.initialCredit,
         p_description: 'Credito iniziale alla creazione account reseller',
         p_created_by: superAdminCheck.userId,
-        p_workspace_id: newResellerWorkspaceId,
       });
     }
 

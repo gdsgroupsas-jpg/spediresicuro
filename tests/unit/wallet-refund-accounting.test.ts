@@ -82,9 +82,9 @@ describe('Wallet Refund Accounting - Tracciabilita Contabile', () => {
   describe('create-shipment-core.ts - Compensazione errore corriere', () => {
     const source = readSource('lib/shipments/create-shipment-core.ts');
 
-    it('usa refund_wallet_balance per compensazione (non increment_wallet_balance)', () => {
-      // Verifica che nella sezione compensazione si usi refund_wallet_balance
-      expect(source).toContain("'refund_wallet_balance'");
+    it('usa refund_wallet_balance_v2 per compensazione (non increment_wallet_balance)', () => {
+      // Verifica che nella sezione compensazione si usi refund_wallet_balance_v2
+      expect(source).toContain("'refund_wallet_balance_v2'");
     });
 
     it('NON usa increment_wallet_balance per compensazione', () => {

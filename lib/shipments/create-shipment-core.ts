@@ -380,14 +380,15 @@ export async function createShipmentCore(params: {
 
     // P0: Passa idempotency_key a wallet function (standalone idempotent)
     // ✅ REFACTOR: Debit diretto di walletChargeAmount (no stima + conguaglio)
-    // Dual-write: passa workspace_id per sincronizzare workspaces.wallet_balance
+    // v2: Lock su workspaces.wallet_balance (source of truth)
     const { data: walletResult, error: walletError } = await withConcurrencyRetry(
       async () =>
-        await supabaseAdmin.rpc('decrement_wallet_balance', {
+        await supabaseAdmin.rpc('deduct_wallet_credit_v2', {
+          p_workspace_id: targetWorkspaceId,
           p_user_id: targetId,
           p_amount: walletChargeAmount,
+          p_type: 'SHIPMENT_CHARGE',
           p_idempotency_key: idempotencyKey, // P0: Wallet-level idempotency
-          p_workspace_id: targetWorkspaceId,
         }),
       { operationName: 'shipment_debit_final' }
     );
@@ -418,24 +419,15 @@ export async function createShipmentCore(params: {
       };
     }
 
-    // P0: Handle new JSONB return type
-    const result = (walletResult as any)?.[0] || walletResult;
+    // v2: deduct_wallet_credit_v2 ritorna UUID (transaction_id) direttamente
+    const transactionUuid = walletResult as string | null;
     console.log('💳 [WALLET] Parsed result:', {
-      success: result?.success,
-      idempotentReplay: result?.idempotent_replay,
-      transactionId: result?.transaction_id,
+      transactionId: transactionUuid,
     });
-
-    if (result?.idempotent_replay) {
-      console.log('💰 [WALLET] Idempotent replay: wallet already debited for this operation', {
-        transaction_id: result.transaction_id,
-        idempotency_key: idempotencyKey,
-      });
-    }
 
     walletDebited = true;
     walletDebitAmount = walletChargeAmount;
-    _walletTransactionId = result?.transaction_id;
+    _walletTransactionId = transactionUuid || undefined;
     console.log('✅ [WALLET] Debit successful:', {
       amount: walletDebitAmount,
       transactionId: _walletTransactionId,
@@ -492,13 +484,13 @@ export async function createShipmentCore(params: {
         const refundFn =
           deps.overrides?.refundWallet ??
           (async ({ userId, amount }) => {
-            // ✨ FIX CONTABILE: Usa refund_wallet_balance con tipo SHIPMENT_REFUND
-            const { error } = await supabaseAdmin.rpc('refund_wallet_balance', {
+            // v2: refund su workspaces.wallet_balance (source of truth)
+            const { error } = await supabaseAdmin.rpc('refund_wallet_balance_v2', {
+              p_workspace_id: targetWorkspaceId,
               p_user_id: userId,
               p_amount: amount,
               p_idempotency_key: `${idempotencyKey}-refund`,
               p_description: 'Rimborso automatico: errore creazione etichetta corriere',
-              p_workspace_id: targetWorkspaceId,
             });
             return { error: error ? { message: error.message, code: error.code } : null };
           });
@@ -836,13 +828,13 @@ export async function createShipmentCore(params: {
         const refundFn =
           deps.overrides?.refundWallet ??
           (async ({ userId, amount }) => {
-            // ✨ FIX CONTABILE: Usa refund_wallet_balance con tipo SHIPMENT_REFUND
-            const { error } = await supabaseAdmin.rpc('refund_wallet_balance', {
+            // v2: refund su workspaces.wallet_balance (source of truth)
+            const { error } = await supabaseAdmin.rpc('refund_wallet_balance_v2', {
+              p_workspace_id: targetWorkspaceId,
               p_user_id: userId,
               p_amount: amount,
               p_idempotency_key: `${idempotencyKey}-refund`,
               p_description: 'Rimborso automatico: errore creazione etichetta corriere',
-              p_workspace_id: targetWorkspaceId,
             });
             return { error: error ? { message: error.message, code: error.code } : null };
           });

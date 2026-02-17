@@ -31,11 +31,12 @@ export async function GET(request: NextRequest) {
     let accountType = user.role; // Fallback a role
     let isReseller = false;
     let resellerRole = null;
+    let walletBalance = 0;
     try {
       const { supabaseAdmin } = await import('@/lib/db/client');
       const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
         .from('users')
-        .select('account_type, role, is_reseller, reseller_role, wallet_balance')
+        .select('account_type, role, is_reseller, reseller_role, primary_workspace_id')
         .eq('email', context!.actor.email)
         .single();
 
@@ -45,16 +46,16 @@ export async function GET(request: NextRequest) {
         accountType = supabaseUser.account_type || supabaseUser.role || user.role;
         isReseller = supabaseUser.is_reseller === true;
         resellerRole = supabaseUser.reseller_role;
-        console.log(
-          'Account Type recuperato da Supabase:',
-          accountType,
-          'is_reseller:',
-          isReseller,
-          'reseller_role:',
-          resellerRole,
-          'per email:',
-          context!.actor.email
-        );
+
+        // Leggi wallet_balance da workspaces (source of truth)
+        if (supabaseUser.primary_workspace_id) {
+          const { data: wsData } = await supabaseAdmin
+            .from('workspaces')
+            .select('wallet_balance')
+            .eq('id', supabaseUser.primary_workspace_id)
+            .single();
+          walletBalance = parseFloat(wsData?.wallet_balance) || 0;
+        }
       }
     } catch (error) {
       // Ignora errori, usa role come fallback
@@ -72,7 +73,7 @@ export async function GET(request: NextRequest) {
       reseller_role: resellerRole,
       provider: user.provider,
       image: user.image,
-      wallet_balance: (user as any).wallet_balance || 0,
+      wallet_balance: walletBalance,
       company_name: (user as any).company_name,
       vat_number: (user as any).vat_number,
       phone: (user as any).phone,

@@ -157,11 +157,12 @@ async function handleCheckoutSessionCompleted(session: any) {
     })
   );
 
-  // Use VAT-aware RPC function (con dual-write workspace)
+  // v2: Lock su workspaces.wallet_balance (source of truth)
   const stripeWorkspaceId = await getUserWorkspaceId(userId);
   const { data: txId, error: creditError } = await withConcurrencyRetry(
     async () =>
-      await supabaseAdmin.rpc('add_wallet_credit_with_vat', {
+      await supabaseAdmin.rpc('add_wallet_credit_with_vat_v2', {
+        p_workspace_id: stripeWorkspaceId,
         p_user_id: userId,
         p_gross_amount: grossAmount,
         p_vat_mode: vatMode,
@@ -169,7 +170,6 @@ async function handleCheckoutSessionCompleted(session: any) {
         p_description: `Ricarica Stripe #${transactionId} (${vatMode === 'included' ? 'IVA inclusa' : 'IVA esclusa'})`,
         p_created_by: null, // System operation
         p_idempotency_key: `stripe_${transactionId}`,
-        p_workspace_id: stripeWorkspaceId,
       }),
     { operationName: 'stripe_webhook_credit' }
   );
@@ -226,11 +226,16 @@ async function handleCheckoutSessionCompleted(session: any) {
     const { sendWalletTopUp } = await import('@/lib/email/resend');
     const userEmail = session.customer_email;
     if (userEmail) {
-      // Get user name + new balance
+      // Get user name + new balance (da workspaces = source of truth)
       const { data: userData } = await supabaseAdmin
         .from('users')
-        .select('display_name, wallet_balance')
+        .select('display_name')
         .eq('id', userId)
+        .maybeSingle();
+      const { data: wsData } = await supabaseAdmin
+        .from('workspaces')
+        .select('wallet_balance')
+        .eq('id', stripeWorkspaceId)
         .maybeSingle();
 
       sendWalletTopUp({
@@ -238,7 +243,7 @@ async function handleCheckoutSessionCompleted(session: any) {
         userName: userData?.display_name || '',
         amount: amountCredit,
         method: 'stripe',
-        newBalance: userData?.wallet_balance,
+        newBalance: wsData?.wallet_balance,
       }).catch((emailErr: any) => {
         console.warn('⚠️ [STRIPE WEBHOOK] Email failed (non-blocking):', emailErr?.message);
       });

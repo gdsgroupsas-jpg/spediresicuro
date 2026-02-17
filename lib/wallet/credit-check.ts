@@ -30,17 +30,19 @@ export interface CreditCheckResult {
  * @param userId - ID utente
  * @param estimatedCost - Costo stimato spedizione (con buffer)
  * @param actingContext - ActingContext per impersonation support
+ * @param workspaceId - ID workspace (source of truth per wallet balance)
  * @returns Risultato verifica credito
  */
 export async function checkCreditBeforeBooking(
   userId: string,
   estimatedCost: number,
-  actingContext?: ActingContext
+  actingContext?: ActingContext,
+  workspaceId?: string
 ): Promise<CreditCheckResult> {
   // Determina user target (supporta impersonation)
   const targetUserId = actingContext?.target.id || userId;
 
-  // Query wallet balance e billing_mode
+  // Leggi role e billing_mode da users (sempre necessario)
   const { data, error } = await supabaseAdmin
     .from('users')
     .select('wallet_balance, role, billing_mode')
@@ -51,7 +53,18 @@ export async function checkCreditBeforeBooking(
     throw new Error(`Errore recupero wallet balance: ${error?.message || 'User not found'}`);
   }
 
-  const currentBalance = parseFloat(data.wallet_balance) || 0;
+  // Source of truth: workspaces.wallet_balance (con fallback a users)
+  let currentBalance: number;
+  if (workspaceId) {
+    const { data: wsData } = await supabaseAdmin
+      .from('workspaces')
+      .select('wallet_balance')
+      .eq('id', workspaceId)
+      .single();
+    currentBalance = parseFloat(wsData?.wallet_balance) || 0;
+  } else {
+    currentBalance = parseFloat(data.wallet_balance) || 0;
+  }
   const isSuperadmin = data.role === 'SUPERADMIN' || data.role === 'superadmin';
 
   // ============================================

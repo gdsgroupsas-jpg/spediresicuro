@@ -636,15 +636,15 @@ export async function manageSubUserWallet(
       const subUserWorkspaceId = await getUserWorkspaceId(subUserId);
 
       const { data: rpcResult, error: rpcError } = await supabaseAdmin.rpc(
-        'reseller_transfer_credit',
+        'reseller_transfer_credit_v2',
         {
+          p_reseller_workspace_id: resellerWorkspaceId,
+          p_sub_user_workspace_id: subUserWorkspaceId,
           p_reseller_id: resellerCheck.userId,
           p_sub_user_id: subUserId,
           p_amount: amount,
           p_description: reason,
           p_idempotency_key: idempotencyKey,
-          p_reseller_workspace_id: resellerWorkspaceId,
-          p_sub_user_workspace_id: subUserWorkspaceId,
         }
       );
 

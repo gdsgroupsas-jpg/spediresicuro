@@ -682,12 +682,12 @@ export async function approveTopUpRequest(
         const fallbackWorkspaceId = await getUserWorkspaceId(refreshedRequest.user_id);
         const { data: txId, error: creditError } = await withConcurrencyRetry(
           async () =>
-            await supabaseAdmin.rpc('add_wallet_credit', {
+            await supabaseAdmin.rpc('add_wallet_credit_v2', {
+              p_workspace_id: fallbackWorkspaceId,
               p_user_id: refreshedRequest.user_id,
               p_amount: refreshedRequest.approved_amount, // Usa quello salvato nel DB
               p_description: `Approvazione richiesta ricarica #${requestId}`,
               p_created_by: adminCheck.userId,
-              p_workspace_id: fallbackWorkspaceId,
             }),
           { operationName: 'topup_credit_fallback' }
         );
@@ -745,12 +745,12 @@ export async function approveTopUpRequest(
     const mainWorkspaceId = await getUserWorkspaceId(updatedRequest.user_id);
     const { data: txId, error: creditError } = await withConcurrencyRetry(
       async () =>
-        await supabaseAdmin.rpc('add_wallet_credit', {
+        await supabaseAdmin.rpc('add_wallet_credit_v2', {
+          p_workspace_id: mainWorkspaceId,
           p_user_id: updatedRequest.user_id,
           p_amount: amountToCredit,
           p_description: `Approvazione richiesta ricarica #${requestId}`,
           p_created_by: adminCheck.userId,
-          p_workspace_id: mainWorkspaceId,
         }),
       { operationName: 'topup_credit' }
     );

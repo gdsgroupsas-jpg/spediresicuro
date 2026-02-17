@@ -97,12 +97,12 @@ export async function rechargeMyWallet(
     if (isAdmin) {
       // Usa la funzione SQL per aggiungere credito (con dual-write workspace)
       const walletWorkspaceId = await getUserWorkspaceId(targetId);
-      const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit', {
+      const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit_v2', {
+        p_workspace_id: walletWorkspaceId,
         p_user_id: targetId, // Target ID (who receives credit)
         p_amount: amount,
         p_description: reason,
         p_created_by: actorId, // Actor ID (who clicked)
-        p_workspace_id: walletWorkspaceId,
       });
 
       if (txError) {
