@@ -409,12 +409,29 @@ export async function updatePriceListStatus(
 }
 
 /**
- * Elimina listino
+ * Elimina listino con FK check
  * @param id - ID listino da eliminare
  * @param workspaceId - ID workspace (obbligatorio per isolamento multi-tenant)
+ *
+ * H6 FIX: Verifica che non ci siano assegnazioni attive prima di eliminare.
+ * Previene orphan records e dà un errore chiaro all'utente.
  */
 export async function deletePriceList(id: string, workspaceId?: string): Promise<void> {
   const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+
+  // H6: Check FK — assegnazioni attive (non revocate)
+  const { count: activeAssignments } = await supabaseAdmin
+    .from('price_list_assignments')
+    .select('id', { count: 'exact', head: true })
+    .eq('price_list_id', id)
+    .is('revoked_at', null);
+
+  if (activeAssignments && activeAssignments > 0) {
+    throw new Error(
+      `Impossibile eliminare: il listino è assegnato a ${activeAssignments} utente/i. Revocare le assegnazioni prima di eliminare.`
+    );
+  }
+
   const { error } = await db.from('price_lists').delete().eq('id', id);
 
   if (error) {

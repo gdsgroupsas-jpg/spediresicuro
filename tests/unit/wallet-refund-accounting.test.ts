@@ -3,7 +3,7 @@
  *
  * Verifica che ogni movimento wallet abbia la sua controparte contabile:
  * - SHIPMENT_CHARGE alla creazione (decrement_wallet_balance)
- * - SHIPMENT_REFUND alla cancellazione (refund_wallet_balance)
+ * - SHIPMENT_REFUND alla cancellazione (refund_wallet_balance_v2)
  *
  * I grandi player (Stripe, PayPal) registrano OGNI movimento.
  * Noi non siamo da meno.
@@ -24,9 +24,9 @@ describe('Wallet Refund Accounting - Tracciabilita Contabile', () => {
   describe('DELETE /api/spedizioni - User cancellation', () => {
     const source = readSource('app/api/spedizioni/route.ts');
 
-    it('usa refund_wallet_balance (non increment_wallet_balance) per rimborso', () => {
-      // Nella sezione RIMBORSO WALLET deve usare refund_wallet_balance
-      expect(source).toContain("'refund_wallet_balance'");
+    it('usa refund_wallet_balance_v2 (non increment_wallet_balance) per rimborso', () => {
+      // M2 FIX: Migrato a v2 (lock su workspaces, source of truth)
+      expect(source).toContain("'refund_wallet_balance_v2'");
     });
 
     it('NON usa increment_wallet_balance per rimborso cancellazione', () => {
@@ -62,8 +62,9 @@ describe('Wallet Refund Accounting - Tracciabilita Contabile', () => {
   describe('DELETE /api/admin/shipments - Admin cancellation', () => {
     const source = readSource('app/api/admin/shipments/[id]/route.ts');
 
-    it('usa refund_wallet_balance (non increment_wallet_balance) per rimborso', () => {
-      expect(source).toContain("'refund_wallet_balance'");
+    it('usa refund_wallet_balance_v2 (non increment_wallet_balance) per rimborso', () => {
+      // M2 FIX: Migrato a v2 (lock su workspaces, source of truth)
+      expect(source).toContain("'refund_wallet_balance_v2'");
     });
 
     it('NON usa increment_wallet_balance per rimborso', () => {

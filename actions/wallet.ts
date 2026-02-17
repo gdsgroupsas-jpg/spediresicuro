@@ -17,6 +17,7 @@
 import crypto from 'crypto';
 import { requireWorkspaceAuth, getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { writeWalletAuditLog } from '@/lib/security/audit-log';
 import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
@@ -156,11 +157,15 @@ export async function rechargeMyWallet(
     } else {
       // Utente normale: crea richiesta di ricarica (per ora ricarica direttamente)
       // TODO: Implementare sistema di richieste approvate da admin
-      const { data: tx, error: insertError } = await supabaseAdmin
+      // M10/M11 FIX: usa workspaceQuery + workspace_id per isolamento multi-tenant
+      const reqWorkspaceId = context.workspace.id;
+      const wqRecharge = workspaceQuery(reqWorkspaceId);
+      const { data: tx, error: insertError } = await wqRecharge
         .from('wallet_transactions')
         .insert([
           {
             user_id: targetId, // Target ID (who receives credit)
+            workspace_id: reqWorkspaceId,
             amount: amount,
             type: 'recharge_request',
             description: reason,
@@ -222,8 +227,10 @@ export async function getMyWalletTransactions(): Promise<{
     // Extract target ID (who owns the wallet)
     const targetId = context.target.id;
 
-    // Query transactions del TARGET (non dell'actor)
-    const { data: transactions, error } = await supabaseAdmin
+    // M5 FIX: Usa workspaceQuery per isolamento multi-tenant
+    const workspaceId = context.workspace.id;
+    const wq = workspaceQuery(workspaceId);
+    const { data: transactions, error } = await wq
       .from('wallet_transactions')
       .select('*')
       .eq('user_id', targetId) // Target ID (wallet owner)

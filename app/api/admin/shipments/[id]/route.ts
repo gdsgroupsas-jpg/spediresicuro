@@ -104,16 +104,17 @@ export async function DELETE(
           const refundDescription =
             `Rimborso cancellazione spedizione ${trackingRef} (admin: ${context.actor.email})`.trim();
 
+          // M2 FIX: Usa refund_wallet_balance_v2 (lock su workspaces, source of truth)
           const refundWorkspaceId = await getUserWorkspaceId(shipment.user_id);
           const { data: refundResult, error: refundError } = await supabaseAdmin.rpc(
-            'refund_wallet_balance',
+            'refund_wallet_balance_v2',
             {
+              p_workspace_id: refundWorkspaceId,
               p_user_id: shipment.user_id,
               p_amount: refundAmount,
               p_idempotency_key: idempotencyKey,
               p_description: refundDescription,
               p_shipment_id: shipmentId,
-              p_workspace_id: refundWorkspaceId,
             }
           );
 

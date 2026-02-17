@@ -73,8 +73,19 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ received: true });
   } catch (error: any) {
     console.error('❌ [STRIPE WEBHOOK] Error processing event:', error);
-    // Ritorna 200 per evitare retry infiniti di Stripe
-    // Loggiamo l'errore per investigazione manuale
+
+    // M6 FIX: Errori wallet → 500 (Stripe ritenta automaticamente fino a 3 giorni)
+    // Errori non-wallet → 200 (non recuperabili, evita retry infiniti)
+    const isWalletError = error.message?.includes('Wallet credit failed');
+    if (isWalletError) {
+      console.error('🚨 [STRIPE WEBHOOK] WALLET ERROR — ritorno 500 per retry Stripe');
+      return NextResponse.json(
+        { error: 'Wallet credit failed — will retry', details: error.message },
+        { status: 500 }
+      );
+    }
+
+    // Errore non-recuperabile: 200 per evitare retry inutili
     return NextResponse.json(
       { error: 'Error processing webhook', details: error.message },
       { status: 200 }

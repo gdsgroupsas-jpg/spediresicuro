@@ -1440,6 +1440,22 @@ export async function clonePriceListAction(input: ClonePriceListInput): Promise<
       return { success: false, error: 'Listino sorgente non trovato' };
     }
 
+    // H7 FIX: Dedup check — previene clone duplicato con stesso nome
+    const wqClone = workspaceQuery(workspaceId);
+    const { data: existingClone } = await wqClone
+      .from('price_lists')
+      .select('id')
+      .eq('name', input.name)
+      .limit(1)
+      .maybeSingle();
+
+    if (existingClone) {
+      return {
+        success: false,
+        error: `Esiste già un listino con il nome "${input.name}". Scegli un nome diverso.`,
+      };
+    }
+
     // Usa la funzione DB clone_price_list
     const { data: clonedId, error } = await supabaseAdmin.rpc('clone_price_list', {
       p_source_id: input.source_price_list_id,
