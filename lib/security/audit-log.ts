@@ -91,7 +91,11 @@ export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
       requestId: context.metadata?.requestId || metadata.requestId,
     };
 
-    // 3. Prepara payload per insert
+    // 3. Estrai workspace_id dal context (se disponibile)
+    // WorkspaceActingContext ha .workspace, ActingContext no
+    const workspaceId = (context as any).workspace?.id || null;
+
+    // 4. Prepara payload per insert
     const logEntry = {
       action,
       resource_type: resourceType,
@@ -106,6 +110,9 @@ export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
       user_id: targetId,
       user_email: context.target.email,
 
+      // Workspace isolation
+      workspace_id: workspaceId,
+
       // Metadata
       audit_metadata: auditMetadata,
 
@@ -113,7 +120,7 @@ export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
       created_at: new Date().toISOString(),
     };
 
-    // 4. Usa SQL function se disponibile (fallback a insert)
+    // 5. Usa SQL function se disponibile (fallback a insert)
     try {
       const { error: rpcError } = await supabaseAdmin.rpc('log_acting_context_audit', {
         p_action: action,
@@ -143,7 +150,7 @@ export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
       }
     }
 
-    // 5. Success log (console)
+    // 6. Success log (console)
     console.log('✅ [AUDIT]', {
       action,
       actor: `${context.actor.email} (${actorId.substring(0, 8)}...)`,

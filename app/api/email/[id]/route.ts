@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
-import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 
 async function requireSuperadmin() {
   const context = await getWorkspaceAuth();
@@ -26,8 +26,9 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
   }
 
   const { id } = await params;
+  const wq = workspaceQuery(auth.context.workspace!.id);
 
-  const { data, error } = await supabaseAdmin.from('emails').select('*').eq('id', id).single();
+  const { data, error } = await wq.from('emails').select('*').eq('id', id).single();
 
   if (error || !data) {
     return NextResponse.json({ error: 'Email non trovata' }, { status: 404 });
@@ -35,7 +36,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
 
   // Auto-mark as read
   if (!data.read) {
-    await supabaseAdmin.from('emails').update({ read: true }).eq('id', id);
+    await wq.from('emails').update({ read: true }).eq('id', id);
     data.read = true;
   }
 
@@ -49,6 +50,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   }
 
   const { id } = await params;
+  const wq = workspaceQuery(auth.context.workspace!.id);
 
   const body = await request.json();
   const updates: Record<string, any> = {};
@@ -63,7 +65,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: 'Nessun campo da aggiornare' }, { status: 400 });
   }
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await wq
     .from('emails')
     .update(updates)
     .eq('id', id)
@@ -87,9 +89,10 @@ export async function DELETE(
   }
 
   const { id } = await params;
+  const wq = workspaceQuery(auth.context.workspace!.id);
 
   // Check if already in trash
-  const { data: email } = await supabaseAdmin.from('emails').select('folder').eq('id', id).single();
+  const { data: email } = await wq.from('emails').select('folder').eq('id', id).single();
 
   if (!email) {
     return NextResponse.json({ error: 'Email non trovata' }, { status: 404 });
@@ -97,7 +100,7 @@ export async function DELETE(
 
   if (email.folder === 'trash') {
     // Hard delete
-    const { error } = await supabaseAdmin.from('emails').delete().eq('id', id);
+    const { error } = await wq.from('emails').delete().eq('id', id);
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
@@ -106,7 +109,7 @@ export async function DELETE(
   }
 
   // Move to trash
-  const { error } = await supabaseAdmin.from('emails').update({ folder: 'trash' }).eq('id', id);
+  const { error } = await wq.from('emails').update({ folder: 'trash' }).eq('id', id);
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });

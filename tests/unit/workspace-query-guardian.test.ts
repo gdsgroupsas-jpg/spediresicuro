@@ -104,6 +104,12 @@ describe('Guardian: usi diretti supabaseAdmin su tabelle multi-tenant', () => {
     'lib/db/workspace-query.ts', // wrapper stesso
     'lib/workspace-auth.ts', // auth system
     'lib/safe-auth.ts', // auth system
+    'lib/security/audit-log.ts', // audit infrastrutturale (fallback insert)
+    'lib/security/security-events.ts', // security events senza workspace context
+    'lib/auth-config.ts', // NextAuth callback (no workspace context)
+    // Health check: SELECT id LIMIT 1 per verificare connettività DB
+    'app/api/health/',
+    'app/api/webhooks/telegram/route.ts',
   ];
 
   function scanDirectory(dir: string): { file: string; violations: string[] }[] {
@@ -179,9 +185,9 @@ describe('Guardian: usi diretti supabaseAdmin su tabelle multi-tenant', () => {
     // Se il numero AUMENTA, qualcuno ha aggiunto nuovo codice senza usare workspaceQuery().
     //
     // REGOLA: il numero NON deve MAI aumentare.
-    // Valore corrente baseline: ~60 (da verificare al primo run)
+    // Baseline 2026-02-17: 54 (dopo esclusioni infrastrutturali + migrazione email)
     // Obiettivo finale: 0
-    expect(totalViolations).toBeLessThanOrEqual(120);
+    expect(totalViolations).toBeLessThanOrEqual(54);
 
     // Salva snapshot per monitoraggio
     console.log(
