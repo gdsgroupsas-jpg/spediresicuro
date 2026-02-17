@@ -183,6 +183,75 @@ describe('V6 (P2): add_wallet_credit_with_vat ha pg_temp in search_path', () => 
   });
 });
 
+// ============================================
+// FIX POST-REVIEW: problemi trovati durante security review
+// ============================================
+
+const POST_REVIEW_FIX_PATH = path.join(
+  process.cwd(),
+  'supabase/migrations/20260217140000_fix_wallet_rpc_grant_idempotency.sql'
+);
+
+describe('V7 (POST-REVIEW): GRANT per deduct_wallet_credit', () => {
+  let sql: string;
+
+  it('la migration post-review esiste', () => {
+    expect(fs.existsSync(POST_REVIEW_FIX_PATH)).toBe(true);
+    sql = fs.readFileSync(POST_REVIEW_FIX_PATH, 'utf-8');
+  });
+
+  it('ha GRANT per authenticated', () => {
+    expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.deduct_wallet_credit');
+    expect(sql).toContain('TO authenticated');
+  });
+
+  it('ha GRANT per service_role', () => {
+    expect(sql).toContain('GRANT EXECUTE ON FUNCTION public.deduct_wallet_credit');
+    expect(sql).toContain('TO service_role');
+  });
+});
+
+describe('V8 (POST-REVIEW): idempotency add_wallet_credit_with_vat filtra per user_id', () => {
+  let sql: string;
+
+  it('la migration post-review esiste', () => {
+    sql = fs.readFileSync(POST_REVIEW_FIX_PATH, 'utf-8');
+  });
+
+  it('idempotency check include AND user_id = p_user_id', () => {
+    const section = extractFunctionSection(sql, 'add_wallet_credit_with_vat');
+    // Deve avere sia idempotency_key che user_id nel check
+    expect(section).toContain('idempotency_key = p_idempotency_key');
+    expect(section).toContain('user_id = p_user_id');
+  });
+
+  it('mantiene SECURITY DEFINER + search_path pg_temp', () => {
+    const section = extractFunctionSection(sql, 'add_wallet_credit_with_vat');
+    expect(section).toContain('SECURITY DEFINER');
+    expect(section).toContain('pg_temp');
+  });
+});
+
+describe('V9 (POST-REVIEW): createReseller NON imposta wallet_balance nell INSERT', () => {
+  let code: string;
+
+  it('il file esiste', () => {
+    const filePath = path.join(process.cwd(), 'actions/super-admin.ts');
+    code = fs.readFileSync(filePath, 'utf-8');
+  });
+
+  it('INSERT di users ha wallet_balance: 0 (non initialCredit)', () => {
+    // Trova la sezione INSERT in public.users per createReseller
+    const insertSection = code.substring(
+      code.indexOf('id: authUserId'),
+      code.indexOf('id: authUserId') + 800
+    );
+    // Deve avere wallet_balance: 0 (il credito lo gestisce la RPC add_wallet_credit)
+    expect(insertSection).toContain('wallet_balance: 0');
+    expect(insertSection).not.toContain('wallet_balance: data.initialCredit');
+  });
+});
+
 describe('Coerenza: TUTTE le RPC wallet hanno SECURITY DEFINER + FOR UPDATE NOWAIT', () => {
   it('verifica nella migration audit fix', () => {
     const sql = fs.readFileSync(AUDIT_FIX_PATH, 'utf-8');

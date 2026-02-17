@@ -705,7 +705,7 @@ export async function createReseller(data: {
           account_type: 'reseller', // ⚠️ FIX: Reseller creati da superadmin hanno account_type='reseller'
           is_reseller: true, // Flag reseller attivo
           reseller_role: 'admin', // ⚠️ FIX: Reseller creati da superadmin sono automaticamente admin
-          wallet_balance: data.initialCredit || 0,
+          wallet_balance: 0, // Credito iniziale gestito dalla RPC add_wallet_credit (step 6)
           provider: 'credentials',
           dati_cliente: datiCliente,
           assigned_price_list_id: data.priceListId || null, // Listino iniziale (opzionale)
