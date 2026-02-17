@@ -353,6 +353,7 @@ export async function updateResellerPriceListMarginAction(
       id: wsContext.actor.id,
       is_reseller: wsContext.actor.is_reseller,
     };
+    const workspaceId = wsContext.workspace.id;
 
     if (!user.is_reseller) {
       return {
@@ -388,8 +389,9 @@ export async function updateResellerPriceListMarginAction(
     }
 
     // ✨ SECURITY FIX: Usa parametri sicuri invece di string interpolation
-    // Recupera metadata esistente e aggiorna in modo sicuro
-    const { data: existingList } = await supabaseAdmin
+    // Recupera metadata esistente e aggiorna in modo sicuro (isolamento multi-tenant)
+    const wq = workspaceQuery(workspaceId);
+    const { data: existingList } = await wq
       .from('price_lists')
       .select('metadata')
       .eq('id', priceListId)
@@ -409,7 +411,7 @@ export async function updateResellerPriceListMarginAction(
       margin_type: marginType,
     };
 
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await wq
       .from('price_lists')
       .update({
         default_margin_percent: marginType === 'percent' ? marginValue : null,
@@ -462,6 +464,7 @@ export async function activateResellerPriceListAction(priceListId: string): Prom
       id: wsContext.actor.id,
       is_reseller: wsContext.actor.is_reseller,
     };
+    const workspaceId = wsContext.workspace.id;
 
     if (!user.is_reseller) {
       return {
@@ -470,8 +473,9 @@ export async function activateResellerPriceListAction(priceListId: string): Prom
       };
     }
 
-    // Verifica che il listino esista e sia del reseller
-    const { data: priceList } = await supabaseAdmin
+    // Verifica che il listino esista e sia del reseller (isolamento multi-tenant)
+    const wq = workspaceQuery(workspaceId);
+    const { data: priceList } = await wq
       .from('price_lists')
       .select('id, list_type')
       .eq('id', priceListId)
@@ -486,11 +490,12 @@ export async function activateResellerPriceListAction(priceListId: string): Prom
       };
     }
 
-    // Attiva listino
-    const { error } = await supabaseAdmin
+    // Attiva listino (con ownership filter per sicurezza)
+    const { error } = await wq
       .from('price_lists')
       .update({ status: 'active', updated_at: new Date().toISOString() })
-      .eq('id', priceListId);
+      .eq('id', priceListId)
+      .eq('created_by', user.id);
 
     if (error) {
       console.error('Errore attivazione listino:', error);
@@ -547,6 +552,7 @@ export async function importPriceListEntriesAction(
       id: wsContext.actor.id,
       is_reseller: wsContext.actor.is_reseller,
     };
+    const workspaceId = wsContext.workspace.id;
 
     if (!user.is_reseller) {
       return {
@@ -555,8 +561,9 @@ export async function importPriceListEntriesAction(
       };
     }
 
-    // Verifica che il listino esista e sia del reseller
-    const { data: priceList } = await supabaseAdmin
+    // Verifica che il listino esista e sia del reseller (isolamento multi-tenant)
+    const wq = workspaceQuery(workspaceId);
+    const { data: priceList } = await wq
       .from('price_lists')
       .select('id, list_type')
       .eq('id', priceListId)

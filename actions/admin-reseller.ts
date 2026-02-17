@@ -14,7 +14,6 @@
 import crypto from 'crypto';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
-import { createUser } from '@/lib/database';
 import bcrypt from 'bcryptjs';
 import { validateEmail } from '@/lib/validators';
 import { userExists, getUserWorkspaceId } from '@/lib/db/user-helpers';
@@ -165,13 +164,9 @@ export async function createSubUser(data: {
     let generatedPassword: string | undefined;
 
     if (!password) {
-      // Genera password casuale sicura
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*';
-      password = '';
-      for (let i = 0; i < 12; i++) {
-        password += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      generatedPassword = password;
+      // Genera password crittograficamente sicura (CSPRNG)
+      generatedPassword = crypto.randomBytes(12).toString('base64url').slice(0, 12);
+      password = generatedPassword;
     }
 
     // Hash password (obbligatorio per sicurezza)
@@ -280,28 +275,30 @@ export async function createSubUser(data: {
       console.error('⚠️ Errore setup workspace client (non critico):', wsSetupError.message);
     }
 
-    // 8. Crea anche nel database locale (compatibilita)
+    // 8. Audit log creazione sub-user
     try {
-      await createUser({
-        email: data.email.trim(),
-        password: hashedPassword,
-        name: data.name.trim(),
-        role: 'user',
-        accountType: 'user',
-        parentAdminId: resellerCheck.userId, // Usa parentAdminId per compatibilita con sistema esistente
+      const wsId = await getUserWorkspaceId(resellerCheck.userId);
+      const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+      await auditDb.from('audit_logs').insert({
+        action: 'sub_user_created',
+        resource_type: 'user',
+        resource_id: newUser.id,
+        user_id: resellerCheck.userId,
+        workspace_id: wsId,
+        metadata: {
+          sub_user_email: data.email.trim(),
+          sub_user_name: data.name.trim(),
+        },
       });
-    } catch (localError: any) {
-      // Non critico se Supabase ha funzionato
-      console.warn('Errore creazione locale (non critico):', localError.message);
+    } catch (auditError) {
+      console.warn('Errore audit log creazione sub-user:', auditError);
     }
 
     return {
       success: true,
-      message: generatedPassword
-        ? `Sub-User creato con successo! Password generata: ${generatedPassword}`
-        : 'Sub-User creato con successo!',
+      message: 'Sub-User creato con successo!',
       userId: newUser.id,
-      generatedPassword: generatedPassword, // Ritorna password generata per mostrare all'admin
+      generatedPassword, // Password nel campo dedicato, MAI nel message
     };
   } catch (error: any) {
     console.error('Errore in createSubUser:', error);
@@ -347,12 +344,11 @@ export async function getSubUsers(): Promise<{
     const canViewAll = await canViewAllClients();
     const resellerCheck = await isCurrentUserReseller();
 
-    // Se superadmin, restituisci tutti i sub-users (per compatibilità)
+    // Se superadmin, restituisci tutti i sub-users (senza wallet_balance per privacy)
     if (canViewAll.canView && canViewAll.userId) {
-      // Per superadmin, restituisci tutti i sub-users di tutti i reseller
       const { data: allSubUsers, error } = await supabaseAdmin
         .from('users')
-        .select('id, email, name, company_name, phone, wallet_balance, created_at')
+        .select('id, email, name, company_name, phone, created_at')
         .not('parent_id', 'is', null)
         .eq('is_reseller', false)
         .order('created_at', { ascending: false });
@@ -367,7 +363,8 @@ export async function getSubUsers(): Promise<{
 
       return {
         success: true,
-        subUsers: allSubUsers || [],
+        // Superadmin: wallet_balance nascosto per privacy (REGOLA #3)
+        subUsers: (allSubUsers || []).map((u: any) => ({ ...u, wallet_balance: 0 })),
       };
     }
 
@@ -464,8 +461,10 @@ export async function getSubUsersStats(): Promise<{
       };
     }
 
-    // 3. Ottieni statistiche spedizioni
-    const { data: shipments, error: shipmentsError } = await supabaseAdmin
+    // 3. Ottieni statistiche spedizioni (workspace-scoped)
+    const resellerWsId = await getUserWorkspaceId(resellerCheck.userId);
+    const wq = resellerWsId ? workspaceQuery(resellerWsId) : supabaseAdmin;
+    const { data: shipments, error: shipmentsError } = await wq
       .from('shipments')
       .select('final_price, user_id')
       .in('user_id', subUserIds)
@@ -810,28 +809,33 @@ export async function updateSubUserBillingMode(
       };
     }
 
-    // 5b. Se passaggio postpagato -> prepagato: verifica POSTPAID_CHARGE non fatturate
+    // 5b. Se passaggio postpagato -> prepagato: verifica TUTTE le POSTPAID_CHARGE non fatturate
     if (subUser.billing_mode === 'postpagato' && billingMode === 'prepagato') {
-      const { data: unfatturate } = await supabaseAdmin
+      // Ottieni workspace del sub-user per workspaceQuery
+      const subWsId = await getUserWorkspaceId(subUserId);
+      const wtDb = subWsId ? workspaceQuery(subWsId) : supabaseAdmin;
+
+      const { data: allPostpaid } = await wtDb
         .from('wallet_transactions')
         .select('id')
         .eq('user_id', subUserId)
-        .eq('type', 'POSTPAID_CHARGE')
-        .limit(1);
+        .eq('type', 'POSTPAID_CHARGE');
 
-      // Verifica che non siano gia' linkate a fatture
-      if (unfatturate && unfatturate.length > 0) {
-        const { data: linked } = await supabaseAdmin
+      if (allPostpaid && allPostpaid.length > 0) {
+        // Controlla quali sono già fatturate
+        const postpaidIds = allPostpaid.map((t: any) => t.id);
+        const { data: linkedAll } = await supabaseAdmin
           .from('invoice_recharge_links')
-          .select('id')
-          .eq('wallet_transaction_id', unfatturate[0].id)
-          .limit(1);
+          .select('wallet_transaction_id')
+          .in('wallet_transaction_id', postpaidIds);
 
-        if (!linked || linked.length === 0) {
+        const linkedIds = new Set((linkedAll || []).map((l: any) => l.wallet_transaction_id));
+        const unlinkedCount = postpaidIds.filter((id: string) => !linkedIds.has(id)).length;
+
+        if (unlinkedCount > 0) {
           return {
             success: false,
-            error:
-              'Impossibile passare a Prepagato: ci sono spedizioni postpagate non ancora fatturate. Genera prima la fattura mensile.',
+            error: `Impossibile passare a Prepagato: ci sono ${unlinkedCount} spedizioni postpagate non ancora fatturate. Genera prima la fattura mensile.`,
           };
         }
       }
@@ -935,14 +939,17 @@ export async function getSubUsersShipments(limit: number = 50): Promise<{
       };
     }
 
-    // 3. Ottieni spedizioni
-    const { data: shipments, error } = await supabaseAdmin
+    // 3. Ottieni spedizioni (workspace-scoped, con limit sicuro)
+    const safeLimit = Math.min(Math.max(1, limit), 200);
+    const resellerWsId = await getUserWorkspaceId(resellerCheck.userId);
+    const wq = resellerWsId ? workspaceQuery(resellerWsId) : supabaseAdmin;
+    const { data: shipments, error } = await wq
       .from('shipments')
       .select('*, users!shipments_user_id_fkey(email, name)')
       .in('user_id', subUserIds)
       .eq('deleted', false)
       .order('created_at', { ascending: false })
-      .limit(limit);
+      .limit(safeLimit);
 
     if (error) {
       console.error('Errore recupero spedizioni:', error);

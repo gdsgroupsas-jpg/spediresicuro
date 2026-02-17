@@ -25,11 +25,13 @@ const QuoteAnalytics = dynamic(
   () => import('@/components/commercial-quotes/quote-analytics').then((mod) => mod.QuoteAnalytics),
   { ssr: false, loading: () => <div className="animate-pulse bg-gray-100 rounded-xl h-64" /> }
 );
-import { BarChart3, FileText, PlusCircle } from 'lucide-react';
-import { useCallback, useState } from 'react';
+import { BarChart3, FileText, PlusCircle, ShieldAlert } from 'lucide-react';
+import { useCallback, useEffect, useState } from 'react';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-export default function PreventivoPage() {
+function PreventivoContent() {
   const [activeTab, setActiveTab] = useState('pipeline');
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
@@ -168,4 +170,59 @@ export default function PreventivoPage() {
       />
     </div>
   );
+}
+
+export default function PreventivoPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+
+  // Auth + role check
+  useEffect(() => {
+    async function checkAccess() {
+      if (status === 'loading') return;
+      if (!session?.user?.email) {
+        router.push('/auth/signin');
+        return;
+      }
+      try {
+        const res = await fetch('/api/user/info');
+        if (res.ok) {
+          const data = await res.json();
+          const u = data.user || data;
+          const accountType = u.account_type || u.accountType;
+          setIsAuthorized(
+            accountType === 'superadmin' || accountType === 'admin' || u.is_reseller === true
+          );
+        } else {
+          setIsAuthorized(false);
+        }
+      } catch {
+        setIsAuthorized(false);
+      }
+    }
+    checkAccess();
+  }, [session, status, router]);
+
+  if (status === 'loading' || isAuthorized === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <ShieldAlert className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900">Accesso non autorizzato</h2>
+          <p className="text-gray-500 mt-2">Solo i reseller possono accedere al preventivatore.</p>
+        </div>
+      </div>
+    );
+  }
+
+  return <PreventivoContent />;
 }

@@ -10,6 +10,8 @@
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { computeMargin } from '@/lib/financial';
 import type {
   FiscalReportFilters,
@@ -284,24 +286,23 @@ export async function getResellerFiscalReport(
 
     console.log('[FISCAL_REPORT] Auth context:', {
       actorId: context.actor.id,
-      actorEmail: context.actor.email,
       targetId: context.target?.id,
-      targetEmail: context.target?.email,
       isImpersonating: context.isImpersonating,
     });
 
     // 1. Verifica utente e ruolo reseller
     // Usa l'ID invece dell'email per query più affidabile (evita problemi di encoding/case)
-    // Nota: Usa * per evitare errori se alcune colonne non esistono nel DB
+    const USER_SELECT_FIELDS =
+      'id, email, name, company_name, vat_number, fiscal_code, address, city, province, zip, country, is_reseller, account_type, parent_id, primary_workspace_id, billing_mode';
     const { data: currentUser, error: userError } = await supabaseAdmin
       .from('users')
-      .select('*')
+      .select(USER_SELECT_FIELDS)
       .eq('id', context.actor.id)
       .single();
 
     if (userError) {
       console.error('[FISCAL_REPORT] User query error:', userError);
-      return { success: false, error: `Errore DB: ${userError.message}` };
+      return { success: false, error: 'Errore recupero dati utente' };
     }
 
     if (!currentUser) {
@@ -325,14 +326,61 @@ export async function getResellerFiscalReport(
     const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59, 999);
 
     // 3. Ottieni sub-users (clienti del reseller)
-    // Nota: Usa * per evitare errori se alcune colonne non esistono nel DB
-    let clientsQuery = supabaseAdmin.from('users').select('*').eq('parent_id', currentUser.id);
+    // Strategia: workspace V2 (workspace_members hierarchy) + fallback legacy parent_id
+    let clients: any[] = [];
+    let clientsError: any = null;
 
-    if (filters.client_id) {
-      clientsQuery = clientsQuery.eq('id', filters.client_id);
+    // 3a. Workspace V2: cerca figli tramite workspace hierarchy
+    if (currentUser.primary_workspace_id) {
+      const { data: wsMembers, error: wsMembersError } = await supabaseAdmin
+        .from('workspace_members')
+        .select('user_id, workspaces!inner(parent_workspace_id)')
+        .eq('workspaces.parent_workspace_id', currentUser.primary_workspace_id)
+        .eq('status', 'active')
+        .eq('role', 'owner');
+
+      if (!wsMembersError && wsMembers && wsMembers.length > 0) {
+        const wsChildIds = wsMembers.map((m: any) => m.user_id);
+        let wsClientsQuery = supabaseAdmin
+          .from('users')
+          .select(USER_SELECT_FIELDS)
+          .in('id', wsChildIds);
+
+        if (filters.client_id) {
+          wsClientsQuery = wsClientsQuery.eq('id', filters.client_id);
+        }
+
+        const { data: wsClients, error: wsClientsError } = await wsClientsQuery;
+        if (!wsClientsError && wsClients) {
+          clients = wsClients;
+        }
+      }
     }
 
-    const { data: clients, error: clientsError } = await clientsQuery;
+    // 3b. Fallback legacy: parent_id
+    {
+      let legacyQuery = supabaseAdmin
+        .from('users')
+        .select(USER_SELECT_FIELDS)
+        .eq('parent_id', currentUser.id);
+
+      if (filters.client_id) {
+        legacyQuery = legacyQuery.eq('id', filters.client_id);
+      }
+
+      const { data: legacyClients, error: legacyError } = await legacyQuery;
+      if (legacyError) {
+        clientsError = legacyError;
+      } else if (legacyClients) {
+        // Merge: aggiungi solo utenti non già presenti dalla query V2
+        const existingIds = new Set(clients.map((c) => c.id));
+        for (const lc of legacyClients) {
+          if (!existingIds.has(lc.id)) {
+            clients.push(lc);
+          }
+        }
+      }
+    }
 
     if (clientsError) {
       console.error('Errore query clienti:', clientsError);
@@ -348,8 +396,11 @@ export async function getResellerFiscalReport(
 
     const clientIds = clients.map((c) => c.id);
 
-    // 4. Query spedizioni nel periodo per tutti i clienti
-    const { data: shipments, error: shipmentsError } = await supabaseAdmin
+    // 4. Query spedizioni nel periodo per tutti i clienti (workspace-scoped)
+    const resellerWsId =
+      currentUser.primary_workspace_id || (await getUserWorkspaceId(currentUser.id));
+    const wq = resellerWsId ? workspaceQuery(resellerWsId) : supabaseAdmin;
+    const { data: shipments, error: shipmentsError } = await wq
       .from('shipments')
       .select(
         `
@@ -382,7 +433,7 @@ export async function getResellerFiscalReport(
 
     // 4b. Recupera costi fornitore da platform_provider_costs
     // Questo ci dà il costo reale pagato dalla piattaforma al corriere
-    const shipmentIds = (shipments || []).map((s) => s.id);
+    const shipmentIds = (shipments || []).map((s: any) => s.id);
     let providerCostMap = new Map<string, number>();
 
     if (shipmentIds.length > 0) {
@@ -483,9 +534,10 @@ export async function getResellerMarginByProvider(
       return { success: false, error: 'Non autenticato' };
     }
 
+    const MARGIN_USER_FIELDS = 'id, is_reseller, account_type, primary_workspace_id';
     const { data: currentUser, error: userError } = await supabaseAdmin
       .from('users')
-      .select('*')
+      .select(MARGIN_USER_FIELDS)
       .eq('id', context.actor.id)
       .single();
 
@@ -497,13 +549,38 @@ export async function getResellerMarginByProvider(
       return { success: false, error: 'Non sei un reseller' };
     }
 
-    // Sub-users del reseller + reseller stesso
-    const { data: clients } = await supabaseAdmin
+    // Sub-users del reseller: workspace V2 + fallback legacy parent_id
+    let clientIds: string[] = [];
+
+    // V2: workspace hierarchy
+    if (currentUser.primary_workspace_id) {
+      const { data: wsMembers } = await supabaseAdmin
+        .from('workspace_members')
+        .select('user_id, workspaces!inner(parent_workspace_id)')
+        .eq('workspaces.parent_workspace_id', currentUser.primary_workspace_id)
+        .eq('status', 'active')
+        .eq('role', 'owner');
+
+      if (wsMembers && wsMembers.length > 0) {
+        clientIds = wsMembers.map((m: any) => m.user_id);
+      }
+    }
+
+    // Fallback legacy: parent_id
+    const { data: legacyClients } = await supabaseAdmin
       .from('users')
       .select('id')
       .eq('parent_id', currentUser.id);
 
-    const clientIds = (clients || []).map((c: any) => c.id);
+    if (legacyClients) {
+      const existingIds = new Set(clientIds);
+      for (const lc of legacyClients) {
+        if (!existingIds.has(lc.id)) {
+          clientIds.push(lc.id);
+        }
+      }
+    }
+
     // Includi anche le spedizioni dirette del reseller stesso
     clientIds.push(currentUser.id);
     // (Se non ci sono sub-users, comunque mostra le spedizioni del reseller)
@@ -512,8 +589,11 @@ export async function getResellerMarginByProvider(
     const startDate = new Date(filters.year, filters.month - 1, 1);
     const endDate = new Date(filters.year, filters.month, 0, 23, 59, 59, 999);
 
-    // Query spedizioni dei clienti con courier_config_id
-    const { data, error } = await supabaseAdmin
+    // Query spedizioni dei clienti con courier_config_id (workspace-scoped)
+    const marginWsId =
+      currentUser.primary_workspace_id || (await getUserWorkspaceId(currentUser.id));
+    const wq = marginWsId ? workspaceQuery(marginWsId) : supabaseAdmin;
+    const { data, error } = await wq
       .from('shipments')
       .select(
         `

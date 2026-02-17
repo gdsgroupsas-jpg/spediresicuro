@@ -222,15 +222,36 @@ function ReportFiscaleContent() {
 export default function ReportFiscalePage() {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
-  // Auth check
+  // Auth + role check
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.push('/auth/signin');
+    async function checkAccess() {
+      if (status === 'loading') return;
+      if (status === 'unauthenticated' || !session?.user?.email) {
+        router.push('/auth/signin');
+        return;
+      }
+      try {
+        const res = await fetch('/api/user/info');
+        if (res.ok) {
+          const data = await res.json();
+          const u = data.user || data;
+          const accountType = u.account_type || u.accountType;
+          setIsAuthorized(
+            accountType === 'superadmin' || accountType === 'admin' || u.is_reseller === true
+          );
+        } else {
+          setIsAuthorized(false);
+        }
+      } catch {
+        setIsAuthorized(false);
+      }
     }
-  }, [status, router]);
+    checkAccess();
+  }, [session, status, router]);
 
-  if (status === 'loading') {
+  if (status === 'loading' || isAuthorized === null) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
@@ -238,8 +259,16 @@ export default function ReportFiscalePage() {
     );
   }
 
-  if (!session) {
-    return null;
+  if (!isAuthorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <ShieldAlert className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900">Accesso non autorizzato</h2>
+          <p className="text-gray-500 mt-2">Solo i reseller possono accedere al report fiscale.</p>
+        </div>
+      </div>
+    );
   }
 
   return (

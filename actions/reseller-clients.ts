@@ -11,6 +11,8 @@
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 
 export interface ListinoInfo {
   id: string;
@@ -72,6 +74,10 @@ export async function getResellerClientsWithListino(): Promise<{
     if (!currentUser.is_reseller && currentUser.account_type !== 'superadmin') {
       return { success: false, error: 'Non sei un reseller' };
     }
+
+    // Workspace-scoped query per tabelle multi-tenant
+    const wsId = context.workspace?.id ?? (await getUserWorkspaceId(currentUser.id));
+    const wq = wsId ? workspaceQuery(wsId) : supabaseAdmin;
 
     // Strategia: workspace V2 (primaria) + fallback parent_id (legacy)
     let clientIds: string[] = [];
@@ -155,7 +161,7 @@ export async function getResellerClientsWithListino(): Promise<{
     }
 
     // Ottieni conteggio spedizioni e totale speso per ogni cliente
-    const { data: shipmentsStats } = await supabaseAdmin
+    const { data: shipmentsStats } = await wq
       .from('shipments')
       .select('user_id, cost')
       .in('user_id', clientIds);
@@ -189,7 +195,7 @@ export async function getResellerClientsWithListino(): Promise<{
     };
 
     // Fonte 1: price_list_assignments (N:N, revoked_at IS NULL)
-    const { data: assignments } = await supabaseAdmin
+    const { data: assignments } = await wq
       .from('price_list_assignments')
       .select(
         `
@@ -210,7 +216,7 @@ export async function getResellerClientsWithListino(): Promise<{
     });
 
     // Fonte 2: price_lists.assigned_to_user_id (legacy diretto)
-    const { data: directAssignments } = await supabaseAdmin
+    const { data: directAssignments } = await wq
       .from('price_lists')
       .select('id, name, default_margin_percent, status, assigned_to_user_id')
       .in('assigned_to_user_id', clientIds)
@@ -224,7 +230,7 @@ export async function getResellerClientsWithListino(): Promise<{
     const clientsWithAssignedPl = clients.filter((c) => (c as any).assigned_price_list_id);
     if (clientsWithAssignedPl.length > 0) {
       const plIds = clientsWithAssignedPl.map((c) => (c as any).assigned_price_list_id);
-      const { data: userAssignedPls } = await supabaseAdmin
+      const { data: userAssignedPls } = await wq
         .from('price_lists')
         .select('id, name, default_margin_percent, status')
         .in('id', plIds);

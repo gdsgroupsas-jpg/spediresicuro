@@ -151,12 +151,10 @@ export async function POST(request: NextRequest) {
     let generatedPassword: string | undefined;
 
     if (!finalPassword) {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*';
-      finalPassword = '';
-      for (let i = 0; i < 12; i++) {
-        finalPassword += chars.charAt(Math.floor(Math.random() * chars.length));
-      }
-      generatedPassword = finalPassword;
+      // Genera password crittograficamente sicura (CSPRNG)
+      const crypto = await import('crypto');
+      generatedPassword = crypto.randomBytes(12).toString('base64url').slice(0, 12);
+      finalPassword = generatedPassword;
     }
 
     // ========================================
@@ -363,15 +361,13 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: generatedPassword
-        ? `Cliente creato con successo! Password generata: ${generatedPassword}`
-        : 'Cliente creato con successo!',
+      message: 'Cliente creato con successo!',
       client: {
         id: clientId,
         email: clientEmail,
         name: clientName,
       },
-      generatedPassword,
+      generatedPassword, // Password nel campo dedicato, MAI nel message
       priceListAssigned: !!priceListId,
     });
   } catch (error: any) {
