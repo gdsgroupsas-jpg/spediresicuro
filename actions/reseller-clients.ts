@@ -168,7 +168,7 @@ export async function getResellerClientsWithListino(): Promise<{
 
     // Aggrega per utente
     const statsMap = new Map<string, { count: number; total: number }>();
-    shipmentsStats?.forEach((s) => {
+    shipmentsStats?.forEach((s: { user_id: string; cost: number | null }) => {
       const current = statsMap.get(s.user_id) || { count: 0, total: 0 };
       statsMap.set(s.user_id, {
         count: current.count + 1,
@@ -211,7 +211,7 @@ export async function getResellerClientsWithListino(): Promise<{
       .in('user_id', clientIds)
       .is('revoked_at', null);
 
-    assignments?.forEach((a) => {
+    assignments?.forEach((a: { user_id: string; price_list: any }) => {
       if (a.price_list) addListino(a.user_id, a.price_list);
     });
 
@@ -222,7 +222,7 @@ export async function getResellerClientsWithListino(): Promise<{
       .in('assigned_to_user_id', clientIds)
       .eq('status', 'active');
 
-    directAssignments?.forEach((pl) => {
+    directAssignments?.forEach((pl: any) => {
       if (pl.assigned_to_user_id) addListino(pl.assigned_to_user_id, pl);
     });
 
@@ -236,7 +236,7 @@ export async function getResellerClientsWithListino(): Promise<{
         .in('id', plIds);
 
       const plMap = new Map<string, any>();
-      userAssignedPls?.forEach((pl) => plMap.set(pl.id, pl));
+      userAssignedPls?.forEach((pl: any) => plMap.set(pl.id, pl));
 
       clientsWithAssignedPl.forEach((c) => {
         const pl = plMap.get((c as any).assigned_price_list_id);
