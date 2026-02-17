@@ -83,15 +83,31 @@ describe('testSpedisciOnlineCredentials URL construction', () => {
     expect(testFn).toContain('Accesso negato');
   });
 
-  it('verifica Content-Type JSON per evitare false positive', () => {
-    // Spedisci.Online restituisce HTML 200 (pagina login) con API key invalida
+  it('verifica body JSON parsabile per evitare false positive', () => {
+    // Spedisci.Online restituisce Content-Type: text/html anche per JSON valido,
+    // e HTML 200 (pagina login) con API key invalida.
+    // Il codice deve parsare il body con JSON.parse, non fidarsi del Content-Type.
     const testFn = content.substring(
       content.indexOf('async function testSpedisciOnlineCredentials'),
       content.indexOf('async function testPosteCredentials')
     );
-    expect(testFn).toContain('content-type');
-    expect(testFn).toContain('application/json');
+    expect(testFn).toContain('JSON.parse');
+    expect(testFn).toContain('Array.isArray');
     expect(testFn).toContain('Risposta non JSON');
+  });
+
+  it('payload test include tutti i campi required OpenAPI', () => {
+    // Spedisci.Online richiede street2, email, notes, insuranceValue, codValue, accessoriServices
+    const testFn = content.substring(
+      content.indexOf('async function testSpedisciOnlineCredentials'),
+      content.indexOf('async function testPosteCredentials')
+    );
+    expect(testFn).toContain("street2: ''");
+    expect(testFn).toContain("email: 'test@example.com'");
+    expect(testFn).toContain('notes:');
+    expect(testFn).toContain('insuranceValue:');
+    expect(testFn).toContain('codValue:');
+    expect(testFn).toContain('accessoriServices:');
   });
 });
 

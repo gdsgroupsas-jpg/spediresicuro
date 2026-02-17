@@ -322,27 +322,37 @@ async function testSpedisciOnlineCredentials(
       ? `${rawBaseUrl}/shipping/rates`
       : `${rawBaseUrl}/api/v2/shipping/rates`;
 
-    // Payload minimo per validare credenziali (come validate-spedisci-online)
+    // Payload completo per validare credenziali (tutti i campi required dall'OpenAPI spec)
     const testPayload = {
       packages: [{ length: 10, width: 10, height: 10, weight: 1 }],
       shipFrom: {
         name: 'Test',
         company: 'Test',
         street1: 'Via Test 1',
+        street2: '',
         city: 'Roma',
         state: 'RM',
         postalCode: '00100',
         country: 'IT',
+        phone: null,
+        email: 'test@example.com',
       },
       shipTo: {
         name: 'Test',
         company: '',
         street1: 'Via Test 2',
+        street2: '',
         city: 'Milano',
         state: 'MI',
         postalCode: '20100',
         country: 'IT',
+        phone: null,
+        email: 'test@example.com',
       },
+      notes: 'test connessione',
+      insuranceValue: 0,
+      codValue: 0,
+      accessoriServices: [],
     };
 
     const response = await fetch(testUrl, {
@@ -358,13 +368,21 @@ async function testSpedisciOnlineCredentials(
     });
 
     if (response.ok) {
-      // Verifica che la risposta sia JSON — Spedisci.Online restituisce HTML 200
-      // (pagina di login) se l'API key è invalida, causando false positive
-      const contentType = response.headers.get('content-type') || '';
-      if (!contentType.includes('application/json')) {
+      // Spedisci.Online restituisce Content-Type: text/html anche per JSON valido.
+      // Verifichiamo parsando il body: se è un array JSON → credenziali OK.
+      // Se è HTML (pagina login) → credenziali invalide (false positive 200).
+      const body = await response.text();
+      try {
+        const json = JSON.parse(body);
+        if (Array.isArray(json)) {
+          return { success: true };
+        }
+        // JSON valido ma non array di tariffe → risposta inattesa
+        return { success: false, error: 'Risposta non JSON array: formato inatteso' };
+      } catch {
+        // Non è JSON → probabilmente pagina HTML di login (false positive 200)
         return { success: false, error: 'Risposta non JSON: credenziali probabilmente non valide' };
       }
-      return { success: true };
     } else if (response.status === 401) {
       return { success: false, error: 'API key non valida o scaduta' };
     } else if (response.status === 403) {

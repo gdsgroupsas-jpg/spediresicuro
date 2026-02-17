@@ -129,13 +129,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 7. Se la risposta è OK, la connessione funziona
-    const data = await response.json().catch(() => ({}));
+    // 7. Verifica che la risposta contenga JSON valido
+    // Spedisci.Online restituisce Content-Type: text/html anche per JSON valido,
+    // quindi parsiamo il body direttamente invece di fidarci dell'header.
+    const bodyText = await response.text();
+    let data: unknown = {};
+    try {
+      data = JSON.parse(bodyText);
+    } catch {
+      // Risposta 200 ma non JSON → probabilmente pagina HTML di login (credenziali invalide)
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            'Risposta non JSON dal server. Le credenziali potrebbero non essere valide (il server ha restituito una pagina HTML).',
+        },
+        { status: 200 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
       message: 'Connessione verificata con successo!',
-      data: data, // Opzionale: ritorna i dati della risposta (es: tariffe disponibili)
+      data: data,
     });
   } catch (error: unknown) {
     // Gestisci errori di rete (no PII nei log)
