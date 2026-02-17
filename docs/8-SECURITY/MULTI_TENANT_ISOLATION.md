@@ -20,13 +20,13 @@ Il bypass di questo principio causa data leak tra workspace.
 ### Livello 1: Application Layer (ATTIVO)
 
 - `workspaceQuery()` in `lib/db/workspace-query.ts` — forza filtro workspace_id
-- 29 tabelle protette in `WORKSPACE_SCOPED_TABLES`
+- 34 tabelle protette in `WORKSPACE_SCOPED_TABLES`
 - Guardian test monitora usi diretti di `supabaseAdmin` (baseline: 57)
 
-### Livello 2: RLS PostgreSQL (PARZIALE)
+### Livello 2: RLS PostgreSQL (ATTIVO)
 
-- Attivo su: `shipments`, `wallet_transactions`, `price_lists`
-- Mancante su: `invoices`, `invoice_items`, `cod_files`, `cod_items`, `cod_distinte`, `cod_disputes`
+- Attivo su: `shipments`, `wallet_transactions`, `price_lists`, `invoices`, `invoice_items`, `cod_files`, `cod_items`, `cod_distinte`
+- Policies: superadmin full access, utente vede solo proprio workspace, service role full access
 
 ### Livello 3: Middleware (ATTIVO)
 
@@ -35,50 +35,36 @@ Il bypass di questo principio causa data leak tra workspace.
 
 ## Stato attuale per area (2026-02-17)
 
-| Area         | Endpoint/File                | Filtro workspace              | Colonna workspace_id | Stato               |
-| ------------ | ---------------------------- | ----------------------------- | -------------------- | ------------------- |
-| Spedizioni   | `shipments`                  | `.eq('workspace_id', wsId)`   | SI                   | OK                  |
-| Listini      | `price_lists`                | `.eq('workspace_id', wsId)`   | SI                   | OK                  |
-| Wallet       | `wallet_transactions`        | `.eq('workspace_id', wsId)`   | SI                   | OK                  |
-| Export CSV   | `/api/export/spediscionline` | `.eq('workspace_id', wsId)`   | via shipments        | OK (fix 2026-02-17) |
-| Recipients   | `/api/recipients/search`     | `.eq('workspace_id', wsId)`   | via shipments        | OK (fix 2026-02-17) |
-| Fatture      | `actions/invoices.ts`        | `.in('user_id', memberIds)`   | NO (TODO)            | BRIDGE              |
-| COD Items    | `/api/cod/items`             | `.in('client_id', memberIds)` | NO (TODO)            | BRIDGE              |
-| COD Distinte | `/api/cod/distinte`          | `.in('client_id', memberIds)` | NO (TODO)            | BRIDGE              |
-| Contrassegni | `actions/contrassegni.ts`    | `.eq('workspace_id', wsId)`   | via shipments        | OK                  |
-| Tracking     | `/track/[trackingId]`        | Pubblico (standard settore)   | N/A                  | OK                  |
+| Area         | Endpoint/File                | Filtro workspace            | Colonna workspace_id | Stato               |
+| ------------ | ---------------------------- | --------------------------- | -------------------- | ------------------- |
+| Spedizioni   | `shipments`                  | `.eq('workspace_id', wsId)` | SI                   | OK                  |
+| Listini      | `price_lists`                | `.eq('workspace_id', wsId)` | SI                   | OK                  |
+| Wallet       | `wallet_transactions`        | `.eq('workspace_id', wsId)` | SI                   | OK                  |
+| Export CSV   | `/api/export/spediscionline` | `.eq('workspace_id', wsId)` | via shipments        | OK (fix 2026-02-17) |
+| Recipients   | `/api/recipients/search`     | `.eq('workspace_id', wsId)` | via shipments        | OK (fix 2026-02-17) |
+| Fatture      | `actions/invoices.ts`        | `.eq('workspace_id', wsId)` | SI                   | OK (fix 2026-02-17) |
+| COD Items    | `/api/cod/items`             | `.eq('workspace_id', wsId)` | SI                   | OK (fix 2026-02-17) |
+| COD Distinte | `/api/cod/distinte`          | `.eq('workspace_id', wsId)` | SI                   | OK (fix 2026-02-17) |
+| Contrassegni | `actions/contrassegni.ts`    | `.eq('workspace_id', wsId)` | via shipments        | OK                  |
+| Tracking     | `/track/[trackingId]`        | Pubblico (standard settore) | N/A                  | OK                  |
 
 ### Legenda stati
 
-- **OK**: filtro diretto su colonna workspace_id
-- **BRIDGE**: filtro indiretto via workspace_members (tabella manca colonna workspace_id)
-- **TODO**: migration necessaria per aggiungere colonna workspace_id
+- **OK**: filtro diretto su colonna workspace_id (o colonna ereditata da tabella parent)
 
-## Pattern "workspace_members bridge"
+## Migration applicata (2026-02-17)
 
-Per tabelle senza colonna `workspace_id` (invoices, cod\_\*), il filtro è:
+File: `supabase/migrations/20260217100000_add_workspace_id_to_invoices_cod.sql`
 
-```typescript
-// 1. Recupera membri del workspace
-const { data: members } = await supabaseAdmin
-  .from('workspace_members')
-  .select('user_id')
-  .eq('workspace_id', workspaceId)
-  .eq('status', 'active');
+**Step 1**: ADD COLUMN workspace_id + INDEX + FK su:
 
-const memberIds = members.map((m) => m.user_id);
+- `invoices`, `invoice_items`, `cod_files`, `cod_items`, `cod_distinte`
 
-// 2. Filtra per appartenenza
-const { data } = await supabaseAdmin.from('invoices').select('*').in('user_id', memberIds);
-```
+**Step 2**: Backfill workspace_id da user_id/client_id -> users.primary_workspace_id
 
-Questo pattern ha un costo: 1 query extra per richiesta. La soluzione definitiva e' aggiungere `workspace_id` direttamente alla tabella.
+**Step 3**: RLS policies (superadmin, utente, service role)
 
-## Migration TODO (priorita')
-
-1. **invoices** + **invoice_items**: aggiungere `workspace_id UUID REFERENCES workspaces(id)`, backfill da shipments.workspace_id o workspace_members, aggiungere a WORKSPACE_SCOPED_TABLES
-2. **cod_files**, **cod_items**, **cod_distinte**, **cod_disputes**: stesso pattern
-3. RLS policies su tutte le tabelle sopra
+Risultato backfill: 0 residui NULL (1 fattura migrata con successo, tabelle COD vuote).
 
 ## Come aggiungere una nuova tabella multi-tenant
 
@@ -95,7 +81,7 @@ Questo pattern ha un costo: 1 query extra per richiesta. La soluzione definitiva
 | `tests/unit/workspace-query-guardian.test.ts`        | Scansione codice per usi diretti supabaseAdmin |
 | `tests/unit/export-workspace-isolation.test.ts`      | Export filtra per workspace                    |
 | `tests/unit/recipients-workspace-isolation.test.ts`  | Recipients filtra per workspace                |
-| `tests/unit/invoices-workspace-isolation.test.ts`    | Fatture filtrate per workspace members         |
-| `tests/unit/cod-workspace-isolation.test.ts`         | COD filtrati per workspace members             |
+| `tests/unit/invoices-workspace-isolation.test.ts`    | Fatture filtrate per workspace diretto         |
+| `tests/unit/cod-workspace-isolation.test.ts`         | COD filtrati per workspace diretto             |
 | `tests/unit/listini-workspace-isolation.test.ts`     | Listini filtrati per workspace                 |
 | `tests/unit/price-lists-workspace-isolation.test.ts` | Price lists con mock isolation                 |

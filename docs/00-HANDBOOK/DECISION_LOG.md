@@ -145,6 +145,19 @@ Record structural and process decisions for fast AI retrieval.
 - Build: zero errori compilazione
 - Benchmark: Spedisci.Online Enterprise usa subdomain isolation per-account — stesso livello di protezione ora raggiunto
 
+## 2026-02-17 - Migration workspace_id su invoices/COD (elimina bridge pattern)
+
+- Decision: Aggiunta colonna `workspace_id` a invoices, invoice_items, cod_files, cod_items, cod_distinte
+- Problem: Il "workspace_members bridge" pattern richiedeva 1 query extra per richiesta (fetch memberIds, poi .in())
+- Solution: ALTER TABLE + backfill + RLS policies + codice passa da bridge a `.eq('workspace_id', wsId)` diretto
+- Migration: `supabase/migrations/20260217100000_add_workspace_id_to_invoices_cod.sql`
+- Miglioramenti aggiuntivi: PATCH e DELETE su cod_distinte ora filtrano per workspace_id (prima no)
+- POST cod_distinte inserisce workspace_id nel record (prima mancante)
+- WORKSPACE_SCOPED_TABLES: da 29 a 34 tabelle protette
+- Tests: 3071 test verdi, 0 falliti. COD test da 12 a 19 verifiche.
+- Commit: `cb34efb`
+- Impact: app/actions/invoices.ts, app/api/cod/distinte/route.ts, app/api/cod/items/route.ts, lib/db/workspace-query.ts
+
 ## 2026-02-17 - Workspace-Scoped Query Builder (architettura anti-leak)
 
 - Decision: Creato `workspaceQuery()` wrapper che forza `workspace_id` su 29 tabelle multi-tenant
