@@ -9,9 +9,14 @@ import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { calculateBestPriceForReseller } from '@/lib/db/price-lists-advanced';
 import type { CourierServiceType } from '@/types/shipments';
+import { withRateLimit } from '@/lib/security/rate-limit-middleware';
 import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 20 req/min per IP (protezione API corrieri da DDoS amplification)
+  const rl = await withRateLimit(request, 'quotes-compare', { limit: 20, windowSeconds: 60 });
+  if (rl) return rl;
+
   try {
     // ✨ M3: Usa getWorkspaceAuth per avere context con workspace
     const wsContext = await getWorkspaceAuth();
@@ -176,6 +181,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('Errore confronto prezzi:', error);
-    return NextResponse.json({ error: error.message || 'Errore sconosciuto' }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante il calcolo preventivi' }, { status: 500 });
   }
 }

@@ -94,7 +94,10 @@ export async function POST(request: Request) {
 
     // Errore config non trovata (da getCourierClientReal)
     if (error.message?.includes('Configurazione non trovata')) {
-      return Response.json({ error: error.message }, { status: 400 });
+      return Response.json(
+        { error: 'Errore durante la creazione della spedizione' },
+        { status: 400 }
+      );
     }
 
     return Response.json({ error: 'Errore interno' }, { status: 500 });

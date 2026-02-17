@@ -49,7 +49,10 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ contact: data });
   } catch (err: any) {
     console.error('[CONTACT-GET] Error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Errore durante il caricamento del contatto' },
+      { status: 500 }
+    );
   }
 }
 
@@ -126,13 +129,19 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
       if (error.code === 'PGRST116') {
         return NextResponse.json({ error: 'Contatto non trovato' }, { status: 404 });
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Errore durante l'aggiornamento del contatto" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ contact: data });
   } catch (err: any) {
     console.error('[CONTACT-UPDATE] Error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Errore durante l'aggiornamento del contatto" },
+      { status: 500 }
+    );
   }
 }
 
@@ -154,12 +163,18 @@ export async function DELETE(
     const { error } = await supabaseAdmin.from('contacts').delete().eq('id', id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Errore durante l'eliminazione del contatto" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true });
   } catch (err: any) {
     console.error('[CONTACT-DELETE] Error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Errore durante l'eliminazione del contatto" },
+      { status: 500 }
+    );
   }
 }

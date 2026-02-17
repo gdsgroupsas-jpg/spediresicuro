@@ -39,8 +39,29 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 3. Prepara endpoint
+    // 3. Prepara endpoint + SSRF protection
     cleanBaseUrl = baseUrl.trim().replace(/\/$/, '');
+
+    // Blocca IP privati, localhost, e metadata endpoints (SSRF protection)
+    const blockedPatterns = [
+      /^https?:\/\/localhost/i,
+      /^https?:\/\/127\./,
+      /^https?:\/\/0\./,
+      /^https?:\/\/10\./,
+      /^https?:\/\/172\.(1[6-9]|2\d|3[01])\./,
+      /^https?:\/\/192\.168\./,
+      /^https?:\/\/169\.254\./, // AWS metadata
+      /^https?:\/\/\[::1\]/, // IPv6 localhost
+      /^https?:\/\/metadata\./i,
+      /^https?:\/\/internal/i,
+    ];
+    if (blockedPatterns.some((p) => p.test(cleanBaseUrl))) {
+      return NextResponse.json(
+        { success: false, error: 'URL non consentito. Inserire un dominio esterno valido.' },
+        { status: 400 }
+      );
+    }
+
     const apiUrl = cleanBaseUrl.includes('/api/v2')
       ? `${cleanBaseUrl}/shipping/rates`
       : `${cleanBaseUrl}/api/v2/shipping/rates`;

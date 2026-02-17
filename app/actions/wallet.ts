@@ -716,7 +716,9 @@ export async function approveTopUpRequest(
               target: refreshedRequest.user_id,
             },
           });
-        } catch (e) {}
+        } catch (auditErr) {
+          console.warn('⚠️ [AUDIT] Errore audit log top_up_request (fail-open):', auditErr);
+        }
 
         return {
           success: true,

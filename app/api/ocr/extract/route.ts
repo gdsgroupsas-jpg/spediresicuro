@@ -166,7 +166,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Errore interno del server',
+        error: "Errore durante l'estrazione OCR",
       },
       { status: 500 }
     );

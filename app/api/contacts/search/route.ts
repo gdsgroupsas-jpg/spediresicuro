@@ -36,7 +36,7 @@ export async function GET(request: NextRequest) {
       .limit(limit);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json({ error: 'Errore durante la ricerca contatti' }, { status: 500 });
     }
 
     return NextResponse.json({
@@ -49,6 +49,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (err: any) {
     console.error('[CONTACTS-SEARCH] Error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante la ricerca contatti' }, { status: 500 });
   }
 }

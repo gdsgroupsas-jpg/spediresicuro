@@ -47,8 +47,10 @@ export async function GET(request: NextRequest) {
       .range(offset, offset + limit - 1);
 
     if (search) {
+      // Sanitizza input per prevenire Supabase filter injection (escape , e .)
+      const safeSearch = search.replace(/[,.*()]/g, '');
       query = query.or(
-        `first_name.ilike.%${search}%,last_name.ilike.%${search}%,email.ilike.%${search}%,company.ilike.%${search}%`
+        `first_name.ilike.%${safeSearch}%,last_name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%,company.ilike.%${safeSearch}%`
       );
     }
 
@@ -59,7 +61,10 @@ export async function GET(request: NextRequest) {
     const { data, error, count } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante il caricamento dei contatti' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -68,7 +73,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (err: any) {
     console.error('[CONTACTS-LIST] Error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Errore durante il caricamento dei contatti' },
+      { status: 500 }
+    );
   }
 }
 
@@ -125,12 +133,18 @@ export async function POST(request: NextRequest) {
           { status: 409 }
         );
       }
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante la creazione del contatto' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ contact: data }, { status: 201 });
   } catch (err: any) {
     console.error('[CONTACTS-CREATE] Error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Errore durante la creazione del contatto' },
+      { status: 500 }
+    );
   }
 }

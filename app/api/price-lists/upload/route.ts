@@ -178,7 +178,7 @@ export async function POST(request: NextRequest) {
     }
   } catch (error: any) {
     console.error('Errore upload tariffe:', error);
-    return NextResponse.json({ error: error.message || 'Errore sconosciuto' }, { status: 500 });
+    return NextResponse.json({ error: "Errore durante l'upload del listino" }, { status: 500 });
   }
 }
 

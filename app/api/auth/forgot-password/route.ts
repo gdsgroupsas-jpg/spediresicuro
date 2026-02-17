@@ -13,12 +13,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendPasswordResetEmail } from '@/lib/email/resend';
+import { withRateLimit } from '@/lib/security/rate-limit-middleware';
 import crypto from 'crypto';
 
 // Token valido per 1 ora
 const TOKEN_EXPIRY_HOURS = 1;
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 3 req/min per IP (prevenzione email bombing)
+  const rl = await withRateLimit(request, 'auth-forgot-password', { limit: 3, windowSeconds: 60 });
+  if (rl) return rl;
+
   try {
     const { email } = await request.json();
 

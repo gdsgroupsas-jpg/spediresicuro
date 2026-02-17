@@ -13,9 +13,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendPasswordChangedEmail } from '@/lib/email/resend';
+import { withRateLimit } from '@/lib/security/rate-limit-middleware';
 import crypto from 'crypto';
 
 export async function POST(request: NextRequest) {
+  // Rate limit: 5 req/min per IP (prevenzione brute force token)
+  const rl = await withRateLimit(request, 'auth-reset-password', { limit: 5, windowSeconds: 60 });
+  if (rl) return rl;
+
   try {
     const { token, email, newPassword } = await request.json();
 

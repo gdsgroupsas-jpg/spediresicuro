@@ -73,7 +73,10 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     .single();
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Errore durante l'aggiornamento dell'email" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json(data);
@@ -103,7 +106,10 @@ export async function DELETE(
     const { error } = await wq.from('emails').delete().eq('id', id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: "Errore durante l'eliminazione dell'email" },
+        { status: 500 }
+      );
     }
     return NextResponse.json({ deleted: true });
   }
@@ -112,7 +118,10 @@ export async function DELETE(
   const { error } = await wq.from('emails').update({ folder: 'trash' }).eq('id', id);
 
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: "Errore durante lo spostamento dell'email nel cestino" },
+      { status: 500 }
+    );
   }
 
   return NextResponse.json({ trashed: true });

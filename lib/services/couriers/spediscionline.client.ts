@@ -223,6 +223,9 @@ export class SpedisciOnlineClient extends BaseCourierClient {
   }
 
   async deleteShipping(request: CourierDeleteShipmentRequest): Promise<void> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000); // 30s timeout
+
     try {
       const response = await fetch(`${this.baseUrl}/shipping/delete`, {
         method: 'POST',
@@ -233,14 +236,22 @@ export class SpedisciOnlineClient extends BaseCourierClient {
         body: JSON.stringify({
           increment_id: parseInt(request.shipmentId),
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
         throw new Error(`Delete failed: ${response.status}`);
       }
-    } catch (error) {
+    } catch (error: any) {
+      if (error.name === 'AbortError') {
+        const timeoutError = new Error('Timeout: cancellazione spedizione SpedisciOnline (30s)');
+        (timeoutError as any).statusCode = 'TIMEOUT';
+        throw timeoutError;
+      }
       console.error('Failed to delete shipment:', error);
       throw error;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
 

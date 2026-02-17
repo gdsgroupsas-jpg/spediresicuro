@@ -45,15 +45,20 @@ export async function GET(request: NextRequest) {
     }
 
     if (search) {
+      // Sanitizza input per prevenire Supabase filter injection (escape , e .)
+      const safeSearch = search.replace(/[,.*()]/g, '');
       query = query.or(
-        `subject.ilike.%${search}%,from_address.ilike.%${search}%,body_text.ilike.%${search}%`
+        `subject.ilike.%${safeSearch}%,from_address.ilike.%${safeSearch}%,body_text.ilike.%${safeSearch}%`
       );
     }
 
     const { data, error, count } = await query;
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante il caricamento delle email' },
+        { status: 500 }
+      );
     }
 
     // Get unread counts per folder
@@ -76,6 +81,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (err: any) {
     console.error('[EMAIL-LIST] Error:', err.message);
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Errore durante il caricamento delle email' },
+      { status: 500 }
+    );
   }
 }
