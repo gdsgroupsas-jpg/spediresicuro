@@ -25,6 +25,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { WORKSPACE_COOKIE } from '@/lib/workspace-auth';
 import type { UserWorkspaceInfo } from '@/types/workspace';
 
@@ -264,8 +265,9 @@ export async function POST(request: NextRequest) {
       httpOnly: true, // CRITICAL: prevent XSS access
     });
 
-    // 7. Log audit (best-effort)
-    await supabaseAdmin.from('audit_logs').insert({
+    // 7. Log audit (best-effort, workspace-isolated)
+    const wq = workspaceQuery(workspaceId);
+    await wq.from('audit_logs').insert({
       action: 'WORKSPACE_SWITCH',
       resource_type: 'workspace',
       resource_id: workspaceId,

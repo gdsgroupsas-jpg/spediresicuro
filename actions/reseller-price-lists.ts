@@ -12,6 +12,7 @@
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { assertValidUserId } from '@/lib/validators';
 import type { PriceList, PriceListEntry } from '@/types/listini';
 import type { CourierServiceType } from '@/types/shipments';
@@ -286,6 +287,7 @@ export async function getResellerSupplierPriceListsAction(): Promise<{
       account_type: wsContext.actor.account_type,
       is_reseller: wsContext.actor.is_reseller,
     };
+    const workspaceId = wsContext.workspace.id;
 
     const isReseller = user.is_reseller === true;
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
@@ -297,8 +299,9 @@ export async function getResellerSupplierPriceListsAction(): Promise<{
       };
     }
 
-    // Recupera listini supplier creati dal reseller
-    const query = supabaseAdmin.from('price_lists').select('*').eq('list_type', 'supplier');
+    // Recupera listini supplier creati dal reseller (isolamento multi-tenant)
+    const wq = workspaceQuery(workspaceId);
+    const query = wq.from('price_lists').select('*').eq('list_type', 'supplier');
 
     if (isReseller && !isAdmin) {
       // Reseller vede solo i propri listini supplier

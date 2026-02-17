@@ -7,6 +7,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 
 /**
  * Security event types (impersonation + existing audit)
@@ -45,6 +46,9 @@ export interface SecurityEvent {
   target_id?: string;
   impersonation_active?: boolean;
 
+  // Workspace isolation
+  workspace_id?: string;
+
   // Legacy (compatibility)
   user_id?: string;
   user_email?: string;
@@ -68,6 +72,7 @@ export interface SecurityEvent {
 export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
   try {
     // Prepara payload per insert
+    const wsId = event.workspace_id || null;
     const logEntry = {
       action: event.action,
       resource_type: event.resource_type,
@@ -77,6 +82,9 @@ export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
       actor_id: event.actor_id || null,
       target_id: event.target_id || null,
       impersonation_active: event.impersonation_active || false,
+
+      // Workspace isolation
+      workspace_id: wsId,
 
       // Legacy fields (compatibility)
       user_id: event.target_id || event.user_id || null,
@@ -93,8 +101,9 @@ export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
       created_at: event.created_at || new Date().toISOString(),
     };
 
-    // Insert in audit_logs
-    const { error } = await supabaseAdmin.from('audit_logs').insert([logEntry]);
+    // Insert in audit_logs (workspace-isolated)
+    const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+    const { error } = await db.from('audit_logs').insert([logEntry]);
 
     if (error) {
       // Fallback: log in console

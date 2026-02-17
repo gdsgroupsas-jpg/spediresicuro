@@ -10,6 +10,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 
 // ⚠️ LISTA SUPERADMIN AUTORIZZATI (hardcoded per sicurezza)
 const AUTHORIZED_SUPERADMINS = [
@@ -104,13 +106,16 @@ export async function POST(request: NextRequest) {
 
     console.log('✅ [AUTO-PROMOTE] Promozione completata:', updatedUser.email);
 
-    // 4. Log audit
+    // 4. Log audit (workspace-isolated)
     try {
-      await supabaseAdmin.from('audit_logs').insert({
+      const wsId = await getUserWorkspaceId(updatedUser.id);
+      const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+      await db.from('audit_logs').insert({
         user_id: updatedUser.id,
         action: 'auto_promote_superadmin',
         severity: 'info',
         message: `Auto-promozione a superadmin: ${userEmail}`,
+        workspace_id: wsId,
         metadata: {
           email: userEmail,
           account_type: 'superadmin',

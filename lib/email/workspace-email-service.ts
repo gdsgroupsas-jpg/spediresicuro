@@ -13,6 +13,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { sendEmail } from '@/lib/email/resend';
 import { rateLimit } from '@/lib/security/rate-limit';
 
@@ -299,9 +300,11 @@ export async function sendWorkspaceEmail(
     replyTo: senderAddress.email_address,
   });
 
+  const wq = workspaceQuery(workspaceId);
+
   if (!resendResult.success) {
     // Aggiorna status a 'failed' nel DB
-    await supabaseAdmin.from('emails').update({ status: 'failed' }).eq('id', emailId);
+    await wq.from('emails').update({ status: 'failed' }).eq('id', emailId);
 
     console.error('❌ [WORKSPACE-EMAIL] Errore Resend:', resendResult.error);
     return { success: false, emailId, error: resendResult.error };
@@ -309,7 +312,7 @@ export async function sendWorkspaceEmail(
 
   // 7. Aggiorna message_id Resend nel record
   if (resendResult.id) {
-    await supabaseAdmin.from('emails').update({ message_id: resendResult.id }).eq('id', emailId);
+    await wq.from('emails').update({ message_id: resendResult.id }).eq('id', emailId);
   }
 
   console.log(

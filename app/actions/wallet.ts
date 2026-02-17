@@ -12,6 +12,7 @@ import { supabaseAdmin } from '@/lib/db/client';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
 import { requireSafeAuth } from '@/lib/safe-auth';
 import { getUserWorkspaceId } from '@/lib/db/user-helpers';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import {
   sendWalletTopUp,
   sendTopUpRejectedEmail,
@@ -299,7 +300,9 @@ export async function uploadBankTransferReceipt(formData: FormData) {
   // ============================================
 
   try {
-    await supabaseAdmin.from('audit_logs').insert({
+    const wsId = await getUserWorkspaceId(user.id);
+    const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+    await auditDb.from('audit_logs').insert({
       action: 'top_up_request_created',
       resource_type: 'top_up_request',
       resource_id: req.id,
@@ -700,7 +703,8 @@ export async function approveTopUpRequest(
         // Audit log (non bloccante)
         try {
           const context = await getSafeAuth();
-          await supabaseAdmin.from('audit_logs').insert({
+          const auditDb = fallbackWorkspaceId ? workspaceQuery(fallbackWorkspaceId) : supabaseAdmin;
+          await auditDb.from('audit_logs').insert({
             action: 'top_up_request_approved_rpc',
             resource_type: 'top_up_request',
             resource_id: requestId,
@@ -813,7 +817,8 @@ export async function approveTopUpRequest(
                 .maybeSingle()
             ).data?.amount || amountToCredit;
 
-      await supabaseAdmin.from('audit_logs').insert({
+      const auditDb = mainWorkspaceId ? workspaceQuery(mainWorkspaceId) : supabaseAdmin;
+      await auditDb.from('audit_logs').insert({
         action: 'top_up_request_approved',
         resource_type: 'top_up_request',
         resource_id: requestId,
@@ -944,7 +949,9 @@ export async function rejectTopUpRequest(
     // 5. Audit log
     try {
       const context = await getSafeAuth();
-      await supabaseAdmin.from('audit_logs').insert({
+      const wsId = await getUserWorkspaceId(request.user_id);
+      const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+      await auditDb.from('audit_logs').insert({
         action: 'top_up_request_rejected',
         resource_type: 'top_up_request',
         resource_id: requestId,
@@ -1056,7 +1063,9 @@ export async function deleteTopUpRequest(requestId: string): Promise<{
     // 5. Audit log
     try {
       const context = await getSafeAuth();
-      await supabaseAdmin.from('audit_logs').insert({
+      const wsId = await getUserWorkspaceId(request.user_id);
+      const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+      await auditDb.from('audit_logs').insert({
         action: 'top_up_request_deleted',
         resource_type: 'top_up_request',
         resource_id: requestId,

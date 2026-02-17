@@ -18,6 +18,7 @@ import { supabaseAdmin } from '@/lib/db/client';
 import { getPaymentTransaction, stripe, updatePaymentTransaction } from '@/lib/payments/stripe';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
 import { getUserWorkspaceId } from '@/lib/db/user-helpers';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -246,14 +247,17 @@ async function handleCheckoutSessionCompleted(session: any) {
     console.warn('⚠️ [STRIPE WEBHOOK] Email setup failed (non-blocking):', emailError);
   }
 
-  // 8. Audit log (non bloccante) - Include VAT info
+  // 8. Audit log (non bloccante, workspace-isolated) - Include VAT info
   try {
-    await supabaseAdmin.from('audit_logs').insert({
+    const wsId = userId ? await getUserWorkspaceId(userId) : null;
+    const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+    await db.from('audit_logs').insert({
       action: 'stripe_payment_completed',
       resource_type: 'payment_transaction',
       resource_id: transactionId,
       user_email: session.customer_email || 'unknown',
       user_id: userId,
+      workspace_id: wsId,
       metadata: {
         amount_credit: amountCredit,
         gross_amount: grossAmount,
@@ -345,13 +349,17 @@ async function handlePaymentIntentFailed(paymentIntent: any) {
     },
   });
 
-  // Audit log
+  // Audit log (workspace-isolated)
   try {
-    await supabaseAdmin.from('audit_logs').insert({
+    const failedUserId = paymentIntent.metadata?.user_id;
+    const wsId = failedUserId ? await getUserWorkspaceId(failedUserId) : null;
+    const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+    await db.from('audit_logs').insert({
       action: 'stripe_payment_failed',
       resource_type: 'payment_transaction',
       resource_id: transactionId,
-      user_id: paymentIntent.metadata?.user_id,
+      user_id: failedUserId,
+      workspace_id: wsId,
       metadata: {
         payment_intent_id: paymentIntent.id,
         error: paymentIntent.last_payment_error?.message,

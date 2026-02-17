@@ -16,6 +16,8 @@
 
 import { revalidatePath } from 'next/cache';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { requireSafeAuth } from '@/lib/safe-auth';
 import { requireWorkspaceAuth, logWorkspaceAudit, isSuperAdmin } from '@/lib/workspace-auth';
 import type {
@@ -75,20 +77,26 @@ export async function createOrganization(
       return { success: false, error: error.message };
     }
 
-    // Audit log
-    await supabaseAdmin.from('audit_logs').insert({
-      action: 'ORGANIZATION_CREATED',
-      resource_type: 'organization',
-      resource_id: data.id,
-      user_id: context.actor.id,
-      actor_id: context.actor.id,
-      target_id: context.actor.id,
-      audit_metadata: {
-        name: input.name,
-        slug,
-        billing_email: input.billing_email,
-      },
-    });
+    // Audit log — recupera workspace dell'attore per isolamento multi-tenant
+    const actorWorkspaceId = await getUserWorkspaceId(context.actor.id);
+    if (actorWorkspaceId) {
+      await workspaceQuery(actorWorkspaceId)
+        .from('audit_logs')
+        .insert({
+          action: 'ORGANIZATION_CREATED',
+          resource_type: 'organization',
+          resource_id: data.id,
+          user_id: context.actor.id,
+          actor_id: context.actor.id,
+          target_id: context.actor.id,
+          workspace_id: actorWorkspaceId,
+          audit_metadata: {
+            name: input.name,
+            slug,
+            billing_email: input.billing_email,
+          },
+        });
+    }
 
     revalidatePath('/dashboard/admin/organizations');
 
@@ -170,24 +178,26 @@ export async function createWorkspace(
       .eq('id', data)
       .single();
 
-    // Audit log
-    await supabaseAdmin.from('audit_logs').insert({
-      action: 'WORKSPACE_CREATED',
-      resource_type: 'workspace',
-      resource_id: data,
-      user_id: context.actor.id,
-      actor_id: context.actor.id,
-      target_id: context.actor.id,
-      workspace_id: data,
-      audit_metadata: {
-        name: input.name,
-        slug,
-        organization_id: input.organization_id,
-        parent_workspace_id: input.parent_workspace_id,
-        // NOTA: fee sono NULL - devono essere configurate separatamente
-        fee_note: 'Fee non configurate - Superadmin deve configurare manualmente',
-      },
-    });
+    // Audit log — usa workspaceQuery per isolamento multi-tenant
+    await workspaceQuery(data)
+      .from('audit_logs')
+      .insert({
+        action: 'WORKSPACE_CREATED',
+        resource_type: 'workspace',
+        resource_id: data,
+        user_id: context.actor.id,
+        actor_id: context.actor.id,
+        target_id: context.actor.id,
+        workspace_id: data,
+        audit_metadata: {
+          name: input.name,
+          slug,
+          organization_id: input.organization_id,
+          parent_workspace_id: input.parent_workspace_id,
+          // NOTA: fee sono NULL - devono essere configurate separatamente
+          fee_note: 'Fee non configurate - Superadmin deve configurare manualmente',
+        },
+      });
 
     revalidatePath('/dashboard');
 
@@ -297,26 +307,28 @@ export async function configureWorkspaceFee(
       return { success: false, error: error.message };
     }
 
-    // Audit log DETTAGLIATO per fee
-    await supabaseAdmin.from('audit_logs').insert({
-      action: 'WORKSPACE_FEE_CONFIGURED',
-      resource_type: 'workspace',
-      resource_id: input.workspace_id,
-      user_id: context.actor.id,
-      actor_id: context.actor.id,
-      target_id: context.actor.id,
-      workspace_id: input.workspace_id,
-      audit_metadata: {
-        workspace_name: oldWorkspace?.name,
-        old_platform_fee: oldWorkspace?.platform_fee_override,
-        new_platform_fee: input.platform_fee_override,
-        old_parent_fee: oldWorkspace?.parent_imposed_fee,
-        new_parent_fee: input.parent_imposed_fee,
-        configured_by: context.actor.email,
-        // Flag per indicare che e' stata una configurazione manuale
-        manual_configuration: true,
-      },
-    });
+    // Audit log DETTAGLIATO per fee — usa workspaceQuery per isolamento multi-tenant
+    await workspaceQuery(input.workspace_id)
+      .from('audit_logs')
+      .insert({
+        action: 'WORKSPACE_FEE_CONFIGURED',
+        resource_type: 'workspace',
+        resource_id: input.workspace_id,
+        user_id: context.actor.id,
+        actor_id: context.actor.id,
+        target_id: context.actor.id,
+        workspace_id: input.workspace_id,
+        audit_metadata: {
+          workspace_name: oldWorkspace?.name,
+          old_platform_fee: oldWorkspace?.platform_fee_override,
+          new_platform_fee: input.platform_fee_override,
+          old_parent_fee: oldWorkspace?.parent_imposed_fee,
+          new_parent_fee: input.parent_imposed_fee,
+          configured_by: context.actor.email,
+          // Flag per indicare che e' stata una configurazione manuale
+          manual_configuration: true,
+        },
+      });
 
     console.log('✅ [FEE-CONFIG] Workspace fee configured:', {
       workspaceId: input.workspace_id,
@@ -445,18 +457,32 @@ export async function acceptWorkspaceInvitation(
       return { success: false, error: error.message };
     }
 
-    // Audit log
-    await supabaseAdmin.from('audit_logs').insert({
-      action: 'WORKSPACE_INVITATION_ACCEPTED',
-      resource_type: 'workspace_member',
-      resource_id: data,
-      user_id: context.target.id,
-      actor_id: context.actor.id,
-      target_id: context.target.id,
-      audit_metadata: {
-        token_hash: token.substring(0, 8) + '...',
-      },
-    });
+    // Recupera workspace_id dall'invito per isolamento multi-tenant
+    const { data: invitation } = await supabaseAdmin
+      .from('workspace_invitations')
+      .select('workspace_id')
+      .eq('token', token)
+      .single();
+
+    const invitationWorkspaceId = invitation?.workspace_id;
+
+    // Audit log — usa workspaceQuery per isolamento multi-tenant
+    if (invitationWorkspaceId) {
+      await workspaceQuery(invitationWorkspaceId)
+        .from('audit_logs')
+        .insert({
+          action: 'WORKSPACE_INVITATION_ACCEPTED',
+          resource_type: 'workspace_member',
+          resource_id: data,
+          user_id: context.target.id,
+          actor_id: context.actor.id,
+          target_id: context.target.id,
+          workspace_id: invitationWorkspaceId,
+          audit_metadata: {
+            token_hash: token.substring(0, 8) + '...',
+          },
+        });
+    }
 
     revalidatePath('/dashboard');
 

@@ -125,7 +125,7 @@ async function handleHealth(chatId: number): Promise<string> {
     // Check Supabase by querying the database
     const supabaseStart = Date.now();
     try {
-      const { data, error } = await supabaseAdmin.from('shipments').select('id').limit(1);
+      const { data, error } = await supabaseAdmin.from('couriers').select('id').limit(1);
 
       services.push({
         name: 'Database',

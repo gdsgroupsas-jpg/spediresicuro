@@ -13,6 +13,7 @@ import { buildSystemPrompt, getVoicePrompt, getBasePrompt, getAdminPrompt } from
 import { ANNE_TOOLS, executeTool } from '@/lib/ai/tools';
 import { getCachedContext, setCachedContext, getContextCacheKey } from '@/lib/ai/cache';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { generateTraceId, logFallbackToLegacy } from '@/lib/telemetry/logger';
 import { rateLimit } from '@/lib/security/rate-limit';
 import {
@@ -634,12 +635,15 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Log audit (solo se admin o in caso di errori)
+    // Log audit (solo se admin o in caso di errori, workspace-isolated)
     // NOTA: user_id nel DB è OK (necessario per audit), ma non va nei log strutturati
     if (isAdmin || !isMock) {
       try {
-        await supabaseAdmin.from('audit_logs').insert({
+        const wsId = actingContext.workspace?.id || null;
+        const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+        await db.from('audit_logs').insert({
           user_id: userId,
+          workspace_id: wsId,
           severity: 'info',
           message: 'Anne conversation completed',
           metadata: {

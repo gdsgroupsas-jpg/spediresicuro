@@ -26,6 +26,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import type { ActingContext } from '@/lib/safe-auth';
 import type { AuditAction, AuditResourceType, AuditMetadataStandard } from './audit-actions';
 
@@ -133,17 +134,19 @@ export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
       });
 
       if (rpcError) {
-        // Fallback: insert diretto
+        // Fallback: insert diretto (con workspace isolation)
         console.warn('⚠️ [AUDIT] RPC fallback to direct insert:', rpcError.message);
-        const { error: insertError } = await supabaseAdmin.from('audit_logs').insert([logEntry]);
+        const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        const { error: insertError } = await db.from('audit_logs').insert([logEntry]);
 
         if (insertError) {
           throw insertError;
         }
       }
     } catch (rpcError) {
-      // RPC non disponibile: fallback a insert
-      const { error: insertError } = await supabaseAdmin.from('audit_logs').insert([logEntry]);
+      // RPC non disponibile: fallback a insert (con workspace isolation)
+      const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+      const { error: insertError } = await db.from('audit_logs').insert([logEntry]);
 
       if (insertError) {
         throw insertError;
@@ -234,7 +237,8 @@ export async function logAuditEvent(
   action: string,
   resourceType: string,
   resourceId: string,
-  metadata: Record<string, any> = {}
+  metadata: Record<string, any> = {},
+  workspaceId?: string | null
 ): Promise<void> {
   try {
     // Tenta di ottenere context corrente (se disponibile)
@@ -286,7 +290,9 @@ export async function logAuditEvent(
       created_at: new Date().toISOString(),
     };
 
-    const { error: insertError } = await supabaseAdmin.from('audit_logs').insert([logEntry]);
+    // Workspace isolation: usa workspaceQuery se disponibile
+    const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+    const { error: insertError } = await db.from('audit_logs').insert([logEntry]);
 
     if (insertError) {
       throw insertError;

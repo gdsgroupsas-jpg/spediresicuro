@@ -19,6 +19,7 @@ import bcrypt from 'bcryptjs';
 import { validateEmail } from '@/lib/validators';
 import { userExists, getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { hasCapability } from '@/lib/db/capability-helpers';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 
 /**
  * Verifica se l'utente corrente è un Reseller
@@ -669,15 +670,18 @@ export async function manageSubUserWallet(
       };
     }
 
-    // 5. Audit log
+    // 5. Audit log (workspace-scoped)
     try {
       const auditContext = await getWorkspaceAuth();
-      await supabaseAdmin.from('audit_logs').insert({
+      const wsId = await getUserWorkspaceId(resellerCheck.userId);
+      const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+      await auditDb.from('audit_logs').insert({
         action: 'reseller_transfer_credit',
         resource_type: 'wallet',
         resource_id: subUserId,
         user_email: auditContext?.actor?.email || 'unknown',
         user_id: resellerCheck.userId,
+        workspace_id: wsId,
         metadata: {
           amount: amount,
           reason: reason,
@@ -847,14 +851,17 @@ export async function updateSubUserBillingMode(
       };
     }
 
-    // 7. Audit log
+    // 7. Audit log (workspace-scoped)
     try {
-      await supabaseAdmin.from('audit_logs').insert({
+      const wsId = await getUserWorkspaceId(resellerCheck.userId);
+      const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+      await auditDb.from('audit_logs').insert({
         action: 'billing_mode_changed',
         resource_type: 'user',
         resource_id: subUserId,
         user_email: context.actor.email,
         user_id: resellerCheck.userId,
+        workspace_id: wsId,
         metadata: {
           type: 'billing_mode_change',
           target_user_id: subUserId,

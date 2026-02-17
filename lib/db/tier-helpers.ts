@@ -6,6 +6,8 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 
 export type ResellerTier = 'small' | 'medium' | 'enterprise';
 
@@ -192,14 +194,17 @@ export async function updateResellerTier(
       };
     }
 
-    // Audit log (opzionale)
+    // Audit log (workspace-isolated)
     try {
-      await supabaseAdmin.from('audit_logs').insert({
+      const wsId = await getUserWorkspaceId(userId);
+      const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+      await db.from('audit_logs').insert({
         action: 'reseller_tier_updated',
         resource_type: 'user',
         resource_id: userId,
         user_email: updatedBy,
         user_id: updatedBy,
+        workspace_id: wsId,
         metadata: {
           new_tier: tier,
           updated_by: updatedBy,

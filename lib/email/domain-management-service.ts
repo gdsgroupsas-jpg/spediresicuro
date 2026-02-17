@@ -14,6 +14,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { getResend } from '@/lib/email/resend';
 
 // ─── TYPES ───
@@ -341,7 +342,8 @@ export async function verifyCustomDomain(workspaceId: string): Promise<DomainVer
       updateData.verified_at = new Date().toISOString();
     }
 
-    await supabaseAdmin.from('workspace_custom_domains').update(updateData).eq('id', domain.id);
+    const wq = workspaceQuery(workspaceId);
+    await wq.from('workspace_custom_domains').update(updateData).eq('id', domain.id);
 
     return {
       success: true,

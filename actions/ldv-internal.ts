@@ -12,6 +12,7 @@
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { generateShipmentPDF, generateShipmentCSV } from '@/lib/generate-shipment-document';
 import type { Shipment } from '@/types/shipments';
 
@@ -47,13 +48,12 @@ export async function generateInternalLDV(
     const actorRole = context.actor.role;
 
     // 3. Recupera spedizione (con filtro workspace per isolamento multi-tenant)
-    let query = supabaseAdmin.from('shipments').select('*').eq('id', shipmentId);
-
-    if (workspaceId) {
-      query = query.eq('workspace_id', workspaceId);
-    }
-
-    const { data: shipment, error: shipmentError } = await query.single();
+    const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+    const { data: shipment, error: shipmentError } = await db
+      .from('shipments')
+      .select('*')
+      .eq('id', shipmentId)
+      .single();
 
     if (shipmentError || !shipment) {
       return {

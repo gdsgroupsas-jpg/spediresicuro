@@ -9,6 +9,7 @@
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { createPriceList } from '@/lib/db/price-lists';
 import type { CreatePriceListInput } from '@/types/listini';
 
@@ -356,8 +357,9 @@ export async function assignCustomerPriceListToMultipleUsersAction(
           continue;
         }
 
-        // Crea assegnazione
-        const { error: assignError } = await supabaseAdmin.from('price_list_assignments').insert({
+        // Crea assegnazione (isolamento multi-tenant)
+        const wq = workspaceQuery(workspaceId);
+        const { error: assignError } = await wq.from('price_list_assignments').insert({
           price_list_id: priceListId,
           user_id: userId,
           assigned_by: user.id,

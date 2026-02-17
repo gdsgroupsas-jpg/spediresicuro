@@ -23,7 +23,7 @@ leads, reseller_prospects, audit_logs, outreach*\*, warehouse/WMS tables
 users, workspaces, workspace_members, couriers, courier_configs, system_settings
 
 Il test `workspace-query-guardian.test.ts` monitora il numero di violazioni.
-Il numero attuale è 57. NON deve MAI aumentare. Ogni PR deve ridurlo.
+Il numero attuale è **0**. ZERO violazioni. NON deve MAI aumentare.
 
 ## REGOLA #2: Testing Obbligatorio
 

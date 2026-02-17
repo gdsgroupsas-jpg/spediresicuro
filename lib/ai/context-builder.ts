@@ -9,6 +9,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import {
   getPipelineSummary,
   getHotEntities,
@@ -167,13 +168,14 @@ export async function buildContext(
 
       // Statistiche contrassegni (COD)
       try {
-        const { data: codStats } = await supabaseAdmin.from('cod_items').select('status, pagato');
+        const codDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        const { data: codStats } = await codDb.from('cod_items').select('status, pagato');
 
         if (codStats && codStats.length > 0) {
-          const inAttesa = codStats.filter((c) => c.status === 'in_attesa');
-          const assegnati = codStats.filter((c) => c.status === 'assegnato');
-          const rimborsati = codStats.filter((c) => c.status === 'rimborsato');
-          const totalDaPagare = assegnati.reduce((s, c) => s + (c.pagato || 0), 0);
+          const inAttesa = codStats.filter((c: any) => c.status === 'in_attesa');
+          const assegnati = codStats.filter((c: any) => c.status === 'assegnato');
+          const rimborsati = codStats.filter((c: any) => c.status === 'rimborsato');
+          const totalDaPagare = assegnati.reduce((s: number, c: any) => s + (c.pagato || 0), 0);
 
           (context as any).codStats = {
             totale: codStats.length,

@@ -10,6 +10,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import type {
   OutreachChannel,
   ChannelConfig,
@@ -82,9 +83,9 @@ export async function upsertChannelConfig(params: {
 }): Promise<{ success: boolean; error?: string }> {
   const { workspaceId, channel, enabled, config, dailyLimit, maxRetries } = params;
 
-  const { error } = await supabaseAdmin.from('outreach_channel_config').upsert(
+  const wq = workspaceQuery(workspaceId);
+  const { error } = await wq.from('outreach_channel_config').upsert(
     {
-      workspace_id: workspaceId,
       channel,
       enabled,
       ...(config !== undefined ? { config } : {}),
@@ -333,7 +334,7 @@ export async function createSequence(params: {
     if (stepsError) {
       console.error('[outreach-data-service] createSequence steps error:', stepsError);
       // Rollback: elimina la sequenza creata (cascade elimina gli step)
-      await supabaseAdmin.from('outreach_sequences').delete().eq('id', sequence.id);
+      await workspaceQuery(workspaceId).from('outreach_sequences').delete().eq('id', sequence.id);
       return { success: false, error: stepsError.message };
     }
   }

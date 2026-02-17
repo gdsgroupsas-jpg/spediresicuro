@@ -22,6 +22,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSafeAuth } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { sendInvitationAcceptedEmail } from '@/lib/email/resend';
 
 export const dynamic = 'force-dynamic';
@@ -270,19 +271,21 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
     }
 
     // 9. Audit log (NO EMAIL per GDPR)
-    await supabaseAdmin.from('audit_logs').insert({
-      action: 'WORKSPACE_INVITATION_ACCEPTED',
-      resource_type: 'workspace_invitation',
-      resource_id: invitation.id,
-      user_id: context.target.id,
-      workspace_id: invitation.workspace_id,
-      audit_metadata: {
-        role_assigned: invitation.role,
-        permissions_assigned: invitation.permissions,
-        accepted_by_user_id: context.target.id,
-        invited_by_user_id: invitation.invited_by,
-      },
-    });
+    await workspaceQuery(invitation.workspace_id)
+      .from('audit_logs')
+      .insert({
+        action: 'WORKSPACE_INVITATION_ACCEPTED',
+        resource_type: 'workspace_invitation',
+        resource_id: invitation.id,
+        user_id: context.target.id,
+        workspace_id: invitation.workspace_id,
+        audit_metadata: {
+          role_assigned: invitation.role,
+          permissions_assigned: invitation.permissions,
+          accepted_by_user_id: context.target.id,
+          invited_by_user_id: invitation.invited_by,
+        },
+      });
 
     // 10. Fetch workspace name per risposta
     const { data: workspace } = await supabaseAdmin

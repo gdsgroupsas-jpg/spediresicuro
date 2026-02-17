@@ -387,14 +387,19 @@ export const authOptions = {
               console.log('✅ [AUTO-PROMOTE] Utente promosso a superadmin automaticamente');
               user.role = 'admin'; // Aggiorna anche il ruolo nella sessione
 
-              // Log audit
+              // Log audit (workspace-isolated)
               try {
-                await supabaseAdmin.from('audit_logs').insert({
+                const { getUserWorkspaceId } = await import('@/lib/db/user-helpers');
+                const { workspaceQuery } = await import('@/lib/db/workspace-query');
+                const wsId = user.id ? await getUserWorkspaceId(user.id) : null;
+                const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+                await db.from('audit_logs').insert({
                   user_id: user.id,
                   action: 'auto_promote_superadmin_at_login',
                   severity: 'info',
                   message: `Auto-promozione a superadmin al login: ${user.email}`,
                   metadata: { email: user.email, account_type: 'superadmin' },
+                  workspace_id: wsId,
                   created_at: new Date().toISOString(),
                 });
               } catch (auditError) {

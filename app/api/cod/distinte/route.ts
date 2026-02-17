@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-actions';
@@ -267,7 +268,8 @@ export async function PATCH(request: NextRequest) {
     }
 
     // Aggiorna items della distinta come rimborsati
-    await supabaseAdmin.from('cod_items').update({ status: 'rimborsato' }).eq('distinta_id', id);
+    const wq = workspaceQuery(workspaceId);
+    await wq.from('cod_items').update({ status: 'rimborsato' }).eq('distinta_id', id);
 
     // Aggiorna totale pagato nel cod_file corrispondente
     const { data: distinctItems } = await supabaseAdmin

@@ -14,6 +14,7 @@ import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { sendPremiumWelcomeEmail } from '@/lib/email/resend';
 import { getUserWorkspaceId } from '@/lib/db/user-helpers';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 
 /**
  * Verifica se l'utente corrente è Super Admin
@@ -234,14 +235,16 @@ export async function manageWallet(
       }
     }
 
-    // 7. Audit log
+    // 7. Audit log (workspace-scoped)
     try {
-      await supabaseAdmin.from('audit_logs').insert({
+      const auditDb = targetWorkspaceId ? workspaceQuery(targetWorkspaceId) : supabaseAdmin;
+      await auditDb.from('audit_logs').insert({
         action: amount > 0 ? 'wallet_credit_added' : 'wallet_credit_removed',
         resource_type: 'wallet',
         resource_id: userId,
         user_email: superAdminCheck.userEmail || 'unknown',
         user_id: superAdminCheck.userId,
+        workspace_id: targetWorkspaceId,
         metadata: {
           amount: Math.abs(amount),
           reason: reason,
@@ -914,14 +917,17 @@ export async function updateResellerRole(
 
     console.log(`✅ [updateResellerRole] Ruolo aggiornato: ${targetUser.email} -> ${role}`);
 
-    // 5. Audit log
+    // 5. Audit log (workspace-scoped)
     try {
-      await supabaseAdmin.from('audit_logs').insert({
+      const wsId = await getUserWorkspaceId(userId);
+      const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+      await auditDb.from('audit_logs').insert({
         action: 'reseller_role_updated',
         resource_type: 'user',
         resource_id: userId,
         user_email: superAdminCheck.userEmail || 'unknown',
         user_id: superAdminCheck.userId,
+        workspace_id: wsId,
         metadata: {
           target_user_email: targetUser.email,
           target_user_name: targetUser.name,
@@ -1005,14 +1011,17 @@ export async function updateUserAiFeatures(
       };
     }
 
-    // 5. Audit log
+    // 5. Audit log (workspace-scoped)
     try {
-      await supabaseAdmin.from('audit_logs').insert({
+      const wsId = await getUserWorkspaceId(userId);
+      const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+      await auditDb.from('audit_logs').insert({
         action: 'ai_features_updated',
         resource_type: 'user',
         resource_id: userId,
         user_email: superAdminCheck.userEmail || 'unknown',
         user_id: superAdminCheck.userId,
+        workspace_id: wsId,
         metadata: {
           features: features,
           target_user_id: userId,

@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300; // 5 minuti max
@@ -80,10 +81,14 @@ export async function GET(request: NextRequest) {
     // AUDIT LOG (optional)
     // ============================================
     if (softDeleted > 0 || hardDeleted > 0) {
-      await supabaseAdmin.from('audit_logs').insert({
+      // Operazione di sistema senza workspace — fallback a supabaseAdmin
+      const wsId: string | null = null;
+      const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+      await db.from('audit_logs').insert({
         action: 'system_maintenance',
         resource_type: 'system',
         resource_id: 'ocr_cleanup',
+        workspace_id: wsId,
         metadata: {
           soft_deleted_count: softDeleted,
           hard_deleted_count: hardDeleted,

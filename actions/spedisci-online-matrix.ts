@@ -1,6 +1,7 @@
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { PRICING_MATRIX } from '@/lib/constants/pricing-matrix';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { createPriceList } from '@/lib/db/price-lists';
 import { testSpedisciOnlineRates } from './spedisci-online-rates';
 
@@ -41,6 +42,9 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
       .single();
 
     if (!user) return { success: false, error: 'Utente non trovato' };
+
+    const workspaceId = context.workspace.id;
+    const wq = workspaceQuery(workspaceId);
 
     console.log('🚀 [MATRIX SYNC] Avvio sincronizzazione completa (Smart Probe)...');
     console.log(
@@ -168,8 +172,8 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
         if (options?.overwriteExisting !== false) {
           // Default true
           console.log(`   🔄 Aggiornamento listino esistente: ${listId}`);
-          // Delete old entries
-          await supabaseAdmin.from('price_list_entries').delete().eq('price_list_id', listId);
+          // Delete old entries (isolamento multi-tenant)
+          await wq.from('price_list_entries').delete().eq('price_list_id', listId);
           priceListsUpdated++;
         } else {
           console.log(`   ⏭️ Listino esistente, skip overwrite.`);
@@ -187,7 +191,8 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
             source_type: 'api',
             notes: 'Matrix Sync V2 - Full Zone/Weight scan',
           },
-          user.id
+          user.id,
+          workspaceId
         );
         listId = newList.id;
         priceListsCreated++;
@@ -237,7 +242,7 @@ export async function syncPriceListsFromSpedisciOnlineMatrix(options?: {
       // e.g. "GLS Standard" and "GLS Express" will both appear for 3kg/Roma.
 
       // We can insert all of them.
-      const { error: insertError } = await supabaseAdmin.from('price_list_entries').insert(entries);
+      const { error: insertError } = await wq.from('price_list_entries').insert(entries);
       if (insertError) {
         console.error('   ❌ Errore inserimento voci:', insertError.message);
       } else {

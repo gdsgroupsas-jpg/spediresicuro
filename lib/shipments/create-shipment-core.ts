@@ -3,6 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { ActingContext } from '@/lib/safe-auth';
 import type { CreateShipmentInput } from '@/lib/validations/shipment';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { getPlatformFeeSafe } from '@/lib/services/pricing/platform-fee';
 import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 // Sprint 1: Financial Tracking
@@ -340,7 +341,9 @@ export async function createShipmentCore(params: {
       idempotencyKey: idempotencyKey?.substring(0, 16) + '...',
     });
 
-    const { error: postpaidError } = await supabaseAdmin.from('wallet_transactions').insert({
+    // Usa workspaceQuery per isolamento multi-tenant su wallet_transactions
+    const walletDb = targetWorkspaceId ? workspaceQuery(targetWorkspaceId) : supabaseAdmin;
+    const { error: postpaidError } = await walletDb.from('wallet_transactions').insert({
       user_id: targetId,
       workspace_id: targetWorkspaceId,
       amount: -walletChargeAmount, // Negativo per coerenza con SHIPMENT_CHARGE

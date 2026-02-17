@@ -14,6 +14,7 @@ import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { getQuoteWithCache, type QuoteCacheParams } from '@/lib/cache/quote-cache';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { addPriceListEntries, createPriceList, upsertPriceListEntries } from '@/lib/db/price-lists';
 import type { CreatePriceListInput } from '@/types/listini';
 
@@ -271,6 +272,9 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     if (!user) {
       return { success: false, error: 'Utente non trovato' };
     }
+
+    const workspaceId = context.workspace.id;
+    const wq = workspaceQuery(workspaceId);
 
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isReseller = user.is_reseller === true;
@@ -1083,8 +1087,8 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             }
           }
 
-          // Elimina entries esistenti
-          await supabaseAdmin.from('price_list_entries').delete().eq('price_list_id', priceListId);
+          // Elimina entries esistenti (isolamento multi-tenant)
+          await wq.from('price_list_entries').delete().eq('price_list_id', priceListId);
         } else {
           // ✨ ENTERPRISE: Lock Logic removed (replaced by global DB lock at start of function)
           // The previous granular Redis lock caused compilation issues and is redundant
@@ -1112,7 +1116,8 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             );
             const newPriceList = await createPriceList(
               priceListData as CreatePriceListInput,
-              user.id
+              user.id,
+              workspaceId
             );
             console.log(
               `✅ [SYNC] Listino creato con successo: id=${newPriceList.id}, name=${newPriceList.name}`
@@ -1206,7 +1211,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
                 `✅ [SYNC] ${upsertResult.inserted} entry vuote inserite, ${upsertResult.updated} aggiornate per ${carrierCode}`
               );
             } else {
-              await addPriceListEntries(priceListId, emptyEntries);
+              await addPriceListEntries(priceListId, emptyEntries, workspaceId);
               entriesAdded += emptyEntries.length;
               console.log(
                 `✅ [SYNC] ${emptyEntries.length} entry vuote aggiunte per ${carrierCode} (overwrite mode)`
@@ -1418,7 +1423,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
             );
           } else {
             // overwriteExisting=true: usa INSERT normale (dopo DELETE, quindi sicuro)
-            await addPriceListEntries(priceListId, entries);
+            await addPriceListEntries(priceListId, entries, workspaceId);
             entriesAdded += entries.length;
             console.log(
               `✅ [SYNC] ${entries.length} entries aggiunte con successo per ${carrierCode} (overwrite mode)`

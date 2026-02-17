@@ -2,6 +2,7 @@
 
 import { createServerActionClient } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { CreateInvoiceDTO, Invoice, InvoiceStatus } from '@/types/invoices';
 import { revalidatePath } from 'next/cache';
 import { generateInvoicePDF, InvoiceData } from '@/lib/invoices/pdf-generator';
@@ -322,8 +323,9 @@ export async function generateInvoiceForShipment(shipmentId: string) {
     throw new Error(`Errore creazione fattura: ${invoiceError.message}`);
   }
 
-  // 9. Crea riga fattura
-  const { error: itemError } = await supabaseAdmin.from('invoice_items').insert({
+  // 9. Crea riga fattura (con isolamento workspace)
+  const invoiceWq = shipment.workspace_id ? workspaceQuery(shipment.workspace_id) : supabaseAdmin;
+  const { error: itemError } = await invoiceWq.from('invoice_items').insert({
     invoice_id: invoice.id,
     shipment_id: shipmentId,
     description: invoiceData.items[0].description,

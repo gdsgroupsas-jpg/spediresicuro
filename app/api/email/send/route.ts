@@ -9,6 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { Resend } from 'resend';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'placeholder');
@@ -27,6 +28,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const emailWsId = context.workspace?.id;
+    const emailDb = emailWsId ? workspaceQuery(emailWsId) : supabaseAdmin;
+
     const body = await request.json();
     const { from, to, cc, bcc, subject, html, text, replyToEmailId, draft } = body;
 
@@ -37,7 +41,7 @@ export async function POST(request: NextRequest) {
 
     // Save as draft without sending
     if (draft) {
-      const { data: draftRecord, error: draftError } = await supabaseAdmin
+      const { data: draftRecord, error: draftError } = await emailDb
         .from('emails')
         .insert({
           message_id: null,
@@ -81,7 +85,7 @@ export async function POST(request: NextRequest) {
 
     if (sendError) {
       // Save as failed
-      await supabaseAdmin.from('emails').insert({
+      await emailDb.from('emails').insert({
         message_id: null,
         direction: 'outbound',
         from_address: fromAddress,
@@ -101,7 +105,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Save as sent
-    const { data: emailRecord, error: insertError } = await supabaseAdmin
+    const { data: emailRecord, error: insertError } = await emailDb
       .from('emails')
       .insert({
         message_id: data?.id || null,

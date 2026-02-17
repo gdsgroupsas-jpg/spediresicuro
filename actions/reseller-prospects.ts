@@ -13,6 +13,7 @@
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { calculateLeadScore } from '@/lib/crm/lead-scoring';
 import type {
   ResellerProspect,
@@ -199,10 +200,16 @@ export async function createProspect(
     if (error) return { success: false, error: `Errore creazione prospect: ${error.message}` };
 
     // Evento 'created'
-    await addEventInternal(prospect.id, 'created', wsAuth.target.id, {
-      company_name: input.company_name,
-      initial_score: score,
-    });
+    await addEventInternal(
+      prospect.id,
+      'created',
+      wsAuth.target.id,
+      {
+        company_name: input.company_name,
+        initial_score: score,
+      },
+      workspaceId
+    );
 
     return { success: true, data: prospect as ResellerProspect };
   } catch (err: any) {
@@ -272,11 +279,17 @@ export async function updateProspect(
     // Evento per cambio status
     if (input.status && input.status !== current.status) {
       const eventType = input.status === 'lost' ? 'lost' : 'contacted';
-      await addEventInternal(prospectId, eventType, wsAuth.target.id, {
-        from_status: current.status,
-        to_status: input.status,
-        lost_reason: input.lost_reason,
-      });
+      await addEventInternal(
+        prospectId,
+        eventType,
+        wsAuth.target.id,
+        {
+          from_status: current.status,
+          to_status: input.status,
+          lost_reason: input.lost_reason,
+        },
+        wsAuth.workspace.id
+      );
     }
 
     // Ricalcola score
@@ -299,10 +312,16 @@ export async function updateProspect(
         .eq('id', prospectId);
 
       if (Math.abs(newScore - current.lead_score) >= 10) {
-        await addEventInternal(prospectId, 'score_changed', wsAuth.target.id, {
-          old_score: current.lead_score,
-          new_score: newScore,
-        });
+        await addEventInternal(
+          prospectId,
+          'score_changed',
+          wsAuth.target.id,
+          {
+            old_score: current.lead_score,
+            new_score: newScore,
+          },
+          wsAuth.workspace.id
+        );
       }
 
       updated.lead_score = newScore;
@@ -375,9 +394,15 @@ export async function addProspectNote(prospectId: string, note: string): Promise
       .update({ notes: newNote, last_contact_at: new Date().toISOString() })
       .eq('id', prospectId);
 
-    await addEventInternal(prospectId, 'note_added', wsAuth.target.id, {
-      note_preview: note.substring(0, 100),
-    });
+    await addEventInternal(
+      prospectId,
+      'note_added',
+      wsAuth.target.id,
+      {
+        note_preview: note.substring(0, 100),
+      },
+      wsAuth.workspace.id
+    );
 
     return { success: true };
   } catch (err: any) {
@@ -424,11 +449,18 @@ export async function linkQuoteToProspect(
       updateData.status = 'quote_sent';
     }
 
-    await supabaseAdmin.from('reseller_prospects').update(updateData).eq('id', prospectId);
+    const prospectWq = workspaceQuery(wsAuth.workspace.id);
+    await prospectWq.from('reseller_prospects').update(updateData).eq('id', prospectId);
 
-    await addEventInternal(prospectId, 'quote_created', wsAuth.target.id, {
-      quote_id: quoteId,
-    });
+    await addEventInternal(
+      prospectId,
+      'quote_created',
+      wsAuth.target.id,
+      {
+        quote_id: quoteId,
+      },
+      wsAuth.workspace.id
+    );
 
     return { success: true };
   } catch (err: any) {
@@ -480,10 +512,12 @@ async function addEventInternal(
   prospectId: string,
   eventType: ProspectEventType,
   actorId: string,
-  eventData?: Record<string, unknown>
+  eventData?: Record<string, unknown>,
+  wsId?: string
 ): Promise<void> {
   try {
-    await supabaseAdmin.from('prospect_events').insert({
+    const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+    await db.from('prospect_events').insert({
       prospect_id: prospectId,
       event_type: eventType,
       event_data: eventData || {},
@@ -523,11 +557,8 @@ export async function findProspectByContactInternal(
   companyName?: string
 ): Promise<ResellerProspect | null> {
   try {
-    let query = supabaseAdmin
-      .from('reseller_prospects')
-      .select('*')
-      .eq('workspace_id', workspaceId)
-      .not('status', 'eq', 'won');
+    const wq = workspaceQuery(workspaceId);
+    let query = wq.from('reseller_prospects').select('*').not('status', 'eq', 'won');
 
     if (email) {
       query = query.ilike('email', email);
@@ -552,16 +583,21 @@ export async function findProspectByContactInternal(
 export async function linkQuoteToProspectInternal(
   prospectId: string,
   quoteId: string,
-  actorId: string
+  actorId: string,
+  wsId?: string
 ): Promise<void> {
   try {
-    const { data: prospect } = await supabaseAdmin
+    const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+    const { data: prospect } = await db
       .from('reseller_prospects')
-      .select('id, linked_quote_ids, status')
+      .select('id, linked_quote_ids, status, workspace_id')
       .eq('id', prospectId)
       .single();
 
     if (!prospect) return;
+
+    const prospectWsId = wsId || prospect.workspace_id;
+    const prospectDb = prospectWsId ? workspaceQuery(prospectWsId) : supabaseAdmin;
 
     const currentIds = prospect.linked_quote_ids || [];
     if (currentIds.includes(quoteId)) return;
@@ -574,9 +610,15 @@ export async function linkQuoteToProspectInternal(
       updateData.status = 'quote_sent';
     }
 
-    await supabaseAdmin.from('reseller_prospects').update(updateData).eq('id', prospectId);
+    await prospectDb.from('reseller_prospects').update(updateData).eq('id', prospectId);
 
-    await addEventInternal(prospectId, 'quote_created', actorId, { quote_id: quoteId });
+    await addEventInternal(
+      prospectId,
+      'quote_created',
+      actorId,
+      { quote_id: quoteId },
+      prospectWsId
+    );
   } catch (err) {
     console.error('[PROSPECTS] linkQuoteToProspectInternal error:', err);
   }
@@ -594,11 +636,12 @@ export async function updateProspectOnQuoteStatus(
   notes?: string
 ): Promise<void> {
   try {
+    const wq = workspaceQuery(workspaceId);
+
     // Cerca prospect con questo quote collegato
-    const { data: prospects } = await supabaseAdmin
+    const { data: prospects } = await wq
       .from('reseller_prospects')
       .select('id, status, linked_quote_ids')
-      .eq('workspace_id', workspaceId)
       .contains('linked_quote_ids', [quoteId]);
 
     if (!prospects || prospects.length === 0) return;
@@ -607,7 +650,7 @@ export async function updateProspectOnQuoteStatus(
 
     if (quoteStatus === 'accepted') {
       // Preventivo accettato → prospect diventa 'won'
-      await supabaseAdmin
+      await wq
         .from('reseller_prospects')
         .update({
           status: 'won',
@@ -615,20 +658,32 @@ export async function updateProspectOnQuoteStatus(
         })
         .eq('id', prospect.id);
 
-      await addEventInternal(prospect.id, 'converted', actorId, {
-        quote_id: quoteId,
-        trigger: 'quote_accepted',
-      });
+      await addEventInternal(
+        prospect.id,
+        'converted',
+        actorId,
+        {
+          quote_id: quoteId,
+          trigger: 'quote_accepted',
+        },
+        workspaceId
+      );
     } else if (quoteStatus === 'rejected') {
       // Preventivo rifiutato → registra evento (non cambia status automaticamente)
-      await addEventInternal(prospect.id, 'quote_rejected', actorId, {
-        quote_id: quoteId,
-        reason: notes || undefined,
-      });
+      await addEventInternal(
+        prospect.id,
+        'quote_rejected',
+        actorId,
+        {
+          quote_id: quoteId,
+          reason: notes || undefined,
+        },
+        workspaceId
+      );
 
       // Se il prospect era in 'quote_sent' → torna a 'contacted'
       if (prospect.status === 'quote_sent') {
-        await supabaseAdmin
+        await wq
           .from('reseller_prospects')
           .update({
             status: 'contacted',
@@ -644,10 +699,10 @@ export async function updateProspectOnQuoteStatus(
 
 /** Calcola statistiche prospect per workspace */
 async function getProspectStatsInternal(workspaceId: string): Promise<ProspectStats> {
-  const { data: all } = await supabaseAdmin
+  const wq = workspaceQuery(workspaceId);
+  const { data: all } = await wq
     .from('reseller_prospects')
-    .select('status, estimated_monthly_value, lead_score, converted_at')
-    .eq('workspace_id', workspaceId);
+    .select('status, estimated_monthly_value, lead_score, converted_at');
 
   const prospects = all || [];
 

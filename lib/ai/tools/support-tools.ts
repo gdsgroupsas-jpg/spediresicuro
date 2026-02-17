@@ -7,6 +7,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import {
   getTrackingService,
   type TrackingResponse,
@@ -255,7 +256,9 @@ async function handleGetShipmentStatus(
   }
 
   // Trova spedizione (con filtro user_id a livello DB per isolamento)
-  let query = supabaseAdmin.from('shipments').select('*');
+  const wsId = await getUserWorkspaceId(userId);
+  const shipDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+  let query = shipDb.from('shipments').select('*');
   if (shipment_id) {
     query = query.eq('id', shipment_id);
   } else {

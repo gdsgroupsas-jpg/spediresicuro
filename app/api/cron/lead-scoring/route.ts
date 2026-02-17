@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { calculateLeadScore } from '@/lib/crm/lead-scoring';
 import type { LeadScoreInput } from '@/lib/crm/lead-scoring';
 
@@ -71,7 +72,7 @@ export async function POST(request: NextRequest) {
     const { data: leads, error: leadsError } = await supabaseAdmin
       .from('leads')
       .select(
-        'id, status, email, phone, sector, estimated_monthly_volume, email_open_count, last_contact_at, created_at, lead_score'
+        'id, workspace_id, status, email, phone, sector, estimated_monthly_volume, email_open_count, last_contact_at, created_at, lead_score'
       )
       .not('status', 'in', '("won","lost")');
 
@@ -95,12 +96,13 @@ export async function POST(request: NextRequest) {
         const oldScore = lead.lead_score || 0;
 
         if (newScore !== oldScore) {
-          await supabaseAdmin.from('leads').update({ lead_score: newScore }).eq('id', lead.id);
+          const leadDb = lead.workspace_id ? workspaceQuery(lead.workspace_id) : supabaseAdmin;
+          await leadDb.from('leads').update({ lead_score: newScore }).eq('id', lead.id);
           leadsUpdated++;
 
           // Evento se delta significativo
           if (Math.abs(newScore - oldScore) >= SCORE_CHANGE_THRESHOLD) {
-            await supabaseAdmin.from('lead_events').insert({
+            await leadDb.from('lead_events').insert({
               lead_id: lead.id,
               event_type: 'score_changed',
               event_data: { old_score: oldScore, new_score: newScore, source: 'cron' },
@@ -117,7 +119,7 @@ export async function POST(request: NextRequest) {
     const { data: prospects, error: prospectsError } = await supabaseAdmin
       .from('reseller_prospects')
       .select(
-        'id, status, email, phone, sector, estimated_monthly_volume, email_open_count, last_contact_at, created_at, lead_score, linked_quote_ids'
+        'id, workspace_id, status, email, phone, sector, estimated_monthly_volume, email_open_count, last_contact_at, created_at, lead_score, linked_quote_ids'
       )
       .not('status', 'in', '("won","lost")');
 
@@ -141,7 +143,10 @@ export async function POST(request: NextRequest) {
         const oldScore = prospect.lead_score || 0;
 
         if (newScore !== oldScore) {
-          await supabaseAdmin
+          const prospectDb = prospect.workspace_id
+            ? workspaceQuery(prospect.workspace_id)
+            : supabaseAdmin;
+          await prospectDb
             .from('reseller_prospects')
             .update({ lead_score: newScore })
             .eq('id', prospect.id);
@@ -149,7 +154,7 @@ export async function POST(request: NextRequest) {
 
           // Evento se delta significativo
           if (Math.abs(newScore - oldScore) >= SCORE_CHANGE_THRESHOLD) {
-            await supabaseAdmin.from('prospect_events').insert({
+            await prospectDb.from('prospect_events').insert({
               prospect_id: prospect.id,
               event_type: 'score_changed',
               event_data: { old_score: oldScore, new_score: newScore, source: 'cron' },

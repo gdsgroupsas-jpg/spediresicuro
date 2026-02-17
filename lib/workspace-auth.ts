@@ -21,6 +21,7 @@
 import { getSafeAuth, ActingContext, isSuperAdmin } from '@/lib/safe-auth';
 import { headers, cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import type {
   WorkspaceActingContext,
   WorkspaceContextInfo,
@@ -667,7 +668,8 @@ export async function logWorkspaceAudit(
   auditMetadata: Record<string, any> = {}
 ): Promise<void> {
   try {
-    const { error } = await supabaseAdmin.from('audit_logs').insert({
+    const wq = workspaceQuery(context.workspace.id);
+    const { error } = await wq.from('audit_logs').insert({
       action,
       resource_type: resourceType,
       resource_id: resourceId,

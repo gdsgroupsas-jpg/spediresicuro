@@ -15,6 +15,8 @@
 import { requireSafeAuth } from '@/lib/safe-auth';
 import { isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { calculateLeadScore } from '@/lib/crm/lead-scoring';
 import type { LeadScoreInput } from '@/lib/crm/lead-scoring';
 import { revalidatePath } from 'next/cache';
@@ -118,9 +120,11 @@ async function addLeadEvent(
   leadId: string,
   eventType: LeadEventType,
   actorId: string,
-  eventData?: Record<string, unknown>
+  eventData?: Record<string, unknown>,
+  wsId?: string | null
 ): Promise<void> {
-  await supabaseAdmin.from('lead_events').insert({
+  const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+  await db.from('lead_events').insert({
     lead_id: leadId,
     event_type: eventType,
     event_data: eventData || {},
@@ -179,7 +183,10 @@ export async function getLeads(
     const leads = (data || []) as Lead[];
 
     // Stats globali: query separata senza filtri per avere numeri reali
-    const { data: allLeads } = await supabaseAdmin.from('leads').select('status, lead_score');
+    // Leads sono gestiti dal superadmin — cross-workspace (requireAdmin() sopra)
+    // Non possiamo usare workspaceQuery: serve vedere TUTTI i lead
+    const adminDb = supabaseAdmin;
+    const { data: allLeads } = await adminDb.from('leads').select('status, lead_score');
 
     const all = (allLeads || []) as { status: string; lead_score: number | null }[];
     const stats: LeadStats = {
@@ -404,7 +411,16 @@ export async function deleteLead(id: string): Promise<ActionResult> {
   try {
     await requireAdmin();
 
-    const { error } = await supabaseAdmin.from('leads').delete().eq('id', id);
+    // Recupera workspace_id del lead prima di eliminarlo
+    const { data: leadData } = await supabaseAdmin
+      .from('leads')
+      .select('workspace_id')
+      .eq('id', id)
+      .single();
+    const leadWsId = leadData?.workspace_id;
+    const db = leadWsId ? workspaceQuery(leadWsId) : supabaseAdmin;
+
+    const { error } = await db.from('leads').delete().eq('id', id);
 
     if (error) {
       return { success: false, error: error.message };
@@ -653,7 +669,8 @@ export async function convertLeadToReseller(
 
     // 7. Credito iniziale wallet
     if (initialCredit && initialCredit > 0) {
-      await supabaseAdmin.from('wallet_transactions').insert({
+      const walletDb = workspaceQuery(workspaceId as string);
+      await walletDb.from('wallet_transactions').insert({
         user_id: authUserId,
         amount: initialCredit,
         type: 'admin_gift',

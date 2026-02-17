@@ -11,7 +11,8 @@ import { supabaseAdmin } from '@/lib/db/client';
 import { createUser } from '@/lib/database';
 import type { User } from '@/lib/database';
 import { validateEmail } from '@/lib/validators';
-import { getUserByEmail, userExists } from '@/lib/db/user-helpers';
+import { getUserByEmail, userExists, getUserWorkspaceId } from '@/lib/db/user-helpers';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 
 /**
  * Verifica se un utente ha la killer feature multi_level_admin attiva
@@ -445,12 +446,15 @@ export async function deleteSubAdmin(subAdminId: string): Promise<{
       };
     }
 
-    // 6. Log audit
-    await supabaseAdmin.from('audit_logs').insert({
+    // 6. Log audit (workspace-scoped)
+    const wsId = await getUserWorkspaceId(parent.id);
+    const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+    await auditDb.from('audit_logs').insert({
       action: 'SUBADMIN_DELETED',
       resource_type: 'user',
       resource_id: subAdminId,
       user_id: parent.id,
+      workspace_id: wsId,
       metadata: {
         deleted_user_email: subAdmin.email,
         deleted_user_name: subAdmin.name,

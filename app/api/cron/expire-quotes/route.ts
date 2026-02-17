@@ -14,6 +14,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { sendQuoteExpiryReminderEmail } from '@/lib/email/resend';
 import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
 
@@ -66,16 +67,32 @@ export async function POST(request: NextRequest) {
       } else {
         expiredCount = quoteIds.length;
 
-        // Inserisci eventi lifecycle
-        const events = quoteIds.map((id) => ({
-          quote_id: id,
-          event_type: 'expired' as const,
-          event_data: { reason: 'auto_expiry', cron: true },
-          actor_id: null,
-        }));
-        await supabaseAdmin.from('commercial_quote_events').insert(events);
+        // Inserisci eventi lifecycle (per workspace)
+        const eventsByWs = new Map<
+          string | null,
+          Array<{
+            quote_id: string;
+            event_type: 'expired';
+            event_data: Record<string, unknown>;
+            actor_id: null;
+          }>
+        >();
+        for (const q of expiredQuotes) {
+          const wsKey = q.workspace_id || null;
+          if (!eventsByWs.has(wsKey)) eventsByWs.set(wsKey, []);
+          eventsByWs.get(wsKey)!.push({
+            quote_id: q.id,
+            event_type: 'expired' as const,
+            event_data: { reason: 'auto_expiry', cron: true },
+            actor_id: null,
+          });
+        }
+        for (const [wsKey, wsEvents] of eventsByWs) {
+          const evDb = wsKey ? workspaceQuery(wsKey) : supabaseAdmin;
+          await evDb.from('commercial_quote_events').insert(wsEvents);
+        }
 
-        // Audit log (system actor - insert diretto)
+        // Audit log (system actor, workspace-isolated)
         const auditEntries = expiredQuotes.map((q) => ({
           action: AUDIT_ACTIONS.COMMERCIAL_QUOTE_EXPIRED,
           resource_type: 'commercial_quote',
@@ -84,6 +101,7 @@ export async function POST(request: NextRequest) {
           user_email: 'system@cron',
           actor_id: null,
           target_id: null,
+          workspace_id: q.workspace_id || null,
           impersonation_active: false,
           audit_metadata: {
             prospect_company: q.prospect_company,
@@ -91,7 +109,17 @@ export async function POST(request: NextRequest) {
           },
           created_at: now,
         }));
-        await supabaseAdmin.from('audit_logs').insert(auditEntries);
+        // Raggruppa per workspace_id e inserisci con isolamento
+        const byWorkspace = new Map<string | null, typeof auditEntries>();
+        for (const entry of auditEntries) {
+          const wsKey = entry.workspace_id || null;
+          if (!byWorkspace.has(wsKey)) byWorkspace.set(wsKey, []);
+          byWorkspace.get(wsKey)!.push(entry);
+        }
+        for (const [wsId, entries] of byWorkspace) {
+          const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+          await db.from('audit_logs').insert(entries);
+        }
 
         console.log(`[CRON] expire-quotes: ${expiredCount} preventivi scaduti`);
       }
@@ -116,8 +144,10 @@ export async function POST(request: NextRequest) {
       console.error('[CRON] expire-quotes: errore query reminder:', soonError);
     } else if (soonExpiring && soonExpiring.length > 0) {
       for (const quote of soonExpiring) {
+        const quoteDb = quote.workspace_id ? workspaceQuery(quote.workspace_id) : supabaseAdmin;
+
         // Controlla se reminder gia' inviato per questa quote
-        const { data: existingReminder } = await supabaseAdmin
+        const { data: existingReminder } = await quoteDb
           .from('commercial_quote_events')
           .select('id')
           .eq('quote_id', quote.id)
@@ -147,7 +177,7 @@ export async function POST(request: NextRequest) {
           });
 
           // Registra evento
-          await supabaseAdmin.from('commercial_quote_events').insert({
+          await quoteDb.from('commercial_quote_events').insert({
             quote_id: quote.id,
             event_type: 'reminder_sent',
             event_data: { sent_to: user.email },

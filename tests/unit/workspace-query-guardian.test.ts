@@ -185,9 +185,9 @@ describe('Guardian: usi diretti supabaseAdmin su tabelle multi-tenant', () => {
     // Se il numero AUMENTA, qualcuno ha aggiunto nuovo codice senza usare workspaceQuery().
     //
     // REGOLA: il numero NON deve MAI aumentare.
-    // Baseline 2026-02-17: 54 (dopo esclusioni infrastrutturali + migrazione email)
-    // Obiettivo finale: 0
-    expect(totalViolations).toBeLessThanOrEqual(54);
+    // Baseline 2026-02-17: 0 (tutte le violazioni migrate a workspaceQuery)
+    // Obiettivo finale: 0 ✅ RAGGIUNTO
+    expect(totalViolations).toBeLessThanOrEqual(0);
 
     // Salva snapshot per monitoraggio
     console.log(

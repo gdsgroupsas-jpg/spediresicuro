@@ -5,6 +5,7 @@
  */
 
 import { supabaseAdmin } from './client';
+import { workspaceQuery } from './workspace-query';
 import type {
   Product,
   ProductFilters,
@@ -248,8 +249,8 @@ export async function linkProductToSupplier(
     priority?: number;
   }
 ): Promise<void> {
-  const { error } = await supabaseAdmin.from('product_suppliers').insert({
-    workspace_id: workspaceId,
+  const wq = workspaceQuery(workspaceId);
+  const { error } = await wq.from('product_suppliers').insert({
     product_id: productId,
     supplier_id: supplierId,
     ...data,

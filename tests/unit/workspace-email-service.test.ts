@@ -39,6 +39,13 @@ vi.mock('@/lib/db/client', () => ({
   },
 }));
 
+// Mock workspaceQuery — restituisce lo stesso mock di supabaseAdmin
+vi.mock('@/lib/db/workspace-query', () => ({
+  workspaceQuery: () => ({
+    from: (...args: unknown[]) => mockFrom(...args),
+  }),
+}));
+
 // Mock rate limiting distribuito — default: permetti tutto
 const mockRateLimit = vi.fn().mockResolvedValue({
   allowed: true,
@@ -122,10 +129,20 @@ function setupSuccessfulSendMocks() {
       };
     }
     if (table === 'emails') {
+      // WorkspaceScopedQuery aggiunge .eq('workspace_id') extra nella chain
+      // select().eq(ws) → poi eq().eq().neq().gte() dal codice
+      // update().eq(ws) → poi .eq('id') dal codice → Promise
+      const updateOk = Promise.resolve({ error: null });
+      (updateOk as any).eq = () => updateOk;
       return {
         select: () => ({
           eq: () => ({
             eq: () => ({
+              eq: () => ({
+                neq: () => ({
+                  gte: () => Promise.resolve({ count: 5, error: null }),
+                }),
+              }),
               neq: () => ({
                 gte: () => Promise.resolve({ count: 5, error: null }),
               }),
@@ -133,7 +150,7 @@ function setupSuccessfulSendMocks() {
           }),
         }),
         update: () => ({
-          eq: () => Promise.resolve({ error: null }),
+          eq: () => updateOk,
         }),
       };
     }

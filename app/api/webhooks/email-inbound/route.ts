@@ -24,6 +24,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { lookupWorkspaceByEmail, sanitizeEmailHtml } from '@/lib/email/workspace-email-service';
 
 // ─── WEBHOOK AUTHENTICATION ───
@@ -200,7 +201,8 @@ export async function POST(request: NextRequest) {
         ? { _truncated: true, message_id: message_id || email_id, subject }
         : payload;
 
-    const { error } = await supabaseAdmin.from('emails').insert({
+    const emailDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+    const { error } = await emailDb.from('emails').insert({
       message_id: message_id || email_id || null,
       workspace_id: workspaceId,
       direction: 'inbound',

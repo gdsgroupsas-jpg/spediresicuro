@@ -34,7 +34,7 @@ export async function GET() {
 
     // Test connessione Supabase
     try {
-      const { error } = await supabaseAdmin.from('shipments').select('id').limit(1);
+      const { error } = await supabaseAdmin.from('couriers').select('id').limit(1);
 
       if (error) {
         healthStatus.database.working = false;

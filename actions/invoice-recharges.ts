@@ -12,6 +12,7 @@
 'use server';
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { generateInvoicePDF, InvoiceData } from '@/lib/invoices/pdf-generator';
 import {
   FatturaPAData,
@@ -19,6 +20,7 @@ import {
   validateFatturaPAData,
 } from '@/lib/invoices/xml-generator';
 import { requireWorkspaceAuth } from '@/lib/workspace-auth';
+import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import type { Invoice } from '@/types/invoices';
 
 /**
@@ -160,8 +162,12 @@ async function internalGenerateInvoiceFromRecharges(params: {
       };
     }
 
+    // Recupera workspace_id dell'utente per isolamento multi-tenant
+    const wsId = await getUserWorkspaceId(params.userId);
+    const wq = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+
     // Recupera fattura creata con items
-    const { data: invoice, error: fetchError } = await supabaseAdmin
+    const { data: invoice, error: fetchError } = await wq
       .from('invoices')
       .select(
         `
@@ -252,7 +258,7 @@ async function internalGenerateInvoiceFromRecharges(params: {
       } = supabaseAdmin.storage.from('documents').getPublicUrl(pdfPath);
 
       // Aggiorna fattura con PDF URL
-      await supabaseAdmin.from('invoices').update({ pdf_url: pdfUrl }).eq('id', invoiceId);
+      await wq.from('invoices').update({ pdf_url: pdfUrl }).eq('id', invoiceId);
     }
 
     // Genera XML se richiesto e dati completi
@@ -291,7 +297,7 @@ async function internalGenerateInvoiceFromRecharges(params: {
             } = supabaseAdmin.storage.from('documents').getPublicUrl(xmlPath);
 
             // Aggiorna fattura con XML URL
-            await supabaseAdmin.from('invoices').update({ xml_url: xmlUrl }).eq('id', invoiceId);
+            await wq.from('invoices').update({ xml_url: xmlUrl }).eq('id', invoiceId);
           }
         }
       } catch (xmlError: any) {
@@ -387,7 +393,9 @@ export async function generateAutomaticInvoiceForStripeRecharge(transactionId: s
     }
 
     // Emetti fattura (draft → issued)
-    await supabaseAdmin.from('invoices').update({ status: 'issued' }).eq('id', result.invoice.id);
+    const autoWsId = await getUserWorkspaceId(transaction.user_id);
+    const autoWq = autoWsId ? workspaceQuery(autoWsId) : supabaseAdmin;
+    await autoWq.from('invoices').update({ status: 'issued' }).eq('id', result.invoice.id);
 
     return {
       success: true,
@@ -721,8 +729,12 @@ export async function generatePostpaidMonthlyInvoice(
       return { success: false, error: "L'utente non e' in modalita' postpagato" };
     }
 
+    // Recupera workspace_id per isolamento multi-tenant
+    const postpaidWsId = await getUserWorkspaceId(userId);
+    const postpaidWq = postpaidWsId ? workspaceQuery(postpaidWsId) : supabaseAdmin;
+
     // Verifica che non esista gia' una fattura per questo mese
-    const { data: existingInvoice } = await supabaseAdmin
+    const { data: existingInvoice } = await postpaidWq
       .from('invoices')
       .select('id, invoice_number')
       .eq('user_id', userId)
@@ -767,7 +779,7 @@ export async function generatePostpaidMonthlyInvoice(
     const invoiceNumber = nextNumber || `${year}-DRAFT`;
 
     // Crea fattura
-    const { data: newInvoice, error: invoiceError } = await supabaseAdmin
+    const { data: newInvoice, error: invoiceError } = await postpaidWq
       .from('invoices')
       .insert({
         user_id: userId,
@@ -810,12 +822,12 @@ export async function generatePostpaidMonthlyInvoice(
       total: Math.abs(charge.amount),
     }));
 
-    const { error: itemsError } = await supabaseAdmin.from('invoice_items').insert(items);
+    const { error: itemsError } = await postpaidWq.from('invoice_items').insert(items);
 
     if (itemsError) {
       console.error('Errore creazione invoice items - rollback fattura:', itemsError);
       // ROLLBACK: cancella fattura orfana per evitare inconsistenze
-      await supabaseAdmin.from('invoices').delete().eq('id', newInvoice.id);
+      await postpaidWq.from('invoices').delete().eq('id', newInvoice.id);
       return {
         success: false,
         error: 'Errore creazione dettagli fattura. Nessuna fattura generata.',
@@ -834,8 +846,8 @@ export async function generatePostpaidMonthlyInvoice(
     if (linksError) {
       console.error('Errore creazione links anti-duplicazione - rollback fattura:', linksError);
       // ROLLBACK: cancella items + fattura per evitare fatture senza protezione duplicazione
-      await supabaseAdmin.from('invoice_items').delete().eq('invoice_id', newInvoice.id);
-      await supabaseAdmin.from('invoices').delete().eq('id', newInvoice.id);
+      await postpaidWq.from('invoice_items').delete().eq('invoice_id', newInvoice.id);
+      await postpaidWq.from('invoices').delete().eq('id', newInvoice.id);
       return {
         success: false,
         error: 'Errore collegamento transazioni. Nessuna fattura generata.',

@@ -13,6 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { isValidUUID } from '@/lib/workspace-constants';
 
 export const dynamic = 'force-dynamic';
@@ -79,7 +80,8 @@ export async function GET(_request: NextRequest, { params }: RouteParams) {
 
     // Auto-mark as read
     if (!data.read) {
-      await supabaseAdmin.from('emails').update({ read: true }).eq('id', emailId);
+      const wq = workspaceQuery(workspaceId);
+      await wq.from('emails').update({ read: true }).eq('id', emailId);
       data.read = true;
     }
 

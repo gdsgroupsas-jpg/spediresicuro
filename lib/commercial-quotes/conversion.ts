@@ -10,6 +10,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import type { CommercialQuote } from '@/types/commercial-quotes';
 import bcrypt from 'bcryptjs';
 
@@ -45,6 +46,9 @@ export async function convertQuoteToClient(
     clientPhone,
   } = params;
   const matrix = quote.price_matrix;
+
+  // Query builder con isolamento multi-tenant
+  const wq = workspaceQuery(quote.workspace_id);
 
   // 1. Verifica stato preventivo
   if (quote.status !== 'accepted') {
@@ -119,11 +123,11 @@ export async function convertQuoteToClient(
   }
 
   if (entries.length > 0) {
-    const { error: entriesError } = await supabaseAdmin.from('price_list_entries').insert(entries);
+    const { error: entriesError } = await wq.from('price_list_entries').insert(entries);
 
     if (entriesError) {
       // Cleanup: elimina listino creato
-      await supabaseAdmin.from('price_lists').delete().eq('id', priceList.id);
+      await wq.from('price_lists').delete().eq('id', priceList.id);
       throw new Error(`Errore inserimento voci listino: ${entriesError.message}`);
     }
   }
@@ -156,8 +160,8 @@ export async function convertQuoteToClient(
 
   if (rpcError) {
     // Cleanup: elimina listino e entries
-    await supabaseAdmin.from('price_list_entries').delete().eq('price_list_id', priceList.id);
-    await supabaseAdmin.from('price_lists').delete().eq('id', priceList.id);
+    await wq.from('price_list_entries').delete().eq('price_list_id', priceList.id);
+    await wq.from('price_lists').delete().eq('id', priceList.id);
     throw new Error(`Errore creazione cliente: ${rpcError.message}`);
   }
 
@@ -165,8 +169,8 @@ export async function convertQuoteToClient(
 
   if (!result?.success || !result.client_id) {
     // Cleanup
-    await supabaseAdmin.from('price_list_entries').delete().eq('price_list_id', priceList.id);
-    await supabaseAdmin.from('price_lists').delete().eq('id', priceList.id);
+    await wq.from('price_list_entries').delete().eq('price_list_id', priceList.id);
+    await wq.from('price_lists').delete().eq('id', priceList.id);
     throw new Error(result?.error || 'Errore creazione cliente sconosciuto');
   }
 

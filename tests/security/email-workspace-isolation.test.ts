@@ -43,6 +43,13 @@ vi.mock('@/lib/db/client', () => ({
   },
 }));
 
+// Mock workspaceQuery — restituisce lo stesso mock di supabaseAdmin
+vi.mock('@/lib/db/workspace-query', () => ({
+  workspaceQuery: () => ({
+    from: (...args: unknown[]) => mockFrom(...args),
+  }),
+}));
+
 import {
   sendWorkspaceEmail,
   validateSenderAddress,

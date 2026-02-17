@@ -43,6 +43,7 @@ const mockQueryBuilder = {
 vi.mock('@/lib/db/client', () => ({
   supabaseAdmin: {
     from: vi.fn(() => mockQueryBuilder),
+    rpc: vi.fn().mockResolvedValue({ data: null, error: null }),
   },
 }));
 

@@ -48,7 +48,7 @@ export interface RecordPlatformCostResult {
  * @returns Risultato dell'operazione
  */
 export async function recordPlatformCost(
-  supabaseAdmin: SupabaseClient,
+  dbClient: SupabaseClient,
   params: RecordPlatformCostParams
 ): Promise<RecordPlatformCostResult> {
   const {
@@ -73,7 +73,7 @@ export async function recordPlatformCost(
 
   try {
     // Usa la funzione RPC per insert sicuro con validazione
-    const { data, error } = await supabaseAdmin.rpc('record_platform_provider_cost', {
+    const { data, error } = await dbClient.rpc('record_platform_provider_cost', {
       p_shipment_id: shipmentId,
       p_tracking_number: trackingNumber,
       p_billed_user_id: billedUserId,
@@ -108,7 +108,7 @@ export async function recordPlatformCost(
 
     // Prova insert diretto come fallback
     try {
-      const { data: fallbackData, error: fallbackError } = await supabaseAdmin
+      const { data: fallbackData, error: fallbackError } = await dbClient
         .from('platform_provider_costs')
         .insert({
           shipment_id: shipmentId,
@@ -135,7 +135,7 @@ export async function recordPlatformCost(
     }
 
     // Log in audit per recovery manuale
-    await logPlatformCostFailure(supabaseAdmin, {
+    await logPlatformCostFailure(dbClient, {
       shipmentId,
       billedUserId,
       billedAmount,
@@ -155,7 +155,7 @@ export async function recordPlatformCost(
  * Logga un fallimento di registrazione per recovery manuale.
  */
 async function logPlatformCostFailure(
-  supabaseAdmin: SupabaseClient,
+  dbClient: SupabaseClient,
   params: {
     shipmentId: string;
     billedUserId: string;
@@ -166,7 +166,7 @@ async function logPlatformCostFailure(
   }
 ): Promise<void> {
   try {
-    await supabaseAdmin.rpc('log_financial_event', {
+    await dbClient.rpc('log_financial_event', {
       p_event_type: 'platform_cost_recorded',
       p_user_id: params.billedUserId,
       p_shipment_id: params.shipmentId,
@@ -195,7 +195,7 @@ async function logPlatformCostFailure(
  * @param priceListUsedId - ID del listino usato (opzionale)
  */
 export async function updateShipmentApiSource(
-  supabaseAdmin: SupabaseClient,
+  dbClient: SupabaseClient,
   shipmentId: string,
   apiSource: ApiSource,
   priceListUsedId?: string
@@ -207,7 +207,7 @@ export async function updateShipmentApiSource(
       updateData.price_list_used_id = priceListUsedId;
     }
 
-    const { error } = await supabaseAdmin.from('shipments').update(updateData).eq('id', shipmentId);
+    const { error } = await dbClient.from('shipments').update(updateData).eq('id', shipmentId);
 
     if (error) {
       console.error('[PLATFORM_COST] Failed to update shipment api_source:', error);

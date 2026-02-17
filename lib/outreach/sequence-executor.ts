@@ -17,6 +17,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { getProvider } from './channel-providers';
 import { renderTemplate, buildTemplateVars } from './template-engine';
 import {
@@ -688,10 +689,10 @@ async function createExecution(params: {
   errorMessage?: string;
   retryCount?: number;
 }): Promise<void> {
-  const { error } = await supabaseAdmin.from('outreach_executions').insert({
+  const wq = workspaceQuery(params.workspaceId);
+  const { error } = await wq.from('outreach_executions').insert({
     enrollment_id: params.enrollmentId,
     step_id: params.stepId,
-    workspace_id: params.workspaceId,
     entity_type: params.entityType,
     entity_id: params.entityId,
     channel: params.channel,

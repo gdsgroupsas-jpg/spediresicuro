@@ -36,7 +36,7 @@ export async function GET() {
   }
 
   try {
-    const { error } = await supabaseAdmin.from('shipments').select('id').limit(1);
+    const { error } = await supabaseAdmin.from('couriers').select('id').limit(1);
 
     if (error) {
       return NextResponse.json(

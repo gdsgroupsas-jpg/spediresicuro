@@ -15,6 +15,7 @@ import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import type { WorkspaceActingContext } from '@/types/workspace';
 import type { ActingContext } from '@/lib/safe-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-actions';
 import { buildPriceMatrix } from '@/lib/commercial-quotes/matrix-builder';
@@ -157,7 +158,10 @@ async function queryAccessiblePriceLists(
   metadata: Record<string, unknown> | null;
   [key: string]: unknown;
 }> | null> {
-  let query = supabaseAdmin.from('price_lists').select(selectColumns).eq('status', 'active');
+  // Non possiamo usare workspaceQuery() qui: il .or() serve per vedere
+  // listini assegnati da altri workspace, e workspaceQuery forzerebbe .eq('workspace_id')
+  const crossWsDb = supabaseAdmin;
+  let query = crossWsDb.from('price_lists').select(selectColumns).eq('status', 'active');
 
   if (accessiblePlIds.length > 0) {
     const orConditions = [`workspace_id.eq.${workspaceId}`];
@@ -379,16 +383,18 @@ export async function createCommercialQuoteAction(
     }
 
     // Evento lifecycle
-    await supabaseAdmin.from('commercial_quote_events').insert({
-      quote_id: quote.id,
-      event_type: 'created',
-      event_data: {
-        margin_percent: marginPercent,
-        margin_fixed_eur: marginFixedEur,
-        carrier_code: input.carrier_code,
-      },
-      actor_id: userId,
-    });
+    await workspaceQuery(workspaceId)
+      .from('commercial_quote_events')
+      .insert({
+        quote_id: quote.id,
+        event_type: 'created',
+        event_data: {
+          margin_percent: marginPercent,
+          margin_fixed_eur: marginFixedEur,
+          carrier_code: input.carrier_code,
+        },
+        actor_id: userId,
+      });
 
     // Audit log
     await writeAuditLog({
@@ -739,12 +745,14 @@ export async function sendCommercialQuoteAction(
     }
 
     // Evento lifecycle
-    await supabaseAdmin.from('commercial_quote_events').insert({
-      quote_id: quoteId,
-      event_type: 'sent',
-      event_data: { pdf_storage_path: storagePath },
-      actor_id: userId,
-    });
+    await workspaceQuery(workspaceId)
+      .from('commercial_quote_events')
+      .insert({
+        quote_id: quoteId,
+        event_type: 'sent',
+        event_data: { pdf_storage_path: storagePath },
+        actor_id: userId,
+      });
 
     // Audit log
     await writeAuditLog({
@@ -840,12 +848,14 @@ export async function updateQuoteStatusAction(
     }
 
     // Evento lifecycle
-    await supabaseAdmin.from('commercial_quote_events').insert({
-      quote_id: quoteId,
-      event_type: newStatus,
-      event_data: { previous_status: currentStatus, notes },
-      actor_id: userId,
-    });
+    await workspaceQuery(workspaceId)
+      .from('commercial_quote_events')
+      .insert({
+        quote_id: quoteId,
+        event_type: newStatus,
+        event_data: { previous_status: currentStatus, notes },
+        actor_id: userId,
+      });
 
     // Audit log per accepted/rejected
     if (newStatus === 'accepted') {
@@ -1016,18 +1026,20 @@ export async function createRevisionAction(
     }
 
     // Evento lifecycle
-    await supabaseAdmin.from('commercial_quote_events').insert({
-      quote_id: revision.id,
-      event_type: 'revised',
-      event_data: {
-        previous_revision: parent.revision,
-        new_revision: newRevision,
-        margin_changed: input.margin_percent !== parent.margin_percent,
-        previous_margin: parent.margin_percent,
-        new_margin: newMargin,
-      },
-      actor_id: userId,
-    });
+    await workspaceQuery(workspaceId)
+      .from('commercial_quote_events')
+      .insert({
+        quote_id: revision.id,
+        event_type: 'revised',
+        event_data: {
+          previous_revision: parent.revision,
+          new_revision: newRevision,
+          margin_changed: input.margin_percent !== parent.margin_percent,
+          previous_margin: parent.margin_percent,
+          new_margin: newMargin,
+        },
+        actor_id: userId,
+      });
 
     // Audit log
     await writeAuditLog({
@@ -1119,16 +1131,18 @@ export async function convertQuoteToClientAction(
       .eq('id', input.quote_id);
 
     // Evento lifecycle
-    await supabaseAdmin.from('commercial_quote_events').insert({
-      quote_id: input.quote_id,
-      event_type: 'converted',
-      event_data: {
-        client_email: input.client_email,
-        user_id: result.userId,
-        price_list_id: result.priceListId,
-      },
-      actor_id: userId,
-    });
+    await workspaceQuery(workspaceId)
+      .from('commercial_quote_events')
+      .insert({
+        quote_id: input.quote_id,
+        event_type: 'converted',
+        event_data: {
+          client_email: input.client_email,
+          user_id: result.userId,
+          price_list_id: result.priceListId,
+        },
+        actor_id: userId,
+      });
 
     // Audit log
     await writeAuditLog({
@@ -1512,27 +1526,31 @@ export async function renewExpiredQuoteAction(
     }
 
     // Evento 'renewed' sul preventivo scaduto
-    await supabaseAdmin.from('commercial_quote_events').insert({
-      quote_id: expired.id,
-      event_type: 'renewed',
-      event_data: {
-        new_quote_id: renewal.id,
-        new_revision: newRevision,
-        new_margin: newMargin,
-      },
-      actor_id: userId,
-    });
+    await workspaceQuery(workspaceId)
+      .from('commercial_quote_events')
+      .insert({
+        quote_id: expired.id,
+        event_type: 'renewed',
+        event_data: {
+          new_quote_id: renewal.id,
+          new_revision: newRevision,
+          new_margin: newMargin,
+        },
+        actor_id: userId,
+      });
 
     // Evento 'created' sulla nuova revisione
-    await supabaseAdmin.from('commercial_quote_events').insert({
-      quote_id: renewal.id,
-      event_type: 'created',
-      event_data: {
-        renewed_from: expired.id,
-        revision: newRevision,
-      },
-      actor_id: userId,
-    });
+    await workspaceQuery(workspaceId)
+      .from('commercial_quote_events')
+      .insert({
+        quote_id: renewal.id,
+        event_type: 'created',
+        event_data: {
+          renewed_from: expired.id,
+          revision: newRevision,
+        },
+        actor_id: userId,
+      });
 
     // Audit log
     await writeAuditLog({

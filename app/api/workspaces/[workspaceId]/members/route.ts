@@ -27,6 +27,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { isValidUUID } from '@/lib/workspace-constants';
 import {
   memberHasPermission,
@@ -217,19 +218,21 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // 7. Audit log (NO EMAIL per GDPR)
-    await supabaseAdmin.from('audit_logs').insert({
-      action: 'WORKSPACE_MEMBER_REMOVED',
-      resource_type: 'workspace_member',
-      resource_id: targetMember.id,
-      user_id: context.target.id,
-      workspace_id: workspaceId,
-      audit_metadata: {
-        target_user_id: targetUserId, // Solo ID, no email
-        previous_role: targetMember.role,
-        removed_by: context.actor.id,
-        is_impersonating: context.isImpersonating,
-      },
-    });
+    await workspaceQuery(workspaceId)
+      .from('audit_logs')
+      .insert({
+        action: 'WORKSPACE_MEMBER_REMOVED',
+        resource_type: 'workspace_member',
+        resource_id: targetMember.id,
+        user_id: context.target.id,
+        workspace_id: workspaceId,
+        audit_metadata: {
+          target_user_id: targetUserId, // Solo ID, no email
+          previous_role: targetMember.role,
+          removed_by: context.actor.id,
+          is_impersonating: context.isImpersonating,
+        },
+      });
 
     return NextResponse.json({
       success: true,
@@ -349,22 +352,24 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // 8. Audit log (NO EMAIL per GDPR)
-    await supabaseAdmin.from('audit_logs').insert({
-      action: 'WORKSPACE_MEMBER_UPDATED',
-      resource_type: 'workspace_member',
-      resource_id: targetMember.id,
-      user_id: context.target.id,
-      workspace_id: workspaceId,
-      audit_metadata: {
-        target_user_id: userId,
-        old_role: targetMember.role,
-        new_role: role || targetMember.role,
-        old_permissions: targetMember.permissions,
-        new_permissions: permissions || targetMember.permissions,
-        updated_by: context.actor.id,
-        is_impersonating: context.isImpersonating,
-      },
-    });
+    await workspaceQuery(workspaceId)
+      .from('audit_logs')
+      .insert({
+        action: 'WORKSPACE_MEMBER_UPDATED',
+        resource_type: 'workspace_member',
+        resource_id: targetMember.id,
+        user_id: context.target.id,
+        workspace_id: workspaceId,
+        audit_metadata: {
+          target_user_id: userId,
+          old_role: targetMember.role,
+          new_role: role || targetMember.role,
+          old_permissions: targetMember.permissions,
+          new_permissions: permissions || targetMember.permissions,
+          updated_by: context.actor.id,
+          is_impersonating: context.isImpersonating,
+        },
+      });
 
     return NextResponse.json({
       success: true,

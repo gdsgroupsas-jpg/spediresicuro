@@ -27,6 +27,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { isValidUUID } from '@/lib/workspace-constants';
 import {
   memberHasPermission,
@@ -188,20 +189,22 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
       .update(normalizedEmail)
       .digest('hex')
       .substring(0, 16);
-    await supabaseAdmin.from('audit_logs').insert({
-      action: 'WORKSPACE_INVITATION_CREATED',
-      resource_type: 'workspace_invitation',
-      resource_id: invitation.id,
-      user_id: context.target.id,
-      workspace_id: workspaceId,
-      audit_metadata: {
-        email_hash: emailHash, // Hash invece di email per GDPR
-        role: memberRole,
-        expires_at: expiresAt.toISOString(),
-        invited_by: context.actor.id,
-        is_impersonating: context.isImpersonating,
-      },
-    });
+    await workspaceQuery(workspaceId)
+      .from('audit_logs')
+      .insert({
+        action: 'WORKSPACE_INVITATION_CREATED',
+        resource_type: 'workspace_invitation',
+        resource_id: invitation.id,
+        user_id: context.target.id,
+        workspace_id: workspaceId,
+        audit_metadata: {
+          email_hash: emailHash, // Hash invece di email per GDPR
+          role: memberRole,
+          expires_at: expiresAt.toISOString(),
+          invited_by: context.actor.id,
+          is_impersonating: context.isImpersonating,
+        },
+      });
 
     // 12. Fetch workspace + organization info per email
     const { data: workspace } = await supabaseAdmin
@@ -422,17 +425,19 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     }
 
     // 6. Audit log
-    await supabaseAdmin.from('audit_logs').insert({
-      action: 'WORKSPACE_INVITATION_REVOKED',
-      resource_type: 'workspace_invitation',
-      resource_id: invitationId,
-      user_id: context.target.id,
-      workspace_id: workspaceId,
-      audit_metadata: {
-        revoked_by: context.actor.id,
-        is_impersonating: context.isImpersonating,
-      },
-    });
+    await workspaceQuery(workspaceId)
+      .from('audit_logs')
+      .insert({
+        action: 'WORKSPACE_INVITATION_REVOKED',
+        resource_type: 'workspace_invitation',
+        resource_id: invitationId,
+        user_id: context.target.id,
+        workspace_id: workspaceId,
+        audit_metadata: {
+          revoked_by: context.actor.id,
+          is_impersonating: context.isImpersonating,
+        },
+      });
 
     return NextResponse.json({
       success: true,
@@ -567,17 +572,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     // 9. Audit log
-    await supabaseAdmin.from('audit_logs').insert({
-      action: 'WORKSPACE_INVITATION_RESENT',
-      resource_type: 'workspace_invitation',
-      resource_id: invitationId,
-      user_id: context.target.id,
-      workspace_id: workspaceId,
-      audit_metadata: {
-        resent_by: context.actor.id,
-        is_impersonating: context.isImpersonating,
-      },
-    });
+    await workspaceQuery(workspaceId)
+      .from('audit_logs')
+      .insert({
+        action: 'WORKSPACE_INVITATION_RESENT',
+        resource_type: 'workspace_invitation',
+        resource_id: invitationId,
+        user_id: context.target.id,
+        workspace_id: workspaceId,
+        audit_metadata: {
+          resent_by: context.actor.id,
+          is_impersonating: context.isImpersonating,
+        },
+      });
 
     return NextResponse.json({
       success: true,

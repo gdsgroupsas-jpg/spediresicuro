@@ -12,6 +12,7 @@ import type {
   UpdatePriceListInput,
 } from '@/types/listini';
 import { supabase, supabaseAdmin } from './client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { assertValidUserId } from '@/lib/validators';
 
 // Re-export funzioni avanzate
@@ -185,17 +186,22 @@ export async function getActivePriceList(courierId: string): Promise<PriceList |
 /**
  * Aggiungi righe al listino
  * ⚠️ NOTA: Usa INSERT semplice, può creare duplicati se chiamato più volte
+ * @param priceListId - ID del listino
+ * @param entries - Array di entries da aggiungere
+ * @param workspaceId - ID workspace (obbligatorio per isolamento multi-tenant)
  */
 export async function addPriceListEntries(
   priceListId: string,
-  entries: Omit<PriceListEntry, 'id' | 'price_list_id' | 'created_at'>[]
+  entries: Omit<PriceListEntry, 'id' | 'price_list_id' | 'created_at'>[],
+  workspaceId?: string
 ): Promise<void> {
   const entriesWithListId = entries.map((entry) => ({
     ...entry,
     price_list_id: priceListId,
   }));
 
-  const { error } = await supabaseAdmin.from('price_list_entries').insert(entriesWithListId);
+  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+  const { error } = await db.from('price_list_entries').insert(entriesWithListId);
 
   if (error) {
     console.error('Error adding price list entries:', error);
@@ -404,9 +410,12 @@ export async function updatePriceListStatus(
 
 /**
  * Elimina listino
+ * @param id - ID listino da eliminare
+ * @param workspaceId - ID workspace (obbligatorio per isolamento multi-tenant)
  */
-export async function deletePriceList(id: string): Promise<void> {
-  const { error } = await supabaseAdmin.from('price_lists').delete().eq('id', id);
+export async function deletePriceList(id: string, workspaceId?: string): Promise<void> {
+  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+  const { error } = await db.from('price_lists').delete().eq('id', id);
 
   if (error) {
     console.error('Error deleting price list:', error);

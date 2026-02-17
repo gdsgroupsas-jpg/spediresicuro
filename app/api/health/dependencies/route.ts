@@ -44,7 +44,7 @@ async function checkSupabase(): Promise<DependencyStatus> {
   }
 
   try {
-    const { error } = await supabaseAdmin.from('shipments').select('id').limit(1);
+    const { error } = await supabaseAdmin.from('couriers').select('id').limit(1);
 
     const latencyMs = Date.now() - start;
 

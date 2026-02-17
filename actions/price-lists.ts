@@ -8,6 +8,7 @@
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import {
   createPriceList,
   deletePriceList,
@@ -883,7 +884,7 @@ export async function deletePriceListAction(id: string): Promise<{
       };
     }
 
-    await deletePriceList(id);
+    await deletePriceList(id, workspaceId);
 
     return { success: true };
   } catch (error: any) {
@@ -962,7 +963,8 @@ export async function listPriceListsAction(filters?: {
       // Aggiungi listini assegnati al workspace ma non ancora nella lista
       const missingExtraIds = extraIds.filter((id) => !resultIds.has(id));
       if (missingExtraIds.length > 0) {
-        let extraQuery = supabaseAdmin.from('price_lists').select('*').in('id', missingExtraIds);
+        const wq = workspaceQuery(workspaceId);
+        let extraQuery = wq.from('price_lists').select('*').in('id', missingExtraIds);
         if (filters?.status) extraQuery = extraQuery.eq('status', filters.status);
         if (filters?.courierId) extraQuery = extraQuery.eq('courier_id', filters.courierId);
 
