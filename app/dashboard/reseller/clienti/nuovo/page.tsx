@@ -14,10 +14,10 @@
  * - UX ottimizzata per ogni ruolo
  */
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { useSession } from 'next-auth/react';
 import { ArrowLeft, UserPlus, ShieldAlert, Store } from 'lucide-react';
+import { useResellerAuth } from '@/hooks/use-reseller-auth';
 import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
@@ -29,51 +29,12 @@ import type {
 } from '@/components/onboarding/types';
 import { getAssignablePriceListsAction } from '@/actions/price-lists';
 
-type UserRole = 'superadmin' | 'reseller' | 'admin' | 'user';
-
 export default function NuovoUtentePage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
-  const [userRole, setUserRole] = useState<UserRole | null>(null);
-  const [isCheckingRole, setIsCheckingRole] = useState(true);
+  const { isAuthorized, isLoading: isCheckingRole, accountType, status } = useResellerAuth();
 
-  // Rileva il ruolo dell'utente
-  useEffect(() => {
-    async function checkUserRole() {
-      if (status === 'loading') return;
-
-      if (!session?.user?.email) {
-        router.push('/login');
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/user/info');
-        if (response.ok) {
-          const data = await response.json();
-          const userData = data.user || data;
-          const accountType = userData.account_type || userData.accountType;
-
-          if (accountType === 'superadmin') {
-            setUserRole('superadmin');
-          } else if (accountType === 'admin' || userData.is_reseller === true) {
-            setUserRole('reseller');
-          } else {
-            setUserRole('user');
-          }
-        } else {
-          setUserRole('user');
-        }
-      } catch (error) {
-        console.error('Errore verifica ruolo:', error);
-        setUserRole('user');
-      } finally {
-        setIsCheckingRole(false);
-      }
-    }
-
-    checkUserRole();
-  }, [session, status, router]);
+  // Determina ruolo dalla hook centralizzata
+  const userRole = accountType === 'superadmin' ? 'superadmin' : isAuthorized ? 'reseller' : 'user';
 
   /**
    * Carica listini disponibili per assegnazione
@@ -186,28 +147,8 @@ export default function NuovoUtentePage() {
     );
   }
 
-  // Not authenticated
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="bg-gray-800 rounded-2xl border border-gray-700 p-8 max-w-md text-center">
-          <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShieldAlert className="h-8 w-8 text-red-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-100 mb-2">Accesso Richiesto</h1>
-          <p className="text-gray-400 mb-6">
-            Devi effettuare il login per accedere a questa pagina.
-          </p>
-          <Button onClick={() => router.push('/login')} variant="outline">
-            Vai al Login
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  // Access denied for regular users
-  if (userRole === 'user') {
+  // Accesso negato (hook gestisce redirect a /login se non autenticato)
+  if (!isAuthorized) {
     return (
       <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="bg-gray-800 rounded-2xl border border-gray-700 p-8 max-w-md text-center">

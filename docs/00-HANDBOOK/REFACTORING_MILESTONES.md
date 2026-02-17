@@ -467,6 +467,9 @@ Gestione domini custom via Resend API (SPF, DKIM, MX).
 | 18. Fattura a Fine Mese (Postpaid)  | ✅ Completato  | 2026-02-12 |
 | 19. Wallet UI & Admin Notifications | ✅ Completato  | 2026-02-12 |
 | 20. Auth Migration & Security DRY   | ✅ Completato  | 2026-02-13 |
+| 21. Wallet Source of Truth Flip     | ✅ Completato  | 2026-02-18 |
+| 22. FASE 2 Audit Sicurezza          | ✅ Completato  | 2026-02-18 |
+| 23. Guardian Zero Violations        | ✅ Completato  | 2026-02-17 |
 
 ---
 
@@ -592,6 +595,96 @@ isolamento multi-tenant, con refactor DRY del bypass E2E e defense-in-depth.
 - `tests/unit/middleware.test.ts` (9 nuovi test security)
 - `tests/unit/price-lists-workspace-isolation.test.ts` (9 test isolamento)
 - `tests/security/price-lists-isolation.test.ts` (12 test security)
+
+---
+
+### Milestone 21: Wallet Source of Truth Flip ✅
+
+**Completato:** 2026-02-18
+
+Flip della source of truth del wallet da `users.wallet_balance` a `workspaces.wallet_balance`. 5 RPC v2 con lock su workspaces, trigger inverso per backward compat, tutti i caller TypeScript migrati.
+
+#### Deliverables
+
+- [x] 5 RPC v2: add_wallet_credit_v2, add_wallet_credit_with_vat_v2, deduct_wallet_credit_v2, refund_wallet_balance_v2, reseller_transfer_credit_v2
+- [x] Trigger inverso `sync_wallet_to_users()` (workspaces → users)
+- [x] Rimosso trigger vecchio `trg_sync_wallet_to_workspace` (users → workspaces)
+- [x] Tutti i caller TypeScript migrati a v2 (6 file)
+- [x] `credit-check.ts` legge da `workspaces.wallet_balance`
+- [x] `/api/user/info` legge wallet da workspace via `primary_workspace_id`
+- [x] Migration `20260218100000_wallet_rpc_v2_workspace_source.sql` applicata in produzione
+- [x] Test verdi su tutta la suite
+
+#### File chiave
+
+- `supabase/migrations/20260218100000_wallet_rpc_v2_workspace_source.sql` (nuovo)
+- `lib/shipments/create-shipment-core.ts` (migrato a v2)
+- `app/actions/wallet.ts` (migrato a v2)
+- `lib/wallet/credit-check.ts` (legge da workspaces)
+- `app/api/user/info/route.ts` (legge wallet da workspace)
+
+---
+
+### Milestone 22: FASE 2 Audit Sicurezza ✅
+
+**Commits:** `a6323ec`, `f3cf892` | **Completato:** 2026-02-18
+
+Audit severo della FASE 2 (Reseller Self-Service): 19 finding di sicurezza identificati e fixati (4 P1, 9 P2, 6 P3). Score da 7/10 a 10/10.
+
+#### Fix P1 (Critici)
+
+- `get_admin_overview_stats()` — accessibile da authenticated → ristretto a service_role
+- `delete_user_complete()` — accessibile da authenticated → ristretto a service_role
+- `listini-fornitore/[id]` — nessun check ruolo reseller → aggiunto `useResellerAuth`
+- `wallet_balance` esposto a superadmin in `getAllClientsForUser` → rimosso
+
+#### Fix P2 (Importanti)
+
+- 4x fallback `supabaseAdmin` quando `wsId` null → early return / skip
+- 12x `error.message` da DB/RPC esposto a client → messaggi generici
+- Password validation (8-128 chars) su creazione client
+- UUID validation su `childUserId` in sub-user-fee
+- Fee max 100 EUR, notes max 500 chars
+
+#### Fix P3 (Minori)
+
+- PII (email) rimossa da `console.log` (usa user ID)
+- `select('*')` → colonne esplicite in `getSubUsersShipments`
+- 5 funzioni: aggiunto `pg_temp` a search_path
+- Redirect `/auth/signin` → `/login` in 2 pagine
+
+#### Infrastruttura
+
+- Rate limiting Upstash Redis su 4 azioni critiche reseller
+- `useResellerAuth` hook centralizzato (7 pagine migrate)
+- Migration `20260218130000_fix_rpc_grants_and_search_path.sql`
+
+#### File chiave
+
+- `actions/admin-reseller.ts` (overhaul sicurezza)
+- `app/api/reseller/sub-user-fee/route.ts` (role check, validation, rate limit)
+- `app/api/reseller/clients/route.ts` (password validation, PII, rate limit)
+- `hooks/use-reseller-auth.ts` (NUOVO — hook centralizzato)
+- `supabase/migrations/20260218130000_fix_rpc_grants_and_search_path.sql` (NUOVO)
+
+#### Test
+
+- 3214 unit test verdi
+- Build zero errori
+
+---
+
+### Milestone 23: Guardian Zero Violations ✅
+
+**Commit:** `961ddaf` | **Completato:** 2026-02-17
+
+Raggiunto l'obiettivo 0 violazioni nel guardian test (`workspace-query-guardian.test.ts`). Da 57 violazioni iniziali a 0. Tutti i file con query multi-tenant migrati a `workspaceQuery()`.
+
+#### Impatto
+
+- 57 file migrati da `supabaseAdmin.from()` a `workspaceQuery(workspaceId).from()`
+- Baseline guardian: 57 → 0
+- Nessun nuovo file può introdurre violazioni (test bloccante)
 
 ---
 

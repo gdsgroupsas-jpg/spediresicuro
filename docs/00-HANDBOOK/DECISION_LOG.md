@@ -183,3 +183,48 @@ Record structural and process decisions for fast AI retrieval.
   - Detail page route `/reseller/listini-fornitore/[id]` unchanged
 - Impact: navigationConfig.ts, 2 new pages, 4 new tab components, 3 redirect pages, 4 e2e test files, 6 doc files
 - Tests: 41 unit tests pass (4 new nav tests, 3 redirect tests), build clean
+
+## 2026-02-17 - Guardian Zero Violations raggiunto
+
+- Decision: Portare a 0 le violazioni nel guardian test (da baseline 57)
+- Problem: 57 file usavano `supabaseAdmin.from()` su tabelle multi-tenant, bypassando isolamento workspace
+- Solution: Migrazione sistematica di tutti i 57 file a `workspaceQuery(workspaceId).from()`
+- Impact: Guardian baseline 57 → 0. Il test è ora bloccante (qualsiasi nuova violazione fallisce la suite)
+- Commit: `961ddaf`
+
+## 2026-02-18 - Wallet Source of Truth Flip (workspaces, non users)
+
+- Decision: La source of truth per il saldo wallet diventa `workspaces.wallet_balance`
+- Before: RPC wallet lockavano su `users.wallet_balance`. Se un utente aveva 2 workspace, condividevano lo stesso saldo.
+- After: 5 RPC v2 lockano su `workspaces.wallet_balance`. Ogni workspace ha il proprio saldo indipendente.
+- Trigger inverso `sync_wallet_to_users()` mantiene backward compat
+- Trigger vecchio `users → workspaces` rimosso
+- Migration: `20260218100000_wallet_rpc_v2_workspace_source.sql`
+- Impact: 6 file TypeScript migrati, credit-check.ts, /api/user/info
+- Tests: 3214 unit test verdi, build clean
+
+## 2026-02-18 - GRANT Security Hardening (RPC wallet + admin)
+
+- Decision: Restringere accesso RPC critiche da `authenticated` a `service_role` only
+- Problem: Le 5 RPC wallet v2 e 2 funzioni admin erano callable da utenti autenticati via PostgREST
+- Solution: REVOKE ALL FROM authenticated + GRANT EXECUTE TO service_role only
+- Aggiunto `pg_temp` a search_path di 5 funzioni (prevenzione schema hijacking)
+- Migration: `20260218130000_fix_rpc_grants_and_search_path.sql`
+
+## 2026-02-18 - Rate Limiting su azioni critiche reseller (Upstash Redis)
+
+- Decision: Aggiungere rate limiting alle 4 azioni reseller più critiche
+- Azioni protette:
+  - `createSubUser`: 10/min per reseller
+  - `manageSubUserWallet`: 20/min per reseller
+  - `POST /api/reseller/clients`: 10/min
+  - `PUT /api/reseller/sub-user-fee`: 30/min per reseller
+- Infrastruttura: Upstash Redis sliding window (già operativo, piano free)
+- Fallback: in-memory se Redis non disponibile, fail-open policy
+
+## 2026-02-18 - useResellerAuth hook centralizzato
+
+- Decision: Creare hook React centralizzato per auth reseller
+- Problem: 7 pagine reseller duplicavano lo stesso pattern di verifica (useSession + fetch /api/user/info + check account_type)
+- Solution: `hooks/use-reseller-auth.ts` — hook unico che ritorna `{ isAuthorized, isLoading, accountType, userId, status }`
+- Impact: 7 pagine reseller migrate al hook, ~40 righe di boilerplate rimosse per pagina

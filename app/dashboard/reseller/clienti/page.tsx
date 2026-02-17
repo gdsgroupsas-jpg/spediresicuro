@@ -25,9 +25,8 @@ import {
   Users,
   UserPlus,
 } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, useEffect } from 'react';
 import { Toaster, toast } from 'sonner';
 
 import DashboardNav from '@/components/dashboard-nav';
@@ -38,6 +37,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
+import { useResellerAuth } from '@/hooks/use-reseller-auth';
 
 import { AssignListinoDialog } from './_components/assign-listino-dialog';
 import { BillingModeDialog } from './_components/billing-mode-dialog';
@@ -514,47 +514,7 @@ function AccessDenied() {
 }
 
 export default function ResellerClientiPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [isReseller, setIsReseller] = useState<boolean | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    async function checkResellerStatus() {
-      if (status === 'loading') return;
-
-      if (!session?.user?.email) {
-        router.push('/login');
-        return;
-      }
-
-      try {
-        const response = await fetch('/api/user/info');
-        if (response.ok) {
-          const data = await response.json();
-          const userData = data.user || data;
-          const accountType = userData.account_type || userData.accountType;
-
-          // Reseller, admin o superadmin possono accedere
-          const hasAccess =
-            accountType === 'superadmin' ||
-            accountType === 'admin' ||
-            userData.is_reseller === true;
-
-          setIsReseller(hasAccess);
-        } else {
-          setIsReseller(false);
-        }
-      } catch (error) {
-        console.error('Errore verifica ruolo:', error);
-        setIsReseller(false);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-
-    checkResellerStatus();
-  }, [session, status, router]);
+  const { isAuthorized, isLoading, status } = useResellerAuth();
 
   if (status === 'loading' || isLoading) {
     return (
@@ -601,11 +561,7 @@ export default function ResellerClientiPage() {
     );
   }
 
-  if (!session) {
-    return null;
-  }
-
-  if (!isReseller) {
+  if (!isAuthorized) {
     return <AccessDenied />;
   }
 

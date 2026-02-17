@@ -69,6 +69,50 @@ Quando un Reseller ricarica un sub-user, il trasferimento è **atomico**: il wal
 - **Max importo**: 10.000 EUR per singolo trasferimento (validato in TS + SQL)
 - **File**: `supabase/migrations/20260216100000_reseller_transfer_credit.sql`
 
+### Wallet v2 — Workspace Source of Truth (dal 2026-02-18)
+
+A partire dal 2026-02-18, la **source of truth** per il saldo wallet è `workspaces.wallet_balance`, non più `users.wallet_balance`.
+
+**Architettura:**
+
+- 5 nuove RPC con suffisso `_v2` lockano su `workspaces` (non `users`)
+- `p_workspace_id UUID` è OBBLIGATORIO (non più opzionale)
+- Trigger inverso `sync_wallet_to_users()` mantiene `users.wallet_balance` allineato
+- Trigger vecchio `users → workspaces` RIMOSSO
+
+**RPC v2 disponibili:**
+
+| RPC                             | Parametri chiave                                                 | Uso                 |
+| ------------------------------- | ---------------------------------------------------------------- | ------------------- |
+| `add_wallet_credit_v2`          | workspace_id, user_id, amount, description                       | Ricarica wallet     |
+| `add_wallet_credit_with_vat_v2` | workspace_id, user_id, amount, description, vat_rate             | Ricarica con IVA    |
+| `deduct_wallet_credit_v2`       | workspace_id, user_id, amount, type, description                 | Addebito spedizione |
+| `refund_wallet_balance_v2`      | workspace_id, user_id, amount, description, reference_type       | Rimborso            |
+| `reseller_transfer_credit_v2`   | reseller_ws_id, sub_user_ws_id, reseller_id, sub_user_id, amount | Transfer atomico    |
+
+**Pattern lock deterministico** (in `reseller_transfer_credit_v2`):
+
+- Ordina i 2 workspace UUID in ordine alfabetico
+- Locka prima quello con UUID minore → previene deadlock
+
+**Migration:** `supabase/migrations/20260218100000_wallet_rpc_v2_workspace_source.sql`
+
+**Caller TypeScript migrati:**
+
+| File                                        | Funzione            | RPC usata                       |
+| ------------------------------------------- | ------------------- | ------------------------------- |
+| `lib/shipments/create-shipment-core.ts`     | createShipmentCore  | `deduct_wallet_credit_v2`       |
+| `app/actions/wallet.ts`                     | rechargeMyWallet    | `add_wallet_credit_v2`          |
+| `app/api/stripe/webhook/route.ts`           | handleCheckout      | `add_wallet_credit_with_vat_v2` |
+| `actions/admin-reseller.ts`                 | manageSubUserWallet | `reseller_transfer_credit_v2`   |
+| `lib/services/giacenze/giacenze-service.ts` | confirmHoldAction   | `deduct_wallet_credit_v2`       |
+| `lib/ai/tools/support-tools.ts`             | refundShipment      | `refund_wallet_balance_v2`      |
+
+**Lettura saldo:**
+
+- `lib/wallet/credit-check.ts` → legge da `workspaces.wallet_balance` (con fallback users)
+- `/api/user/info` → legge da `workspaces.wallet_balance` via `primary_workspace_id`
+
 ### Fatturazione Postpagata
 
 Per utenti con `billing_mode = 'postpagato'`:
@@ -226,9 +270,18 @@ if (!isSuperadmin) {
 
 #### Funzioni Atomiche Disponibili
 
-- `decrement_wallet_balance(user_id, amount)` - Debit atomico con lock pessimistico (FOR UPDATE NOWAIT)
-- `increment_wallet_balance(user_id, amount)` - Credit atomico con lock pessimistico
+**Legacy (v1 — lock su users, da non usare per nuovo codice):**
+
+- `decrement_wallet_balance(user_id, amount)` - Debit atomico con lock su users
+- `increment_wallet_balance(user_id, amount)` - Credit atomico con lock su users
 - `add_wallet_credit(user_id, amount, description, created_by)` - Credit con audit trail
+
+**Current (v2 — lock su workspaces, USARE QUESTE):**
+
+- `deduct_wallet_credit_v2(workspace_id, user_id, amount, type, ...)` - Debit con lock su workspaces
+- `add_wallet_credit_v2(workspace_id, user_id, amount, description, ...)` - Credit con lock su workspaces
+- `refund_wallet_balance_v2(workspace_id, user_id, amount, ...)` - Rimborso con lock su workspaces
+- `reseller_transfer_credit_v2(reseller_ws, sub_user_ws, ...)` - Transfer atomico con dual lock
 
 **Vedi:** [Database Architecture](../2-ARCHITECTURE/DATABASE.md) per dettagli tecnici.
 
@@ -306,9 +359,10 @@ Il SuperAdmin può azzerare il saldo di un utente direttamente dalla dashboard, 
 
 #### Tabelle Database
 
-1. **`users.wallet_balance`** - Saldo corrente (DECIMAL(10,2), DEFAULT 0, CHECK >= 0)
-2. **`wallet_transactions`** - Ledger immutabile (append-only, audit trail)
-3. **`top_up_requests`** - Richieste ricarica (pending/approved/rejected)
+1. **`workspaces.wallet_balance`** - Saldo corrente — SOURCE OF TRUTH (DECIMAL(10,2), DEFAULT 0)
+2. **`users.wallet_balance`** - Mirror sincronizzato via trigger `sync_wallet_to_users()` (backward compat)
+3. **`wallet_transactions`** - Ledger immutabile (append-only, audit trail)
+4. **`top_up_requests`** - Richieste ricarica (pending/approved/rejected)
 
 #### Funzioni SQL Atomiche
 
@@ -507,12 +561,13 @@ transactions.forEach((tx) => {
 
 | Date       | Version | Changes                                                              | Author   |
 | ---------- | ------- | -------------------------------------------------------------------- | -------- |
+| 2026-02-18 | 3.0.0   | Wallet v2: workspace source of truth, 5 RPC v2, trigger inverso      | AI Agent |
 | 2026-02-12 | 2.1.0   | UI contrast fix, email admin top-up, receipts bucket, azzera wallet  | AI Agent |
 | 2026-02-12 | 2.0.0   | Post-paid billing, reseller transfer atomico, billing mode UI        | AI Agent |
 | 2026-01-12 | 1.0.0   | Initial version - Wallet system completo, Acting Context, Anti-fraud | AI Agent |
 
 ---
 
-_Last Updated: 2026-02-12_
+_Last Updated: 2026-02-18_
 _Status: 🟢 Active_
 _Maintainer: Engineering Team_
