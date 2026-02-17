@@ -15,6 +15,7 @@ import { ApiErrors, handleApiError } from '@/lib/api-responses';
 import type { DatiCliente } from '@/lib/database';
 import { supabaseAdmin } from '@/lib/db/client';
 import { sendPremiumWelcomeEmail } from '@/lib/email/resend';
+import { withRateLimit } from '@/lib/security/rate-limit-middleware';
 import { NextRequest, NextResponse } from 'next/server';
 
 /**
@@ -23,6 +24,13 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function POST(request: NextRequest) {
   try {
+    // Rate limiting: max 10 creazioni clienti/minuto
+    const rlResult = await withRateLimit(request, 'reseller-create-client', {
+      limit: 10,
+      windowSeconds: 60,
+    });
+    if (rlResult) return rlResult;
+
     const authResult = await requireAuth();
     if (!authResult.authorized) return authResult.response;
     const { context } = authResult;

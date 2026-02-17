@@ -13,6 +13,7 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { rateLimit } from '@/lib/security/rate-limit';
 import { setParentImposedFee, getSubUsersWithFees } from '@/lib/services/pricing/platform-fee';
 
 /**
@@ -92,6 +93,18 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { error: 'Solo i reseller possono gestire le fee' },
         { status: 403 }
+      );
+    }
+
+    // Rate limiting: max 30 modifiche fee/minuto per reseller
+    const rl = await rateLimit('reseller-set-fee', context.actor.id, {
+      limit: 30,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return NextResponse.json(
+        { error: 'Troppe richieste. Riprova tra qualche secondo.' },
+        { status: 429 }
       );
     }
 

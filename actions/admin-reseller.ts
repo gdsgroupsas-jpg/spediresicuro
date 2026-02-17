@@ -19,6 +19,7 @@ import { validateEmail } from '@/lib/validators';
 import { userExists, getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { hasCapability } from '@/lib/db/capability-helpers';
 import { workspaceQuery } from '@/lib/db/workspace-query';
+import { rateLimit } from '@/lib/security/rate-limit';
 
 /**
  * Verifica se l'utente corrente è un Reseller
@@ -130,6 +131,18 @@ export async function createSubUser(data: {
       return {
         success: false,
         error: 'Solo i Reseller possono creare Sub-Users.',
+      };
+    }
+
+    // 2b. Rate limiting: max 10 creazioni/minuto per reseller
+    const rl = await rateLimit('reseller-create-subuser', resellerCheck.userId, {
+      limit: 10,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: 'Troppe richieste. Riprova tra qualche secondo.',
       };
     }
 
@@ -549,6 +562,18 @@ export async function manageSubUserWallet(
       return {
         success: false,
         error: 'Solo i Reseller possono gestire il wallet dei Sub-Users.',
+      };
+    }
+
+    // 1b. Rate limiting: max 20 trasferimenti/minuto per reseller
+    const rl = await rateLimit('reseller-wallet-transfer', resellerCheck.userId, {
+      limit: 20,
+      windowSeconds: 60,
+    });
+    if (!rl.allowed) {
+      return {
+        success: false,
+        error: 'Troppe richieste. Riprova tra qualche secondo.',
       };
     }
 
