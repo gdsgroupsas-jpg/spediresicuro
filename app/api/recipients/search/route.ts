@@ -30,9 +30,10 @@ interface ShipmentRecipientRow {
 
 export async function GET(request: NextRequest) {
   try {
-    // 1. Auth check
+    // 1. Auth check — workspace obbligatorio per isolamento multi-tenant
     const context = await requireWorkspaceAuth();
     const userId = context.target.id;
+    const workspaceId = context.workspace.id;
 
     // 2. Parse query params
     const searchParams = request.nextUrl.searchParams;
@@ -56,10 +57,11 @@ export async function GET(request: NextRequest) {
           created_at
         `
         )
+        .eq('workspace_id', workspaceId)
         .eq('user_id', userId)
         .eq('deleted', false)
         .order('created_at', { ascending: false })
-        .limit(50); // Fetch di piu per deduplicare
+        .limit(50);
 
       if (error) throw error;
 
@@ -72,7 +74,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 4. Ricerca con ILIKE
+    // 4. Ricerca con ILIKE — filtro workspace_id per isolamento multi-tenant
     const { data, error } = await supabaseAdmin
       .from('shipments')
       .select(
@@ -87,11 +89,12 @@ export async function GET(request: NextRequest) {
         created_at
       `
       )
+      .eq('workspace_id', workspaceId)
       .eq('user_id', userId)
       .eq('deleted', false)
       .ilike('recipient_name', `%${query}%`)
       .order('created_at', { ascending: false })
-      .limit(100); // Fetch di piu per deduplicare
+      .limit(100);
 
     if (error) throw error;
 

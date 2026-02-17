@@ -20,14 +20,15 @@ Questo documento descrive l'architettura di sicurezza di SpedireSicuro, inclusi 
 
 ## Quick Reference
 
-| Sezione                  | Pagina                             | Link                                                |
-| ------------------------ | ---------------------------------- | --------------------------------------------------- |
-| Multi-Tenant Enforcement | docs/8-SECURITY/OVERVIEW.md        | [Multi-Tenant](#multi-tenant-enforcement)           |
-| RLS Pattern              | docs/8-SECURITY/OVERVIEW.md        | [RLS](#rls-row-level-security-pattern)              |
-| Acting Context           | docs/8-SECURITY/AUTHORIZATION.md   | [Acting Context](../8-SECURITY/AUTHORIZATION.md)    |
-| Audit Logging            | docs/8-SECURITY/AUDIT_LOGGING.md   | [Audit](../8-SECURITY/AUDIT_LOGGING.md)             |
-| Rate Limiting            | docs/8-SECURITY/RATE_LIMITING.md   | [Rate Limiting](../8-SECURITY/RATE_LIMITING.md)     |
-| Data Protection          | docs/8-SECURITY/DATA_PROTECTION.md | [Data Protection](../8-SECURITY/DATA_PROTECTION.md) |
+| Sezione                  | Pagina                                    | Link                                                |
+| ------------------------ | ----------------------------------------- | --------------------------------------------------- |
+| Multi-Tenant Enforcement | docs/8-SECURITY/OVERVIEW.md               | [Multi-Tenant](#multi-tenant-enforcement)           |
+| Multi-Tenant Isolation   | docs/8-SECURITY/MULTI_TENANT_ISOLATION.md | [Isolation Detail](MULTI_TENANT_ISOLATION.md)       |
+| RLS Pattern              | docs/8-SECURITY/OVERVIEW.md               | [RLS](#rls-row-level-security-pattern)              |
+| Acting Context           | docs/8-SECURITY/AUTHORIZATION.md          | [Acting Context](../8-SECURITY/AUTHORIZATION.md)    |
+| Audit Logging            | docs/8-SECURITY/AUDIT_LOGGING.md          | [Audit](../8-SECURITY/AUDIT_LOGGING.md)             |
+| Rate Limiting            | docs/8-SECURITY/RATE_LIMITING.md          | [Rate Limiting](../8-SECURITY/RATE_LIMITING.md)     |
+| Data Protection          | docs/8-SECURITY/DATA_PROTECTION.md        | [Data Protection](../8-SECURITY/DATA_PROTECTION.md) |
 
 ## Content
 

@@ -10,6 +10,7 @@ import {
   validateFatturaPAData,
   FatturaPAData,
 } from '@/lib/invoices/xml-generator';
+import { getWorkspaceAuth } from '@/lib/workspace-auth';
 
 /**
  * Crea una nuova bozza di fattura
@@ -100,14 +101,38 @@ export async function updateInvoiceStatus(id: string, status: InvoiceStatus) {
 }
 
 /**
- * Get fatture per admin table
+ * Get fatture per admin table — filtrate per workspace corrente.
+ *
+ * La tabella invoices non ha ancora workspace_id (TODO: migration).
+ * Per ora filtriamo via workspace_members: solo fatture di utenti
+ * che appartengono al workspace corrente dell'admin.
  */
 export async function getInvoices(limit = 50) {
-  const supabase = createServerActionClient();
+  // Verifica autenticazione workspace
+  const context = await getWorkspaceAuth();
+  if (!context?.workspace?.id) {
+    throw new Error('Non autenticato o workspace non trovato');
+  }
 
-  const { data, error } = await supabase
+  const workspaceId = context.workspace.id;
+
+  // Recupera user_id dei membri del workspace
+  const { data: members, error: membersError } = await supabaseAdmin
+    .from('workspace_members')
+    .select('user_id')
+    .eq('workspace_id', workspaceId)
+    .eq('status', 'active');
+
+  if (membersError) throw new Error(membersError.message);
+
+  const memberIds = (members || []).map((m: any) => m.user_id);
+  if (memberIds.length === 0) return [] as Invoice[];
+
+  // Filtra fatture solo per utenti del workspace
+  const { data, error } = await supabaseAdmin
     .from('invoices')
     .select('*, user:users(name, email, company_name)')
+    .in('user_id', memberIds)
     .order('created_at', { ascending: false })
     .limit(limit);
 

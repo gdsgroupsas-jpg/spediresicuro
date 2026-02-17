@@ -45,11 +45,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Seleziona almeno un contrassegno' }, { status: 400 });
     }
 
-    // Fetch items selezionati
+    // Isolamento multi-tenant: verifica che items appartengano al workspace
+    const workspaceId = auth.workspace?.id;
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace non trovato' }, { status: 403 });
+    }
+
+    const { data: members } = await supabaseAdmin
+      .from('workspace_members')
+      .select('user_id')
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'active');
+
+    const memberIds = (members || []).map((m: any) => m.user_id);
+
+    // Fetch items selezionati — solo quelli del workspace corrente
     const { data: items, error: fetchError } = await supabaseAdmin
       .from('cod_items')
       .select('id, client_id, pagato, ldv')
       .in('id', itemIds)
+      .in('client_id', memberIds)
       .is('distinta_id', null);
 
     if (fetchError || !items) {
@@ -146,7 +161,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-/** GET - Lista distinte */
+/** GET - Lista distinte — filtrate per workspace corrente */
 export async function GET(request: NextRequest) {
   const auth = await requireAdmin();
   if (!auth) {
@@ -162,6 +177,23 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Isolamento multi-tenant: solo distinte dei membri del workspace corrente
+    const workspaceId = auth.workspace?.id;
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace non trovato' }, { status: 403 });
+    }
+
+    const { data: members } = await supabaseAdmin
+      .from('workspace_members')
+      .select('user_id')
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'active');
+
+    const memberIds = (members || []).map((m: any) => m.user_id);
+    if (memberIds.length === 0) {
+      return NextResponse.json({ success: true, distinte: [], total: 0, page: 1, limit: 50 });
+    }
+
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
     const page = parseInt(searchParams.get('page') || '1', 10);
@@ -171,6 +203,7 @@ export async function GET(request: NextRequest) {
     let query = supabaseAdmin
       .from('cod_distinte')
       .select('*', { count: 'exact' })
+      .in('client_id', memberIds)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

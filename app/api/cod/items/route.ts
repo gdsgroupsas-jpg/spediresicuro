@@ -32,6 +32,24 @@ export async function GET(request: NextRequest) {
   }
 
   try {
+    // Isolamento multi-tenant: solo COD dei membri del workspace corrente
+    const workspaceId = auth.workspace?.id;
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace non trovato' }, { status: 403 });
+    }
+
+    // Recupera user_id dei membri del workspace
+    const { data: members } = await supabaseAdmin
+      .from('workspace_members')
+      .select('user_id')
+      .eq('workspace_id', workspaceId)
+      .eq('status', 'active');
+
+    const memberIds = (members || []).map((m: any) => m.user_id);
+    if (memberIds.length === 0) {
+      return NextResponse.json({ success: true, items: [], total: 0, page: 1, limit: 50 });
+    }
+
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get('client_id');
     const status = searchParams.get('status');
@@ -50,6 +68,7 @@ export async function GET(request: NextRequest) {
       `,
         { count: 'exact' }
       )
+      .in('client_id', memberIds)
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

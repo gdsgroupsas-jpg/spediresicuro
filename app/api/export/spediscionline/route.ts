@@ -20,41 +20,6 @@ import type { AuthContext } from '@/lib/auth-context';
 export const dynamic = 'force-dynamic';
 
 /**
- * Helper: Ottiene user_id Supabase da email NextAuth
- */
-async function getSupabaseUserIdFromEmail(email: string): Promise<string | null> {
-  try {
-    const { data: profile, error } = await supabaseAdmin
-      .from('user_profiles')
-      .select('supabase_user_id')
-      .eq('email', email)
-      .single();
-
-    if (!error && profile?.supabase_user_id) {
-      return profile.supabase_user_id;
-    }
-
-    const {
-      data: { users },
-      error: authError,
-    } = await supabaseAdmin.auth.admin.listUsers();
-    if (!authError && users) {
-      const supabaseUser = users.find((u: any) => u.email === email);
-      if (supabaseUser) {
-        await supabaseAdmin
-          .from('user_profiles')
-          .upsert({ email, supabase_user_id: supabaseUser.id }, { onConflict: 'email' });
-        return supabaseUser.id;
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error('⚠️ Errore getSupabaseUserIdFromEmail:', error);
-    return null;
-  }
-}
-
-/**
  * Helper per pulire stringhe CSV (rimuove punto e virgola che romperebbero il formato)
  */
 function cleanString(str: string | null | undefined): string {
@@ -89,55 +54,32 @@ export async function GET() {
       isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
     };
 
-    // ⚠️ IMPORTANTE: Se Supabase non è configurato, usa JSON locale
+    // Workspace obbligatorio per isolamento multi-tenant
+    const workspaceId = context.workspace?.id;
+    if (!workspaceId) {
+      return NextResponse.json({ error: 'Workspace non trovato' }, { status: 403 });
+    }
+
     if (!isSupabaseConfigured()) {
-      console.log('📁 [JSON] Supabase non configurato, uso database JSON locale per export');
-      // Usa getSpedizioni che gestisce automaticamente il fallback
       const tutteSpedizioni = await getSpedizioni(authContext);
-      // Filtra solo quelle con status 'pending' o 'in_preparazione'
       spedizioni = tutteSpedizioni.filter(
         (s: any) => (s.status === 'pending' || s.status === 'in_preparazione') && !s.deleted
       );
-      console.log(`📁 [JSON] Esportate ${spedizioni.length} spedizioni dal database JSON`);
     } else {
-      console.log('🔄 [SUPABASE] Tentativo export da Supabase...');
-      // Usa Supabase se configurato
-      const userId = await getSupabaseUserIdFromEmail(context.actor.email);
-
-      // 1. Preleva SOLO le spedizioni non ancora esportate (status = 'pending')
-      // ⚠️ IMPORTANTE: Filtra per user_id per multi-tenancy
-      let query = supabaseAdmin
+      // Query con filtro workspace_id (isolamento multi-tenant)
+      const { data, error } = await supabaseAdmin
         .from('shipments')
         .select('*')
+        .eq('workspace_id', workspaceId)
         .eq('status', 'pending')
         .order('created_at', { ascending: false });
 
-      // Filtra per user_id se disponibile (multi-tenancy)
-      if (userId) {
-        query = query.eq('user_id', userId);
-      } else {
-        // Se non trovato user_id, usa fallback: filtra per email nel campo notes
-        // (per compatibilità con vecchi dati senza user_id)
-        console.warn(
-          `⚠️ Nessun user_id trovato per ${context.actor.email}, esporto tutte le spedizioni pending`
-        );
-      }
-
-      const { data, error } = await query;
-
       if (error) {
-        console.error('❌ [SUPABASE] Errore query:', error.message);
-        console.log('📁 [FALLBACK] Uso database JSON locale');
-        // Fallback a JSON se errore Supabase
-        const tutteSpedizioni = await getSpedizioni(authContext);
-        spedizioni = tutteSpedizioni.filter(
-          (s: any) => (s.status === 'pending' || s.status === 'in_preparazione') && !s.deleted
-        );
-        console.log(`📁 [JSON] Esportate ${spedizioni.length} spedizioni dal database JSON`);
-      } else {
-        spedizioni = data || [];
-        console.log(`✅ [SUPABASE] Esportate ${spedizioni.length} spedizioni da Supabase`);
+        console.error('❌ Errore query export:', error.message);
+        return NextResponse.json({ error: 'Errore nel recupero spedizioni' }, { status: 500 });
       }
+
+      spedizioni = data || [];
     }
 
     if (!spedizioni || spedizioni.length === 0) {

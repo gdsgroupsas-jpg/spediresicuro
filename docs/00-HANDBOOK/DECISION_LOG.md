@@ -5,7 +5,7 @@ audience: all
 owner: engineering
 status: active
 source_of_truth: true
-updated: 2026-02-16
+updated: 2026-02-17
 ---
 
 # Decision Log
@@ -127,6 +127,33 @@ Record structural and process decisions for fast AI retrieval.
 - Future: Full migration wallet→workspace planned as Phase 2 (sync trigger, RPC dual-write, source of truth flip)
 - Impact: app/dashboard/page.tsx
 - Tests: 8 new unit tests (dashboard-wallet-balance-source.test.ts), 2874 total tests green, build clean
+
+## 2026-02-17 - Multi-Tenant Isolation Fix (5 endpoint critici)
+
+- Decision: Chiudere 5 buchi di sicurezza multi-tenant identificati dall'audit CTO
+- Problem: Diversi endpoint usavano `supabaseAdmin` (bypassa RLS) senza filtro `workspace_id`, esponendo dati cross-workspace
+- Vulnerabilità chiuse:
+  1. **Export Spedisci.Online** (`/api/export/spediscionline`): esportava TUTTE le spedizioni pending senza filtro workspace. Rimossa anche `auth.admin.listUsers()` (information disclosure). Fix: `.eq('workspace_id', workspaceId)` + fail-closed (403 se workspace mancante)
+  2. **Fatture** (`getInvoices` in `actions/invoices.ts`): ritornava TUTTE le fatture globali. La tabella `invoices` non ha workspace_id (TODO: migration). Fix temporaneo: filtro via `workspace_members` → `.in('user_id', memberIds)`
+  3. **COD Items/Distinte** (`/api/cod/items`, `/api/cod/distinte`): nessun filtro workspace su GET/POST. Le tabelle `cod_*` non hanno workspace_id (TODO: migration). Fix: filtro via `workspace_members` → `.in('client_id', memberIds)` + validazione ownership su POST
+  4. **Ricerca Destinatari** (`/api/recipients/search`): filtrava solo per `user_id`, mancava `workspace_id`. Fix: `.eq('workspace_id', workspaceId)` su entrambe le query (recenti + ILIKE)
+  5. **Tracking pubblico**: nessuna azione — standard universale del settore (tracking number = token di accesso)
+- Architettura: pattern "workspace*members bridge" per tabelle senza colonna workspace_id (invoices, cod*\*)
+- Debito tecnico residuo: invoices e cod\_\* necessitano migration per aggiungere colonna `workspace_id` + backfill
+- Impact: 5 file modificati, 4 test file creati (35 test)
+- Tests: 35 nuovi test verdi + 22 pre-esistenti verdi + guardian stabile a 57 violazioni (non aumentate)
+- Build: zero errori compilazione
+- Benchmark: Spedisci.Online Enterprise usa subdomain isolation per-account — stesso livello di protezione ora raggiunto
+
+## 2026-02-17 - Workspace-Scoped Query Builder (architettura anti-leak)
+
+- Decision: Creato `workspaceQuery()` wrapper che forza `workspace_id` su 29 tabelle multi-tenant
+- Problem: Errori umani ripetuti — ogni sviluppatore deve ricordarsi di aggiungere `.eq('workspace_id', ...)` manualmente
+- Solution: `lib/db/workspace-query.ts` — wrapper architetturale che intercetta select/insert/update/delete
+- Guardian test: `tests/unit/workspace-query-guardian.test.ts` scansiona il codice e conta usi diretti di `supabaseAdmin` su tabelle protette
+- Baseline: 57 violazioni in 46 file (da ridurre a 0 nel tempo). Il numero NON deve MAI aumentare.
+- Rule in CLAUDE.md: "Usa workspaceQuery() per tabelle multi-tenant, mai supabaseAdmin.from() direttamente"
+- Impact: lib/db/workspace-query.ts, tests/unit/workspace-query-guardian.test.ts, CLAUDE.md
 
 ## 2026-02-02 - Unified Listini UI (4→1 sidebar entry per role)
 
