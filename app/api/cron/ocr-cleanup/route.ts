@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: error.message,
+          error: 'Errore durante cleanup log OCR',
         },
         { status: 500 }
       );
@@ -114,7 +114,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error.message || 'Internal server error',
+        error: 'Errore durante cleanup log OCR',
       },
       { status: 500 }
     );

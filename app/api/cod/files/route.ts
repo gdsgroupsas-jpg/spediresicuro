@@ -40,7 +40,10 @@ export async function GET() {
 
     if (error) {
       console.error('[COD Files] Error:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante il caricamento file COD' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -49,6 +52,6 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error('[COD Files] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante il caricamento file COD' }, { status: 500 });
   }
 }

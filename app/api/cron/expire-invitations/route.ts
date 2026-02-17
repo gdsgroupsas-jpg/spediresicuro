@@ -39,7 +39,10 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[CRON] expire-invitations error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante scadenza inviti workspace' },
+        { status: 500 }
+      );
     }
 
     const expiredCount = data || 0;
@@ -52,7 +55,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[CRON] expire-invitations exception:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Errore durante scadenza inviti workspace' },
+      { status: 500 }
+    );
   }
 }
 

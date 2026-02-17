@@ -23,39 +23,6 @@ import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
 
 /**
- * DEPRECATED: Legacy function, migrato a getWorkspaceAuth() + isSuperAdmin()
- * Mantenuto per compatibilità temporanea, ma NON usare in nuovo codice
- */
-async function isCurrentUserAdmin_DEPRECATED(): Promise<{
-  isAdmin: boolean;
-  userId?: string;
-  isSuperAdmin?: boolean;
-}> {
-  console.warn(
-    '⚠️ [DEPRECATED] isCurrentUserAdmin() is deprecated. Use getWorkspaceAuth() + isSuperAdmin() instead.'
-  );
-
-  try {
-    const context = await getWorkspaceAuth();
-
-    if (!context) {
-      return { isAdmin: false };
-    }
-
-    const isAdmin = isSuperAdmin(context);
-
-    return {
-      isAdmin,
-      isSuperAdmin: isAdmin,
-      userId: context.target.id,
-    };
-  } catch (error: any) {
-    console.error('Errore verifica Admin:', error);
-    return { isAdmin: false };
-  }
-}
-
-/**
  * Server Action: Ricarica wallet dell'utente corrente
  *
  * Se l'utente è admin/superadmin, può ricaricare direttamente.

@@ -80,7 +80,10 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('[COD Items] Error:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante il caricamento voci COD' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -92,6 +95,6 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[COD Items] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante il caricamento voci COD' }, { status: 500 });
   }
 }

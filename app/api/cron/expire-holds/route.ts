@@ -34,7 +34,10 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[CRON] expire-holds error:', error);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante scadenza hold spedizioni' },
+        { status: 500 }
+      );
     }
 
     const expiredCount = data || 0;
@@ -46,6 +49,6 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[CRON] expire-holds exception:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante scadenza hold spedizioni' }, { status: 500 });
   }
 }

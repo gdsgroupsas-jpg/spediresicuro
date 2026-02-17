@@ -204,7 +204,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[CRON] expire-quotes exception:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Errore durante scadenza preventivi commerciali' },
+      { status: 500 }
+    );
   }
 }
 

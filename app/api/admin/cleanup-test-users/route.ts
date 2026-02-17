@@ -131,7 +131,10 @@ export async function GET(
     });
   } catch (error: any) {
     console.error('Error in cleanup preview:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Errore durante la pulizia utenti di test' },
+      { status: 500 }
+    );
   }
 }
 
@@ -288,6 +291,9 @@ export async function POST(
     });
   } catch (error: any) {
     console.error('Error in cleanup execute:', error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Errore durante la pulizia utenti di test' },
+      { status: 500 }
+    );
   }
 }

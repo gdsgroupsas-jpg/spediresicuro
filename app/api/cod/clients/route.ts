@@ -39,7 +39,10 @@ export async function GET() {
       .not('client_id', 'is', null);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante il caricamento clienti COD' },
+        { status: 500 }
+      );
     }
 
     const uniqueIds = [...new Set((items || []).map((i) => i.client_id).filter(Boolean))];
@@ -61,6 +64,9 @@ export async function GET() {
     return NextResponse.json({ success: true, clients });
   } catch (error: any) {
     console.error('[COD Clients] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Errore durante il caricamento clienti COD' },
+      { status: 500 }
+    );
   }
 }

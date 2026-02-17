@@ -61,7 +61,10 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('[COD Disputes] Error:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante la gestione reclami COD' },
+        { status: 500 }
+      );
     }
 
     // Stats aggregate
@@ -88,7 +91,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[COD Disputes] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante la gestione reclami COD' }, { status: 500 });
   }
 }
 
@@ -146,7 +149,10 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[COD Disputes] Errore creazione:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante la gestione reclami COD' },
+        { status: 500 }
+      );
     }
 
     await writeAuditLog({
@@ -160,7 +166,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, dispute: data });
   } catch (error: any) {
     console.error('[COD Disputes] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante la gestione reclami COD' }, { status: 500 });
   }
 }
 
@@ -208,12 +214,15 @@ export async function PATCH(request: NextRequest) {
 
     if (error) {
       console.error('[COD Disputes] Errore risoluzione:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante la gestione reclami COD' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true, dispute: data });
   } catch (error: any) {
     console.error('[COD Disputes] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante la gestione reclami COD' }, { status: 500 });
   }
 }

@@ -49,7 +49,10 @@ export async function GET(request: Request) {
     });
   } catch (error: any) {
     console.error('[CRON] Automation dispatcher error:', error);
-    return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: 'Errore durante dispatch automazioni' },
+      { status: 500 }
+    );
   }
 }
 

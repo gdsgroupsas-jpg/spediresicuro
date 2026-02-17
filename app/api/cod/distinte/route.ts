@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[COD Distinte] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante la gestione distinte COD' }, { status: 500 });
   }
 }
 
@@ -198,7 +198,10 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('[COD Distinte] Error:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante la gestione distinte COD' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({
@@ -210,7 +213,7 @@ export async function GET(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[COD Distinte] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante la gestione distinte COD' }, { status: 500 });
   }
 }
 
@@ -264,7 +267,10 @@ export async function PATCH(request: NextRequest) {
 
     if (error) {
       console.error('[COD Distinte] Errore aggiornamento:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante la gestione distinte COD' },
+        { status: 500 }
+      );
     }
 
     // Aggiorna items della distinta come rimborsati
@@ -333,7 +339,7 @@ export async function PATCH(request: NextRequest) {
     });
   } catch (error: any) {
     console.error('[COD Distinte] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante la gestione distinte COD' }, { status: 500 });
   }
 }
 
@@ -382,7 +388,10 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       console.error('[COD Distinte] Errore eliminazione:', error.message);
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: 'Errore durante la gestione distinte COD' },
+        { status: 500 }
+      );
     }
 
     // Audit log
@@ -396,6 +405,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error: any) {
     console.error('[COD Distinte] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: 'Errore durante la gestione distinte COD' }, { status: 500 });
   }
 }

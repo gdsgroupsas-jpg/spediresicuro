@@ -186,6 +186,9 @@ export async function GET() {
     });
   } catch (error: any) {
     console.error('[COD Forecast] Error:', error.message);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Errore durante il calcolo previsioni COD' },
+      { status: 500 }
+    );
   }
 }
