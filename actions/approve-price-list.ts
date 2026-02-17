@@ -46,6 +46,8 @@ export async function approvePriceListAction(
       return { success: false, error: 'Utente non trovato' };
     }
 
+    const workspaceId = context.workspace.id;
+
     // Verifica permessi
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isReseller = user.is_reseller === true;
@@ -121,7 +123,7 @@ export async function approvePriceListAction(
     }
 
     // ✨ APPROVAZIONE: Cambia status da draft → active
-    await updatePriceList(priceListId, { status: 'active' }, user.id);
+    await updatePriceList(priceListId, { status: 'active' }, user.id, workspaceId);
 
     return {
       success: true,

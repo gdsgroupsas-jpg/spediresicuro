@@ -44,8 +44,10 @@ export async function getSupplierPriceListConfig(priceListId: string): Promise<{
       return { success: false, error: 'Utente non trovato' };
     }
 
+    const workspaceId = context.workspace.id;
+
     // Verifica che il listino esista e appartenga all'utente
-    const priceList = await getPriceListById(priceListId);
+    const priceList = await getPriceListById(priceListId, workspaceId);
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };
     }
@@ -142,6 +144,8 @@ export async function upsertSupplierPriceListConfig(
       return { success: false, error: 'Utente non trovato' };
     }
 
+    const workspaceId = context.workspace.id;
+
     // Verifica permessi
     const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
     const isReseller = user.is_reseller === true;
@@ -155,7 +159,7 @@ export async function upsertSupplierPriceListConfig(
     }
 
     // Verifica che il listino esista e appartenga all'utente
-    const priceList = await getPriceListById(input.price_list_id);
+    const priceList = await getPriceListById(input.price_list_id, workspaceId);
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };
     }
@@ -394,8 +398,10 @@ export async function deleteSupplierPriceListConfig(priceListId: string): Promis
       return { success: false, error: 'Utente non trovato' };
     }
 
+    const workspaceId = context.workspace.id;
+
     // Verifica che il listino esista e appartenga all'utente
-    const priceList = await getPriceListById(priceListId);
+    const priceList = await getPriceListById(priceListId, workspaceId);
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };
     }

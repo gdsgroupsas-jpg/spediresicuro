@@ -11,6 +11,7 @@ import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { findUserByEmail } from '@/lib/database';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 import { getUserWorkspaceId } from '@/lib/db/user-helpers';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 
 export async function DELETE(
   request: NextRequest,
@@ -46,7 +47,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Supabase non configurato' }, { status: 503 });
     }
 
-    const { data: shipment, error: shipmentError } = await supabaseAdmin
+    // Isolamento multi-tenant: admin opera nel proprio workspace
+    const adminWorkspaceId = context.workspace?.id;
+    const wq = adminWorkspaceId ? workspaceQuery(adminWorkspaceId) : supabaseAdmin;
+
+    const { data: shipment, error: shipmentError } = await wq
       .from('shipments')
       .select('id, user_id, tracking_number, shipment_id_external, status, final_price')
       .eq('id', shipmentId)
@@ -56,8 +61,8 @@ export async function DELETE(
       return NextResponse.json({ error: 'Spedizione non trovata' }, { status: 404 });
     }
 
-    // 5. Soft delete spedizione (come admin, può cancellare qualsiasi spedizione)
-    const { error: deleteError } = await supabaseAdmin
+    // 5. Soft delete spedizione (come admin, nel proprio workspace)
+    const { error: deleteError } = await wq
       .from('shipments')
       .update({
         deleted: true,

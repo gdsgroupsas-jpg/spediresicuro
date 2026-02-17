@@ -161,7 +161,7 @@ export async function updatePriceListAction(
     const workspaceId = wsContext.workspace.id;
 
     // Recupera listino esistente
-    const existingPriceList = await getPriceListById(id);
+    const existingPriceList = await getPriceListById(id, workspaceId);
     if (!existingPriceList) {
       return { success: false, error: 'Listino non trovato' };
     }
@@ -196,7 +196,7 @@ export async function updatePriceListAction(
       };
     }
 
-    const updated = await updatePriceList(id, data, user.id);
+    const updated = await updatePriceList(id, data, user.id, workspaceId);
 
     // Logga evento audit
     const changes: Record<string, any> = {};
@@ -832,7 +832,7 @@ export async function getPriceListByIdAction(id: string): Promise<{
     }
 
     // Se autorizzato, recupera il listino
-    const priceList = await getPriceListById(id);
+    const priceList = await getPriceListById(id, workspaceId);
 
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };
@@ -865,7 +865,7 @@ export async function deletePriceListAction(id: string): Promise<{
     const workspaceId = wsContext.workspace.id;
 
     // Recupera listino esistente
-    const existingPriceList = await getPriceListById(id);
+    const existingPriceList = await getPriceListById(id, workspaceId);
     if (!existingPriceList) {
       return { success: false, error: 'Listino non trovato' };
     }
@@ -1435,7 +1435,7 @@ export async function clonePriceListAction(input: ClonePriceListInput): Promise<
     }
 
     // Verifica che il listino sorgente esista
-    const sourcePriceList = await getPriceListById(input.source_price_list_id);
+    const sourcePriceList = await getPriceListById(input.source_price_list_id, workspaceId);
     if (!sourcePriceList) {
       return { success: false, error: 'Listino sorgente non trovato' };
     }
@@ -1470,7 +1470,7 @@ export async function clonePriceListAction(input: ClonePriceListInput): Promise<
     }
 
     // Recupera il listino clonato
-    const clonedPriceList = await getPriceListById(clonedId);
+    const clonedPriceList = await getPriceListById(clonedId, workspaceId);
 
     console.log(
       `✅ [CLONE] Listino ${input.source_price_list_id} clonato come ${clonedId} (${input.name})`
@@ -2166,7 +2166,7 @@ export async function getPriceListAuditEventsAction(
     const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi sul listino
-    const priceList = await getPriceListById(priceListId);
+    const priceList = await getPriceListById(priceListId, workspaceId);
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };
     }

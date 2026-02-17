@@ -199,7 +199,7 @@ export async function updateCustomerPriceListMarginAction(
 
     // Verifica permessi sul listino
     const { getPriceListById } = await import('@/lib/db/price-lists');
-    const priceList = await getPriceListById(priceListId);
+    const priceList = await getPriceListById(priceListId, workspaceId);
 
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };
@@ -238,7 +238,8 @@ export async function updateCustomerPriceListMarginAction(
     const updated = await updatePriceList(
       priceListId,
       { default_margin_percent: marginPercent },
-      user.id
+      user.id,
+      workspaceId
     );
 
     return { success: true, priceList: updated };
@@ -288,7 +289,7 @@ export async function assignCustomerPriceListToMultipleUsersAction(
 
     // Verifica che il listino esista e sia listino cliente
     const { getPriceListById } = await import('@/lib/db/price-lists');
-    const priceList = await getPriceListById(priceListId);
+    const priceList = await getPriceListById(priceListId, workspaceId);
 
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };

@@ -40,7 +40,9 @@ export async function createPriceList(
     insertData.workspace_id = workspaceId;
   }
 
-  const { data: priceList, error } = await supabaseAdmin
+  // Usa workspaceQuery per isolamento multi-tenant se workspace disponibile
+  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+  const { data: priceList, error } = await db
     .from('price_lists')
     .insert(insertData)
     .select()
@@ -56,13 +58,20 @@ export async function createPriceList(
 
 /**
  * Aggiorna listino esistente
+ * @param id - ID listino
+ * @param data - Dati da aggiornare
+ * @param userId - ID utente che aggiorna
+ * @param workspaceId - ID workspace per isolamento multi-tenant (opzionale per retrocompatibilità)
  */
 export async function updatePriceList(
   id: string,
   data: UpdatePriceListInput,
-  userId: string
+  userId: string,
+  workspaceId?: string
 ): Promise<PriceList> {
-  const { data: priceList, error } = await supabaseAdmin
+  // Usa workspaceQuery per isolamento multi-tenant se workspace disponibile
+  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+  const { data: priceList, error } = await db
     .from('price_lists')
     .update({
       ...data,
@@ -83,9 +92,16 @@ export async function updatePriceList(
 
 /**
  * Ottieni listino per ID
+ * @param id - ID listino
+ * @param workspaceId - ID workspace per isolamento multi-tenant (opzionale per retrocompatibilità)
  */
-export async function getPriceListById(id: string): Promise<PriceList | null> {
-  const { data, error } = await supabaseAdmin
+export async function getPriceListById(
+  id: string,
+  workspaceId?: string
+): Promise<PriceList | null> {
+  // Usa workspaceQuery per isolamento multi-tenant se workspace disponibile
+  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+  const { data, error } = await db
     .from('price_lists')
     .select('*, entries:price_list_entries(*)')
     .eq('id', id)
@@ -221,11 +237,13 @@ export async function addPriceListEntries(
  *
  * @param priceListId - ID del listino
  * @param entries - Array di entries da aggiungere/aggiornare
+ * @param workspaceId - ID workspace per isolamento multi-tenant (opzionale per retrocompatibilità)
  * @returns Statistiche: { inserted: number, updated: number, skipped: number }
  */
 export async function upsertPriceListEntries(
   priceListId: string,
-  entries: Omit<PriceListEntry, 'id' | 'price_list_id' | 'created_at'>[]
+  entries: Omit<PriceListEntry, 'id' | 'price_list_id' | 'created_at'>[],
+  workspaceId?: string
 ): Promise<{
   inserted: number;
   updated: number;
@@ -235,6 +253,9 @@ export async function upsertPriceListEntries(
     ...entry,
     price_list_id: priceListId,
   }));
+
+  // Usa workspaceQuery per isolamento multi-tenant se workspace disponibile
+  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
 
   let inserted = 0;
   let updated = 0;
@@ -249,7 +270,7 @@ export async function upsertPriceListEntries(
     for (const entry of batch) {
       try {
         // Cerca entry esistente con stessa combinazione
-        const { data: existing } = await supabaseAdmin
+        const { data: existing } = await db
           .from('price_list_entries')
           .select('id, base_price')
           .eq('price_list_id', priceListId)
@@ -265,7 +286,7 @@ export async function upsertPriceListEntries(
 
           if (priceChanged) {
             // Prezzo diverso: aggiorna
-            const { error: updateError } = await supabaseAdmin
+            const { error: updateError } = await db
               .from('price_list_entries')
               .update({
                 base_price: entry.base_price,
@@ -294,9 +315,7 @@ export async function upsertPriceListEntries(
           }
         } else {
           // Entry non esiste: inserisci nuova
-          const { error: insertError } = await supabaseAdmin
-            .from('price_list_entries')
-            .insert(entry);
+          const { error: insertError } = await db.from('price_list_entries').insert(entry);
 
           if (insertError) {
             // Se errore per duplicato (race condition), prova update
@@ -306,7 +325,7 @@ export async function upsertPriceListEntries(
               insertError.message?.includes('unique')
             ) {
               // Race condition: entry creata da altro processo, prova update
-              const { data: raceExisting } = await supabaseAdmin
+              const { data: raceExisting } = await db
                 .from('price_list_entries')
                 .select('id')
                 .eq('price_list_id', priceListId)
@@ -317,7 +336,7 @@ export async function upsertPriceListEntries(
                 .maybeSingle();
 
               if (raceExisting) {
-                await supabaseAdmin
+                await db
                   .from('price_list_entries')
                   .update({
                     base_price: entry.base_price,

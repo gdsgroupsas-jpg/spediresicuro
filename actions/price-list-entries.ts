@@ -41,6 +41,7 @@ export async function updatePriceListEntryAction(
       account_type: wsContext.actor.account_type,
       is_reseller: wsContext.actor.is_reseller,
     };
+    const workspaceId = wsContext.workspace.id;
 
     // Recupera entry per verificare permessi sul listino
     const { data: entry, error: entryError } = await supabaseAdmin
@@ -54,7 +55,7 @@ export async function updatePriceListEntryAction(
     }
 
     // Verifica permessi sul listino
-    const priceList = await getPriceListById(entry.price_list_id);
+    const priceList = await getPriceListById(entry.price_list_id, workspaceId);
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };
     }
@@ -146,9 +147,10 @@ export async function createPriceListEntryAction(
       account_type: wsContext.actor.account_type,
       is_reseller: wsContext.actor.is_reseller,
     };
+    const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi sul listino
-    const priceList = await getPriceListById(priceListId);
+    const priceList = await getPriceListById(priceListId, workspaceId);
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };
     }
@@ -217,6 +219,7 @@ export async function deletePriceListEntryAction(entryId: string): Promise<{
       account_type: wsContext.actor.account_type,
       is_reseller: wsContext.actor.is_reseller,
     };
+    const workspaceId = wsContext.workspace.id;
 
     // Recupera entry per verificare permessi sul listino
     const { data: entry, error: entryError } = await supabaseAdmin
@@ -230,7 +233,7 @@ export async function deletePriceListEntryAction(entryId: string): Promise<{
     }
 
     // Verifica permessi sul listino
-    const priceList = await getPriceListById(entry.price_list_id);
+    const priceList = await getPriceListById(entry.price_list_id, workspaceId);
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };
     }
@@ -299,9 +302,10 @@ export async function upsertPriceListEntriesAction(
       account_type: wsContext.actor.account_type,
       is_reseller: wsContext.actor.is_reseller,
     };
+    const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi sul listino
-    const priceList = await getPriceListById(priceListId);
+    const priceList = await getPriceListById(priceListId, workspaceId);
     if (!priceList) {
       return { success: false, error: 'Listino non trovato' };
     }
