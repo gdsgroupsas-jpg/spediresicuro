@@ -312,7 +312,6 @@ export async function getResellerFiscalReport(
 
     console.log('[FISCAL_REPORT] Current user:', {
       id: currentUser.id,
-      email: currentUser.email,
       is_reseller: currentUser.is_reseller,
       account_type: currentUser.account_type,
     });
@@ -399,7 +398,10 @@ export async function getResellerFiscalReport(
     // 4. Query spedizioni nel periodo per tutti i clienti (workspace-scoped)
     const resellerWsId =
       currentUser.primary_workspace_id || (await getUserWorkspaceId(currentUser.id));
-    const wq = resellerWsId ? workspaceQuery(resellerWsId) : supabaseAdmin;
+    if (!resellerWsId) {
+      return { success: false, error: 'Workspace non configurato' };
+    }
+    const wq = workspaceQuery(resellerWsId);
     const { data: shipments, error: shipmentsError } = await wq
       .from('shipments')
       .select(
@@ -592,7 +594,10 @@ export async function getResellerMarginByProvider(
     // Query spedizioni dei clienti con courier_config_id (workspace-scoped)
     const marginWsId =
       currentUser.primary_workspace_id || (await getUserWorkspaceId(currentUser.id));
-    const wq = marginWsId ? workspaceQuery(marginWsId) : supabaseAdmin;
+    if (!marginWsId) {
+      return { success: false, error: 'Workspace non configurato' };
+    }
+    const wq = workspaceQuery(marginWsId);
     const { data, error } = await wq
       .from('shipments')
       .select(

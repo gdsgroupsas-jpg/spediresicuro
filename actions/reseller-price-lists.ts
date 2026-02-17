@@ -60,6 +60,20 @@ export async function resellerCloneSupplierPriceListAction(
       };
     }
 
+    // Validazione input
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!sourcePriceListId || !uuidRegex.test(sourcePriceListId)) {
+      return { success: false, error: 'ID listino non valido' };
+    }
+    if (
+      !newName ||
+      typeof newName !== 'string' ||
+      newName.trim().length === 0 ||
+      newName.trim().length > 200
+    ) {
+      return { success: false, error: 'Nome listino non valido (1-200 caratteri)' };
+    }
+
     // Valida margini
     if (marginType === 'percent' && marginValue < -100) {
       return {
@@ -89,7 +103,7 @@ export async function resellerCloneSupplierPriceListAction(
       console.error('Errore clonazione listino:', error);
       return {
         success: false,
-        error: error.message || 'Errore durante la clonazione del listino',
+        error: 'Errore durante la clonazione del listino',
       };
     }
 
@@ -126,7 +140,7 @@ export async function resellerCloneSupplierPriceListAction(
     console.error('Errore resellerCloneSupplierPriceListAction:', error);
     return {
       success: false,
-      error: error.message || 'Errore sconosciuto',
+      error: 'Errore durante la clonazione del listino',
     };
   }
 }
@@ -182,7 +196,7 @@ export async function resellerAssignPriceListAction(
       console.error('Errore assegnazione listino:', error);
       return {
         success: false,
-        error: error.message || "Errore durante l'assegnazione del listino",
+        error: "Errore durante l'assegnazione del listino",
       };
     }
 
@@ -194,7 +208,7 @@ export async function resellerAssignPriceListAction(
     console.error('Errore resellerAssignPriceListAction:', error);
     return {
       success: false,
-      error: error.message || 'Errore sconosciuto',
+      error: "Errore durante l'assegnazione del listino",
     };
   }
 }
@@ -263,7 +277,7 @@ export async function getResellerSubUsersAction(): Promise<{
     };
   } catch (error: any) {
     console.error('Errore getResellerSubUsersAction:', error);
-    return { success: false, error: error.message || 'Errore sconosciuto' };
+    return { success: false, error: 'Errore recupero sub-users' };
   }
 }
 
@@ -314,7 +328,7 @@ export async function getResellerSupplierPriceListsAction(): Promise<{
 
     if (error) {
       console.error('Errore recupero listini supplier:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: 'Errore recupero listini supplier' };
     }
 
     return {
@@ -323,7 +337,7 @@ export async function getResellerSupplierPriceListsAction(): Promise<{
     };
   } catch (error: any) {
     console.error('Errore getResellerSupplierPriceListsAction:', error);
-    return { success: false, error: error.message || 'Errore sconosciuto' };
+    return { success: false, error: 'Errore recupero listini supplier' };
   }
 }
 
@@ -427,7 +441,7 @@ export async function updateResellerPriceListMarginAction(
 
     if (error) {
       console.error('Errore aggiornamento margine:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: 'Errore aggiornamento margine listino' };
     }
 
     // ✨ FIX: Restituisci data (risultato della query) invece di priceList (non definito)
@@ -441,7 +455,7 @@ export async function updateResellerPriceListMarginAction(
     return { success: true, priceList: data as PriceList };
   } catch (error: any) {
     console.error('Errore updateResellerPriceListMarginAction:', error);
-    return { success: false, error: error.message || 'Errore sconosciuto' };
+    return { success: false, error: 'Errore aggiornamento margine listino' };
   }
 }
 
@@ -499,13 +513,13 @@ export async function activateResellerPriceListAction(priceListId: string): Prom
 
     if (error) {
       console.error('Errore attivazione listino:', error);
-      return { success: false, error: error.message };
+      return { success: false, error: 'Errore attivazione listino' };
     }
 
     return { success: true };
   } catch (error: any) {
     console.error('Errore activateResellerPriceListAction:', error);
-    return { success: false, error: error.message || 'Errore sconosciuto' };
+    return { success: false, error: 'Errore attivazione listino' };
   }
 }
 
@@ -635,7 +649,7 @@ export async function importPriceListEntriesAction(
     console.error('Errore importPriceListEntriesAction:', error);
     return {
       success: false,
-      error: error.message || 'Errore sconosciuto',
+      error: 'Errore importazione entries listino',
     };
   }
 }

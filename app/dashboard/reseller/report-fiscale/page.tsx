@@ -14,10 +14,11 @@
  */
 
 import { Download, FileSpreadsheet, RefreshCw, ShieldAlert } from 'lucide-react';
-import { useSession } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { Toaster, toast } from 'sonner';
+
+import { useResellerAuth } from '@/hooks/use-reseller-auth';
 
 import DashboardNav from '@/components/dashboard-nav';
 import { QueryProvider } from '@/components/providers/query-provider';
@@ -220,38 +221,9 @@ function ReportFiscaleContent() {
 }
 
 export default function ReportFiscalePage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const { isAuthorized, isLoading, status } = useResellerAuth();
 
-  // Auth + role check
-  useEffect(() => {
-    async function checkAccess() {
-      if (status === 'loading') return;
-      if (status === 'unauthenticated' || !session?.user?.email) {
-        router.push('/auth/signin');
-        return;
-      }
-      try {
-        const res = await fetch('/api/user/info');
-        if (res.ok) {
-          const data = await res.json();
-          const u = data.user || data;
-          const accountType = u.account_type || u.accountType;
-          setIsAuthorized(
-            accountType === 'superadmin' || accountType === 'admin' || u.is_reseller === true
-          );
-        } else {
-          setIsAuthorized(false);
-        }
-      } catch {
-        setIsAuthorized(false);
-      }
-    }
-    checkAccess();
-  }, [session, status, router]);
-
-  if (status === 'loading' || isAuthorized === null) {
+  if (status === 'loading' || isLoading || isAuthorized === null) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />

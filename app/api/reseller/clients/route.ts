@@ -95,6 +95,16 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email non valida' }, { status: 400 });
     }
 
+    // Validazione password se fornita dall'utente
+    if (password) {
+      if (typeof password !== 'string' || password.trim().length < 8 || password.length > 128) {
+        return NextResponse.json(
+          { error: 'La password deve essere tra 8 e 128 caratteri' },
+          { status: 400 }
+        );
+      }
+    }
+
     // Validazione campi obbligatori
     if (
       !nome ||
@@ -314,7 +324,7 @@ export async function POST(request: NextRequest) {
       }
 
       return NextResponse.json(
-        { error: rpcError.message || 'Errore durante la creazione del cliente' },
+        { error: 'Errore durante la creazione del cliente' },
         { status: 500 }
       );
     }
@@ -323,10 +333,9 @@ export async function POST(request: NextRequest) {
     const clientId = rpcResult?.client_id;
     const clientEmail = rpcResult?.email;
 
-    console.log('✅ [RESELLER CLIENTS] Cliente creato ATOMICAMENTE:', {
+    console.log('✅ [RESELLER CLIENTS] Cliente creato:', {
       resellerId,
       clientId,
-      clientEmail,
       tipoCliente,
       priceListId: priceListId || 'none',
     });
@@ -353,7 +362,7 @@ export async function POST(request: NextRequest) {
         resellerName: resellerName || undefined,
         resellerCompany: resellerCompanyName || undefined,
       });
-      console.log('✅ [RESELLER CLIENTS] Email premium di benvenuto inviata a:', emailLower);
+      console.log('✅ [RESELLER CLIENTS] Email premium di benvenuto inviata a clientId:', clientId);
     } catch (emailError) {
       console.error('⚠️ [RESELLER CLIENTS] Errore invio email benvenuto:', emailError);
       // Non blocchiamo, il cliente è stato creato
@@ -371,7 +380,7 @@ export async function POST(request: NextRequest) {
       priceListAssigned: !!priceListId,
     });
   } catch (error: any) {
-    console.error('❌ [RESELLER CLIENTS] Errore:', error);
+    console.error('❌ [RESELLER CLIENTS] Errore:', error?.message);
     return handleApiError(error, 'POST /api/reseller/clients');
   }
 }

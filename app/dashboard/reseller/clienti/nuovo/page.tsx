@@ -43,7 +43,7 @@ export default function NuovoUtentePage() {
       if (status === 'loading') return;
 
       if (!session?.user?.email) {
-        router.push('/auth/signin');
+        router.push('/login');
         return;
       }
 
@@ -198,7 +198,7 @@ export default function NuovoUtentePage() {
           <p className="text-gray-400 mb-6">
             Devi effettuare il login per accedere a questa pagina.
           </p>
-          <Button onClick={() => router.push('/auth/signin')} variant="outline">
+          <Button onClick={() => router.push('/login')} variant="outline">
             Vai al Login
           </Button>
         </div>

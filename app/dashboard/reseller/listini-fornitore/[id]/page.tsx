@@ -7,6 +7,7 @@
 
 'use client';
 
+import { useResellerAuth } from '@/hooks/use-reseller-auth';
 import { approvePriceListAction } from '@/actions/approve-price-list';
 import { updateCustomerPriceListMarginAction } from '@/actions/customer-price-lists';
 import { upsertPriceListEntriesAction } from '@/actions/price-list-entries';
@@ -41,6 +42,7 @@ import {
   RefreshCw,
   Save,
   Settings,
+  ShieldAlert,
   Trash2,
   Truck,
   Upload,
@@ -113,7 +115,7 @@ function getServiceTypeBadge(serviceType: string) {
   );
 }
 
-export default function PriceListDetailPage() {
+function PriceListDetailContent() {
   const params = useParams();
   const router = useRouter();
   const { data: session } = useSession();
@@ -1292,4 +1294,32 @@ export default function PriceListDetailPage() {
       </div>
     </div>
   );
+}
+
+export default function PriceListDetailPage() {
+  const { isAuthorized, isLoading, status } = useResellerAuth();
+
+  if (status === 'loading' || isLoading || isAuthorized === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />
+      </div>
+    );
+  }
+
+  if (!isAuthorized) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="text-center">
+          <ShieldAlert className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold text-gray-900">Accesso non autorizzato</h2>
+          <p className="text-gray-500 mt-2">
+            Solo i reseller possono accedere ai listini fornitore.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  return <PriceListDetailContent />;
 }

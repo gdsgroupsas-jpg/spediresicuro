@@ -524,7 +524,7 @@ export default function ResellerClientiPage() {
       if (status === 'loading') return;
 
       if (!session?.user?.email) {
-        router.push('/auth/signin');
+        router.push('/login');
         return;
       }
 

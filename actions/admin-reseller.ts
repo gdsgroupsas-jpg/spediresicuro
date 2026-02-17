@@ -61,7 +61,7 @@ async function canViewAllClients(): Promise<{ canView: boolean; userId?: string;
     const accountType = wsContext.actor.account_type;
     const role = wsContext.actor.role;
 
-    console.log('🔍 [canViewAllClients] Verifica per:', wsContext.actor.email);
+    console.log('🔍 [canViewAllClients] Verifica per:', wsContext.actor.id);
 
     // Superadmin può sempre vedere tutto
     if (accountType === 'superadmin') {
@@ -204,7 +204,7 @@ export async function createSubUser(data: {
       console.error('Errore creazione Sub-User:', createError);
       return {
         success: false,
-        error: createError.message || 'Errore durante la creazione del Sub-User.',
+        error: 'Errore durante la creazione del Sub-User.',
       };
     }
 
@@ -278,18 +278,23 @@ export async function createSubUser(data: {
     // 8. Audit log creazione sub-user
     try {
       const wsId = await getUserWorkspaceId(resellerCheck.userId);
-      const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
-      await auditDb.from('audit_logs').insert({
-        action: 'sub_user_created',
-        resource_type: 'user',
-        resource_id: newUser.id,
-        user_id: resellerCheck.userId,
-        workspace_id: wsId,
-        metadata: {
-          sub_user_email: data.email.trim(),
-          sub_user_name: data.name.trim(),
-        },
-      });
+      if (!wsId) {
+        console.warn('Audit log skippato: workspace non trovato per reseller');
+      } else {
+        await workspaceQuery(wsId)
+          .from('audit_logs')
+          .insert({
+            action: 'sub_user_created',
+            resource_type: 'user',
+            resource_id: newUser.id,
+            user_id: resellerCheck.userId,
+            workspace_id: wsId,
+            metadata: {
+              sub_user_email: data.email.trim(),
+              sub_user_name: data.name.trim(),
+            },
+          });
+      }
     } catch (auditError) {
       console.warn('Errore audit log creazione sub-user:', auditError);
     }
@@ -357,7 +362,7 @@ export async function getSubUsers(): Promise<{
         console.error('Errore recupero Sub-Users (superadmin):', error);
         return {
           success: false,
-          error: error.message || 'Errore durante il recupero dei Sub-Users.',
+          error: 'Errore durante il recupero dei Sub-Users.',
         };
       }
 
@@ -388,7 +393,7 @@ export async function getSubUsers(): Promise<{
       console.error('Errore recupero Sub-Users:', error);
       return {
         success: false,
-        error: error.message || 'Errore durante il recupero dei Sub-Users.',
+        error: 'Errore durante il recupero dei Sub-Users.',
       };
     }
 
@@ -463,7 +468,10 @@ export async function getSubUsersStats(): Promise<{
 
     // 3. Ottieni statistiche spedizioni (workspace-scoped)
     const resellerWsId = await getUserWorkspaceId(resellerCheck.userId);
-    const wq = resellerWsId ? workspaceQuery(resellerWsId) : supabaseAdmin;
+    if (!resellerWsId) {
+      return { success: false, error: 'Workspace non configurato per questo reseller.' };
+    }
+    const wq = workspaceQuery(resellerWsId);
     const { data: shipments, error: shipmentsError } = await wq
       .from('shipments')
       .select('final_price, user_id')
@@ -851,29 +859,34 @@ export async function updateSubUserBillingMode(
       console.error('Errore aggiornamento billing_mode:', updateError);
       return {
         success: false,
-        error: updateError.message || "Errore durante l'aggiornamento del contratto.",
+        error: "Errore durante l'aggiornamento del contratto.",
       };
     }
 
     // 7. Audit log (workspace-scoped)
     try {
       const wsId = await getUserWorkspaceId(resellerCheck.userId);
-      const auditDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
-      await auditDb.from('audit_logs').insert({
-        action: 'billing_mode_changed',
-        resource_type: 'user',
-        resource_id: subUserId,
-        user_email: context.actor.email,
-        user_id: resellerCheck.userId,
-        workspace_id: wsId,
-        metadata: {
-          type: 'billing_mode_change',
-          target_user_id: subUserId,
-          target_email: subUser.email,
-          old_billing_mode: subUser.billing_mode || 'prepagato',
-          new_billing_mode: billingMode,
-        },
-      });
+      if (!wsId) {
+        console.warn('Audit log skippato: workspace non trovato per reseller');
+      } else {
+        await workspaceQuery(wsId)
+          .from('audit_logs')
+          .insert({
+            action: 'billing_mode_changed',
+            resource_type: 'user',
+            resource_id: subUserId,
+            user_email: context.actor.email,
+            user_id: resellerCheck.userId,
+            workspace_id: wsId,
+            metadata: {
+              type: 'billing_mode_change',
+              target_user_id: subUserId,
+              target_email: subUser.email,
+              old_billing_mode: subUser.billing_mode || 'prepagato',
+              new_billing_mode: billingMode,
+            },
+          });
+      }
     } catch (auditError) {
       console.warn('Errore audit log billing_mode:', auditError);
     }
@@ -942,10 +955,15 @@ export async function getSubUsersShipments(limit: number = 50): Promise<{
     // 3. Ottieni spedizioni (workspace-scoped, con limit sicuro)
     const safeLimit = Math.min(Math.max(1, limit), 200);
     const resellerWsId = await getUserWorkspaceId(resellerCheck.userId);
-    const wq = resellerWsId ? workspaceQuery(resellerWsId) : supabaseAdmin;
+    if (!resellerWsId) {
+      return { success: false, error: 'Workspace non configurato per questo reseller.' };
+    }
+    const wq = workspaceQuery(resellerWsId);
     const { data: shipments, error } = await wq
       .from('shipments')
-      .select('*, users!shipments_user_id_fkey(email, name)')
+      .select(
+        'id, tracking_number, status, carrier, service_type, final_price, cost, created_at, user_id, sender_city, sender_province, recipient_city, recipient_province, recipient_name, weight, users!shipments_user_id_fkey(email, name)'
+      )
       .in('user_id', subUserIds)
       .eq('deleted', false)
       .order('created_at', { ascending: false })
@@ -955,7 +973,7 @@ export async function getSubUsersShipments(limit: number = 50): Promise<{
       console.error('Errore recupero spedizioni:', error);
       return {
         success: false,
-        error: error.message || 'Errore durante il recupero delle spedizioni.',
+        error: 'Errore durante il recupero delle spedizioni.',
       };
     }
 
@@ -967,7 +985,7 @@ export async function getSubUsersShipments(limit: number = 50): Promise<{
     console.error('Errore in getSubUsersShipments:', error);
     return {
       success: false,
-      error: error.message || 'Errore sconosciuto.',
+      error: 'Errore durante il recupero delle spedizioni.',
     };
   }
 }
@@ -1039,7 +1057,7 @@ export async function getAllClientsForUser(): Promise<{
       };
     }
 
-    console.log('✅ [getAllClientsForUser] Utente autenticato:', context.actor.email);
+    console.log('✅ [getAllClientsForUser] Utente autenticato:', context.actor.id);
 
     // 2. Verifica che l'utente possa vedere tutti i clienti
     const canViewAll = await canViewAllClients();
@@ -1069,7 +1087,7 @@ export async function getAllClientsForUser(): Promise<{
 
     const { data: resellersFull, error: errorFull } = await supabaseAdmin
       .from('users')
-      .select('id, email, name, company_name, phone, wallet_balance, created_at, reseller_tier')
+      .select('id, email, name, company_name, phone, created_at, reseller_tier')
       .eq('is_reseller', true)
       .order('created_at', { ascending: false });
 
@@ -1086,7 +1104,7 @@ export async function getAllClientsForUser(): Promise<{
 
         const { data: resellersEssential, error: errorEssential } = await supabaseAdmin
           .from('users')
-          .select('id, email, name, wallet_balance, created_at')
+          .select('id, email, name, created_at')
           .eq('is_reseller', true)
           .order('created_at', { ascending: false });
 
@@ -1118,7 +1136,7 @@ export async function getAllClientsForUser(): Promise<{
       });
       return {
         success: false,
-        error: resellersError.message || 'Errore durante il recupero dei Reseller.',
+        error: 'Errore durante il recupero dei Reseller.',
       };
     }
 
@@ -1132,7 +1150,7 @@ export async function getAllClientsForUser(): Promise<{
         let subUsers: any[] = [];
         const { data: subUsersFull, error: subUsersErrorFull } = await supabaseAdmin
           .from('users')
-          .select('id, email, name, company_name, phone, wallet_balance, created_at')
+          .select('id, email, name, company_name, phone, created_at')
           .eq('parent_id', reseller.id)
           .eq('is_reseller', false)
           .order('created_at', { ascending: false });
@@ -1146,7 +1164,7 @@ export async function getAllClientsForUser(): Promise<{
           if (isColumnMissing) {
             const { data: subUsersEssential, error: subUsersErrorEssential } = await supabaseAdmin
               .from('users')
-              .select('id, email, name, wallet_balance, created_at')
+              .select('id, email, name, created_at')
               .eq('parent_id', reseller.id)
               .eq('is_reseller', false)
               .order('created_at', { ascending: false });
@@ -1187,17 +1205,15 @@ export async function getAllClientsForUser(): Promise<{
             };
           }
         } else {
-          subUsers = subUsersFull || [];
+          subUsers = (subUsersFull || []).map((su: any) => ({ ...su, wallet_balance: 0 }));
         }
-
-        const totalWalletBalance = subUsers.reduce((sum, su) => sum + (su.wallet_balance || 0), 0);
 
         return {
           reseller,
           subUsers,
           stats: {
             totalSubUsers: subUsers.length,
-            totalWalletBalance,
+            totalWalletBalance: 0,
           },
         };
       })
@@ -1208,7 +1224,7 @@ export async function getAllClientsForUser(): Promise<{
     let byocClients: any[] = [];
     const { data: byocClientsFull, error: byocErrorFull } = await supabaseAdmin
       .from('users')
-      .select('id, email, name, company_name, phone, wallet_balance, created_at')
+      .select('id, email, name, company_name, phone, created_at')
       .eq('account_type', 'byoc')
       .order('created_at', { ascending: false });
 
@@ -1222,7 +1238,7 @@ export async function getAllClientsForUser(): Promise<{
         console.warn('⚠️ [RESILIENCE] Colonna opzionale mancante per BYOC, uso query essenziali');
         const { data: byocClientsEssential, error: byocErrorEssential } = await supabaseAdmin
           .from('users')
-          .select('id, email, name, wallet_balance, created_at')
+          .select('id, email, name, created_at')
           .eq('account_type', 'byoc')
           .order('created_at', { ascending: false });
 
@@ -1245,18 +1261,14 @@ export async function getAllClientsForUser(): Promise<{
         // Non bloccante, continua con reseller
       }
     } else {
-      byocClients = byocClientsFull || [];
+      byocClients = (byocClientsFull || []).map((b: any) => ({ ...b, wallet_balance: 0 }));
     }
 
     // 6. Calcola statistiche aggregate
     const totalResellers = resellersWithSubUsers.length;
     const totalSubUsers = resellersWithSubUsers.reduce((sum, r) => sum + r.stats.totalSubUsers, 0);
     const totalBYOC = (byocClients || []).length;
-    const totalWalletBalance =
-      resellersWithSubUsers.reduce(
-        (sum, r) => sum + (r.reseller.wallet_balance || 0) + r.stats.totalWalletBalance,
-        0
-      ) + (byocClients || []).reduce((sum, b) => sum + (b.wallet_balance || 0), 0);
+    const totalWalletBalance = 0;
 
     console.log('✅ [getAllClientsForUser] Dati completati:', {
       resellers: resellersWithSubUsers.length,
@@ -1264,7 +1276,6 @@ export async function getAllClientsForUser(): Promise<{
       totalResellers,
       totalSubUsers,
       totalBYOC,
-      totalWalletBalance,
     });
 
     return {
@@ -1288,7 +1299,7 @@ export async function getAllClientsForUser(): Promise<{
     });
     return {
       success: false,
-      error: error.message || 'Errore sconosciuto.',
+      error: 'Errore sconosciuto.',
     };
   }
 }

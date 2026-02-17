@@ -27,9 +27,9 @@ const QuoteAnalytics = dynamic(
 );
 import { BarChart3, FileText, PlusCircle, ShieldAlert } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
-import { useSession } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+
+import { useResellerAuth } from '@/hooks/use-reseller-auth';
 
 function PreventivoContent() {
   const [activeTab, setActiveTab] = useState('pipeline');
@@ -173,38 +173,9 @@ function PreventivoContent() {
 }
 
 export default function PreventivoPage() {
-  const { data: session, status } = useSession();
-  const router = useRouter();
-  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
+  const { isAuthorized, isLoading, status } = useResellerAuth();
 
-  // Auth + role check
-  useEffect(() => {
-    async function checkAccess() {
-      if (status === 'loading') return;
-      if (!session?.user?.email) {
-        router.push('/auth/signin');
-        return;
-      }
-      try {
-        const res = await fetch('/api/user/info');
-        if (res.ok) {
-          const data = await res.json();
-          const u = data.user || data;
-          const accountType = u.account_type || u.accountType;
-          setIsAuthorized(
-            accountType === 'superadmin' || accountType === 'admin' || u.is_reseller === true
-          );
-        } else {
-          setIsAuthorized(false);
-        }
-      } catch {
-        setIsAuthorized(false);
-      }
-    }
-    checkAccess();
-  }, [session, status, router]);
-
-  if (status === 'loading' || isAuthorized === null) {
+  if (status === 'loading' || isLoading || isAuthorized === null) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-orange-500 border-t-transparent" />

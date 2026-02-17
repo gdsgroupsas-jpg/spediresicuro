@@ -12,6 +12,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { supabaseAdmin } from '@/lib/db/client';
 import { setParentImposedFee, getSubUsersWithFees } from '@/lib/services/pricing/platform-fee';
 
 /**
@@ -28,6 +29,23 @@ export async function GET() {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Verifica ruolo reseller
+    const { data: actor } = await supabaseAdmin
+      .from('users')
+      .select('id, is_reseller, account_type')
+      .eq('id', context.actor.id)
+      .single();
+
+    if (
+      !actor ||
+      (!actor.is_reseller && actor.account_type !== 'superadmin' && actor.account_type !== 'admin')
+    ) {
+      return NextResponse.json(
+        { error: 'Solo i reseller possono gestire le fee' },
+        { status: 403 }
+      );
+    }
+
     const subUsers = await getSubUsersWithFees(context.actor.id);
 
     return NextResponse.json({
@@ -36,8 +54,8 @@ export async function GET() {
       count: subUsers.length,
     });
   } catch (error: any) {
-    console.error('[API] GET /reseller/sub-user-fee error:', error);
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    console.error('[API] GET /reseller/sub-user-fee error:', error?.message);
+    return NextResponse.json({ error: 'Errore nel recupero delle fee' }, { status: 500 });
   }
 }
 
@@ -60,6 +78,23 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    // Verifica ruolo reseller
+    const { data: actor } = await supabaseAdmin
+      .from('users')
+      .select('id, is_reseller, account_type')
+      .eq('id', context.actor.id)
+      .single();
+
+    if (
+      !actor ||
+      (!actor.is_reseller && actor.account_type !== 'superadmin' && actor.account_type !== 'admin')
+    ) {
+      return NextResponse.json(
+        { error: 'Solo i reseller possono gestire le fee' },
+        { status: 403 }
+      );
+    }
+
     const body = await request.json();
     const { childUserId, fee, notes } = body;
 
@@ -76,11 +111,28 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'fee cannot be negative' }, { status: 400 });
     }
 
+    if (fee !== null && fee > 100) {
+      return NextResponse.json({ error: 'La fee non può superare 100€' }, { status: 400 });
+    }
+
+    // Validazione notes
+    if (notes !== undefined && notes !== null) {
+      if (typeof notes !== 'string' || notes.length > 500) {
+        return NextResponse.json({ error: 'Note non valide (max 500 caratteri)' }, { status: 400 });
+      }
+    }
+
+    // Validazione UUID childUserId
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(childUserId)) {
+      return NextResponse.json({ error: 'childUserId non valido' }, { status: 400 });
+    }
+
     const result = await setParentImposedFee({ childUserId, fee, notes }, context.actor.id);
 
     return NextResponse.json(result);
   } catch (error: any) {
-    console.error('[API] PUT /reseller/sub-user-fee error:', error);
+    console.error('[API] PUT /reseller/sub-user-fee error:', error?.message);
 
     // Errori noti
     if (error.message?.includes('not a sub-user')) {
@@ -91,6 +143,6 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: error.message }, { status: 403 });
     }
 
-    return NextResponse.json({ error: error.message || 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Errore nell aggiornamento della fee' }, { status: 500 });
   }
 }

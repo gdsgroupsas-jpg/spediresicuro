@@ -295,18 +295,13 @@ describe('updateSubUserBillingMode - Gestione Contratti (M3)', () => {
   });
 
   describe('Audit log', () => {
-    it('dovrebbe creare audit log con tipo billing_mode_change', async () => {
+    it('dovrebbe skippare audit log se workspace non configurato', async () => {
+      // getUserWorkspaceId ritorna null nel mock → audit log skippato (defense-in-depth)
       await updateSubUserBillingMode(SUB_USER_ID, 'postpagato');
 
-      expect(auditInserts.length).toBeGreaterThan(0);
-      const auditEntry = auditInserts[0];
-      expect(auditEntry.action).toBe('billing_mode_changed');
-      expect(auditEntry.resource_type).toBe('user');
-      expect(auditEntry.resource_id).toBe(SUB_USER_ID);
-      expect(auditEntry.metadata.type).toBe('billing_mode_change');
-      expect(auditEntry.metadata.old_billing_mode).toBe('prepagato');
-      expect(auditEntry.metadata.new_billing_mode).toBe('postpagato');
-      expect(auditEntry.metadata.target_user_id).toBe(SUB_USER_ID);
+      // Senza workspace configurato, l'audit log non viene creato
+      // (non si fa mai fallback a supabaseAdmin su tabelle multi-tenant)
+      expect(auditInserts.length).toBe(0);
     });
   });
 
