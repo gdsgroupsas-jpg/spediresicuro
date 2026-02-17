@@ -941,12 +941,12 @@ export async function listPriceListsAction(filters?: {
       if (wsRow?.assigned_price_list_id) extraIds.push(wsRow.assigned_price_list_id);
       if (wsRow?.selling_price_list_id) extraIds.push(wsRow.selling_price_list_id);
 
-      // Query: listini del workspace corrente OPPURE creati dall'utente con workspace_id NULL
-      // Questo copre sia i listini nuovi (con workspace_id) sia i legacy (senza workspace_id)
+      // Query: SOLO listini del workspace corrente (isolamento multi-tenant)
+      // Ogni listino ha workspace_id valorizzato dopo backfill del 2026-02-18
       let query = supabaseAdmin
         .from('price_lists')
         .select('*')
-        .or(`workspace_id.eq.${workspaceId},and(workspace_id.is.null,created_by.eq.${user.id})`)
+        .eq('workspace_id', workspaceId)
         .order('created_at', { ascending: false });
 
       if (filters?.status) query = query.eq('status', filters.status);
@@ -1774,11 +1774,13 @@ export async function listMasterPriceListsAction(): Promise<{
       };
     }
 
-    // Recupera listini master (quelli senza master_list_id)
+    // Recupera listini master del workspace corrente (isolamento multi-tenant)
+    // Il superadmin vede SOLO i listini del proprio workspace, NON quelli dei reseller
     const { data: masterLists, error } = await supabaseAdmin
       .from('price_lists')
       .select('*')
       .is('master_list_id', null)
+      .eq('workspace_id', workspaceId)
       .order('created_at', { ascending: false });
 
     if (error) {

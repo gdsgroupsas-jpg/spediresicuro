@@ -97,11 +97,10 @@ describe('Isolamento Workspace - listPriceListsAction', () => {
       }),
     };
 
-    // Mock: from('price_lists').select().or().order()
-    // La query ora usa .or() per includere workspace_id=wsId OR (workspace_id IS NULL AND created_by=userId)
+    // Mock: from('price_lists').select().eq('workspace_id', wsId).order()
+    // La query filtra SOLO per workspace_id (isolamento multi-tenant)
     const mockPlQuery = {
       select: vi.fn().mockReturnThis(),
-      or: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
       order: vi.fn().mockResolvedValue({
         data: workspaceId === WORKSPACE_A ? [listinoWsA] : [listinoWsB],
@@ -146,7 +145,7 @@ describe('Isolamento Workspace - listPriceListsAction', () => {
     expect(mockGetWorkspaceAuth).toHaveBeenCalled();
   });
 
-  it('filtra per workspace_id (o created_by legacy) nella query price_lists', async () => {
+  it('filtra per workspace_id nella query price_lists (senza clausola OR legacy)', async () => {
     setupSuperadminInWorkspace(WORKSPACE_A);
 
     await listPriceListsAction();
@@ -154,13 +153,14 @@ describe('Isolamento Workspace - listPriceListsAction', () => {
     // Verifica che from('price_lists') sia stato chiamato
     expect(mockFrom).toHaveBeenCalledWith('price_lists');
 
-    // Verifica che .or() sia stato chiamato con filtro workspace_id + fallback created_by
+    // Verifica che .eq() sia stato chiamato con workspace_id (filtro diretto, no OR)
     const plCall = mockFrom.mock.results.find(
       (_: any, i: number) => mockFrom.mock.calls[i][0] === 'price_lists'
     );
     if (plCall) {
       const chain = plCall.value;
-      expect(chain.or).toHaveBeenCalledWith(expect.stringContaining(WORKSPACE_A));
+      // eq viene chiamato con 'workspace_id' come primo argomento
+      expect(chain.eq).toHaveBeenCalledWith('workspace_id', WORKSPACE_A);
     }
   });
 

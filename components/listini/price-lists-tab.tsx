@@ -231,28 +231,28 @@ export function PriceListsTab() {
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-[28%] min-w-[180px]">
                     Listino
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-[12%]">
                     Corriere
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-[8%]">
                     Stato
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-[8%]">
                     IVA
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-[8%]">
                     Priorità
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-[8%]">
                     Utilizzi
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase">
+                  <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase w-[10%]">
                     Validità
                   </th>
-                  <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase">
+                  <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase w-[18%]">
                     Azioni
                   </th>
                 </tr>
@@ -260,21 +260,26 @@ export function PriceListsTab() {
               <tbody className="divide-y divide-gray-100">
                 {filteredLists.map((list) => (
                   <tr key={list.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div>
-                        <div className="font-medium text-gray-900">{list.name}</div>
-                        <div className="text-sm text-gray-500">v{list.version}</div>
+                        <div
+                          className="font-medium text-gray-900 truncate max-w-[260px]"
+                          title={list.name}
+                        >
+                          {list.name}
+                        </div>
+                        <div className="text-xs text-gray-500">v{list.version}</div>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">
                       {list.courier ? (
                         <div className="text-sm text-gray-900">{list.courier.name}</div>
                       ) : (
                         <Badge variant="outline">Multi-corriere</Badge>
                       )}
                     </td>
-                    <td className="px-6 py-4">{getStatusBadge(list.status)}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">{getStatusBadge(list.status)}</td>
+                    <td className="px-3 py-3">
                       {list.vat_mode === 'included' ? (
                         <Badge
                           variant="outline"
@@ -288,14 +293,14 @@ export function PriceListsTab() {
                         </Badge>
                       )}
                     </td>
-                    <td className="px-6 py-4">{getPriorityBadge(list.priority)}</td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">{getPriorityBadge(list.priority)}</td>
+                    <td className="px-3 py-3">
                       <div className="text-sm text-gray-900">{list.usage_count || 0}</div>
                       {list.last_used_at && (
                         <div className="text-xs text-gray-500">{formatDate(list.last_used_at)}</div>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">
                       <div className="text-sm text-gray-900">
                         {list.valid_from ? formatDate(list.valid_from) : '-'}
                       </div>
@@ -305,8 +310,8 @@ export function PriceListsTab() {
                         </div>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-3 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="sm"

@@ -272,28 +272,28 @@ export function MasterPriceListsTab() {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-[30%] min-w-[200px]">
                   Nome Listino
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-[12%]">
                   Corriere
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-[8%]">
                   Tipo
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-[8%]">
                   Stato
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-3 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider w-[8%]">
                   IVA
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Derivazioni
+                <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-[7%]">
+                  Deriv.
                 </th>
-                <th className="px-6 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Assegnazioni
+                <th className="px-3 py-3 text-center text-xs font-semibold text-gray-600 uppercase tracking-wider w-[7%]">
+                  Assegn.
                 </th>
-                <th className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                <th className="px-3 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider w-[20%]">
                   Azioni
                 </th>
               </tr>
@@ -309,16 +309,21 @@ export function MasterPriceListsTab() {
               ) : (
                 filteredLists.map((list) => (
                   <tr key={list.id} className="hover:bg-gray-50">
-                    <td className="px-6 py-4">
+                    <td className="px-4 py-3">
                       <div>
-                        <p className="font-medium text-gray-900">{list.name}</p>
+                        <p
+                          className="font-medium text-gray-900 truncate max-w-[280px]"
+                          title={list.name}
+                        >
+                          {list.name}
+                        </p>
                         <p className="text-xs text-gray-500">v{list.version}</p>
                       </div>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3 text-sm">
                       {list.courier?.name || <span className="text-gray-400">Multi-corriere</span>}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">
                       <Badge
                         variant={
                           list.list_type === 'global'
@@ -331,7 +336,7 @@ export function MasterPriceListsTab() {
                         {list.list_type || 'default'}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">
                       {list.status === 'active' ? (
                         <Badge
                           variant="outline"
@@ -346,7 +351,7 @@ export function MasterPriceListsTab() {
                         </Badge>
                       )}
                     </td>
-                    <td className="px-6 py-4">
+                    <td className="px-3 py-3">
                       {list.vat_mode === 'included' ? (
                         <Badge
                           variant="outline"
@@ -360,10 +365,10 @@ export function MasterPriceListsTab() {
                         </Badge>
                       )}
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-3 py-3 text-center">
                       <Badge variant="secondary">{list.derived_count || 0}</Badge>
                     </td>
-                    <td className="px-6 py-4 text-center">
+                    <td className="px-3 py-3 text-center">
                       <Badge
                         variant="secondary"
                         className="cursor-pointer hover:bg-gray-200"
@@ -372,8 +377,8 @@ export function MasterPriceListsTab() {
                         {list.assignment_count || 0}
                       </Badge>
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                    <td className="px-3 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
                         <Button
                           size="sm"
                           variant="ghost"
