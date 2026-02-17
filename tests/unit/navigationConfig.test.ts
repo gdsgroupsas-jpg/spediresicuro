@@ -219,13 +219,14 @@ describe('navigationConfig - Nested Sections', () => {
     expect(financeSubsection?.items).toHaveLength(5);
   });
 
-  it('should have admin-system subsection with 5 items', () => {
+  it('should have admin-system subsection with 6 items', () => {
     const config = getNavigationForUser('admin');
 
     const adminSection = config.sections.find((s) => s.id === 'admin');
     const systemSubsection = adminSection?.subsections?.find((s) => s.id === 'admin-system');
 
-    expect(systemSubsection?.items).toHaveLength(5);
+    // 6 items: incluso Automazioni Piattaforma
+    expect(systemSubsection?.items).toHaveLength(6);
   });
 });
 

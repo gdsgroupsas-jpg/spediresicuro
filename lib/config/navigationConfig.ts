@@ -478,6 +478,13 @@ const adminSection: NavSection = {
           description: 'Sync automatici e integrazioni',
         },
         {
+          id: 'admin-automazioni-piattaforma',
+          label: 'Automazioni Piattaforma',
+          href: '/dashboard/admin/automazioni',
+          icon: Zap,
+          description: 'Processi automatici governabili',
+        },
+        {
           id: 'admin-config',
           label: 'Configurazioni',
           href: '/dashboard/admin/configurations',

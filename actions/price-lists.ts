@@ -29,6 +29,7 @@ import { writeAuditLog } from '@/lib/security/audit-log';
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-actions';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { validateUUID } from '@/lib/validators';
+import { __clearMasterListCache } from '@/lib/db/price-lists-advanced';
 
 /**
  * Helper: Logga evento listino nel financial_audit_log
@@ -125,6 +126,9 @@ export async function createPriceListAction(data: CreatePriceListInput): Promise
     }
 
     const priceList = await createPriceList(data, user.id, workspaceId);
+
+    // H8 FIX: Invalida cache master list dopo creazione
+    __clearMasterListCache();
 
     return { success: true, priceList };
   } catch (error: any) {
@@ -284,6 +288,9 @@ export async function updatePriceListAction(
         updated
       );
     }
+
+    // H8 FIX: Invalida cache master list dopo aggiornamento
+    __clearMasterListCache();
 
     return { success: true, priceList: updated };
   } catch (error: any) {
@@ -886,6 +893,9 @@ export async function deletePriceListAction(id: string): Promise<{
 
     await deletePriceList(id, workspaceId);
 
+    // H8 FIX: Invalida cache master list dopo eliminazione
+    __clearMasterListCache();
+
     return { success: true };
   } catch (error: any) {
     console.error('Errore eliminazione listino:', error);
@@ -1449,6 +1459,9 @@ export async function clonePriceListAction(input: ClonePriceListInput): Promise<
     console.log(
       `✅ [CLONE] Listino ${input.source_price_list_id} clonato come ${clonedId} (${input.name})`
     );
+
+    // H8 FIX: Invalida cache master list dopo clonazione
+    __clearMasterListCache();
 
     return { success: true, priceList: clonedPriceList };
   } catch (error: any) {

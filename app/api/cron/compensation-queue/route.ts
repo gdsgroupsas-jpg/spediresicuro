@@ -59,8 +59,10 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Cleanup compensation queue completato',
+      message: 'Compensation queue processato (retry + cleanup)',
       processed: result.processed,
+      retried: result.retried,
+      resolved: result.resolved,
       expired: result.expired,
       deleted: result.deleted,
       errors: result.errors,

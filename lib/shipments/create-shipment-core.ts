@@ -12,6 +12,7 @@ import {
   updateShipmentApiSource,
 } from '@/lib/shipments/platform-cost-recorder';
 import { determineApiSource, calculateProviderCost } from '@/lib/pricing/platform-cost-calculator';
+import { calculatePriceFromPriceList } from '@/lib/services/pricing/calculate-from-pricelist';
 import type {
   CourierCreateShipmentRequest,
   CourierCreateShipmentResponse,
@@ -253,33 +254,111 @@ export async function createShipmentCore(params: {
   }
 
   // ============================================
+  // RICALCOLO PREZZO SERVER-SIDE (SICUREZZA)
+  // ============================================
+  // MAI fidarsi del final_price inviato dal client.
+  // Ricalcoliamo sempre dal listino e usiamo il prezzo ricalcolato.
+  // Se il client ha inviato un prezzo, lo confrontiamo per audit.
+  const totalWeight = validated.packages.reduce((sum, p) => sum + p.weight, 0);
+  const targetWorkspaceId = await getUserWorkspaceId(targetId);
+
+  let serverPrice: number | null = null;
+  try {
+    const priceResult = await calculatePriceFromPriceList({
+      userId: targetId,
+      workspaceId: targetWorkspaceId || '',
+      courierCode: validated.carrier || '',
+      weight: totalWeight,
+      destination: {
+        zip: validated.recipient.postalCode,
+        province: validated.recipient.province,
+        city: validated.recipient.city,
+        country: validated.recipient.country || 'IT',
+      },
+      serviceType: 'standard',
+      options: {
+        cashOnDelivery: !!validated.cod?.value,
+        declaredValue: validated.insurance?.value,
+        insurance: !!validated.insurance?.value,
+      },
+    });
+
+    if (priceResult.success && priceResult.price && priceResult.price > 0) {
+      serverPrice = priceResult.price;
+    }
+  } catch (priceError) {
+    console.warn(
+      '[CreateShipment] Errore ricalcolo prezzo server-side, uso client price come fallback:',
+      priceError
+    );
+  }
+
+  // Determina il prezzo finale autorizzato
+  let verifiedFinalPrice: number | undefined;
+
+  if (serverPrice !== null) {
+    // Prezzo ricalcolato disponibile — QUESTO è il prezzo autorevole
+    verifiedFinalPrice = serverPrice;
+
+    // Audit: confronta con prezzo client
+    if (validated.final_price && validated.final_price > 0) {
+      const priceDiff = Math.abs(validated.final_price - serverPrice);
+      const priceDiffPercent = (priceDiff / serverPrice) * 100;
+
+      if (priceDiffPercent > 5) {
+        console.warn('[CreateShipment] PREZZO DIVERGENTE — client vs server:', {
+          clientPrice: validated.final_price,
+          serverPrice,
+          diffPercent: priceDiffPercent.toFixed(1) + '%',
+          userId: targetId?.substring(0, 8) + '...',
+          carrier: validated.carrier,
+          action: 'uso prezzo server (autorevole)',
+        });
+      }
+    }
+  } else if (validated.final_price && validated.final_price > 0) {
+    // Ricalcolo non disponibile (es. nessun listino configurato)
+    // Fallback al prezzo client — ma log warning
+    verifiedFinalPrice = validated.final_price;
+    console.warn('[CreateShipment] Ricalcolo non disponibile, fallback a client price:', {
+      clientPrice: validated.final_price,
+      userId: targetId?.substring(0, 8) + '...',
+    });
+  }
+
+  // ============================================
   // CALCOLO COSTO WALLET (Simplified Debit Logic)
   // ============================================
-  // ✅ REFACTOR 2026-01-28: Scala esattamente final_price (niente stima + conguaglio)
-  // - L'utente paga esattamente quanto vede nel preventivo
-  // - Margini garantiti dal listino, non dall'API response
-  // - BYOC paga solo platform_fee (standard di mercato: Sendcloud, Shippo, etc.)
   const platformFee = await getPlatformFeeSafe(targetId);
 
   const isSuperadmin = user.role === 'SUPERADMIN' || user.role === 'superadmin';
   const isByoc = user.role === 'BYOC' || user.role === 'byoc';
   const isPostpaid = (user as unknown as { billing_mode?: string }).billing_mode === 'postpagato';
 
+  // H3 FIX: Se workspace non configurato, errore chiaro PRIMA di qualsiasi operazione wallet
+  if (!targetWorkspaceId && !isSuperadmin) {
+    return {
+      status: 400,
+      json: {
+        error: 'ACCOUNT_NOT_CONFIGURED',
+        message: 'Configurazione account incompleta: workspace non trovato. Contattare supporto.',
+      },
+    };
+  }
+
   let walletChargeAmount: number;
-  let chargeSource: 'quoted' | 'fallback' | 'byoc_fee';
+  let chargeSource: 'quoted' | 'fallback' | 'byoc_fee' | 'server_verified';
 
   if (isByoc) {
-    // BYOC: Paga solo il platform fee (il costo spedizione lo paga direttamente al corriere)
+    // BYOC: Paga solo il platform fee
     walletChargeAmount = platformFee;
     chargeSource = 'byoc_fee';
-  } else if (validated.final_price && validated.final_price > 0) {
-    // ✅ Usa prezzo ESATTO dal preventivo (calcolato dal listino dell'utente)
-    // Nessun margine: l'utente paga esattamente quanto vede nel preventivo
-    walletChargeAmount = validated.final_price;
-    chargeSource = 'quoted';
+  } else if (verifiedFinalPrice && verifiedFinalPrice > 0) {
+    // Prezzo verificato server-side (da ricalcolo listino o fallback client)
+    walletChargeAmount = verifiedFinalPrice;
+    chargeSource = serverPrice !== null ? 'server_verified' : 'quoted';
   } else {
-    // ⚠️ Fallback: stima conservativa per spedizioni senza preventivo
-    // Questo caso dovrebbe essere raro (API calls dirette senza UI quote)
+    // Nessun prezzo disponibile — stima conservativa
     const fallbackEstimate = 15.0;
     walletChargeAmount = fallbackEstimate + platformFee;
     chargeSource = 'fallback';
@@ -306,10 +385,7 @@ export async function createShipmentCore(params: {
     };
   }
 
-  // ============================================
-  // LOOKUP WORKSPACE_ID PER DUAL-WRITE
-  // ============================================
-  const targetWorkspaceId = await getUserWorkspaceId(targetId);
+  // targetWorkspaceId già calcolato sopra (sezione RICALCOLO PREZZO)
 
   // ============================================
   // WALLET DEBIT PRIMA DELLA CHIAMATA CORRIERE

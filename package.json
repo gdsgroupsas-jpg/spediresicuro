@@ -111,6 +111,7 @@
     "cheerio": "^1.0.0",
     "clsx": "^2.1.0",
     "cmdk": "^1.0.0",
+    "croner": "^10.0.1",
     "date-fns": "^4.1.0",
     "exceljs": "^4.4.0",
     "framer-motion": "^11.0.0",

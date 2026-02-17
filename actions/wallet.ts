@@ -14,6 +14,7 @@
  * - Visualizzare le proprie transazioni
  */
 
+import crypto from 'crypto';
 import { requireWorkspaceAuth, getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { writeWalletAuditLog } from '@/lib/security/audit-log';
@@ -95,6 +96,21 @@ export async function rechargeMyWallet(
 
     // 5. Se l'actor è admin/superadmin, ricarica direttamente il wallet del target
     if (isAdmin) {
+      // M8 FIX: Idempotency key per prevenire doppio accredito da double-click
+      // Hash di actorId + targetId + amount + finestra temporale 10 secondi
+      const idempotencyKey = crypto
+        .createHash('sha256')
+        .update(
+          JSON.stringify({
+            actor: actorId,
+            target: targetId,
+            amount,
+            ts: Math.floor(Date.now() / 10000), // finestra 10s
+          })
+        )
+        .digest('hex')
+        .substring(0, 32);
+
       // Usa la funzione SQL per aggiungere credito (con dual-write workspace)
       const walletWorkspaceId = await getUserWorkspaceId(targetId);
       const { data: txData, error: txError } = await supabaseAdmin.rpc('add_wallet_credit_v2', {
@@ -103,6 +119,7 @@ export async function rechargeMyWallet(
         p_amount: amount,
         p_description: reason,
         p_created_by: actorId, // Actor ID (who clicked)
+        p_idempotency_key: `recharge-${idempotencyKey}`,
       });
 
       if (txError) {

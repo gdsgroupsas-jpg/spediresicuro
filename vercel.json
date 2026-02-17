@@ -43,6 +43,10 @@
     {
       "path": "/api/cron/outreach-executor",
       "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/automation-dispatcher",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

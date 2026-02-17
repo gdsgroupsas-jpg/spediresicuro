@@ -667,16 +667,21 @@ export async function convertLeadToReseller(
       .update({ primary_workspace_id: workspaceId })
       .eq('id', authUserId);
 
-    // 7. Credito iniziale wallet
+    // 7. Credito iniziale wallet (H4 FIX: usa RPC atomica che aggiorna anche workspaces.wallet_balance)
     if (initialCredit && initialCredit > 0) {
-      const walletDb = workspaceQuery(workspaceId as string);
-      await walletDb.from('wallet_transactions').insert({
-        user_id: authUserId,
-        amount: initialCredit,
-        type: 'admin_gift',
-        description: 'Credito iniziale alla conversione da lead',
-        created_by: actorId,
+      const { error: creditError } = await supabaseAdmin.rpc('add_wallet_credit_v2', {
+        p_workspace_id: workspaceId,
+        p_user_id: authUserId,
+        p_amount: initialCredit,
+        p_description: 'Credito iniziale alla conversione da lead',
+        p_created_by: actorId,
+        p_idempotency_key: `lead-convert-${leadId}`,
       });
+
+      if (creditError) {
+        console.error('❌ [Lead Conversion] Errore accredito iniziale:', creditError.message);
+        // Non fare rollback: il reseller esiste gia'. L'admin puo accreditare manualmente.
+      }
     }
 
     // 8. Assegna listino se specificato
