@@ -277,16 +277,19 @@ export async function executeAction(
       );
     }
 
-    // Debit wallet with retry
+    // Debit wallet con deduct_wallet_credit (tipo GIACENZA_ACTION, singola transazione)
     const actionLabel = HOLD_ACTION_LABELS[actionType]?.label || actionType;
     const description = `Giacenza: ${actionLabel} - ${hold.shipment?.tracking_number || ''}`;
 
     const result = await withConcurrencyRetry(
       async () =>
-        await supabaseAdmin.rpc('decrement_wallet_balance', {
+        await supabaseAdmin.rpc('deduct_wallet_credit', {
           p_user_id: userId,
           p_amount: cost,
-          p_idempotency_key: idempotencyKey,
+          p_type: 'GIACENZA_ACTION',
+          p_description: description,
+          p_reference_id: holdId,
+          p_reference_type: 'giacenza_action',
           p_workspace_id: giacenzaWorkspaceId,
         }),
       { operationName: 'giacenza_action_debit' }
@@ -296,23 +299,8 @@ export async function executeAction(
       throw new Error(`Errore addebito wallet: ${result.error.message}`);
     }
 
-    // Record wallet transaction with reference
-    const { data: txData } = await supabaseAdmin
-      .from('wallet_transactions')
-      .insert({
-        user_id: userId,
-        workspace_id: giacenzaWorkspaceId,
-        amount: -cost,
-        type: 'GIACENZA_ACTION',
-        description,
-        reference_type: 'giacenza_action',
-        reference_id: holdId,
-        idempotency_key: idempotencyKey,
-      })
-      .select('id')
-      .single();
-
-    walletTransactionId = txData?.id;
+    // deduct_wallet_credit ritorna UUID della transazione creata
+    walletTransactionId = result.data as string | undefined;
   }
 
   // Update hold record

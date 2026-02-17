@@ -795,17 +795,16 @@ export async function createReseller(data: {
       // Non blocca la creazione del reseller
     }
 
-    // 6. Se c'è credito iniziale, crea transazione wallet
+    // 6. Se c'è credito iniziale, accredita wallet tramite RPC (atomico + workspace tracking)
     if (data.initialCredit && data.initialCredit > 0) {
-      await supabaseAdmin.from('wallet_transactions').insert([
-        {
-          user_id: userId,
-          amount: data.initialCredit,
-          type: 'admin_gift',
-          description: 'Credito iniziale alla creazione account reseller',
-          created_by: superAdminCheck.userId,
-        },
-      ]);
+      const newResellerWorkspaceId = await getUserWorkspaceId(userId);
+      await supabaseAdmin.rpc('add_wallet_credit', {
+        p_user_id: userId,
+        p_amount: data.initialCredit,
+        p_description: 'Credito iniziale alla creazione account reseller',
+        p_created_by: superAdminCheck.userId,
+        p_workspace_id: newResellerWorkspaceId,
+      });
     }
 
     // 7. Se ci sono note, salvale (opzionale, se esiste una tabella notes)
