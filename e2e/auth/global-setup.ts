@@ -46,6 +46,13 @@ const ACCOUNTS: AccountConfig[] = [
     email: process.env.E2E_ADMIN_EMAIL || 'testspediresicuro+e2e.admin@gmail.com',
     password: process.env.E2E_ADMIN_PASSWORD || '',
   },
+  {
+    // Superadmin reale di produzione — accesso completo a tutte le sezioni
+    name: 'superadmin',
+    authFile: path.join(AUTH_DIR, 'superadmin.json'),
+    email: process.env.E2E_SUPERADMIN_EMAIL || 'admin@spediresicuro.it',
+    password: process.env.E2E_SUPERADMIN_PASSWORD || '',
+  },
 ];
 
 /** Verifica se il file di sessione è valido e recente (< 25 giorni) */

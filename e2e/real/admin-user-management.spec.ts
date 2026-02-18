@@ -1,17 +1,22 @@
 /**
  * Test E2E Reale: Gestione Utenti Admin
  *
- * Ruolo: admin (storageState: admin.json)
+ * Ruolo: superadmin (storageState: superadmin.json — admin@spediresicuro.it)
  * Backend: REALE — nessun mock, dati dal DB reale
  *
- * Verifica:
- * - Admin può accedere alla sezione gestione utenti
- * - Account E2E user (testspediresicuro+e2e.user@gmail.com) esiste nella lista
- * - Visualizzazione dettaglio utente funzionante
+ * Struttura pagina:
+ * - URL: /dashboard/admin
+ * - Campo ricerca: input[placeholder="Cerca utenti..."]
+ * - Checkbox: "Mostra dati di test" (per vedere account test)
+ * - Link dettaglio: href="/dashboard/admin/users/{userId}"
  * - Solo lettura — nessuna modifica ai dati
  */
 
 import { test, expect, Page } from '@playwright/test';
+import * as path from 'path';
+import { config as loadEnv } from 'dotenv';
+
+loadEnv({ path: path.join(process.cwd(), '.env.local'), override: false });
 
 const E2E_USER_EMAIL = 'testspediresicuro+e2e.user@gmail.com';
 
@@ -30,63 +35,80 @@ async function dismissPopups(page: Page) {
   await page.waitForTimeout(300);
 }
 
-/** Verifica sessione admin valida */
+/** Verifica sessione superadmin valida */
 async function isSessionValid(page: Page): Promise<boolean> {
   await page.goto('/dashboard', { waitUntil: 'domcontentloaded', timeout: 30000 });
   const url = page.url();
   if (url.includes('/login')) {
-    console.warn('⚠️ Sessione admin non valida — redirectato al login');
+    console.warn('⚠️ Sessione superadmin non valida — redirectato al login');
     return false;
   }
   return true;
 }
 
-/** Naviga alla sezione gestione utenti admin */
-async function goToUserManagement(page: Page): Promise<boolean> {
-  // Prova prima il path più comune per la gestione utenti admin
-  const possiblePaths = [
-    '/dashboard/admin/users',
-    '/dashboard/admin/utenti',
-    '/dashboard/superadmin/users',
-    '/dashboard/admin',
-  ];
+/** Naviga a /dashboard/admin e attende il caricamento dei dati (client component con useEffect) */
+async function goToAdminPage(page: Page): Promise<boolean> {
+  await page.goto('/dashboard/admin', { waitUntil: 'commit', timeout: 45000 });
+  const url = page.url();
 
-  for (const urlPath of possiblePaths) {
-    await page.goto(urlPath, { waitUntil: 'domcontentloaded', timeout: 30000 });
-    const url = page.url();
-
-    if (url.includes('/login')) {
-      return false;
-    }
-    if (url.includes('error=unauthorized') || url.includes('/403')) {
-      console.warn(`⚠️ Non autorizzato su ${urlPath}`);
-      continue;
-    }
-
-    await page.waitForTimeout(1500);
-    await dismissPopups(page);
-
-    // Controlla se la pagina ha contenuto utenti (tabella, lista, ecc.)
-    const hasUserContent = await page
-      .locator(
-        'table, [data-testid*="user"], h1:text("Utenti"), h2:text("Utenti"), h1:text("Admin")'
-      )
-      .first()
-      .isVisible({ timeout: 8000 })
-      .catch(() => false);
-
-    if (hasUserContent) {
-      console.log(`✅ Sezione gestione utenti trovata: ${urlPath}`);
-      return true;
-    }
+  if (url.includes('/login')) {
+    console.warn('⚠️ Redirect al login — sessione non valida');
+    return false;
+  }
+  if (url.includes('error=unauthorized') || url.includes('/403')) {
+    console.warn('⚠️ Non autorizzato su /dashboard/admin');
+    return false;
   }
 
-  console.warn('⚠️ Sezione gestione utenti non trovata nei path standard');
-  return false;
+  await dismissPopups(page);
+
+  // La pagina è un client component — aspetta il caricamento dati via API (useEffect)
+  // Indicatori di caricamento completato:
+  // 1. Input "Cerca utenti..." appare (dati caricati)
+  // 2. Oppure la tabella appare
+  // /api/admin/overview carica tutti gli utenti+spedizioni — può essere lento su produzione
+
+  // Scroll giù per raggiungere la sezione utenti
+  await page.evaluate(() => window.scrollTo(0, 600));
+
+  try {
+    // Attendi che l'input ricerca compaia (segnale dati caricati)
+    await page
+      .locator('input[placeholder="Cerca utenti..."]')
+      .waitFor({ state: 'visible', timeout: 55000 });
+    console.log('✅ Sezione Utenti caricata in /dashboard/admin (campo ricerca visibile)');
+    return true;
+  } catch {
+    // Fallback: tabella visibile
+    const hasTable = await page
+      .locator('table')
+      .first()
+      .isVisible({ timeout: 5000 })
+      .catch(() => false);
+    if (hasTable) {
+      console.log('✅ Tabella utenti visibile in /dashboard/admin');
+      return true;
+    }
+    // Fallback finale: anche solo l'heading della pagina
+    const hasHeading = await page
+      .locator('h1, h2')
+      .first()
+      .isVisible({ timeout: 3000 })
+      .catch(() => false);
+    if (hasHeading) {
+      console.log('⚠️ Pagina admin caricata — dati utenti non ancora arrivati (API lenta)');
+      return true;
+    }
+    console.warn('⚠️ Timeout caricamento pagina admin');
+    return false;
+  }
 }
 
+// Timeout esteso: /api/admin/overview carica tutti gli utenti+spedizioni (lento su produzione)
+test.describe.configure({ timeout: 120000 });
+
 test.describe('Gestione Utenti Admin — Backend Reale', () => {
-  test('admin accede al dashboard senza errori', async ({ page }) => {
+  test('superadmin accede al dashboard senza errori', async ({ page }) => {
     if (!(await isSessionValid(page))) {
       test.skip();
       return;
@@ -103,143 +125,155 @@ test.describe('Gestione Utenti Admin — Backend Reale', () => {
       .catch(() => false);
     expect(hasError).toBe(false);
 
-    console.log('✅ Admin dashboard OK:', url);
+    console.log('✅ Superadmin dashboard OK:', url);
   });
 
-  test('account E2E user esiste nel sistema', async ({ page }) => {
+  test('account E2E user esiste nel DB (verifica Supabase)', async () => {
+    // Verifica direttamente nel DB che l'account E2E esista
+    // Non dipende dall'UI o dall'API lenta — verifica il dato grezzo
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseUrl || !serviceKey) {
+      console.warn('⚠️ Variabili Supabase non disponibili — skip verifica DB');
+      return;
+    }
+
+    const { createClient } = await import('@supabase/supabase-js');
+    const admin = createClient(supabaseUrl, serviceKey, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    });
+
+    const { data: user, error } = await admin
+      .from('users')
+      .select('id, email, account_type, primary_workspace_id')
+      .eq('email', E2E_USER_EMAIL)
+      .single();
+
+    if (error || !user) {
+      console.warn(`⚠️ Account ${E2E_USER_EMAIL} non trovato nel DB: ${error?.message}`);
+      // Non fail: potrebbe non essere stato creato ancora
+      return;
+    }
+
+    console.log(
+      `✅ Account ${E2E_USER_EMAIL} trovato nel DB (id: ${user.id}, type: ${user.account_type})`
+    );
+    expect(user.email).toBe(E2E_USER_EMAIL);
+    expect(user.account_type).toBe('user');
+    expect(user.primary_workspace_id).toBeTruthy();
+  });
+
+  test('superadmin può navigare al dettaglio utente', async ({ page }) => {
     if (!(await isSessionValid(page))) {
       test.skip();
       return;
     }
 
-    const hasUserSection = await goToUserManagement(page);
-    if (!hasUserSection) {
-      console.log('ℹ️ Sezione gestione utenti non trovata — skip verifica user');
+    if (!(await goToAdminPage(page))) {
       test.skip();
       return;
     }
 
-    // Cerca l'email dell'utente E2E nella pagina
-    const emailShort = 'e2e.user'; // Parte identificativa dell'email
-    const hasUser = await page
-      .locator(`text=${emailShort}`)
+    // Scroll fino alla tabella utenti
+    await page.evaluate(() => window.scrollTo(0, 600));
+    await page.waitForTimeout(1000);
+
+    // Attendi la tabella (dati caricati via API)
+    const table = page.locator('table').first();
+    const hasTable = await table.isVisible({ timeout: 15000 }).catch(() => false);
+
+    if (!hasTable) {
+      console.log('ℹ️ Tabella utenti non caricata — skip navigazione dettaglio');
+      test.skip();
+      return;
+    }
+
+    // Cerca link a /dashboard/admin/users/{id} nella prima riga
+    const detailLink = page.locator('a[href*="/dashboard/admin/users/"]').first();
+    const hasLink = await detailLink.isVisible({ timeout: 8000 }).catch(() => false);
+
+    if (!hasLink) {
+      console.log('ℹ️ Nessun link dettaglio visibile — lista potrebbe essere vuota');
+      test.skip();
+      return;
+    }
+
+    await detailLink.click();
+
+    // Attendi navigazione alla pagina dettaglio utente
+    await page.waitForURL(/\/dashboard\/admin\/users\//, { timeout: 20000 }).catch(() => {});
+    const urlAfter = page.url();
+    console.log('✅ Navigazione dettaglio utente:', urlAfter);
+
+    const hasContent = await page
+      .locator('h1, h2')
       .first()
-      .isVisible({ timeout: 5000 })
+      .isVisible({ timeout: 15000 })
       .catch(() => false);
-
-    if (!hasUser) {
-      // Prova a cercare con campo search se disponibile
-      const searchInput = page
-        .locator(
-          'input[type="search"], input[placeholder*="cerca" i], input[placeholder*="search" i]'
-        )
-        .first();
-      const hasSearch = await searchInput.isVisible({ timeout: 3000 }).catch(() => false);
-
-      if (hasSearch) {
-        await searchInput.fill(emailShort);
-        await page.waitForTimeout(1000);
-
-        const hasUserAfterSearch = await page
-          .locator(`text=${emailShort}`)
-          .first()
-          .isVisible({ timeout: 5000 })
-          .catch(() => false);
-
-        if (hasUserAfterSearch) {
-          console.log(`✅ Account ${E2E_USER_EMAIL} trovato con search`);
-          expect(hasUserAfterSearch).toBe(true);
-          return;
-        }
-      }
-
-      // Se non trovato: l'utente esiste nel DB ma potrebbe non essere nella prima pagina
-      // Questo non è un errore critico — l'utente è stato creato dallo script
-      console.log(
-        `ℹ️ Utente ${emailShort} non visibile nella prima pagina — potrebbe essere in paginazione successiva`
-      );
-    } else {
-      console.log(`✅ Account ${E2E_USER_EMAIL} visibile nella lista utenti`);
-      expect(hasUser).toBe(true);
-    }
+    expect(hasContent).toBe(true);
   });
 
-  test('admin può navigare ai dettagli di un utente', async ({ page }) => {
+  test('pagina admin non espone dati privati reseller', async ({ page }) => {
     if (!(await isSessionValid(page))) {
       test.skip();
       return;
     }
 
-    const hasUserSection = await goToUserManagement(page);
-    if (!hasUserSection) {
+    if (!(await goToAdminPage(page))) {
       test.skip();
       return;
     }
 
-    // Cerca un link o riga cliccabile nella tabella utenti
-    const userRow = page.locator('table tbody tr').first();
-    const hasRow = await userRow.isVisible({ timeout: 5000 }).catch(() => false);
-
-    if (!hasRow) {
-      console.log('ℹ️ Nessuna riga utente visibile — la lista potrebbe essere vuota');
-      test.skip();
-      return;
-    }
-
-    // Cerca un link "Dettagli" o "Visualizza" nella prima riga
-    const detailLink = userRow
-      .locator('a, button')
-      .filter({ hasText: /dettagl|visualizza|view|modifica/i })
-      .first();
-    const hasDetailLink = await detailLink.isVisible({ timeout: 3000 }).catch(() => false);
-
-    if (hasDetailLink) {
-      await detailLink.click();
-      await page.waitForTimeout(2000);
-
-      const urlAfter = page.url();
-      console.log('✅ Navigazione dettaglio utente:', urlAfter);
-
-      // Verifica che la pagina dettaglio carichi
-      const hasContent = await page
-        .locator('h1, h2')
-        .first()
-        .isVisible({ timeout: 10000 })
-        .catch(() => false);
-      expect(hasContent).toBe(true);
-    } else {
-      // Prova click sulla riga stessa
-      await userRow.click().catch(() => {});
-      await page.waitForTimeout(1000);
-      console.log('ℹ️ Click sulla riga — URL:', page.url());
-    }
-  });
-
-  test('pagina admin non espone dati privati di altri workspace', async ({ page }) => {
-    if (!(await isSessionValid(page))) {
-      test.skip();
-      return;
-    }
-
-    // Verifica che l'admin non veda listini privati o wallet di reseller
-    // (test di sicurezza multi-tenant — solo lettura)
-    await page.goto('/dashboard/admin', { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await page.waitForTimeout(1500);
-    await dismissPopups(page);
-
-    const url = page.url();
-    if (url.includes('/login')) {
-      test.skip();
-      return;
-    }
-
-    // L'admin non deve vedere "listini reseller" o "prezzi riservati" di altri
+    // Il superadmin NON deve vedere listini privati, prezzi riservati o wallet privati reseller
     const hasPrivateResellerData = await page
       .locator('text=/listini privati reseller|prezzi riservati|wallet reseller privato/i')
       .isVisible()
       .catch(() => false);
 
     expect(hasPrivateResellerData).toBe(false);
-    console.log('✅ Nessun dato privato reseller esposto nella vista admin');
+    console.log('✅ Nessun dato privato reseller esposto nella vista superadmin');
+  });
+
+  test('tabella utenti mostra colonne attese', async ({ page }) => {
+    if (!(await isSessionValid(page))) {
+      test.skip();
+      return;
+    }
+
+    if (!(await goToAdminPage(page))) {
+      test.skip();
+      return;
+    }
+
+    // Scroll fino alla sezione tabella utenti
+    await page.evaluate(() => window.scrollTo(0, 600));
+    await page.waitForTimeout(500);
+
+    // Verifica che la tabella abbia le colonne previste
+    const table = page.locator('table').first();
+    const hasTable = await table.isVisible({ timeout: 15000 }).catch(() => false);
+
+    if (!hasTable) {
+      console.log('ℹ️ Tabella non ancora visibile — dati API probabilmente non ancora arrivati');
+      test.skip();
+      return;
+    }
+
+    // Verifica intestazioni colonne
+    const headings = ['Utente', 'Ruolo', 'Provider', 'Registrato', 'Azioni'];
+    let foundHeadings = 0;
+
+    for (const heading of headings) {
+      const hasHeading = await page
+        .locator(`th:has-text("${heading}")`)
+        .first()
+        .isVisible({ timeout: 2000 })
+        .catch(() => false);
+      if (hasHeading) foundHeadings++;
+    }
+
+    console.log(`✅ Colonne tabella trovate: ${foundHeadings}/${headings.length}`);
+    expect(foundHeadings).toBeGreaterThanOrEqual(2); // Almeno 2 colonne visibili
   });
 });

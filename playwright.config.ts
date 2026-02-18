@@ -79,14 +79,25 @@ export default defineConfig({
       testMatch: ['**/e2e/real/shipment-create.spec.ts', '**/e2e/real/shipments-list-real.spec.ts'],
     },
     {
-      // Progetto con sessione admin reale (test E2E reali)
+      // Progetto con sessione admin base (test wallet/accesso)
       name: 'chromium-admin',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 },
         storageState: path.join(AUTH_DIR, 'admin.json'),
       },
-      testMatch: ['**/e2e/real/wallet-topup.spec.ts', '**/e2e/real/admin-user-management.spec.ts'],
+      testMatch: ['**/e2e/real/wallet-topup.spec.ts'],
+    },
+    {
+      // Progetto con sessione superadmin reale (admin@spediresicuro.it)
+      // Accesso completo: gestione utenti, listini master, wallet admin, ecc.
+      name: 'chromium-superadmin',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+        storageState: path.join(AUTH_DIR, 'superadmin.json'),
+      },
+      testMatch: ['**/e2e/real/admin-user-management.spec.ts'],
     },
     {
       // Progetto standard (test con mock auth o pubblici)
