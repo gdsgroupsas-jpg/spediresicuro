@@ -117,13 +117,25 @@ test.describe('P0 Security Fixes Verification', () => {
       });
 
       // Tenta di accedere direttamente al listino di User B
-      // Aspettiamo che: o appaia l'errore, o avvenga il redirect
-      const navigationPromise = page.waitForNavigation().catch(() => {}); // Catch per evitare errori se non naviga subito
-
       await page.goto(`/dashboard/reseller/listini-fornitore/${userBPriceListId}`);
 
-      // Attesa sufficiente per processare la risposta API e aggiornare UI o redirect
-      await page.waitForTimeout(1000);
+      // Attendi che il redirect avvenga o che compaia un errore
+      // La pagina fa server action → se non autorizzato → router.push() → redirect
+      await Promise.race([
+        page.waitForURL('**/login**', { timeout: 8000 }).catch(() => {}),
+        page
+          .waitForURL(
+            (url) =>
+              url.pathname.includes('/listini-fornitore') &&
+              !url.pathname.includes(userBPriceListId),
+            { timeout: 8000 }
+          )
+          .catch(() => {}),
+        page
+          .locator('text=/Non autorizzato|Access denied|403/i')
+          .waitFor({ timeout: 8000 })
+          .catch(() => {}),
+      ]);
 
       // ASSERTION: Deve mostrare errore autorizzazione o redirect
       const hasUnauthorizedError =
