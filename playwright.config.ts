@@ -8,18 +8,20 @@ loadEnv({ path: path.join(__dirname, '.env.local'), override: false });
 /**
  * Configurazione Playwright
  *
- * - globalSetup: login reale una volta → storageState riusato da tutti i test
- * - Progetto 'setup': esegue il login e salva la sessione
- * - Progetto 'chromium': usa la sessione salvata (storageState)
+ * - globalSetup: login reale una volta per ogni account → storageState riusato da tutti i test
+ * - Progetto 'chromium-reseller': sessione reseller (listini, spedizioni reseller)
+ * - Progetto 'chromium-user': sessione utente normale (spedizioni, wallet)
+ * - Progetto 'chromium-admin': sessione admin (gestione utenti, wallet admin)
+ * - Progetto 'chromium': test con mock auth o pubblici
  * - CI=true: bypassa webServer, usa server esterno
  */
 
-const AUTH_FILE = path.join(__dirname, 'e2e/auth/.auth/reseller.json');
+const AUTH_DIR = path.join(__dirname, 'e2e/auth/.auth');
 
 export default defineConfig({
   testDir: './e2e',
 
-  // Global setup: login reale prima di tutti i test
+  // Global setup: login reale prima di tutti i test (reseller + user + admin)
   globalSetup: './e2e/auth/global-setup.ts',
 
   // Timeout per ogni test
@@ -57,10 +59,8 @@ export default defineConfig({
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 },
-        // Usa la sessione salvata dal global setup
-        storageState: AUTH_FILE,
+        storageState: path.join(AUTH_DIR, 'reseller.json'),
       },
-      // Solo i test che richiedono sessione reseller reale
       testMatch: [
         '**/reseller-price-lists.spec.ts',
         '**/sync-price-lists-optimized.spec.ts',
@@ -69,18 +69,39 @@ export default defineConfig({
       ],
     },
     {
+      // Progetto con sessione utente normale reale (test E2E reali)
+      name: 'chromium-user',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+        storageState: path.join(AUTH_DIR, 'user.json'),
+      },
+      testMatch: ['**/e2e/real/shipment-create.spec.ts', '**/e2e/real/shipments-list-real.spec.ts'],
+    },
+    {
+      // Progetto con sessione admin reale (test E2E reali)
+      name: 'chromium-admin',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+        storageState: path.join(AUTH_DIR, 'admin.json'),
+      },
+      testMatch: ['**/e2e/real/wallet-topup.spec.ts', '**/e2e/real/admin-user-management.spec.ts'],
+    },
+    {
       // Progetto standard (test con mock auth o pubblici)
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
         viewport: { width: 1280, height: 720 },
       },
-      // Tutti i test esclusi quelli del progetto reseller
+      // Tutti i test esclusi quelli dei progetti con sessione reale
       testIgnore: [
         '**/reseller-price-lists.spec.ts',
         '**/sync-price-lists-optimized.spec.ts',
         '**/shipments-list.spec.ts',
         '**/shipment-detail.spec.ts',
+        '**/e2e/real/**',
       ],
     },
   ],
