@@ -38,11 +38,13 @@ const PUBLIC_ROUTES = [
 ];
 
 function isPublicRoute(pathname: string): boolean {
-  // Special case: '/' matches only exact '/'
-  if (pathname === '/') return true;
-
-  // For other routes, check if pathname starts with route (excluding '/')
-  return PUBLIC_ROUTES.filter((route) => route !== '/').some((route) => pathname.startsWith(route));
+  return PUBLIC_ROUTES.some((route) => {
+    if (route === '/') {
+      return pathname === '/';
+    }
+    // Boundary check: /prezzi matches /prezzi and /prezzi/... but NOT /prezzi-admin
+    return pathname === route || pathname.startsWith(route + '/');
+  });
 }
 
 function isStaticAsset(pathname: string): boolean {
@@ -120,6 +122,27 @@ describe('Middleware Utility Functions', () => {
 
     it('should return false for /api/wallet', () => {
       expect(isPublicRoute('/api/wallet/balance')).toBe(false);
+    });
+
+    it('boundary check: /prezzi non deve matchare /prezzi-admin', () => {
+      expect(isPublicRoute('/prezzi')).toBe(true);
+      expect(isPublicRoute('/prezzi-admin')).toBe(false);
+      expect(isPublicRoute('/preventivi-segreti')).toBe(false);
+    });
+
+    it('boundary check: /track deve matchare /track/ABC123 ma non /tracking', () => {
+      expect(isPublicRoute('/track/ABC123')).toBe(true);
+      expect(isPublicRoute('/tracking')).toBe(false);
+    });
+
+    it('boundary check: /api/cron deve matchare /api/cron/job ma non /api/cron-admin', () => {
+      expect(isPublicRoute('/api/cron/telegram-queue')).toBe(true);
+      expect(isPublicRoute('/api/cron-admin')).toBe(false);
+    });
+
+    it('boundary check: /login deve matchare esattamente ma non /login-bypass', () => {
+      expect(isPublicRoute('/login')).toBe(true);
+      expect(isPublicRoute('/login-bypass')).toBe(false);
     });
   });
 

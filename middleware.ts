@@ -70,7 +70,9 @@ const PUBLIC_ROUTES = [
 
 /**
  * Check if a path matches public routes
- * NOTE: For '/' (root), we do exact match. For other routes, we use startsWith.
+ * NOTE: For '/' (root), exact match. For other routes, prefix match with
+ * boundary check (must be followed by '/' or end of string) to prevent
+ * accidental exposure of routes like /prezzi-admin when /prezzi is public.
  */
 function isPublicRoute(pathname: string): boolean {
   return PUBLIC_ROUTES.some((route) => {
@@ -78,8 +80,8 @@ function isPublicRoute(pathname: string): boolean {
       // Root route must match exactly
       return pathname === '/';
     }
-    // Other routes use prefix matching
-    return pathname.startsWith(route);
+    // Prefix match with boundary: /track matches /track and /track/abc but NOT /track-anything
+    return pathname === route || pathname.startsWith(route + '/');
   });
 }
 
@@ -175,35 +177,46 @@ export default async function middleware(request: NextRequest) {
     // Get session (from JWT, no DB query)
     const session = await auth();
 
-    // Check onboarding for authenticated users
-    if (session?.user?.email) {
-      const userEmail = session.user.email.toLowerCase();
-      const onboardingComplete = (session.user as any).onboarding_complete === true;
-
-      // Skip check for test user
-      if (userEmail === 'test@spediresicuro.it') {
-        // Still inject workspace header for test user
-        return injectWorkspaceHeader(request);
+    // Utente non autenticato su route protetta → fail-closed
+    if (!session?.user?.email) {
+      if (pathname.startsWith('/api/')) {
+        // API routes: return 401 JSON
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
       }
+      // Dashboard e altre route protette: redirect al login
+      const loginUrl = new URL('/login', request.url);
+      loginUrl.searchParams.set('callbackUrl', pathname);
+      return NextResponse.redirect(loginUrl);
+    }
 
-      // Redirect to onboarding if not completed
-      if (
-        !onboardingComplete &&
-        pathname.startsWith('/dashboard') &&
-        pathname !== '/dashboard/dati-cliente'
-      ) {
-        console.log('🔒 [MIDDLEWARE] Redirect to onboarding:', userEmail);
-        return NextResponse.redirect(new URL('/dashboard/dati-cliente', request.url));
-      }
+    // Da qui: utente autenticato
+    const userEmail = session.user.email.toLowerCase();
+    const onboardingComplete = (session.user as any).onboarding_complete === true;
 
-      // Inject workspace header for authenticated users
+    // Skip onboarding check per test user
+    if (userEmail === 'test@spediresicuro.it') {
       return injectWorkspaceHeader(request);
     }
 
-    return NextResponse.next();
+    // Redirect a onboarding se non completato
+    if (
+      !onboardingComplete &&
+      pathname.startsWith('/dashboard') &&
+      pathname !== '/dashboard/dati-cliente'
+    ) {
+      console.log('🔒 [MIDDLEWARE] Redirect to onboarding:', userEmail);
+      return NextResponse.redirect(new URL('/dashboard/dati-cliente', request.url));
+    }
+
+    // Inject workspace header per utenti autenticati
+    return injectWorkspaceHeader(request);
   } catch (error) {
     console.error('🔒 [MIDDLEWARE] Error:', error);
-    return NextResponse.next();
+    // Fail-closed: su errore, nega accesso alle route protette
+    if (pathname.startsWith('/api/')) {
+      return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+    }
+    return NextResponse.redirect(new URL('/login', request.url));
   }
 }
 
