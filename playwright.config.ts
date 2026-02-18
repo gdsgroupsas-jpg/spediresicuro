@@ -77,8 +77,8 @@ export default defineConfig({
     ? undefined
     : {
         command: 'npm run dev',
-        url: 'http://localhost:3000',
-        reuseExistingServer: !process.env.CI,
+        url: 'http://localhost:3000/api/health',
+        reuseExistingServer: true,
         timeout: 120 * 1000, // 2 minuti per avviare il server
         env: {
           PLAYWRIGHT_TEST_MODE: 'true', // Bypassa autenticazione in test
