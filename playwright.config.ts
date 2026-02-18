@@ -66,6 +66,7 @@ export default defineConfig({
         '**/sync-price-lists-optimized.spec.ts',
         '**/shipments-list.spec.ts',
         '**/shipment-detail.spec.ts',
+        '**/e2e/real/reseller-subuser-flow.spec.ts',
       ],
     },
     {

@@ -56,6 +56,7 @@ export interface CreateShipmentCoreDeps {
     }) => Promise<{ error: { message: string; code?: string } | null }>;
     insertShipment?: (args: {
       targetId: string;
+      targetWorkspaceId: string | null;
       validated: CreateShipmentInput;
       idempotencyKey: string;
       courierResponse: CourierCreateShippingResult;
@@ -660,6 +661,8 @@ export async function createShipmentCore(params: {
           .from('shipments')
           .insert({
             user_id: args.targetId,
+            // workspace_id esplicito per isolamento multi-tenant (CLAUDE.md Regola #1)
+            ...(args.targetWorkspaceId ? { workspace_id: args.targetWorkspaceId } : {}),
             // NOTE: il DB applica un CHECK constraint su shipments.status.
             // In produzione il valore valido è 'pending' (vedi errore shipments_status_check).
             status: 'pending',
@@ -709,6 +712,7 @@ export async function createShipmentCore(params: {
 
     const { data: newShipment, error: shipmentError } = await insertShipmentFn({
       targetId,
+      targetWorkspaceId,
       validated,
       idempotencyKey,
       courierResponse,
