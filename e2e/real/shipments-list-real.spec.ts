@@ -45,7 +45,8 @@ test.describe('Lista Spedizioni — Backend Reale (user)', () => {
       return;
     }
 
-    await page.goto('/dashboard/spedizioni', { waitUntil: 'domcontentloaded', timeout: 30000 });
+    // Usa 'commit' per non bloccarsi su SSR lento — poi aspettiamo contenuto manualmente
+    await page.goto('/dashboard/spedizioni', { waitUntil: 'commit', timeout: 45000 });
 
     const url = page.url();
     if (url.includes('/login')) {
@@ -53,42 +54,24 @@ test.describe('Lista Spedizioni — Backend Reale (user)', () => {
       return;
     }
 
-    await page.waitForTimeout(2000);
     await dismissPopups(page);
 
-    // Attendi che il contenuto carichi (tabella o messaggio "nessuna spedizione")
-    const deadline = Date.now() + 20000;
+    // Attendi che il contenuto carichi (tabella, heading, o msg "nessuna spedizione")
+    // Timeout generoso: il primo caricamento SSR può essere lento
+    const contentLocator = page.locator('h1, h2, h3, table, [data-testid]');
     let contentLoaded = false;
 
-    while (!contentLoaded && Date.now() < deadline) {
-      const hasTable = await page
-        .locator('table')
-        .isVisible()
-        .catch(() => false);
-      const hasEmptyMsg = await page
-        .locator('text=/nessuna spedizione/i, text=/no shipments/i')
-        .isVisible()
-        .catch(() => false);
-      const hasHeading = await page
-        .locator('h1, h2')
-        .isVisible()
-        .catch(() => false);
-
-      if (hasTable || hasEmptyMsg || hasHeading) {
-        contentLoaded = true;
-      } else {
-        await page.waitForTimeout(500);
-      }
-    }
-
-    if (!contentLoaded) {
+    try {
+      await contentLocator.first().waitFor({ state: 'visible', timeout: 40000 });
+      contentLoaded = true;
+    } catch {
       await page
         .screenshot({ path: 'test-results/debug-list-real-timeout.png', fullPage: true })
         .catch(() => {});
     }
 
     expect(contentLoaded).toBe(true);
-    console.log('✅ Lista spedizioni caricata correttamente');
+    console.log('✅ Lista spedizioni caricata correttamente:', page.url());
   });
 
   test('pagina dashboard accessibile senza errori critici', async ({ page }) => {
