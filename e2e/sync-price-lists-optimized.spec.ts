@@ -14,7 +14,7 @@
 import { expect, test } from '@playwright/test';
 
 const TEST_EMAIL = 'testspediresicuro+postaexpress@gmail.com';
-const TEST_PASSWORD = 'Striano1382-';
+const TEST_PASSWORD = process.env.E2E_RESELLER_PASSWORD || process.env.TEST_USER_PASSWORD || '';
 
 test.describe('Sync Listini Ottimizzati', () => {
   test.beforeEach(async ({ page }) => {

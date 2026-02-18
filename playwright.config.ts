@@ -1,87 +1,104 @@
 import { defineConfig, devices } from '@playwright/test';
+import * as path from 'path';
+import { config as loadEnv } from 'dotenv';
+
+// Carica .env.local per rendere disponibili le variabili E2E_RESELLER_EMAIL, ecc.
+loadEnv({ path: path.join(__dirname, '.env.local'), override: false });
 
 /**
- * Configurazione Playwright ottimizzata per CI (headless)
+ * Configurazione Playwright
  *
- * Questa configurazione è pensata per:
- * - Eseguire test in modalità headless (CI/CD)
- * - Timeout generosi per gestire Next.js SSR/hydration
- * - Retry automatico per flaky tests
- * - Screenshot e video su failure
+ * - globalSetup: login reale una volta → storageState riusato da tutti i test
+ * - Progetto 'setup': esegue il login e salva la sessione
+ * - Progetto 'chromium': usa la sessione salvata (storageState)
+ * - CI=true: bypassa webServer, usa server esterno
  */
+
+const AUTH_FILE = path.join(__dirname, 'e2e/auth/.auth/reseller.json');
+
 export default defineConfig({
-  // Directory dove sono i test
   testDir: './e2e',
 
-  // Timeout per ogni test (60 secondi - aumentato per gestire login e form complesso)
+  // Global setup: login reale prima di tutti i test
+  globalSetup: './e2e/auth/global-setup.ts',
+
+  // Timeout per ogni test
   timeout: 60 * 1000,
 
-  // Timeout per le assertion (10 secondi)
   expect: {
     timeout: 10 * 1000,
   },
 
-  // Esegui test in parallelo (massimo 1 worker per evitare conflitti con DB)
   fullyParallel: false,
   workers: 1,
 
-  // Retry automatico su failure (massimo 2 retry)
   retries: process.env.CI ? 2 : 0,
 
-  // Reporter per CI
   reporter: process.env.CI ? [['html'], ['list']] : [['html'], ['list'], ['line']],
 
-  // Configurazione condivisa per tutti i progetti
   use: {
-    // Base URL dell'applicazione (usa variabile d'ambiente o default)
     baseURL: process.env.PLAYWRIGHT_TEST_BASE_URL || 'http://localhost:3000',
-
-    // Headless mode (sempre in CI, opzionale in locale)
-    headless: process.env.CI ? true : true,
-
-    // Screenshot su failure
+    headless: true,
     screenshot: 'only-on-failure',
-
-    // Video su failure
     video: 'retain-on-failure',
-
-    // Trace su failure (utile per debug)
     trace: 'retain-on-failure',
-
-    // Timeout per navigazione (20 secondi)
     navigationTimeout: 20 * 1000,
-
-    // Timeout per azioni (10 secondi)
     actionTimeout: 10 * 1000,
-
-    // Imposta variabile d'ambiente per bypassare autenticazione in test
+    // x-test-mode mantenuto per i test che usano ancora il mock
     extraHTTPHeaders: {
       'x-test-mode': 'playwright',
     },
   },
 
-  // Configurazione progetti (browser)
   projects: [
     {
+      // Progetto con sessione reseller reale
+      name: 'chromium-reseller',
+      use: {
+        ...devices['Desktop Chrome'],
+        viewport: { width: 1280, height: 720 },
+        // Usa la sessione salvata dal global setup
+        storageState: AUTH_FILE,
+      },
+      // Solo i test nella cartella reseller/ e auth-required/
+      testMatch: [
+        '**/reseller-price-lists.spec.ts',
+        '**/happy-path.spec.ts',
+        '**/sync-price-lists-optimized.spec.ts',
+        '**/shipments-list.spec.ts',
+        '**/shipment-detail.spec.ts',
+      ],
+    },
+    {
+      // Progetto standard (test con mock auth o pubblici)
       name: 'chromium',
       use: {
         ...devices['Desktop Chrome'],
-        // Viewport realistico
         viewport: { width: 1280, height: 720 },
       },
+      // Tutti i test esclusi quelli del progetto reseller
+      testIgnore: [
+        '**/reseller-price-lists.spec.ts',
+        '**/happy-path.spec.ts',
+        '**/sync-price-lists-optimized.spec.ts',
+        '**/shipments-list.spec.ts',
+        '**/shipment-detail.spec.ts',
+      ],
     },
   ],
 
-  // Server di sviluppo Next.js (se necessario)
   webServer: process.env.CI
     ? undefined
     : {
         command: 'npm run dev',
         url: 'http://localhost:3000/api/health',
         reuseExistingServer: true,
-        timeout: 120 * 1000, // 2 minuti per avviare il server
+        timeout: 120 * 1000,
         env: {
-          PLAYWRIGHT_TEST_MODE: 'true', // Bypassa autenticazione in test
+          PLAYWRIGHT_TEST_MODE: 'true',
+          // Per i test chromium-reseller: l'utente test mock deve corrispondere al reseller reale
+          TEST_USER_EMAIL:
+            process.env.E2E_RESELLER_EMAIL || 'testspediresicuro+postaexpress@gmail.com',
         },
       },
 });

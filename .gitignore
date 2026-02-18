@@ -137,3 +137,6 @@ gitleaks-report.json
 gitleaks-report.sarif
 
 nul
+
+# Playwright auth state (sessioni reali)
+e2e/auth/.auth/
