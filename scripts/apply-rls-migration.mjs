@@ -45,6 +45,7 @@ const FILES_TO_APPLY = [
   '20260219200400_rls_fix_legacy_policies.sql',
   '20260219200500_rls_fix_users_permission.sql',
   '20260219200600_rls_fix_legacy_public_policies.sql',
+  '20260219200700_rls_drop_legacy_public_policies.sql',
 ];
 
 for (const file of FILES_TO_APPLY) {
