@@ -60,10 +60,9 @@ export default defineConfig({
         // Usa la sessione salvata dal global setup
         storageState: AUTH_FILE,
       },
-      // Solo i test nella cartella reseller/ e auth-required/
+      // Solo i test che richiedono sessione reseller reale
       testMatch: [
         '**/reseller-price-lists.spec.ts',
-        '**/happy-path.spec.ts',
         '**/sync-price-lists-optimized.spec.ts',
         '**/shipments-list.spec.ts',
         '**/shipment-detail.spec.ts',
@@ -79,7 +78,6 @@ export default defineConfig({
       // Tutti i test esclusi quelli del progetto reseller
       testIgnore: [
         '**/reseller-price-lists.spec.ts',
-        '**/happy-path.spec.ts',
         '**/sync-price-lists-optimized.spec.ts',
         '**/shipments-list.spec.ts',
         '**/shipment-detail.spec.ts',

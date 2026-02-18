@@ -531,7 +531,11 @@ export function QuickModeForm() {
     return {
       mittenteNome: formData.mittenteNome.length >= 2,
       mittenteIndirizzo: formData.mittenteIndirizzo.length >= 5,
-      mittenteCitta: formData.mittenteCitta.length >= 2,
+      // cityValid=true solo quando la città è stata SELEZIONATA dall'autocomplete (provincia+CAP settati)
+      mittenteCitta:
+        formData.mittenteCitta.length >= 2 &&
+        formData.mittenteProvincia.length >= 2 &&
+        formData.mittenteCap.length >= 5,
       mittenteProvincia: formData.mittenteProvincia.length >= 2, // ⚠️ VALIDAZIONE PROVINCIA MITTENTE (OBBLIGATORIA)
       mittenteCap: formData.mittenteCap.length >= 5, // ⚠️ VALIDAZIONE CAP MITTENTE (OBBLIGATORIO)
       mittenteTelefono: /^[\d\s\+\-\(\)]{8,}$/.test(formData.mittenteTelefono),
@@ -539,7 +543,11 @@ export function QuickModeForm() {
         !formData.mittenteEmail || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.mittenteEmail),
       destinatarioNome: formData.destinatarioNome.length >= 2,
       destinatarioIndirizzo: formData.destinatarioIndirizzo.length >= 5,
-      destinatarioCitta: formData.destinatarioCitta.length >= 2,
+      // cityValid=true solo quando la città è stata SELEZIONATA dall'autocomplete (provincia+CAP settati)
+      destinatarioCitta:
+        formData.destinatarioCitta.length >= 2 &&
+        formData.destinatarioProvincia.length >= 2 &&
+        formData.destinatarioCap.length >= 5,
       destinatarioProvincia: formData.destinatarioProvincia.length >= 2, // ⚠️ VALIDAZIONE PROVINCIA DESTINATARIO (OBBLIGATORIA)
       destinatarioCap: formData.destinatarioCap.length >= 5, // ⚠️ VALIDAZIONE CAP DESTINATARIO (OBBLIGATORIO)
       destinatarioTelefono: contrassegnoAttivo

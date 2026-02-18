@@ -430,6 +430,11 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       return;
     }
 
+    // Pulisci localStorage per resettare eventuale stato cityValid persistito da test precedenti
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+    });
+
     await page.goto('/dashboard/spedizioni/nuova', {
       waitUntil: 'domcontentloaded',
       timeout: 30000,
@@ -465,8 +470,10 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       test.skip();
       return;
     }
+    // Reset del campo: fill('') triggera onCityChange('') → cityValid=false nel parent
     await mittenteCityInput.click();
-    await mittenteCityInput.clear();
+    await mittenteCityInput.fill('');
+    await page.waitForTimeout(500);
     await mittenteCityInput.pressSequentially('Milano', { delay: 50 });
     await page.waitForTimeout(2500);
 
@@ -514,8 +521,10 @@ test.describe('Validazione Form Nuova Spedizione', () => {
     const destinatarioCityInputs = page.getByPlaceholder('Cerca città...');
     if ((await destinatarioCityInputs.count()) >= 2) {
       const destinatarioCityInput = destinatarioCityInputs.nth(1);
+      // Reset del campo: fill('') triggera onCityChange('') → cityValid=false nel parent
       await destinatarioCityInput.click();
-      await destinatarioCityInput.clear();
+      await destinatarioCityInput.fill('');
+      await page.waitForTimeout(500);
       await destinatarioCityInput.pressSequentially('Roma', { delay: 50 });
       await page.waitForTimeout(2500);
 
@@ -545,11 +554,17 @@ test.describe('Validazione Form Nuova Spedizione', () => {
       await telefonoInputs.nth(1).fill('+39 098 765 4321');
     }
 
-    // Peso
+    // Peso e dimensioni pacco (dimensioni obbligatorie per attivare il preventivatore)
     await page.evaluate(() => window.scrollTo(0, 1200));
     await page.waitForTimeout(500);
-    const pesoInput = page.locator('input[type="number"]').first();
+    const numberInputs = page.locator('input[type="number"]');
+    const pesoInput = numberInputs.first();
     await pesoInput.fill('2.5');
+    if ((await numberInputs.count()) >= 4) {
+      await numberInputs.nth(1).fill('30'); // lunghezza
+      await numberInputs.nth(2).fill('20'); // larghezza
+      await numberInputs.nth(3).fill('15'); // altezza
+    }
     await page.waitForTimeout(500);
 
     // Seleziona corriere dalla tabella preventivi

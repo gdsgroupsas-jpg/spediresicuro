@@ -81,7 +81,28 @@ test.describe('Nuova Spedizione - Happy Path', () => {
       });
     });
 
-    // Mock API spedizioni
+    // Mock API creazione spedizione (il QuickModeForm usa /api/shipments/create)
+    await page.route('**/api/shipments/create', async (route) => {
+      if (route.request().method() === 'POST') {
+        await route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({
+            success: true,
+            data: {
+              id: 'test-shipment-123',
+              tracking: 'GLSTEST123456',
+              status: 'pending',
+              createdAt: new Date().toISOString(),
+            },
+          }),
+        });
+      } else {
+        await route.continue();
+      }
+    });
+
+    // Mock API spedizioni (legacy, manteniamo per compatibilità)
     await page.route('**/api/spedizioni', async (route) => {
       if (route.request().method() === 'POST') {
         await route.fulfill({
@@ -219,6 +240,11 @@ test.describe('Nuova Spedizione - Happy Path', () => {
       }
     });
 
+    // Pulisci localStorage per resettare eventuale stato cityValid persistito da test precedenti
+    await page.addInitScript(() => {
+      window.localStorage.clear();
+    });
+
     // STEP 1: Naviga alla pagina (il bypass auth è gestito dal layout tramite header)
     await page.goto('/dashboard/spedizioni/nuova', {
       waitUntil: 'domcontentloaded',
@@ -344,9 +370,12 @@ test.describe('Nuova Spedizione - Happy Path', () => {
     const mittenteCityInput = page.getByPlaceholder('Cerca città...').first();
     await expect(mittenteCityInput).toBeVisible({ timeout: 5000 });
 
-    // Usa type() invece di fill() per simulare digitazione reale e triggerare onChange
+    // Reset del campo città: fill('') triggera onCityChange('') nel parent → cityValid=false
     await mittenteCityInput.click();
-    await mittenteCityInput.clear();
+    await mittenteCityInput.fill('');
+    // Attendi che React processi il reset di cityValid (prop dal parent)
+    await page.waitForTimeout(500);
+    // Ora digita per triggerare il dropdown (cityValid=false → dropdown si apre)
     await mittenteCityInput.pressSequentially('Milano', { delay: 50 });
 
     // Attendi debounce (300ms) + tempo per fetch + rendering
@@ -423,7 +452,11 @@ test.describe('Nuova Spedizione - Happy Path', () => {
     const destinatarioCityInputs = page.getByPlaceholder('Cerca città...');
     if ((await destinatarioCityInputs.count()) >= 2) {
       const destinatarioCityInput = destinatarioCityInputs.nth(1);
-      await destinatarioCityInput.fill('Roma');
+      // Reset del campo: fill('') triggera onCityChange('') → cityValid=false nel parent
+      await destinatarioCityInput.click();
+      await destinatarioCityInput.fill('');
+      await page.waitForTimeout(500);
+      await destinatarioCityInput.pressSequentially('Roma', { delay: 50 });
       await page.waitForTimeout(2000); // Attendi che i risultati appaiano
 
       // Clicca sul primo risultato (Roma)
@@ -437,7 +470,9 @@ test.describe('Nuova Spedizione - Happy Path', () => {
         await page.waitForTimeout(500);
       }
 
-      const firstOptionDest = page.locator('[role="option"]').first();
+      const firstOptionDest = page
+        .locator('[cmdk-item], [role="option"], [data-radix-collection-item]')
+        .first();
       await expect(firstOptionDest).toBeVisible({ timeout: 5000 });
 
       // Prova click normale, se fallisce usa force
@@ -461,36 +496,31 @@ test.describe('Nuova Spedizione - Happy Path', () => {
         await page.waitForTimeout(1000); // Attendi che la selezione venga processata
       }
 
-      // Verifica che la città sia stata selezionata correttamente (deve contenere provincia e CAP)
+      // Verifica che la città sia stata selezionata correttamente
+      // Il componente salva solo il nome città nel campo (es. "Roma"), non "Roma (RM) - 00100"
       await page.waitForTimeout(1000); // Attendi che il form si aggiorni
       const destinatarioCityValue = await destinatarioCityInput.inputValue();
       console.log('📍 Città destinatario selezionata:', destinatarioCityValue);
 
-      // Se la città non contiene "Roma (RM)", potrebbe non essere stata salvata correttamente
-      if (!destinatarioCityValue.includes('Roma') || !destinatarioCityValue.includes('RM')) {
-        console.log('⚠️ Città destinatario non salvata correttamente, riprovo selezione...');
-        // Riprova: cancella e riseleziona
-        const cancelButton = destinatarioCityInput
-          .locator('..')
-          .locator('button:has-text("✕")')
-          .first();
-        if (await cancelButton.isVisible().catch(() => false)) {
-          await cancelButton.click();
-          await page.waitForTimeout(500);
-        }
-        await destinatarioCityInput.fill('Roma');
-        await page.waitForTimeout(2000);
-        const firstOptionDest = page.locator('[role="option"]').first();
-        await expect(firstOptionDest).toBeVisible({ timeout: 5000 });
-        await firstOptionDest.click();
-        await page.waitForTimeout(1000);
-
-        // Se appare di nuovo il popup CAP
-        const capPopupRetry = page.locator('text=/Seleziona CAP per/i');
-        if (await capPopupRetry.isVisible().catch(() => false)) {
-          const firstCapRetry = page.getByRole('button', { name: /^\d{5}$/ }).first();
-          await firstCapRetry.click();
+      // Il campo mostra solo "Roma" (non "Roma (RM)") — verifica solo che contenga il nome
+      if (!destinatarioCityValue.toLowerCase().includes('rom')) {
+        console.log('⚠️ Città destinatario non selezionata, riprovo...');
+        // Reset e riprova
+        await destinatarioCityInput.click();
+        await destinatarioCityInput.fill('');
+        await page.waitForTimeout(500);
+        await destinatarioCityInput.pressSequentially('Roma', { delay: 50 });
+        await page.waitForTimeout(2500);
+        const firstOptionRetry = page.locator('[cmdk-item]').first();
+        if (await firstOptionRetry.isVisible().catch(() => false)) {
+          await firstOptionRetry.click();
           await page.waitForTimeout(1000);
+          const capPopupRetry = page.locator('text=/Seleziona CAP per/i');
+          if (await capPopupRetry.isVisible().catch(() => false)) {
+            const firstCapRetry = page.getByRole('button', { name: /^\d{5}$/ }).first();
+            await firstCapRetry.click();
+            await page.waitForTimeout(1000);
+          }
         }
       }
     }
@@ -536,9 +566,19 @@ test.describe('Nuova Spedizione - Happy Path', () => {
     await page.evaluate(() => window.scrollTo(0, 1200));
     await page.waitForTimeout(500);
 
-    const pesoInput = page.locator('input[type="number"]').first();
+    // Compila peso e dimensioni pacco (dimensioni obbligatorie per attivare il preventivatore)
+    const numberInputs = page.locator('input[type="number"]');
+    const pesoInput = numberInputs.first();
     await pesoInput.fill('2.5');
     await page.waitForTimeout(300);
+
+    // Lunghezza, larghezza, altezza (indici 1, 2, 3 dopo peso)
+    if ((await numberInputs.count()) >= 4) {
+      await numberInputs.nth(1).fill('30'); // lunghezza
+      await numberInputs.nth(2).fill('20'); // larghezza
+      await numberInputs.nth(3).fill('15'); // altezza
+      await page.waitForTimeout(300);
+    }
 
     // STEP 7: Scroll e seleziona CORRIERE (obbligatorio per completare il form)
     await page.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
@@ -709,6 +749,16 @@ test.describe('Nuova Spedizione - Happy Path', () => {
           fillAction: async (input: any) => {
             await input.fill('2.5');
             await page.waitForTimeout(300);
+            // Compila anche dimensioni (necessarie per il preventivatore)
+            const allNumberInputs = page.locator('input[type="number"]');
+            if ((await allNumberInputs.count()) >= 4) {
+              const lValue = await allNumberInputs.nth(1).inputValue();
+              if (!lValue || parseFloat(lValue) <= 0) {
+                await allNumberInputs.nth(1).fill('30');
+                await allNumberInputs.nth(2).fill('20');
+                await allNumberInputs.nth(3).fill('15');
+              }
+            }
           },
         },
       ];
@@ -853,19 +903,27 @@ test.describe('Nuova Spedizione - Happy Path', () => {
     }
 
     // STEP 9: Attendi successo
-    // Usa .first() per evitare strict mode violation (ci sono 2 elementi che matchano)
-    // Verifica sia il messaggio di successo che il redirect
+    // Il componente mostra SuccessModal ("Spedizione Creata") o messaggio inline
+    // o fa redirect a /dashboard/spedizioni
     await Promise.race([
+      // Messaggio inline legacy
       expect(page.getByText(/Spedizione creata.*successo/i).first()).toBeVisible({
         timeout: 20000,
       }),
+      // SuccessModal enterprise (titolo "Spedizione Creata")
+      expect(page.getByRole('heading', { name: /Spedizione Creata/i }).first()).toBeVisible({
+        timeout: 20000,
+      }),
+      // Redirect alla lista spedizioni
       page.waitForURL('**/dashboard/spedizioni', { timeout: 20000 }),
     ]);
 
     // STEP 10: Verifica finale
     const finalUrl = page.url();
     // Verifica che siamo sulla pagina delle spedizioni (redirect) O che ci sia il messaggio di successo
-    const hasSuccessMessage = (await page.getByText(/Spedizione creata.*successo/i).count()) > 0;
+    const hasSuccessMessage =
+      (await page.getByText(/Spedizione creata.*successo/i).count()) > 0 ||
+      (await page.getByRole('heading', { name: /Spedizione Creata/i }).count()) > 0;
     const isOnListPage = finalUrl.includes('/dashboard/spedizioni') && !finalUrl.includes('/nuova');
 
     expect(isOnListPage || hasSuccessMessage).toBeTruthy();
