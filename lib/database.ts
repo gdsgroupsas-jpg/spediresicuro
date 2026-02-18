@@ -545,8 +545,8 @@ function mapSpedizioneToSupabase(spedizione: any, userId?: string | null): any {
     height: toNumberOrNull(spedizione.dimensioni?.altezza),
     // ⚠️ NOTA: packages_count NON esiste nello schema Supabase - rimosso
     // Servizio
-    // ⚠️ courier_id è UUID che fa riferimento a couriers(id) - per ora null (da implementare mapping nome->UUID)
-    courier_id: null, // TODO: Mappare spedizione.corriere (es. "GLS", "SDA") a UUID da tabella couriers
+    // courier_id verrà impostato in addSpedizione dopo il lookup async
+    courier_id: null,
     service_type:
       spedizione.tipoSpedizione === 'express'
         ? 'express'
@@ -715,6 +715,27 @@ function mapSpedizioneFromSupabase(s: any): any {
       vat_mode: s.vat_mode || null,
       vat_rate: s.vat_rate || 22.0,
     };
+  }
+}
+
+/**
+ * Lookup UUID corriere da codice/nome (es. "GLS" → UUID da tabella couriers).
+ * Tabella couriers è globale → ok supabaseAdmin.
+ * Se non trovato → null (backward compat).
+ */
+async function getCourierIdByCode(courierCode: string): Promise<string | null> {
+  if (!courierCode) return null;
+  const code = courierCode.toUpperCase().trim();
+  try {
+    const { data } = await supabaseAdmin
+      .from('couriers')
+      .select('id')
+      .or(`code.eq.${code},name.ilike.%${code}%`)
+      .limit(1)
+      .maybeSingle();
+    return data?.id || null;
+  } catch {
+    return null;
   }
 }
 
@@ -898,6 +919,11 @@ export async function addSpedizione(
     }
 
     const supabasePayload = mapSpedizioneToSupabase(nuovaSpedizione, supabaseUserId);
+
+    // Risolvi courier_id in modo async (tabella couriers è globale → supabaseAdmin)
+    if (nuovaSpedizione.corriere) {
+      supabasePayload.courier_id = await getCourierIdByCode(nuovaSpedizione.corriere);
+    }
 
     // ⚠️ CRITICO: Normalizza payload prima dell'INSERT
     // - Rimuove campi admin se non in contesto admin

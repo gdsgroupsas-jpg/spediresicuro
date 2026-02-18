@@ -36,10 +36,9 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'CAP e città destinatario obbligatori' }, { status: 400 });
     }
 
-    // Carica mittente predefinito (se disponibile)
-    // TODO: Recuperare da impostazioni utente
-    const defaultSender = {
-      nome: 'Mittente Predefinito',
+    // Carica mittente predefinito dalle impostazioni utente
+    let defaultSender = {
+      nome: '',
       indirizzo: '',
       citta: '',
       provincia: '',
@@ -47,6 +46,22 @@ export async function POST(request: NextRequest) {
       telefono: '',
       email: '',
     };
+    try {
+      const { supabaseAdmin } = await import('@/lib/db/client');
+      const { data: userData } = await supabaseAdmin
+        .from('users')
+        .select('default_sender')
+        .eq('email', context.actor.email!)
+        .maybeSingle();
+      if (userData?.default_sender && typeof userData.default_sender === 'object') {
+        defaultSender = {
+          ...defaultSender,
+          ...(userData.default_sender as Record<string, string>),
+        };
+      }
+    } catch {
+      // Fallback silenzioso: usa mittente vuoto
+    }
 
     // Prepara dati spedizione
     const spedizioneData = {

@@ -589,17 +589,14 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
           : null,
     });
 
-    // ✨ DEBUG: Log completo payload (senza dati sensibili)
-    console.log('📡 [SPEDISCI.ONLINE] Payload completo (debug):', {
+    // Log payload (solo metadati non sensibili)
+    console.log('📡 [SPEDISCI.ONLINE] Payload:', {
       carrierCode: payload.carrierCode,
       contractCode: payload.contractCode,
       packages_count: payload.packages?.length || 0,
-      shipFrom_city: payload.shipFrom?.city,
-      shipTo_city: payload.shipTo?.city,
-      notes: payload.notes?.substring(0, 50),
-      insuranceValue: payload.insuranceValue,
-      codValue: payload.codValue,
-      accessoriServices: JSON.stringify(payload.accessoriServices), // Serializza per vedere formato esatto
+      accessoriServices_count: Array.isArray(payload.accessoriServices)
+        ? payload.accessoriServices.length
+        : 0,
     });
 
     try {
@@ -620,44 +617,16 @@ export class SpedisciOnlineAdapter extends CourierAdapter {
       if (response.ok) {
         const result = await response.json();
 
-        // ⚠️⚠️⚠️ DEBUG CRITICO: Log COMPLETO risposta API per capire cosa restituisce Spedisci.Online ⚠️⚠️⚠️
-        console.log('═══════════════════════════════════════════════════════════════════════════');
-        console.log(
-          '📦 [SPEDISCI.ONLINE] ⚠️⚠️⚠️ RISPOSTA API COMPLETA - VERIFICA SHIPMENTID ⚠️⚠️⚠️'
-        );
-        console.log('═══════════════════════════════════════════════════════════════════════════');
-        console.log('📦 [SPEDISCI.ONLINE] Risposta RAW (JSON completo):');
-        console.log(JSON.stringify(result, null, 2));
-        console.log('═══════════════════════════════════════════════════════════════════════════');
-        console.log('📦 [SPEDISCI.ONLINE] Analisi campi:', {
+        // Log risposta (solo flag booleani, nessun valore sensibile)
+        console.log('📦 [SPEDISCI.ONLINE] Risposta ricevuta:', {
           status: response.status,
           apiKeyFingerprint: keyFingerprint,
           response_keys: Object.keys(result),
-          response_shipmentId: result.shipmentId,
-          response_shipmentId_type: typeof result.shipmentId,
-          response_increment_id: result.increment_id,
-          response_incrementId: result.incrementId,
-          response_id: result.id,
-          response_trackingNumber: result.trackingNumber || result.tracking_number,
-          // Cerca anche in oggetti annidati
-          packages_first: result.packages?.[0],
-          has_nested_shipmentId: !!(result.shipment?.shipmentId || result.data?.shipmentId),
-        });
-        console.log('═══════════════════════════════════════════════════════════════════════════');
-
-        // ⚠️ CRITICO: Log dettagliato per shipmentId - questo è essenziale per la cancellazione
-        console.log('🔍 [SPEDISCI.ONLINE] ⚠️⚠️⚠️ VERIFICA SHIPMENTID NELLA RISPOSTA API ⚠️⚠️⚠️:', {
           has_shipmentId: !!result.shipmentId,
-          shipmentId_value: result.shipmentId,
-          shipmentId_type: typeof result.shipmentId,
           has_increment_id: !!result.increment_id,
-          increment_id_value: result.increment_id,
           has_incrementId: !!result.incrementId,
-          incrementId_value: result.incrementId,
           has_id: !!result.id,
-          id_value: result.id,
-          all_keys: Object.keys(result),
-          response_sample: JSON.stringify(result).substring(0, 1000), // Primi 1000 caratteri per debug completo
+          has_nested_shipmentId: !!(result.shipment?.shipmentId || result.data?.shipmentId),
         });
 
         // Log successo production-safe
