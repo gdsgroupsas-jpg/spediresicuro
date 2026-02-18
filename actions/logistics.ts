@@ -13,23 +13,18 @@ import type { Shipment } from '@/types/shipments';
 
 /**
  * Cerca una spedizione per LDV (Lettera di Vettura) o tracking number
- * @param workspaceId - Workspace ID per isolamento multi-tenant
+ * @param workspaceId - Workspace ID OBBLIGATORIO per isolamento multi-tenant
+ * @security workspaceId è richiesto: senza di esso la query non viene eseguita
  */
-async function findShipmentByLDV(
-  ldvNumber: string,
-  workspaceId?: string
-): Promise<Shipment | null> {
+async function findShipmentByLDV(ldvNumber: string, workspaceId: string): Promise<Shipment | null> {
   try {
-    // Cerca prima per LDV
+    // Cerca prima per LDV — SEMPRE filtrata per workspace
     let query = supabaseAdmin
       .from('shipments')
       .select('*')
       .eq('ldv', ldvNumber)
-      .eq('deleted', false);
-
-    if (workspaceId) {
-      query = query.eq('workspace_id', workspaceId);
-    }
+      .eq('deleted', false)
+      .eq('workspace_id', workspaceId);
 
     let { data, error } = await query.limit(1).maybeSingle();
 
@@ -43,16 +38,13 @@ async function findShipmentByLDV(
       return data as Shipment;
     }
 
-    // Fallback: cerca per tracking_number
+    // Fallback: cerca per tracking_number — SEMPRE filtrata per workspace
     let trackingQuery = supabaseAdmin
       .from('shipments')
       .select('*')
       .eq('tracking_number', ldvNumber)
-      .eq('deleted', false);
-
-    if (workspaceId) {
-      trackingQuery = trackingQuery.eq('workspace_id', workspaceId);
-    }
+      .eq('deleted', false)
+      .eq('workspace_id', workspaceId);
 
     const { data: trackingData, error: trackingError } = await trackingQuery.limit(1).maybeSingle();
 
@@ -104,8 +96,15 @@ export async function confirmPickupScan(
 
     const ldvClean = ldvNumber.trim().toUpperCase();
 
-    // 3. Workspace isolation
+    // 3. Workspace isolation — OBBLIGATORIO per isolamento multi-tenant
     const workspaceId = context.workspace?.id;
+
+    if (!workspaceId) {
+      return {
+        success: false,
+        error: 'Workspace non trovato. Seleziona un workspace prima di effettuare la scansione.',
+      };
+    }
 
     // 4. Cerca spedizione per LDV o tracking number (filtrata per workspace)
     const shipment = await findShipmentByLDV(ldvClean, workspaceId);
