@@ -33,8 +33,7 @@ jobs:
         run: npm ci
 
       - name: Run npm audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
+        run: npm audit --audit-level=high --omit=dev
 
       - name: Run npm audit (JSON report)
         run: npm audit --json > audit-report.json || true
@@ -157,6 +156,5 @@ jobs:
 
       - name: Perform CodeQL Analysis
         uses: github/codeql-action/analyze@v3
-        continue-on-error: true
         with:
           category: "/language:javascript-typescript"

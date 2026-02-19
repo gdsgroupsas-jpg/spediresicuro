@@ -16,6 +16,8 @@
 
 import { Redis } from '@upstash/redis';
 import crypto from 'crypto';
+import { trackError } from '@/lib/error-tracker';
+import * as Sentry from '@sentry/nextjs';
 
 // ====== CONFIGURAZIONE ======
 const DEFAULT_LIMIT = 20;
@@ -160,7 +162,17 @@ export async function rateLimit(
         return { ...result, resetAt, source: 'redis' };
       }
     } catch (error) {
-      console.warn('⚠️ [RATE-LIMIT] Redis error, fallback in-memory');
+      trackError(error instanceof Error ? error : new Error('Redis rate-limit error'), {
+        context: 'RateLimit',
+        metadata: { route, reason: 'redis_error_or_timeout' },
+      });
+      try {
+        Sentry.metrics.count('rate_limit.redis_fallback', 1, {
+          attributes: { route },
+        });
+      } catch {
+        // Sentry non disponibile
+      }
     }
   }
 
@@ -169,8 +181,18 @@ export async function rateLimit(
     const memResult = rateLimitInMemory(key, limit, windowSeconds);
     return { ...memResult, source: 'memory' };
   } catch (error) {
-    // 3. Errore critico - ALLOW (fail-open)
-    console.error('❌ [RATE-LIMIT] Errore critico, allowing request');
+    // 3. Errore critico - ALLOW (fail-open) con alerting
+    trackError(error instanceof Error ? error : new Error('Rate-limit critical error'), {
+      context: 'RateLimit',
+      metadata: { route, reason: 'critical_fallback_fail_open' },
+    });
+    try {
+      Sentry.metrics.count('rate_limit.fail_open', 1, {
+        attributes: { route, reason: 'critical_error' },
+      });
+    } catch {
+      // Sentry non disponibile
+    }
     return {
       allowed: true,
       remaining: limit,

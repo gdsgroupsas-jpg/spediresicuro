@@ -4,20 +4,38 @@
  * Usa Redis (Upstash) per lock pessimistico sulle automazioni.
  * Previene esecuzioni duplicate in caso di multiple istanze.
  *
- * Fallback: se Redis non è disponibile, fail-open (procedi).
- * Sicuro per Vercel single-instance (il lock è extra-safety).
+ * Fail mode configurabile via LOCK_FAIL_MODE:
+ * - 'open' (default): se Redis non disponibile, procedi (sicuro per Vercel single-instance)
+ * - 'closed': se Redis non disponibile, blocca esecuzione
+ *
+ * Observability: trackError() + Sentry metrics su ogni fail-open/fail-closed
  */
 
 import { getRedis } from '@/lib/db/redis';
+import { trackError } from '@/lib/error-tracker';
+import * as Sentry from '@sentry/nextjs';
 
 const LOCK_PREFIX = 'automation:lock:';
+
+// Fail mode configurabile: 'open' (default, procedi) o 'closed' (blocca)
+let lockFailMode: 'open' | 'closed' = (process.env.LOCK_FAIL_MODE as 'open' | 'closed') || 'open';
+
+/** Solo per testing — imposta fail mode runtime */
+export function __setFailModeForTesting(mode: 'open' | 'closed'): void {
+  lockFailMode = mode;
+}
+
+/** Solo per testing — reset al default */
+export function __resetFailModeForTesting(): void {
+  lockFailMode = (process.env.LOCK_FAIL_MODE as 'open' | 'closed') || 'open';
+}
 
 /**
  * Acquisisce un lock distribuito per un'automazione.
  *
  * @param slug - Identificativo automazione
  * @param ttlSeconds - Durata lock in secondi (default: 300 = 5 min)
- * @returns true se lock acquisito (o Redis non disponibile)
+ * @returns true se lock acquisito (o Redis non disponibile in fail-open mode)
  */
 export async function acquireAutomationLock(
   slug: string,
@@ -25,10 +43,20 @@ export async function acquireAutomationLock(
 ): Promise<boolean> {
   const redis = getRedis();
 
-  // Fallback fail-open: se Redis non disponibile, procedi
+  // Redis non disponibile: comportamento dipende da failMode
   if (!redis) {
-    console.warn(`[LOCK] Redis non disponibile, fail-open per: ${slug}`);
-    return true;
+    trackError(new Error(`Redis non disponibile per lock: ${slug}`), {
+      context: 'DistributedLock',
+      metadata: { slug, failMode: lockFailMode, reason: 'redis_unavailable' },
+    });
+    try {
+      Sentry.metrics.count('distributed_lock.fail_open', 1, {
+        attributes: { slug, reason: 'redis_unavailable' },
+      });
+    } catch {
+      // Sentry non disponibile
+    }
+    return lockFailMode === 'open';
   }
 
   try {
@@ -40,12 +68,22 @@ export async function acquireAutomationLock(
       return true;
     }
 
-    console.warn(`[LOCK] Automazione già in esecuzione: ${slug}`);
+    // Lock gia in uso — non e' un errore, e' comportamento atteso
+    console.warn(`[LOCK] Automazione gia in esecuzione: ${slug}`);
     return false;
   } catch (error) {
-    console.error(`[LOCK] Errore acquisizione lock ${slug}:`, error);
-    // Fail-open: in caso di errore Redis, procedi comunque
-    return true;
+    trackError(error instanceof Error ? error : new Error(String(error)), {
+      context: 'DistributedLock',
+      metadata: { slug, failMode: lockFailMode, reason: 'redis_error' },
+    });
+    try {
+      Sentry.metrics.count('distributed_lock.fail_open', 1, {
+        attributes: { slug, reason: 'redis_error' },
+      });
+    } catch {
+      // Sentry non disponibile
+    }
+    return lockFailMode === 'open';
   }
 }
 
@@ -63,7 +101,10 @@ export async function releaseAutomationLock(slug: string): Promise<void> {
     const key = `${LOCK_PREFIX}${slug}`;
     await redis.del(key);
   } catch (error) {
-    console.error(`[LOCK] Errore rilascio lock ${slug}:`, error);
-    // Non critico: il TTL libererà comunque il lock
+    trackError(error instanceof Error ? error : new Error(String(error)), {
+      context: 'DistributedLock.release',
+      metadata: { slug },
+    });
+    // Non critico: il TTL liberera comunque il lock
   }
 }

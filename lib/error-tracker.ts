@@ -9,6 +9,7 @@
  */
 
 import { createLogger, generateRequestId } from './logger';
+import * as Sentry from '@sentry/nextjs';
 
 export interface ErrorContext {
   requestId?: string;
@@ -41,13 +42,16 @@ export function trackError(error: Error | any, errorContext: ErrorContext = {}):
     errorType: error?.name || 'Error',
   });
 
-  // In futuro: qui si può aggiungere integrazione con Sentry o altri servizi
-  // if (process.env.SENTRY_DSN) {
-  //   Sentry.captureException(error, {
-  //     tags: { context, userId },
-  //     extra: { requestId, ...metadata },
-  //   });
-  // }
+  // Sentry error tracking (fail-safe: se Sentry non inizializzato, skip)
+  try {
+    Sentry.captureException(error instanceof Error ? error : new Error(String(error)), {
+      tags: { context, severity: determineSeverity(error) },
+      extra: { requestId, ...metadata },
+      ...(userId && userId !== 'unknown' ? { user: { id: userId } } : {}),
+    });
+  } catch {
+    // Sentry non disponibile (es. test, dev senza DSN) — logging gia avvenuto sopra
+  }
 }
 
 /**

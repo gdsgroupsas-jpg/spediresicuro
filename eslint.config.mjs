@@ -66,6 +66,10 @@ const eslintConfig = [
       ],
     },
   },
+  // NOTE: no-console rule non attivato qui perche Next.js esegue ESLint
+  // durante il build e 816 warning preesistenti renderebbero il build rumoroso.
+  // Da attivare quando il debito console.log sara ridotto sotto 100.
+  // Vedi .github/SECURITY_DEBT_POLICY.md per piano riduzione.
 ];
 
 export default eslintConfig;

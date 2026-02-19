@@ -7,7 +7,7 @@
  * Sicurezza:
  * - Validazione ownership indirizzo mittente (server-side, MAI fidarsi del client)
  * - Rate limiting per workspace (daily_limit da outreach_channel_config)
- * - Sanitizzazione HTML body tramite sanitize-html (libreria testata)
+ * - Sanitizzazione HTML body tramite sanitize-html (parser, no regex)
  * - Isolamento cross-workspace garantito da RLS + validazione server-side
  * - Fail-closed: se rate limit non verificabile, blocca invio
  */
@@ -16,6 +16,7 @@ import { supabaseAdmin } from '@/lib/db/client';
 import { workspaceQuery } from '@/lib/db/workspace-query';
 import { sendEmail } from '@/lib/email/resend';
 import { rateLimit } from '@/lib/security/rate-limit';
+import sanitizeHtml from 'sanitize-html';
 
 // ─── TYPES ───
 
@@ -56,58 +57,86 @@ export interface WorkspaceEmailResult {
 /**
  * Sanitizza HTML body email rimuovendo tag e attributi pericolosi.
  *
- * Approccio multi-pass:
- * 1. Rimuovi tag pericolosi (script, iframe, object, embed, form, ecc.)
- * 2. Rimuovi event handler inline (on*)
- * 3. Rimuovi protocolli pericolosi da href/src (javascript:, data:, vbscript:, ecc.)
- *    — include HTML entity decoding per bloccare bypass come &#106;avascript:
- * 4. Ripeti la rimozione tag per bloccare recomposition (es. <scr<script>ipt>)
+ * Usa sanitize-html — sanitizer server-side basato su htmlparser2 (parser reale,
+ * non regex). Immune a mutation XSS, recomposition attacks, e encoding bypass.
+ * Nessuna dipendenza DOM (no jsdom), leggero per server-side.
+ *
+ * Configurazione: allowlist di tag e attributi sicuri per contesto email.
  */
 export function sanitizeEmailHtml(html: string): string {
-  // Lista tag pericolosi
-  const dangerousTagsRegex =
-    /<\s*\/?\s*(script|style|iframe|object|embed|form|input|textarea|button|link|meta|base|applet|svg|math)\b[^>]*>/gi;
+  if (!html) return '';
 
-  // Pass 1: rimuovi tag pericolosi
-  let sanitized = html.replace(dangerousTagsRegex, '');
-
-  // Pass 2: rimuovi event handler inline (onclick, onerror, onload, ecc.)
-  // Copre: con apici, senza apici, con spazi
-  sanitized = sanitized.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
-
-  // Pass 3: rimuovi protocolli pericolosi da attributi href/src/action
-  // Copre javascript:, vbscript:, livescript:, data: (con e senza HTML entities)
-  // Prima decodifico HTML entities nei valori attributo per bloccare bypass
-  const dangerousProtocols = /(href|src|action)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
-
-  sanitized = sanitized.replace(dangerousProtocols, (match, attr, dblQuoteVal, singleQuoteVal) => {
-    const rawVal = dblQuoteVal ?? singleQuoteVal ?? '';
-    // Decodifica HTML entities per rilevare offuscamento
-    const decoded = rawVal
-      .replace(/&#x([0-9a-fA-F]+);?/g, (_: string, hex: string) =>
-        String.fromCharCode(parseInt(hex, 16))
-      )
-      .replace(/&#(\d+);?/g, (_: string, dec: string) => String.fromCharCode(parseInt(dec, 10)))
-      .replace(/&amp;/gi, '&');
-    // Strip whitespace e newline interni per bloccare "java\nscript:" bypass
-    const cleaned = decoded.replace(/[\s\r\n\t]+/g, '').toLowerCase();
-
-    if (
-      cleaned.startsWith('javascript:') ||
-      cleaned.startsWith('vbscript:') ||
-      cleaned.startsWith('livescript:') ||
-      cleaned.startsWith('data:') ||
-      cleaned.startsWith('mhtml:')
-    ) {
-      return `${attr}=""`;
-    }
-    return match;
+  return sanitizeHtml(html, {
+    // Tag sicuri per email HTML
+    allowedTags: [
+      'h1',
+      'h2',
+      'h3',
+      'h4',
+      'h5',
+      'h6',
+      'p',
+      'br',
+      'hr',
+      'div',
+      'span',
+      'strong',
+      'b',
+      'em',
+      'i',
+      'u',
+      's',
+      'del',
+      'a',
+      'img',
+      'ul',
+      'ol',
+      'li',
+      'table',
+      'thead',
+      'tbody',
+      'tfoot',
+      'tr',
+      'th',
+      'td',
+      'blockquote',
+      'pre',
+      'code',
+      'sup',
+      'sub',
+      'small',
+    ],
+    // Attributi sicuri per email (per tag)
+    allowedAttributes: {
+      a: ['href', 'target', 'rel', 'title', 'class', 'id', 'style'],
+      img: ['src', 'alt', 'title', 'width', 'height', 'class', 'id', 'style'],
+      table: ['border', 'cellpadding', 'cellspacing', 'align', 'width', 'class', 'id', 'style'],
+      td: ['colspan', 'rowspan', 'align', 'valign', 'width', 'height', 'class', 'id', 'style'],
+      th: ['colspan', 'rowspan', 'align', 'valign', 'width', 'height', 'class', 'id', 'style'],
+      tr: ['align', 'valign', 'class', 'id', 'style'],
+      div: ['class', 'id', 'style', 'align'],
+      span: ['class', 'id', 'style'],
+      p: ['class', 'id', 'style', 'align'],
+      h1: ['class', 'id', 'style'],
+      h2: ['class', 'id', 'style'],
+      h3: ['class', 'id', 'style'],
+      h4: ['class', 'id', 'style'],
+      h5: ['class', 'id', 'style'],
+      h6: ['class', 'id', 'style'],
+      blockquote: ['class', 'id', 'style'],
+      hr: ['class', 'id', 'style'],
+    },
+    // Protocolli sicuri (blocca javascript:, vbscript:, data:, ecc.)
+    allowedSchemes: ['http', 'https', 'mailto'],
+    allowedSchemesByTag: {
+      img: ['http', 'https'],
+      a: ['http', 'https', 'mailto'],
+    },
+    // Rimuovi tag non permessi (non mostrare come testo)
+    disallowedTagsMode: 'discard',
+    // Nessun attributo data-* permesso
+    allowedClasses: {},
   });
-
-  // Pass 4: secondo passaggio per tag pericolosi (blocca recomposition)
-  sanitized = sanitized.replace(dangerousTagsRegex, '');
-
-  return sanitized;
 }
 
 // ─── VALIDAZIONE ───

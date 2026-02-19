@@ -18,6 +18,18 @@ vi.mock('@/lib/db/redis', () => ({
   getRedis: vi.fn(() => null),
 }));
 
+// Mock error-tracker e Sentry (importati da rate-limit.ts per observability)
+const mockTrackError = vi.fn();
+vi.mock('@/lib/error-tracker', () => ({
+  trackError: (...args: unknown[]) => mockTrackError(...args),
+}));
+
+vi.mock('@sentry/nextjs', () => ({
+  metrics: {
+    count: vi.fn(),
+  },
+}));
+
 describe('Rate Limit Utility', () => {
   beforeEach(() => {
     resetForTesting();
