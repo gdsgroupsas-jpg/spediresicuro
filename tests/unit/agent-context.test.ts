@@ -10,7 +10,7 @@
 import { describe, it, expect } from 'vitest';
 import { AgentState } from '@/lib/agent/orchestrator/state';
 import { ActingContext } from '@/lib/safe-auth';
-import { UserRole } from '@/lib/rbac';
+import { AccountType } from '@/lib/safe-auth';
 import { HumanMessage } from '@langchain/core/messages';
 
 // ==================== FIXTURES ====================
@@ -44,7 +44,7 @@ const createAgentStateWithContext = (actingContext: ActingContext): AgentState =
   agent_context: {
     session_id: 'test-session-123',
     conversation_history: [new HumanMessage('Test message')],
-    user_role: (actingContext.target.role || 'user') as UserRole,
+    user_role: (actingContext.target.role || 'user') as AccountType,
     is_impersonating: actingContext.isImpersonating,
     acting_context: actingContext,
   },

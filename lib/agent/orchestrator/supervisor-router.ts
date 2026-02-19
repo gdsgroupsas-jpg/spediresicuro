@@ -48,7 +48,7 @@ import {
 } from '@/lib/telemetry/logger';
 import { defaultLogger, type ILogger } from '../logger';
 import { ActingContext } from '@/lib/safe-auth';
-import { UserRole } from '@/lib/rbac';
+import { AccountType } from '@/lib/safe-auth';
 import { createTypingChannel, type TypingChannel } from '@/lib/realtime/typing-indicators';
 
 // ==================== TIPI ====================
@@ -453,7 +453,7 @@ export async function supervisorRouter(
       agent_context: {
         session_id: sessionId,
         conversation_history: [new HumanMessage(message)],
-        user_role: (actingContext.target.role || 'user') as UserRole,
+        user_role: (actingContext.target.role || 'user') as AccountType,
         is_impersonating: actingContext.isImpersonating,
         acting_context: actingContext,
       },

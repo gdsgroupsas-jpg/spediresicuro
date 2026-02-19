@@ -77,7 +77,7 @@ const IMPERSONATE_HEADER = 'x-sec-impersonate-target';
 /**
  * Ruoli autorizzati a fare impersonation
  */
-const AUTHORIZED_IMPERSONATORS = ['admin', 'superadmin'];
+const AUTHORIZED_IMPERSONATORS = ['superadmin'];
 
 /**
  * Get Safe Auth - L'UNICO modo per ottenere contesto autenticazione
@@ -294,16 +294,38 @@ export async function requireSafeAuth(): Promise<ActingContext> {
 }
 
 /**
- * Check se utente corrente è SuperAdmin (può fare impersonation)
+ * Tipi account supportati (source of truth: campo account_type nel DB users)
+ *
+ * REGOLA: account_type e' la SOURCE OF TRUTH. Il campo role e' deprecated.
+ */
+export type AccountType = 'user' | 'admin' | 'superadmin' | 'byoc' | 'reseller';
+
+/**
+ * Check se utente corrente è SuperAdmin (può fare impersonation, accesso totale)
+ *
+ * FIX F1: Usa SOLO account_type come source of truth.
+ * Il campo role e' deprecated e viene ignorato.
  *
  * @param context - ActingContext da getSafeAuth()
  * @returns true se actor è SuperAdmin
  */
 export function isSuperAdmin(context: ActingContext): boolean {
-  const role = context.actor.role.toLowerCase();
   const accountType = context.actor.account_type?.toLowerCase();
+  return accountType === 'superadmin';
+}
 
-  return role === 'admin' || role === 'superadmin' || accountType === 'superadmin';
+/**
+ * Check se utente corrente è Admin o SuperAdmin (accesso admin panel)
+ *
+ * Usa questo per gate che richiedono almeno livello admin.
+ * Per gate superadmin-only, usa isSuperAdmin().
+ *
+ * @param context - ActingContext da getSafeAuth()
+ * @returns true se actor è Admin o SuperAdmin
+ */
+export function isAdminOrAbove(context: ActingContext): boolean {
+  const accountType = context.actor.account_type?.toLowerCase();
+  return accountType === 'admin' || accountType === 'superadmin';
 }
 
 /**

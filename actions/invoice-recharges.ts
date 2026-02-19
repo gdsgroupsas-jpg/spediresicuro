@@ -12,6 +12,7 @@
 'use server';
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { workspaceQuery } from '@/lib/db/workspace-query';
 import { generateInvoicePDF, InvoiceData } from '@/lib/invoices/pdf-generator';
 import {
@@ -49,8 +50,7 @@ export async function generateInvoiceFromRechargesAction(params: {
     const context = await requireWorkspaceAuth();
 
     // Solo admin/superadmin può generare fatture
-    const isAdmin =
-      context.actor.account_type === 'admin' || context.actor.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(context.actor);
 
     if (!isAdmin) {
       return {
@@ -429,8 +429,7 @@ export async function generatePeriodicInvoiceAction(params: {
   try {
     const context = await requireWorkspaceAuth();
 
-    const isAdmin =
-      context.actor.account_type === 'admin' || context.actor.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(context.actor);
 
     if (!isAdmin) {
       return {
@@ -507,8 +506,7 @@ export async function configureInvoiceGenerationRuleAction(params: {
   try {
     const context = await requireWorkspaceAuth();
 
-    const isAdmin =
-      context.actor.account_type === 'admin' || context.actor.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(context.actor);
 
     if (!isAdmin) {
       return {
@@ -581,8 +579,7 @@ export async function listUninvoicedRechargesAction(userId: string): Promise<{
     const context = await requireWorkspaceAuth();
 
     // Verifica permessi: admin vede tutto, utenti vedono solo proprie
-    const isAdmin =
-      context.actor.account_type === 'admin' || context.actor.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(context.actor);
 
     if (!isAdmin && context.target.id !== userId) {
       return {
@@ -641,8 +638,7 @@ export async function generatePostpaidMonthlyInvoice(
   try {
     // Solo admin/superadmin puo' generare fatture postpaid
     const context = await requireWorkspaceAuth();
-    const isAdmin =
-      context.actor.account_type === 'admin' || context.actor.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(context.actor);
     const isReseller = (context.actor as unknown as { is_reseller?: boolean }).is_reseller === true;
 
     if (!isAdmin && !isReseller) {

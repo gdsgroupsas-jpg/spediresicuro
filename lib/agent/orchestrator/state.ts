@@ -1,7 +1,7 @@
 import { ShipmentDraft } from '@/lib/address/shipment-draft';
 import { BookingResult } from '@/lib/agent/workers/booking';
 import { PricingResult } from '@/lib/ai/pricing-engine';
-import { UserRole } from '@/lib/rbac';
+import { AccountType } from '@/lib/safe-auth';
 import { ActingContext } from '@/lib/safe-auth';
 import { CourierServiceType, Shipment } from '@/types/shipments';
 import { BaseMessage } from '@langchain/core/messages';
@@ -133,7 +133,7 @@ export interface AgentState {
   agent_context?: {
     session_id: string;
     conversation_history: BaseMessage[];
-    user_role: UserRole;
+    user_role: AccountType;
     current_page?: string;
     is_impersonating: boolean;
     acting_context?: ActingContext; // Iniettato da supervisor-router

@@ -3,7 +3,10 @@
  * Ensures type safety across fiscal control features
  */
 
-export type UserRole = 'user' | 'admin' | 'reseller' | 'superadmin';
+import type { AccountType } from '@/lib/safe-auth';
+
+/** @deprecated Usare AccountType da @/lib/safe-auth */
+export type UserRole = AccountType;
 
 /**
  * Motivo per cui il margine non e calcolabile

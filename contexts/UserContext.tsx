@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, ReactNode } from 'react';
 import { useSession } from 'next-auth/react';
+import { isAdminOrAbove, isSuperAdminCheck, isResellerCheck } from '@/lib/auth-helpers';
 
 // Dati utente condivisi — un singolo fetch sostituisce 19+ fetch ridondanti
 export interface UserData {
@@ -98,14 +99,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
     }
   }, [status, session?.user?.email, fetchUserInfo]);
 
-  // Valori derivati
-  const isAdmin =
-    user?.account_type === 'admin' ||
-    user?.account_type === 'superadmin' ||
-    user?.role === 'admin' ||
-    user?.role === 'superadmin';
-  const isSuperAdmin = user?.account_type === 'superadmin' || user?.role === 'superadmin';
-  const isReseller = user?.is_reseller === true;
+  // Valori derivati — account_type e' la source of truth
+  const isAdmin = user ? isAdminOrAbove(user) : false;
+  const isSuperAdmin = user ? isSuperAdminCheck(user) : false;
+  const isReseller = user ? isResellerCheck(user) : false;
   const hasCompletedOnboarding =
     (user?.datiCliente as Record<string, unknown>)?.datiCompletati === true;
 

@@ -292,26 +292,77 @@ Nessun check `X-Telegram-Bot-Api-Secret-Token`.
 
 ### Finding respinti
 
-| Finding                         | Verdetto             | Motivazione                                                                         |
-| ------------------------------- | -------------------- | ----------------------------------------------------------------------------------- |
-| F1: escalation admin→superadmin | PARZIALE             | `role='admin'` impostato solo da auto-promote superadmin; nessun vettore di exploit |
-| F6: RBAC incoerente             | FALSO POSITIVO       | Design intenzionale: gerarchia admin > reseller                                     |
-| F7: lock-out workspace          | CONFERMATO, MITIGATO | Fallback `primary_workspace_id` gia presente                                        |
-| F9: a11y coverage               | CONFERMATO           | Backlog (non security blocker)                                                      |
+| Finding             | Verdetto       | Motivazione                                     |
+| ------------------- | -------------- | ----------------------------------------------- |
+| F6: RBAC incoerente | FALSO POSITIVO | Design intenzionale: gerarchia admin > reseller |
+| F9: a11y coverage   | CONFERMATO     | Backlog (non security blocker)                  |
 
 ### Tabella riassuntiva audit finding
 
-| Finding                     | Gravita        | Commit    | Stato                         |
-| --------------------------- | -------------- | --------- | ----------------------------- |
-| F3 delete user cross-tenant | CRITICO        | `5a6df2b` | CHIUSO                        |
-| F2 cron/webhook fail-open   | CRITICO        | `5a6df2b` | CHIUSO                        |
-| F5 wallet leak NULL         | ALTO           | `5a6df2b` | CHIUSO                        |
-| F4 atomicita feature wallet | ALTO           | `5a6df2b` | CHIUSO                        |
-| F8 Telegram webhook auth    | MEDIO          | `5a6df2b` | CHIUSO                        |
-| F1 admin→superadmin         | PARZIALE       | —         | APERTO (refactor consigliato) |
-| F7 lock-out workspace       | MEDIO          | —         | MITIGATO                      |
-| F6 RBAC incoerente          | FALSO POSITIVO | —         | CHIUSO                        |
-| F9 a11y                     | MEDIO-BASSO    | —         | BACKLOG                       |
+| Finding                     | Gravita        | Commit     | Stato   |
+| --------------------------- | -------------- | ---------- | ------- |
+| F3 delete user cross-tenant | CRITICO        | `5a6df2b`  | CHIUSO  |
+| F2 cron/webhook fail-open   | CRITICO        | `5a6df2b`  | CHIUSO  |
+| F5 wallet leak NULL         | ALTO           | `5a6df2b`  | CHIUSO  |
+| F4 atomicita feature wallet | ALTO           | `5a6df2b`  | CHIUSO  |
+| F8 Telegram webhook auth    | MEDIO          | `5a6df2b`  | CHIUSO  |
+| F1 admin→superadmin         | PARZIALE       | vedi sotto | CHIUSO  |
+| F7 lock-out workspace       | MEDIO          | vedi sotto | CHIUSO  |
+| F6 RBAC incoerente          | FALSO POSITIVO | —          | CHIUSO  |
+| F9 a11y                     | MEDIO-BASSO    | —          | BACKLOG |
+
+---
+
+## Audit Esterno #2 — Fix F1 + F7 (Consolidamento RBAC)
+
+### F1 CHIUSO: isSuperAdmin() consolidato su account_type
+
+**Problema**: `isSuperAdmin()` controllava `role === 'admin'`, troppo permissivo.
+Un admin non-superadmin poteva passare il check.
+
+**Root cause**: Auto-promozione superadmin scriveva `role: 'admin'` (non `'superadmin'`).
+
+**Fix implementati**:
+
+1. **`lib/safe-auth.ts`**: `isSuperAdmin()` usa SOLO `account_type === 'superadmin'`
+2. **`lib/safe-auth.ts`**: Nuova funzione `isAdminOrAbove()` per gate admin
+3. **`lib/safe-auth.ts`**: `AUTHORIZED_IMPERSONATORS` ristretto a `['superadmin']`
+4. **`lib/auth-config.ts`**: Auto-promozione scrive `role: 'superadmin'` (allineato)
+5. **`lib/auth-config.ts`**: JWT callback allinea `token.role = account_type`
+6. **`lib/auth-helpers.ts`**: Nuovo file con helper puri (funzionano server + client)
+7. **`lib/rbac.ts`**: RIMOSSO (zero import, guardian test monitora)
+8. **8+ file actions/**: Check inline sostituiti con helper centralizzati
+
+**Test**: 52 nuovi test in `rbac-consolidation.test.ts` + `auth-helpers.test.ts`
+
+**Architettura RBAC finale**:
+
+```text
+account_type (SOURCE OF TRUTH — campo DB users)
+├── 'superadmin' → Piattaforma owner (impersonation, accesso totale)
+├── 'admin'      → Amministratore (admin panel, gestione utenti)
+├── 'reseller'   → Cliente B2B (sub-utenti, listini propri)
+├── 'byoc'       → Bring Your Own Courier
+└── 'user'       → Utente standard
+
+Helper disponibili:
+├── @/lib/safe-auth     → isSuperAdmin(context), isAdminOrAbove(context), isReseller(context)
+│                         Usa con ActingContext (impersonation-aware, server-only)
+└── @/lib/auth-helpers  → isSuperAdminCheck(u), isAdminOrAbove(u), isResellerCheck(u), isBYOC(u)
+                          Funzioni pure (server + client, qualsiasi oggetto con account_type)
+```
+
+### F7 CHIUSO: Workspace lock-out gia protetto
+
+**Protezioni verificate (esistenti)**:
+
+1. **DB trigger `check_workspace_has_owner()`**: BEFORE UPDATE, blocca rimozione ultimo owner
+2. **DB trigger `prevent_delete_last_owner()`**: BEFORE DELETE, blocca cancellazione ultimo owner
+3. **API DELETE endpoint**: Rifiuta rimozione se target e' owner
+4. **Fallback 3 livelli**: localStorage → `primary_workspace_id` → primo workspace
+5. **Soft-delete**: `status='removed'` (non hard delete)
+
+**Verdetto**: Lock-out workspace e' impossibile con le protezioni attuali. Finding chiuso.
 
 ---
 
@@ -319,6 +370,4 @@ Nessun check `X-Telegram-Bot-Api-Secret-Token`.
 
 - **Test coverage API routes**: ~26% → target 60%+ (giorni di lavoro)
 - **A11y workspace switcher**: ARIA/listbox semantics mancanti + axe-core/playwright
-- **159 inline `account_type` checks**: da consolidare in helper (refactoring, non security)
-- **F1 RBAC cleanup**: `isSuperAdmin()` dovrebbe usare solo `accountType`, non `role`
 - **TELEGRAM_WEBHOOK_SECRET**: configurare via `setWebhook({ secret_token })` in produzione

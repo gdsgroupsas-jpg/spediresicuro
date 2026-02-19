@@ -80,7 +80,8 @@ export interface NavSection {
 }
 
 /**
- * Ruoli utente supportati
+ * Ruoli utente per navigazione (subset di AccountType da @/lib/safe-auth)
+ * Non include 'byoc' e 'reseller' che non hanno menu dedicati
  */
 export type UserRole = 'user' | 'admin' | 'superadmin';
 

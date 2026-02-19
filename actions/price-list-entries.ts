@@ -7,6 +7,7 @@
 'use server';
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getPriceListById } from '@/lib/db/price-lists';
 import type { PriceListEntry } from '@/types/listini';
@@ -60,7 +61,7 @@ export async function updatePriceListEntryAction(
       return { success: false, error: 'Listino non trovato' };
     }
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
     const isOwner = priceList.created_by === user.id;
     const isAssignedOwner = priceList.assigned_to_user_id === user.id;
 
@@ -155,7 +156,7 @@ export async function createPriceListEntryAction(
       return { success: false, error: 'Listino non trovato' };
     }
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
     const isOwner = priceList.created_by === user.id;
     const isAssignedOwner = priceList.assigned_to_user_id === user.id;
 
@@ -238,7 +239,7 @@ export async function deletePriceListEntryAction(entryId: string): Promise<{
       return { success: false, error: 'Listino non trovato' };
     }
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
     const isOwner = priceList.created_by === user.id;
     const isAssignedOwner = priceList.assigned_to_user_id === user.id;
 
@@ -310,7 +311,7 @@ export async function upsertPriceListEntriesAction(
       return { success: false, error: 'Listino non trovato' };
     }
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
     const isOwner = priceList.created_by === user.id;
     const isAssignedOwner = priceList.assigned_to_user_id === user.id;
 

@@ -378,14 +378,14 @@ export const authOptions = {
                 account_type: 'superadmin',
                 admin_level: 0,
                 parent_admin_id: null,
-                role: 'admin',
+                role: 'superadmin',
                 updated_at: new Date().toISOString(),
               })
               .eq('email', user.email);
 
             if (!updateError) {
               console.log('✅ [AUTO-PROMOTE] Utente promosso a superadmin automaticamente');
-              user.role = 'admin'; // Aggiorna anche il ruolo nella sessione
+              user.role = 'superadmin'; // Allinea role a account_type (source of truth)
 
               // Log audit (workspace-isolated)
               try {
@@ -470,6 +470,8 @@ export const authOptions = {
               token.parent_id = userData.parent_id || null;
               token.wallet_balance = parseFloat(userData.wallet_balance || '0') || 0;
               token.account_type = userData.account_type || 'user';
+              // Allinea role a account_type (source of truth) — FIX F1
+              token.role = userData.account_type || token.role || 'user';
               // Onboarding status from dati_cliente JSONB
               token.onboarding_complete = userData.dati_cliente?.datiCompletati === true;
 

@@ -42,7 +42,7 @@ import {
 } from '@/lib/agent/orchestrator/supervisor-router';
 import { generateTraceId } from '@/lib/telemetry/logger';
 import type { ActingContext } from '@/lib/safe-auth';
-import type { UserRole } from '@/lib/rbac';
+import type { AccountType } from '@/lib/safe-auth';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -237,13 +237,13 @@ async function processIncomingMessage(
       actor: {
         id: user.id,
         email: user.email,
-        role: (user.role || 'user') as UserRole,
+        role: (user.role || 'user') as AccountType,
         name: user.name || senderName,
       },
       target: {
         id: user.id,
         email: user.email,
-        role: (user.role || 'user') as UserRole,
+        role: (user.role || 'user') as AccountType,
         name: user.name || senderName,
       },
       isImpersonating: false,

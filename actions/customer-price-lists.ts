@@ -8,6 +8,7 @@
 'use server';
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { workspaceQuery } from '@/lib/db/workspace-query';
 import { createPriceList } from '@/lib/db/price-lists';
@@ -43,7 +44,7 @@ export async function createCustomerPriceListAction(data: {
     const workspaceId = wsContext.workspace.id;
 
     const isReseller = user.is_reseller === true;
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
 
     if (!isReseller && !isAdmin) {
       return {
@@ -131,7 +132,7 @@ export async function getResellerSubUsersAction(): Promise<{
     const workspaceId = wsContext.workspace.id;
 
     const isReseller = user.is_reseller === true;
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
 
     if (!isReseller && !isAdmin) {
       return {
@@ -213,7 +214,7 @@ export async function updateCustomerPriceListMarginAction(
       };
     }
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
     const isOwner = priceList.created_by === user.id;
     const isReseller = user.is_reseller === true;
 
@@ -278,7 +279,7 @@ export async function assignCustomerPriceListToMultipleUsersAction(
     const workspaceId = wsContext.workspace.id;
 
     const isReseller = user.is_reseller === true;
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
 
     if (!isReseller && !isAdmin) {
       return {

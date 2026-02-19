@@ -6,6 +6,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { isAdminOrAbove, isSuperAdminCheck, isBYOC, isResellerCheck } from '@/lib/auth-helpers';
 
 /**
  * Verifica se un utente ha una capability attiva
@@ -85,51 +86,29 @@ export function hasCapabilityFallback(
     return false;
   }
 
-  const { role, account_type, is_reseller } = user;
-
-  // Mapping capability → role/account_type
+  // Mapping capability → account_type (source of truth)
+  // Il campo role e' deprecated e viene ignorato
   switch (capabilityName) {
     case 'can_manage_pricing':
-      return (
-        account_type === 'admin' ||
-        account_type === 'superadmin' ||
-        role === 'admin' ||
-        role === 'superadmin'
-      );
+      return isAdminOrAbove(user);
 
     case 'can_create_subusers':
-      return (
-        is_reseller === true ||
-        account_type === 'admin' ||
-        account_type === 'superadmin' ||
-        role === 'admin' ||
-        role === 'superadmin'
-      );
+      return isResellerCheck(user) || isAdminOrAbove(user);
 
     case 'can_access_api':
-      return account_type === 'byoc' || account_type === 'admin' || account_type === 'superadmin';
+      return isBYOC(user) || isAdminOrAbove(user);
 
     case 'can_manage_wallet':
-      return (
-        account_type === 'admin' ||
-        account_type === 'superadmin' ||
-        role === 'admin' ||
-        role === 'superadmin'
-      );
+      return isAdminOrAbove(user);
 
     case 'can_view_all_clients':
-      return (
-        account_type === 'admin' ||
-        account_type === 'superadmin' ||
-        role === 'admin' ||
-        role === 'superadmin'
-      );
+      return isAdminOrAbove(user);
 
     case 'can_manage_resellers':
-      return account_type === 'superadmin';
+      return isSuperAdminCheck(user);
 
     case 'can_bypass_rls':
-      return account_type === 'superadmin';
+      return isSuperAdminCheck(user);
 
     default:
       // Capability sconosciuta: negato per sicurezza

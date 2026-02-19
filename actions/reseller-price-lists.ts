@@ -11,6 +11,7 @@
 'use server';
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { workspaceQuery } from '@/lib/db/workspace-query';
 import { assertValidUserId } from '@/lib/validators';
@@ -51,7 +52,7 @@ export async function resellerCloneSupplierPriceListAction(
     };
 
     const isReseller = user.is_reseller === true;
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
 
     if (!isReseller && !isAdmin) {
       return {
@@ -304,7 +305,7 @@ export async function getResellerSupplierPriceListsAction(): Promise<{
     const workspaceId = wsContext.workspace.id;
 
     const isReseller = user.is_reseller === true;
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
 
     if (!isReseller && !isAdmin) {
       return {

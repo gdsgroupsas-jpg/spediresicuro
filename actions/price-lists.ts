@@ -30,6 +30,12 @@ import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-action
 import { rateLimit } from '@/lib/security/rate-limit';
 import { validateUUID } from '@/lib/validators';
 import { __clearMasterListCache } from '@/lib/db/price-lists-advanced';
+import {
+  isAdminOrAbove,
+  isResellerCheck,
+  isBYOC as isBYOCCheck,
+  isSuperAdminCheck,
+} from '@/lib/auth-helpers';
 
 /**
  * Helper: Logga evento listino nel financial_audit_log
@@ -81,9 +87,9 @@ export async function createPriceListAction(data: CreatePriceListInput): Promise
     const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
-    const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === 'byoc';
+    const isAdmin = isAdminOrAbove(user);
+    const isReseller = isResellerCheck(user);
+    const isBYOC = isBYOCCheck(user);
 
     if (!isAdmin && !isReseller && !isBYOC) {
       return {
@@ -167,7 +173,7 @@ export async function updatePriceListAction(
     }
 
     // Verifica permessi: admin, creatore, O proprietario (assigned_to_user_id)
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
     const isOwner = existingPriceList.created_by === user.id;
     const isAssignedOwner = existingPriceList.assigned_to_user_id === user.id;
 
@@ -179,8 +185,7 @@ export async function updatePriceListAction(
     }
 
     // Validazione per BYOC: non può cambiare list_type
-    const isBYOC = user.account_type === 'byoc';
-    if (isBYOC && data.list_type && data.list_type !== 'supplier') {
+    if (isBYOCCheck(user) && data.list_type && data.list_type !== 'supplier') {
       return {
         success: false,
         error: 'BYOC può modificare solo listini fornitore',
@@ -188,7 +193,7 @@ export async function updatePriceListAction(
     }
 
     // Validazione per Reseller: non può cambiare list_type a 'global'
-    const isReseller = user.is_reseller === true;
+    const isReseller = isResellerCheck(user);
     if (isReseller && data.list_type === 'global') {
       return {
         success: false,
@@ -470,12 +475,8 @@ export async function assignPriceListToUserAction(
     const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi: admin, superadmin, o reseller
-    const isAdmin =
-      currentUser.account_type === 'admin' || currentUser.account_type === 'superadmin';
-    const isReseller =
-      currentUser.is_reseller === true ||
-      currentUser.account_type === 'reseller' ||
-      currentUser.account_type === 'reseller_admin';
+    const isAdmin = isAdminOrAbove(currentUser);
+    const isReseller = isResellerCheck(currentUser);
 
     if (!isAdmin && !isReseller) {
       return {
@@ -590,12 +591,8 @@ export async function revokePriceListFromUserAction(
     };
     const workspaceId = wsContext.workspace.id;
 
-    const isAdmin =
-      currentUser.account_type === 'admin' || currentUser.account_type === 'superadmin';
-    const isReseller =
-      currentUser.is_reseller === true ||
-      currentUser.account_type === 'reseller' ||
-      currentUser.account_type === 'reseller_admin';
+    const isAdmin = isAdminOrAbove(currentUser);
+    const isReseller = isResellerCheck(currentUser);
 
     if (!isAdmin && !isReseller) {
       return { success: false, error: 'Solo admin e reseller possono gestire listini' };
@@ -676,12 +673,8 @@ export async function bulkUpdateUserListiniAction(
     };
     const workspaceId = wsContext.workspace.id;
 
-    const isAdmin =
-      currentUser.account_type === 'admin' || currentUser.account_type === 'superadmin';
-    const isReseller =
-      currentUser.is_reseller === true ||
-      currentUser.account_type === 'reseller' ||
-      currentUser.account_type === 'reseller_admin';
+    const isAdmin = isAdminOrAbove(currentUser);
+    const isReseller = isResellerCheck(currentUser);
 
     if (!isAdmin && !isReseller) {
       return { success: false, added: 0, removed: 0, error: 'Permessi insufficienti' };
@@ -871,7 +864,7 @@ export async function deletePriceListAction(id: string): Promise<{
     }
 
     // Verifica permessi: admin, creatore, O proprietario (assigned_to_user_id)
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
     const isOwner = existingPriceList.created_by === user.id;
     const isAssignedOwner = existingPriceList.assigned_to_user_id === user.id;
 
@@ -883,7 +876,7 @@ export async function deletePriceListAction(id: string): Promise<{
     }
 
     // Validazione per BYOC: può eliminare solo listini fornitore
-    const isBYOC = user.account_type === 'byoc';
+    const isBYOC = isBYOCCheck(user);
     if (isBYOC && existingPriceList.list_type !== 'supplier') {
       return {
         success: false,
@@ -935,8 +928,8 @@ export async function listPriceListsAction(filters?: {
       return { success: false, error: 'Utente non trovato' };
     }
 
-    const isSuperAdmin = user.account_type === 'superadmin';
-    const isAdmin = user.account_type === 'admin' || isSuperAdmin;
+    const isSuperAdmin = isSuperAdminCheck(user);
+    const isAdmin = isAdminOrAbove(user);
 
     // Superadmin/admin: query filtrata per workspace corrente
     // Include anche listini con workspace_id NULL creati dall'utente (legacy pre-migrazione)
@@ -996,7 +989,7 @@ export async function listPriceListsAction(filters?: {
       p_is_global: filters?.isGlobal ?? null,
     });
 
-    const isReseller = user.is_reseller === true;
+    const isReseller = isResellerCheck(user);
     if (error && !isReseller) {
       return { success: false, error: error.message };
     }
@@ -1127,8 +1120,8 @@ export async function createSupplierPriceListAction(
     };
     const workspaceId = wsContext.workspace.id;
 
-    const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === 'byoc';
+    const isReseller = isResellerCheck(user);
+    const isBYOC = isBYOCCheck(user);
 
     if (!isReseller && !isBYOC) {
       return {
@@ -1231,8 +1224,8 @@ export async function listSupplierPriceListsAction(): Promise<{
       };
     }
 
-    const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === 'byoc';
+    const isReseller = isResellerCheck(user);
+    const isBYOC = isBYOCCheck(user);
 
     if (!isReseller && !isBYOC) {
       return {
@@ -1351,8 +1344,8 @@ export async function getSupplierPriceListForCourierAction(courierId: string): P
     };
     const workspaceId = wsContext.workspace.id;
 
-    const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === 'byoc';
+    const isReseller = isResellerCheck(user);
+    const isBYOC = isBYOCCheck(user);
 
     if (!isReseller && !isBYOC) {
       return {
@@ -1427,7 +1420,7 @@ export async function clonePriceListAction(input: ClonePriceListInput): Promise<
     const workspaceId = wsContext.workspace.id;
 
     // Solo superadmin può clonare
-    if (user.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(user)) {
       return {
         success: false,
         error: 'Solo superadmin può clonare listini',
@@ -1511,7 +1504,7 @@ export async function assignPriceListToUserViaTableAction(input: AssignPriceList
     const workspaceId = wsContext.workspace.id;
 
     // Solo superadmin può assegnare
-    if (user.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(user)) {
       return {
         success: false,
         error: 'Solo superadmin può assegnare listini',
@@ -1582,7 +1575,7 @@ export async function revokePriceListAssignmentAction(assignmentId: string): Pro
     const workspaceId = wsContext.workspace.id;
 
     // Solo superadmin può revocare
-    if (user.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(user)) {
       return {
         success: false,
         error: 'Solo superadmin può revocare assegnazioni',
@@ -1633,7 +1626,7 @@ export async function listAssignmentsForPriceListAction(priceListId: string): Pr
     const workspaceId = wsContext.workspace.id;
 
     // Solo superadmin può vedere tutte le assegnazioni
-    if (user.account_type !== 'superadmin' && user.account_type !== 'admin') {
+    if (!isAdminOrAbove(user)) {
       return {
         success: false,
         error: 'Solo admin può vedere le assegnazioni',
@@ -1798,7 +1791,7 @@ export async function listMasterPriceListsAction(): Promise<{
     }
 
     // Solo superadmin può vedere i listini master
-    if (user.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(user)) {
       return {
         success: false,
         error: 'Solo superadmin può vedere i listini master',
@@ -1948,7 +1941,7 @@ export async function listUsersForAssignmentAction(options?: { global?: boolean 
     }
 
     // Solo superadmin puo' vedere la lista utenti
-    if (user.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(user)) {
       return {
         success: false,
         error: 'Solo superadmin può vedere la lista utenti',
@@ -2024,11 +2017,8 @@ export async function getAssignablePriceListsAction(options?: {
     const workspaceId = wsContext.workspace.id;
 
     // Verifica permessi: admin, superadmin, o reseller
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
-    const isReseller =
-      user.is_reseller === true ||
-      user.account_type === 'reseller' ||
-      user.account_type === 'reseller_admin';
+    const isAdmin = isAdminOrAbove(user);
+    const isReseller = isResellerCheck(user);
 
     if (!isAdmin && !isReseller) {
       return {
@@ -2171,7 +2161,7 @@ export async function getPriceListAuditEventsAction(
       return { success: false, error: 'Listino non trovato' };
     }
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
     const isOwner = priceList.created_by === user.id;
     const isAssignedOwner = priceList.assigned_to_user_id === user.id;
 
