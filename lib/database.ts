@@ -116,6 +116,8 @@ export interface User {
   password: string; // Hash della password (in produzione usare bcrypt) - vuoto per OAuth
   name: string;
   role: 'user' | 'admin';
+  account_type?: string; // Source of truth per RBAC (superadmin, admin, user, reseller, byoc)
+  is_reseller?: boolean;
   provider?: 'credentials' | 'google' | 'github' | 'facebook'; // Provider di autenticazione
   providerId?: string; // ID utente dal provider OAuth
   image?: string; // Avatar URL (da OAuth)

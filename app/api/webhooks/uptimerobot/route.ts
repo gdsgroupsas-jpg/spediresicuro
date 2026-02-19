@@ -45,21 +45,13 @@ function normalizeAlertType(alertType: AlertType): '1' | '2' | '3' {
  */
 function verifyWebhookSecret(request: NextRequest): { valid: boolean; error?: string } {
   const secret = process.env.UPTIMEROBOT_WEBHOOK_SECRET;
-  const isProduction = process.env.NODE_ENV === 'production';
 
-  // FAIL-CLOSED in production: secret MUST be configured
+  // FAIL-CLOSED: secret MUST be configured in qualsiasi ambiente
   if (!secret || secret.length === 0) {
-    if (isProduction) {
-      console.error(
-        '[UPTIMEROBOT_WEBHOOK] CRITICAL: UPTIMEROBOT_WEBHOOK_SECRET not configured in production - rejecting request'
-      );
-      return { valid: false, error: 'Webhook secret not configured' };
-    }
-    // Only allow in development for initial setup
-    console.warn(
-      '[UPTIMEROBOT_WEBHOOK] UPTIMEROBOT_WEBHOOK_SECRET not configured - allowing in development only'
+    console.error(
+      '[UPTIMEROBOT_WEBHOOK] UPTIMEROBOT_WEBHOOK_SECRET non configurato — richiesta rifiutata (fail-closed)'
     );
-    return { valid: true };
+    return { valid: false, error: 'Webhook secret not configured' };
   }
 
   // Check query parameter

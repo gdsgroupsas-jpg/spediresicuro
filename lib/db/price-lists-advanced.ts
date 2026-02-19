@@ -87,8 +87,9 @@ async function getCachedMasterList(
     .select('*, entries:price_list_entries(*)')
     .eq('id', masterListId);
 
-  // ✨ M3: Filtro workspace - master list deve essere nel workspace o globale
+  // ✨ M3: Filtro workspace - master list deve essere nel workspace o globale (workspace_id IS NULL)
   // ✨ M5-FIX: Usa buildWorkspaceFilter per prevenire SQL injection
+  // NOTA SICUREZZA (audit feb 2026): IS NULL intenzionale — vedi commento in buildWorkspaceFilter
   if (workspaceId && validateUUID(workspaceId)) {
     query = query.or(buildWorkspaceFilter(workspaceId));
   }
@@ -185,6 +186,7 @@ async function getApplicablePriceListManual(
 
   // ✨ M3: Tutti i listini devono essere nel workspace dell'utente o globali (workspace_id IS NULL)
   // ✨ M5-FIX: Usa buildWorkspaceFilter per prevenire SQL injection
+  // NOTA SICUREZZA (audit feb 2026): IS NULL intenzionale — vedi commento in buildWorkspaceFilter
   const workspaceFilter = validateUUID(workspaceId)
     ? buildWorkspaceFilter(workspaceId)
     : 'workspace_id.is.null';

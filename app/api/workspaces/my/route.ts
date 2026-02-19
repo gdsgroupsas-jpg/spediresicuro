@@ -15,7 +15,7 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getWorkspaceAuth, isSuperAdmin } from '@/lib/workspace-auth';
+import { getSafeAuth, isSuperAdmin } from '@/lib/safe-auth';
 import { getUserWorkspaces } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import type { UserWorkspaceInfo } from '@/types/workspace';
@@ -24,8 +24,8 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    // 1. Verifica autenticazione
-    const context = await getWorkspaceAuth();
+    // 1. Verifica autenticazione (senza richiedere workspace — questo e' l'endpoint di bootstrap)
+    const context = await getSafeAuth();
 
     if (!context) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

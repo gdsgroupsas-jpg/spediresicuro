@@ -10,6 +10,7 @@ import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { findUserByEmail } from '@/lib/database';
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
 import { NextRequest, NextResponse } from 'next/server';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -23,7 +24,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     // 2. Verifica che l'utente sia admin
     const adminUser = await findUserByEmail(context.actor.email);
 
-    if (!adminUser || adminUser.role !== 'admin') {
+    if (!adminUser || !isAdminOrAbove(adminUser)) {
       return NextResponse.json(
         { error: 'Accesso negato. Solo gli admin possono accedere.' },
         { status: 403 }

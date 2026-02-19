@@ -1379,6 +1379,8 @@ export async function listConfigurations(): Promise<{
 
       // Fallback: query diretta filtrata
       console.log('⚠️ Fallback: query diretta filtrata per utente');
+      // NOTA SICUREZZA (audit feb 2026): owner_user_id.is.null include config globali piattaforma
+      // (courier_configs e' tabella globale, non multi-tenant — vedi CLAUDE.md)
       const { data: fallbackConfigs, error: fallbackError } = await supabaseAdmin
         .from('courier_configs')
         .select('*')

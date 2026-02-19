@@ -171,6 +171,14 @@ export function assertValidWorkspaceId(workspaceId: string): asserts workspaceId
  * const filter = buildWorkspaceFilter(workspaceId);
  * query = query.or(filter); // safe
  */
+/**
+ * NOTA SICUREZZA (audit feb 2026): workspace_id.is.null e' INTENZIONALE.
+ * I listini master/globali (creati dalla piattaforma) hanno workspace_id = NULL
+ * e devono essere visibili a tutti i workspace per il calcolo prezzi.
+ * Questo NON e' un leak multi-tenant: i dati globali sono pubblici by design.
+ * Se si vuole isolamento totale (nessun dato globale), rimuovere la clausola is.null
+ * e assegnare ogni listino master a un workspace specifico.
+ */
 export function buildWorkspaceFilter(workspaceId: string): string {
   assertValidWorkspaceId(workspaceId);
   return `workspace_id.eq.${workspaceId},workspace_id.is.null`;

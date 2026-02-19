@@ -12,12 +12,12 @@ import { rateLimit } from '@/lib/security/rate-limit';
 import { getParser } from '@/lib/cod/parsers';
 import { writeAuditLog } from '@/lib/security/audit-log';
 import { AUDIT_ACTIONS, AUDIT_RESOURCE_TYPES } from '@/lib/security/audit-actions';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 async function requireAdmin() {
   const auth = await getWorkspaceAuth();
   if (!auth) return null;
-  const role = auth.target.role;
-  if (role !== 'admin' && role !== 'superadmin') return null;
+  if (!isAdminOrAbove(auth.target)) return null;
   return auth;
 }
 

@@ -8,12 +8,12 @@ import { NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { rateLimit } from '@/lib/security/rate-limit';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 async function requireAdmin() {
   const auth = await getWorkspaceAuth();
   if (!auth) return null;
-  const role = auth.target.role;
-  if (role !== 'admin' && role !== 'superadmin') return null;
+  if (!isAdminOrAbove(auth.target)) return null;
   return auth;
 }
 

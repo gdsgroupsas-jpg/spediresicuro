@@ -12,6 +12,7 @@ import { findUserByEmail } from '@/lib/database';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { workspaceQuery } from '@/lib/db/workspace-query';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 export async function DELETE(
   request: NextRequest,
@@ -28,7 +29,7 @@ export async function DELETE(
     // 2. Verifica che l'utente sia admin
     const adminUser = await findUserByEmail(context.actor.email);
 
-    if (!adminUser || adminUser.role !== 'admin') {
+    if (!adminUser || !isAdminOrAbove(adminUser)) {
       return NextResponse.json(
         { error: 'Accesso negato. Solo gli admin possono cancellare spedizioni di altri utenti.' },
         { status: 403 }
