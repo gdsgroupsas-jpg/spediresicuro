@@ -8,6 +8,7 @@
  */
 
 import { getSafeAuth, ActingContext, ActingUser } from '@/lib/safe-auth';
+import { isAdminOrAbove, isResellerCheck } from '@/lib/auth-helpers';
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
 import { headers } from 'next/headers';
 import { NextResponse } from 'next/server';
@@ -106,11 +107,13 @@ export function checkSupabaseConfig(): NextResponse | undefined {
  */
 export async function findUserByEmail(
   email: string,
-  select: string = 'id, email, role'
+  select: string = 'id, email, role, account_type, is_reseller'
 ): Promise<{
   id: string;
   email: string;
   role: string;
+  account_type?: string;
+  is_reseller?: boolean;
   [key: string]: any;
 } | null> {
   const { data: user, error } = await supabaseAdmin
@@ -163,10 +166,10 @@ export async function requireAdminRole(customErrorMessage?: string): Promise<Adm
     };
   }
 
-  // Cerca utente e verifica ruolo admin
+  // Cerca utente e verifica account_type admin o superadmin (source of truth)
   const user = await findUserByEmail(context!.actor.email!);
 
-  if (!user || user.role !== 'admin') {
+  if (!user || !isAdminOrAbove(user)) {
     return {
       authorized: false,
       response: NextResponse.json(
@@ -213,7 +216,7 @@ export async function requireResellerRole(): Promise<AdminAuthResult> {
 
   const user = await findUserByEmail(context!.actor.email!);
 
-  if (!user || (user.role !== 'reseller' && user.role !== 'admin')) {
+  if (!user || (!isResellerCheck(user) && !isAdminOrAbove(user))) {
     return {
       authorized: false,
       response: NextResponse.json(

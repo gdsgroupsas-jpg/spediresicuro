@@ -396,8 +396,33 @@ export async function grantFeature(
         );
         if (!refundResult.success) {
           console.error(
-            `[GRANT_FEATURE] CRITICAL: Rimborso fallito per ${userId}, €${priceInEuros}`
+            `[GRANT_FEATURE] CRITICAL: Rimborso fallito per ${userId}, €${priceInEuros} — accodamento compensation_queue`
           );
+          // Accoda alla compensation_queue per retry automatico
+          try {
+            await supabaseAdmin.from('compensation_queue').insert({
+              user_id: userId,
+              shipment_id_external: `feature-${featureCode}`,
+              tracking_number: `grant-feature-${featureCode}`,
+              action: 'REFUND',
+              carrier: 'PLATFORM',
+              original_cost: priceInEuros,
+              error_context: {
+                reason: 'grant_feature_refund_failed',
+                feature_code: featureCode,
+                feature_name: feature.name,
+                activation_error: activateError.message,
+                refund_error: refundResult.error,
+                admin_id: superAdminCheck.userId,
+              },
+              status: 'PENDING',
+            } as any);
+          } catch (queueError: any) {
+            console.error(
+              `[GRANT_FEATURE] CRITICAL: Anche accodamento compensation_queue fallito per ${userId}, €${priceInEuros}:`,
+              queueError?.message
+            );
+          }
         }
       }
 

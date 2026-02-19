@@ -1386,8 +1386,9 @@ export async function getSpedizioni(
           query = query.eq('workspace_id', workspaceId);
         } else if (visibleIds && visibleIds.length > 0) {
           // Filtra per tutti i workspace visibili (self + discendenti)
-          // Include anche workspace_id IS NULL per backward-compatibility
-          query = query.or(`workspace_id.in.(${visibleIds.join(',')}),workspace_id.is.null`);
+          // NO workspace_id IS NULL: query passa da supabaseAdmin (service role),
+          // RLS non filtra — record orfani sarebbero un leak cross-workspace
+          query = query.in('workspace_id', visibleIds);
           console.log(
             `✅ [SUPABASE] Filtro gerarchico: ${visibleIds.length} workspace visibili da ${workspaceId.substring(0, 8)}...`
           );

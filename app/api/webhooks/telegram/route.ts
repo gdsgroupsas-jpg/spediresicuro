@@ -47,9 +47,11 @@ function getAuthorizedChatIds(): number[] {
 function verifyTelegramSecret(request: NextRequest): boolean {
   const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
   if (!expectedSecret) {
-    // Se non configurato, accetta (backward compat, ma loggare warning)
-    console.warn('[TELEGRAM_WEBHOOK] TELEGRAM_WEBHOOK_SECRET non configurato');
-    return true;
+    // Fail-closed: se il secret non e' configurato, rifiuta tutte le richieste
+    console.error(
+      '[TELEGRAM_WEBHOOK] TELEGRAM_WEBHOOK_SECRET non configurato — richiesta rifiutata (fail-closed)'
+    );
+    return false;
   }
 
   const receivedSecret = request.headers.get('x-telegram-bot-api-secret-token');
