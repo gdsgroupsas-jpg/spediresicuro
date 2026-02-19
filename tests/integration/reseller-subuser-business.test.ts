@@ -36,6 +36,7 @@ describe('Business Flow: Reseller → Sub-User Wallet e Isolamento', () => {
 
   // IDs delle entità di test
   let organizationId: string;
+  let platformWsId: string; // depth=0, gerarchia platform→reseller→subclient
   let resellerWsId: string;
   let subclientWsId: string;
   let resellerAuthId: string;
@@ -82,16 +83,35 @@ describe('Business Flow: Reseller → Sub-User Wallet e Isolamento', () => {
       }
       organizationId = org.id;
 
-      // 2. Workspace reseller (depth=1)
+      // 2a. Platform workspace (depth=0, no parent) — richiesto dal trigger enforce_workspace_depth
+      // Il trigger imposta type='platform' per workspace senza parent_workspace_id
+      const { data: platformWs, error: platformWsErr } = await supabaseAdmin
+        .from('workspaces')
+        .insert({
+          organization_id: organizationId,
+          name: `Platform WS ${suffix}`,
+          slug: `platform-ws-${suffix}`,
+          status: 'active',
+          wallet_balance: 0,
+        })
+        .select('id')
+        .single();
+
+      if (platformWsErr) {
+        console.error('❌ Setup workspace platform fallito:', platformWsErr.message);
+        skipTests = true;
+        return;
+      }
+      platformWsId = platformWs.id;
+
+      // 2b. Workspace reseller (depth=1, parent=platform)
       const { data: resellerWs, error: resellerWsErr } = await supabaseAdmin
         .from('workspaces')
         .insert({
           organization_id: organizationId,
           name: `Reseller WS ${suffix}`,
           slug: `reseller-ws-${suffix}`,
-          type: 'reseller',
-          depth: 1,
-          parent_workspace_id: null,
+          parent_workspace_id: platformWsId,
           status: 'active',
           wallet_balance: 100,
         })
@@ -105,15 +125,13 @@ describe('Business Flow: Reseller → Sub-User Wallet e Isolamento', () => {
       }
       resellerWsId = resellerWs.id;
 
-      // 3. Workspace sub-client (depth=2, parent=reseller)
+      // 3. Workspace sub-client (depth=2, parent=reseller) — trigger imposta type='client' automaticamente
       const { data: subclientWs, error: subclientWsErr } = await supabaseAdmin
         .from('workspaces')
         .insert({
           organization_id: organizationId,
           name: `SubClient WS ${suffix}`,
           slug: `subclient-ws-${suffix}`,
-          type: 'client',
-          depth: 2,
           parent_workspace_id: resellerWsId,
           status: 'active',
           wallet_balance: 50,
@@ -262,7 +280,7 @@ describe('Business Flow: Reseller → Sub-User Wallet e Isolamento', () => {
       await supabaseAdmin
         .from('workspace_members')
         .delete()
-        .in('workspace_id', [resellerWsId, subclientWsId].filter(Boolean));
+        .in('workspace_id', [platformWsId, resellerWsId, subclientWsId].filter(Boolean));
 
       // public.users
       if (resellerAuthId) {
@@ -280,12 +298,15 @@ describe('Business Flow: Reseller → Sub-User Wallet e Isolamento', () => {
         await supabaseAdmin.auth.admin.deleteUser(subclientAuthId);
       }
 
-      // Workspaces
+      // Workspaces (ordine obbligatorio per FK: sub-client → reseller → platform)
       if (subclientWsId) {
         await supabaseAdmin.from('workspaces').delete().eq('id', subclientWsId);
       }
       if (resellerWsId) {
         await supabaseAdmin.from('workspaces').delete().eq('id', resellerWsId);
+      }
+      if (platformWsId) {
+        await supabaseAdmin.from('workspaces').delete().eq('id', platformWsId);
       }
 
       // Organization
@@ -576,6 +597,7 @@ describe('Business Flow: Reseller → Sub-User Wallet e Isolamento', () => {
       .eq('id', subclientWsId)
       .single();
 
+    // Il trigger enforce_workspace_depth imposta automaticamente type e depth
     expect(subclientWsData.type).toBe('client');
     expect(subclientWsData.depth).toBe(2);
     expect(subclientWsData.parent_workspace_id).toBe(resellerWsId);
@@ -588,8 +610,10 @@ describe('Business Flow: Reseller → Sub-User Wallet e Isolamento', () => {
 
     expect(resellerWsData.type).toBe('reseller');
     expect(resellerWsData.depth).toBe(1);
-    expect(resellerWsData.parent_workspace_id).toBeNull();
+    expect(resellerWsData.parent_workspace_id).toBe(platformWsId);
 
-    console.log('✅ Gerarchia workspace corretta: reseller(depth=1) → subclient(depth=2)');
+    console.log(
+      '✅ Gerarchia workspace corretta: platform(depth=0) → reseller(depth=1) → subclient(depth=2)'
+    );
   });
 });
