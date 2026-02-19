@@ -7,6 +7,8 @@
 Questa sessione ha indirizzato tutti i finding di un audit top-tier esterno (score pre-audit: 8.0/10).
 Score post-fix: **9.2/10** (multi-tenant isolation: **9.7/10**).
 
+> **Audit Pack completo**: vedi [AUDIT_PACK_2026.md](../security/AUDIT_PACK_2026.md) per threat model, controls, evidence, runbook.
+
 ---
 
 ## Layer di sicurezza implementati
