@@ -5,7 +5,7 @@
 ## Overview
 
 Questa sessione ha indirizzato tutti i finding di un audit top-tier esterno (score pre-audit: 8.0/10).
-Score post-fix: **8.9/10** (multi-tenant isolation: **9.5/10**).
+Score post-fix: **9.2/10** (multi-tenant isolation: **9.7/10**).
 
 ---
 
@@ -235,8 +235,90 @@ $$;
 
 ---
 
+## Audit Esterno #2 — Fix Feb 2026 (commit `5a6df2b`)
+
+Secondo audit esterno ha identificato 9 finding. 7 confermati, 1 falso positivo, 1 parziale.
+Tutti i fix implementati con 15 test dedicati in `tests/security/audit-security-fixes-2026.test.ts`.
+
+### F3 CRITICO: DELETE user cross-tenant
+
+**Problema**: `DELETE /api/admin/users/[id]` accettava qualsiasi `role='admin'` senza verifica workspace.
+Un admin poteva cancellare utenti di workspace altrui.
+
+**Fix**:
+
+- Solo `isSuperAdmin()` puo cancellare (non piu `role === 'admin'`)
+- Verifica `workspace_members` membership prima di eliminare
+- Blocco cancellazione di altri superadmin
+- Log warning su tentativi cross-tenant
+
+### F5 ALTO: Wallet leak workspace_id NULL
+
+**Problema**: `GET /api/wallet/transactions` includeva `workspace_id.is.null` nel filtro OR.
+Transazioni legacy senza workspace leakavano a tutti gli utenti.
+
+**Fix**: Rimosso `.is.null`, ora usa `.eq('workspace_id', workspaceId)` strict.
+
+### F2 CRITICO: 6 endpoint cron/webhook fail-open
+
+**Problema**: 5 cron + 1 webhook accettavano richieste se env var di secret non configurata.
+
+| Endpoint                        | Fix                                               |
+| ------------------------------- | ------------------------------------------------- |
+| `/api/cron/trigger-sync`        | 503 se CRON_SECRET manca + fallback x-vercel-cron |
+| `/api/cron/telegram-queue`      | 503 se CRON_SECRET manca + fallback x-vercel-cron |
+| `/api/cron/automation-sync`     | 503 se CRON_SECRET manca + fallback x-vercel-cron |
+| `/api/cron/auto-reconciliation` | 503 se CRON_SECRET manca + fallback x-vercel-cron |
+| `/api/cron/financial-alerts`    | 503 se CRON_SECRET manca + fallback x-vercel-cron |
+| `/api/webhooks/email-inbound`   | `return false` se RESEND_WEBHOOK_SECRET manca     |
+
+### F4 ALTO: Atomicita feature activation
+
+**Problema**: `grantFeature()` scalava wallet (step 1) poi attivava feature (step 2).
+Se step 2 falliva, wallet gia scalato senza compensazione.
+
+**Fix**: Traccia `walletDebited`, se upsert fallisce → rimborsa con `manageWallet(userId, +priceInEuros)`.
+
+### F8 MEDIO: Telegram webhook senza auth
+
+**Problema**: POST `/api/webhooks/telegram` non verificava la sorgente.
+Nessun check `X-Telegram-Bot-Api-Secret-Token`.
+
+**Fix**:
+
+- `verifyTelegramSecret()` controlla header `x-telegram-bot-api-secret-token`
+- `isAuthorizedChat()` non ritorna piu `true` su lista vuota
+- Solo `/id` consentito senza chat autorizzata (per setup iniziale)
+
+### Finding respinti
+
+| Finding                         | Verdetto             | Motivazione                                                                         |
+| ------------------------------- | -------------------- | ----------------------------------------------------------------------------------- |
+| F1: escalation admin→superadmin | PARZIALE             | `role='admin'` impostato solo da auto-promote superadmin; nessun vettore di exploit |
+| F6: RBAC incoerente             | FALSO POSITIVO       | Design intenzionale: gerarchia admin > reseller                                     |
+| F7: lock-out workspace          | CONFERMATO, MITIGATO | Fallback `primary_workspace_id` gia presente                                        |
+| F9: a11y coverage               | CONFERMATO           | Backlog (non security blocker)                                                      |
+
+### Tabella riassuntiva audit finding
+
+| Finding                     | Gravita        | Commit    | Stato                         |
+| --------------------------- | -------------- | --------- | ----------------------------- |
+| F3 delete user cross-tenant | CRITICO        | `5a6df2b` | CHIUSO                        |
+| F2 cron/webhook fail-open   | CRITICO        | `5a6df2b` | CHIUSO                        |
+| F5 wallet leak NULL         | ALTO           | `5a6df2b` | CHIUSO                        |
+| F4 atomicita feature wallet | ALTO           | `5a6df2b` | CHIUSO                        |
+| F8 Telegram webhook auth    | MEDIO          | `5a6df2b` | CHIUSO                        |
+| F1 admin→superadmin         | PARZIALE       | —         | APERTO (refactor consigliato) |
+| F7 lock-out workspace       | MEDIO          | —         | MITIGATO                      |
+| F6 RBAC incoerente          | FALSO POSITIVO | —         | CHIUSO                        |
+| F9 a11y                     | MEDIO-BASSO    | —         | BACKLOG                       |
+
+---
+
 ## Cosa rimane (non security blocker)
 
 - **Test coverage API routes**: ~26% → target 60%+ (giorni di lavoro)
-- **A11y workspace switcher**: ARIA/listbox semantics mancanti
+- **A11y workspace switcher**: ARIA/listbox semantics mancanti + axe-core/playwright
 - **159 inline `account_type` checks**: da consolidare in helper (refactoring, non security)
+- **F1 RBAC cleanup**: `isSuperAdmin()` dovrebbe usare solo `accountType`, non `role`
+- **TELEGRAM_WEBHOOK_SECRET**: configurare via `setWebhook({ secret_token })` in produzione
