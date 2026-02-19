@@ -107,6 +107,11 @@ vi.mock('@/lib/safe-auth', () => ({
   getSafeAuth: vi.fn(() => mockAuthResponse),
 }));
 
+// Mock rate-limit: sempre allowed in test (evita accumulo in-memory tra test)
+vi.mock('@/lib/security/rate-limit', () => ({
+  rateLimit: vi.fn().mockResolvedValue({ allowed: true, remaining: 99, resetAt: 0 }),
+}));
+
 vi.mock('@/lib/workspace-auth', () => ({
   getWorkspaceAuth: vi.fn(() => mockAuthResponse),
   requireWorkspaceAuth: vi.fn(() => {

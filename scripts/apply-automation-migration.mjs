@@ -1,9 +1,18 @@
 import https from 'https';
 import fs from 'fs';
 import path from 'path';
+import { config } from 'dotenv';
 
-const ACCESS_TOKEN = 'sbp_b5a23c86eb994249771f74152a68490a10670675';
-const PROJECT_REF = 'pxwmposcsvsusjxdjues';
+// Carica .env.local per SUPABASE_ACCESS_TOKEN e SUPABASE_PROJECT_REF
+config({ path: '.env.local' });
+
+const ACCESS_TOKEN = process.env.SUPABASE_ACCESS_TOKEN;
+const PROJECT_REF = process.env.SUPABASE_PROJECT_REF || 'pxwmposcsvsusjxdjues';
+
+if (!ACCESS_TOKEN) {
+  console.error('❌ SUPABASE_ACCESS_TOKEN non impostato in .env.local');
+  process.exit(1);
+}
 
 function query(sql) {
   return new Promise((resolve, reject) => {

@@ -50,21 +50,12 @@ async function testApiAuth(): Promise<void> {
     });
 
     if (response1.status === 401) {
-      const body = await response1.json();
-      if (body.error === 'Non autenticato') {
-        results.push({
-          check: 'API_AUTH_401_SPEDIZIONI',
-          status: 'PASS',
-        });
-        console.log('  ✅ GET /api/spedizioni => 401 (PASS)');
-      } else {
-        results.push({
-          check: 'API_AUTH_401_SPEDIZIONI',
-          status: 'FAIL',
-          message: `Expected error "Non autenticato", got: ${JSON.stringify(body)}`,
-        });
-        console.log('  ❌ GET /api/spedizioni => 401 but wrong error message (FAIL)');
-      }
+      // Il middleware fail-closed ritorna 401. Verifica solo lo status code (non il testo).
+      results.push({
+        check: 'API_AUTH_401_SPEDIZIONI',
+        status: 'PASS',
+      });
+      console.log('  ✅ GET /api/spedizioni => 401 (PASS)');
     } else {
       results.push({
         check: 'API_AUTH_401_SPEDIZIONI',
@@ -92,21 +83,12 @@ async function testApiAuth(): Promise<void> {
     });
 
     if (response2.status === 401) {
-      const body = await response2.json();
-      if (body.error === 'Non autenticato') {
-        results.push({
-          check: 'API_AUTH_401_RELIABILITY',
-          status: 'PASS',
-        });
-        console.log('  ✅ GET /api/corrieri/reliability => 401 (PASS)');
-      } else {
-        results.push({
-          check: 'API_AUTH_401_RELIABILITY',
-          status: 'FAIL',
-          message: `Expected error "Non autenticato", got: ${JSON.stringify(body)}`,
-        });
-        console.log('  ❌ GET /api/corrieri/reliability => 401 but wrong error message (FAIL)');
-      }
+      // Il middleware fail-closed ritorna 401. Verifica solo lo status code (non il testo).
+      results.push({
+        check: 'API_AUTH_401_RELIABILITY',
+        status: 'PASS',
+      });
+      console.log('  ✅ GET /api/corrieri/reliability => 401 (PASS)');
     } else {
       results.push({
         check: 'API_AUTH_401_RELIABILITY',
