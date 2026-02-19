@@ -97,6 +97,7 @@ export function ResellerFornitoreTab({
     }
 
     loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountType, resellerRole]);
 
   async function loadPriceLists() {

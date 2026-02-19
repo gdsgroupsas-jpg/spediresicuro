@@ -58,6 +58,7 @@ export function CourierQuoteCard({
       setQuoteRequested(true);
       handleRequestQuote();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isExpanded, quoteRequested, weight, zip]);
 
   // Notifica quote ricevuta

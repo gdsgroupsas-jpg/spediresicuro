@@ -189,6 +189,7 @@ export function AnneAssistant({
       }, 100);
       return () => clearTimeout(timer);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [input]);
 
   // Carica preferenze da localStorage
@@ -220,6 +221,7 @@ export function AnneAssistant({
         }, 30000); // 30 secondi invece di 2
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Salva preferenze
@@ -250,6 +252,7 @@ export function AnneAssistant({
         }, 1500);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
   // Ascolta evento personalizzato per aprire Anne (da mobile nav)

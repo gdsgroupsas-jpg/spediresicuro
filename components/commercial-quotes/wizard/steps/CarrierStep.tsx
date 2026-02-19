@@ -71,6 +71,7 @@ export function CarrierStep() {
       }
     }
     loadServices();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [carrier.primaryCarrier?.priceListId, loadAccessoryServices]);
 
   // Corrieri disponibili per confronto

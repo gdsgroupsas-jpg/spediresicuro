@@ -52,6 +52,7 @@ export default function ScannerLDV({ onClose, onSuccess }: ScannerLDVProps) {
         isScanningRef.current = false;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -103,6 +104,7 @@ export default function ScannerLDV({ onClose, onSuccess }: ScannerLDVProps) {
         "Errore inizializzazione scanner. Assicurati di permettere l'accesso alla fotocamera."
       );
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -142,6 +144,7 @@ export default function ScannerLDV({ onClose, onSuccess }: ScannerLDVProps) {
         setError(`Errore accesso fotocamera: ${err.message}`);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -243,6 +246,7 @@ export default function ScannerLDV({ onClose, onSuccess }: ScannerLDVProps) {
         }, 2000);
       }
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [gpsLocation, isProcessing, successMessage, onSuccess, onClose]
   );
 

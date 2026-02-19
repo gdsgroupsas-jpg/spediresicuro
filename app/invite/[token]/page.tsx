@@ -13,6 +13,7 @@
 'use client';
 
 import { useState, useEffect, useCallback, useRef, use } from 'react';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import Link from 'next/link';
@@ -136,7 +137,7 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
     } finally {
       setIsAccepting(false);
     }
-  }, [token, router]);
+  }, [token]);
 
   // Auto-accept: quando l'utente è loggato e l'invito è valido, accetta automaticamente
   useEffect(() => {
@@ -257,10 +258,12 @@ export default function AcceptInvitePage({ params }: { params: Promise<{ token: 
         {/* Logo/Branding */}
         <div className="text-center mb-6">
           {invitation?.organization?.branding?.logo_url ? (
-            <img
+            <Image
               src={invitation.organization.branding.logo_url}
               alt={invitation.organization.name}
               className="h-12 mx-auto mb-4"
+              width={48}
+              height={48}
             />
           ) : (
             <div className="w-16 h-16 bg-gradient-to-br from-[#FF9500] to-[#FF6B35] rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">

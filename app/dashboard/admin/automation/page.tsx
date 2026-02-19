@@ -72,6 +72,7 @@ export default function AutomationPage() {
       loadLocks();
     }, 10000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadLocks() {

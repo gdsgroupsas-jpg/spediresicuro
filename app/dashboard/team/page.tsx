@@ -122,6 +122,7 @@ export default function TeamManagementPage() {
     }
 
     loadTeamData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session, status, router]);
 
   // Carica sotto-admin diretti

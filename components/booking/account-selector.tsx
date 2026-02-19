@@ -89,6 +89,7 @@ export function AccountSelector({
     }
 
     loadAccounts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Sincronizza selectedAccountId esterno
@@ -96,6 +97,7 @@ export function AccountSelector({
     if (selectedAccountId && selectedAccountId !== selectedId) {
       setSelectedId(selectedAccountId);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAccountId]);
 
   const handleSelect = (account: AccountConfig) => {

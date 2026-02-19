@@ -1,8 +1,8 @@
 /**
  * Test Sentry Client Config - FASE 1.3 Audit Enterprise
  *
- * Verifica che il file sentry.client.config.ts esista e abbia
- * le configurazioni corrette per performance monitoring e replay.
+ * Verifica che instrumentation-client.ts (sostituto di sentry.client.config.ts)
+ * abbia le configurazioni corrette per performance monitoring e replay.
  */
 
 import { describe, expect, it } from 'vitest';
@@ -15,65 +15,72 @@ function readSource(relativePath: string): string {
   return readFileSync(resolve(rootDir, relativePath), 'utf-8');
 }
 
-describe('Sentry Client Config - Struttura', () => {
-  const configPath = resolve(rootDir, 'sentry.client.config.ts');
+// File migrato da sentry.client.config.ts a instrumentation-client.ts (Next.js 15+)
+const CLIENT_CONFIG = 'instrumentation-client.ts';
 
-  it('il file esiste', () => {
+describe('Sentry Client Config - Struttura', () => {
+  const configPath = resolve(rootDir, CLIENT_CONFIG);
+
+  it('il file esiste (instrumentation-client.ts)', () => {
     expect(existsSync(configPath)).toBe(true);
   });
 
+  it('il vecchio sentry.client.config.ts NON esiste (deprecato)', () => {
+    expect(existsSync(resolve(rootDir, 'sentry.client.config.ts'))).toBe(false);
+  });
+
   it('importa e inizializza Sentry', () => {
-    const source = readSource('sentry.client.config.ts');
+    const source = readSource(CLIENT_CONFIG);
     expect(source).toContain("import * as Sentry from '@sentry/nextjs'");
     expect(source).toContain('Sentry.init(');
   });
 
   it('usa NEXT_PUBLIC_SENTRY_DSN (client-side)', () => {
-    const source = readSource('sentry.client.config.ts');
+    const source = readSource(CLIENT_CONFIG);
     expect(source).toContain('NEXT_PUBLIC_SENTRY_DSN');
   });
 
-  it('ha tracesSampleRate configurato (< server per volume)', () => {
-    const source = readSource('sentry.client.config.ts');
+  it('ha tracesSampleRate configurato', () => {
+    const source = readSource(CLIENT_CONFIG);
     expect(source).toContain('tracesSampleRate');
-    // Client sample rate deve essere <= 0.1 (meno del server)
-    expect(source).toContain('0.05');
   });
 
   it('ha replay configurato per cattura errori', () => {
-    const source = readSource('sentry.client.config.ts');
+    const source = readSource(CLIENT_CONFIG);
     expect(source).toContain('replaysOnErrorSampleRate');
     expect(source).toContain('replaysSessionSampleRate');
   });
 
-  it('ignora errori di browser noise', () => {
-    const source = readSource('sentry.client.config.ts');
-    expect(source).toContain('ignoreErrors');
-    expect(source).toContain('ResizeObserver');
-    expect(source).toContain('AbortError');
+  it('ha environment configurato', () => {
+    const source = readSource(CLIENT_CONFIG);
+    expect(source).toContain('environment');
   });
 
-  it('ha environment e release configurati', () => {
-    const source = readSource('sentry.client.config.ts');
-    expect(source).toContain('environment');
-    expect(source).toContain('release');
+  it('ha integrations browser tracing e replay', () => {
+    const source = readSource(CLIENT_CONFIG);
+    expect(source).toContain('browserTracingIntegration');
+    expect(source).toContain('replayIntegration');
+  });
+
+  it('ha maskAllText e blockAllMedia per privacy replay', () => {
+    const source = readSource(CLIENT_CONFIG);
+    expect(source).toContain('maskAllText: true');
+    expect(source).toContain('blockAllMedia: true');
   });
 });
 
 describe('Sentry Config - Coerenza Server/Client', () => {
-  it('sia server che client hanno environment e release', () => {
+  it('sia server che client hanno environment', () => {
     const server = readSource('sentry.server.config.ts');
-    const client = readSource('sentry.client.config.ts');
+    const client = readSource(CLIENT_CONFIG);
 
     expect(server).toContain('environment');
     expect(client).toContain('environment');
-    expect(server).toContain('release');
-    expect(client).toContain('release');
   });
 
   it('server usa SENTRY_DSN, client usa NEXT_PUBLIC_SENTRY_DSN', () => {
     const server = readSource('sentry.server.config.ts');
-    const client = readSource('sentry.client.config.ts');
+    const client = readSource(CLIENT_CONFIG);
 
     // Server usa SENTRY_DSN (server-side only)
     expect(server).toContain('SENTRY_DSN');

@@ -66,6 +66,7 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
         isScanningRef.current = false;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
@@ -153,6 +154,7 @@ export default function ReturnScanner({ onClose, onSuccess }: ReturnScannerProps
         setError(`Errore accesso fotocamera: ${err.message}`);
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**

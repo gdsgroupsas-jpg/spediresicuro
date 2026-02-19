@@ -305,7 +305,7 @@ export async function createAuditPayload(
 // EXPORTS
 // ============================================
 
-export default {
+const workspaceInjection = {
   getCurrentWorkspaceId,
   validateWorkspaceId,
   injectWorkspaceId,
@@ -316,3 +316,5 @@ export default {
   createWorkspaceContext,
   createAuditPayload,
 };
+
+export default workspaceInjection;

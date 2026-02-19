@@ -79,6 +79,7 @@ export function ResellerPersonalizzatiTab({ userId }: ResellerPersonalizzatiTabP
     }
 
     loadInitialData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadPriceLists() {

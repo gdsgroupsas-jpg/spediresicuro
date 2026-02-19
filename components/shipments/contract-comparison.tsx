@@ -57,6 +57,9 @@ export default function ContractComparison({
   const [bestPrice, setBestPrice] = useState<number | null>(null);
   const [bestSource, setBestSource] = useState<string | null>(null);
 
+  // Serializza options per usarlo come dependency stabile
+  const optionsKey = JSON.stringify(options);
+
   // Calcola prezzi quando cambiano i parametri
   useEffect(() => {
     if (!weight || weight <= 0 || !destination?.zip) {
@@ -106,14 +109,8 @@ export default function ContractComparison({
     // Debounce: aspetta 500ms prima di calcolare
     const timeoutId = setTimeout(fetchComparison, 500);
     return () => clearTimeout(timeoutId);
-  }, [
-    weight,
-    destination.zip,
-    destination.province,
-    courierId,
-    serviceType,
-    JSON.stringify(options),
-  ]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [weight, destination.zip, destination.province, courierId, serviceType, optionsKey]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('it-IT', {

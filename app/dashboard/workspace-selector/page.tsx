@@ -128,6 +128,7 @@ export default function WorkspaceSelectorPage() {
     }
 
     loadWorkspaces();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   // ============================================

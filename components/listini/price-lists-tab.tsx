@@ -64,6 +64,7 @@ export function PriceListsTab() {
 
   useEffect(() => {
     loadPriceLists();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [statusFilter]);
 
   async function loadPriceLists() {

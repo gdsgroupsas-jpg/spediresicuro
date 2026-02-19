@@ -230,7 +230,6 @@ export class GeminiLiveClient {
       const payload = JSON.parse(message);
 
       if (this.debug) {
-        // eslint-disable-next-line no-console
         console.debug('[Gemini Live] message', payload);
       }
 

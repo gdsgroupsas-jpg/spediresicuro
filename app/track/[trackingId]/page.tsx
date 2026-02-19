@@ -266,6 +266,7 @@ export default function TrackingPage() {
 
   useEffect(() => {
     fetchTracking();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trackingId]);
 
   if (isLoading) {

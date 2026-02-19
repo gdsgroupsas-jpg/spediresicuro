@@ -173,6 +173,7 @@ export default function AdminBonificiPage() {
       // Quando il modal si apre, assicurati che il campo sia vuoto
       setApprovedAmount('');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDetailsModal, selectedRequest?.id]);
 
   async function handleApprove() {

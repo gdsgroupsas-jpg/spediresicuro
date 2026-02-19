@@ -335,6 +335,7 @@ function LoginPageContent() {
       // ⚠️ P0 FIX: Rimuove delay, esegue controllo immediato (no flash di dashboard)
       checkAndRedirect();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, session, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {

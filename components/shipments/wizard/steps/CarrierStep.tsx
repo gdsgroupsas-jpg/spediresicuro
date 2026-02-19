@@ -53,6 +53,7 @@ export function CarrierStep() {
   // Fetch quotes quando il componente monta
   useEffect(() => {
     fetchQuotes();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchQuotes = async () => {

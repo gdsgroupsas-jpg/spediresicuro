@@ -68,6 +68,7 @@ export default function PriceListDetailPage() {
     if (params.id) {
       loadPriceList(params.id as string);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id]);
 
   async function loadPriceList(id: string) {
@@ -526,6 +527,7 @@ function PriceCalculatorPreview({
 
   useEffect(() => {
     loadEntries();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceListId, refreshKey]);
 
   async function loadEntries() {
@@ -807,6 +809,7 @@ function PriceCalculatorPreview({
     if (!isEditing) {
       setHasUnsavedChanges(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEditing, entries.length]);
 
   // Formatta valuta
@@ -1226,6 +1229,7 @@ function AuditTrail({ priceListId }: { priceListId: string }) {
 
   useEffect(() => {
     loadEvents();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceListId, selectedEventType, page]);
 
   async function loadEvents() {

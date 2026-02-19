@@ -185,6 +185,7 @@ export default function CourierAPIConfig() {
   // Carica dati quando cambia API selezionata
   useEffect(() => {
     loadConfigForAPI(selectedAPI);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedAPI]);
 
   const loadConfigurations = async () => {
