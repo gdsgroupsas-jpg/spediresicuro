@@ -13,6 +13,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 import { ActingContext } from '@/lib/safe-auth';
 
 export interface CreditCheckResult {
@@ -45,7 +46,7 @@ export async function checkCreditBeforeBooking(
   // Leggi role e billing_mode da users (sempre necessario)
   const { data, error } = await supabaseAdmin
     .from('users')
-    .select('wallet_balance, role, billing_mode')
+    .select('wallet_balance, role, account_type, billing_mode')
     .eq('id', targetUserId)
     .single();
 
@@ -65,7 +66,7 @@ export async function checkCreditBeforeBooking(
   } else {
     currentBalance = parseFloat(data.wallet_balance) || 0;
   }
-  const isSuperadmin = data.role === 'SUPERADMIN' || data.role === 'superadmin';
+  const isSuperadmin = isSuperAdminCheck(data);
 
   // ============================================
   // SUPERADMIN WALLET BYPASS (P0 SECURITY)

@@ -41,9 +41,7 @@ export default async function UserDetailPage({ params }: PageProps) {
     .single();
 
   const isSuperAdmin =
-    adminUser?.account_type === 'superadmin' ||
-    adminUser?.role === 'admin' ||
-    adminUser?.role === 'SUPERADMIN';
+    adminUser?.account_type === 'superadmin' || adminUser?.account_type === 'admin';
 
   if (!isSuperAdmin) {
     redirect('/dashboard');

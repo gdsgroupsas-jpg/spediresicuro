@@ -78,9 +78,8 @@ export default function PlatformFeaturesPage() {
             email: userData.email,
           });
 
-          // Permetti accesso se è superadmin O admin (role) O admin (account_type)
-          // L'API backend permette accesso se role === 'admin', quindi allineiamo il frontend
-          if (accountType === 'superadmin' || role === 'admin' || accountType === 'admin') {
+          // Permetti accesso se account_type è admin o superadmin (source of truth)
+          if (accountType === 'superadmin' || accountType === 'admin') {
             console.log('✅ [FEATURES] Accesso autorizzato');
             setIsAuthorized(true);
             await loadFeatures();

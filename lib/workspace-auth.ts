@@ -46,6 +46,109 @@ export { WORKSPACE_COOKIE, WORKSPACE_STORAGE_KEY } from '@/lib/workspace-constan
 export { isSuperAdmin } from '@/lib/safe-auth';
 
 // ============================================
+// WORKSPACE BOOTSTRAP (auto-provisioning)
+// ============================================
+
+/**
+ * Garantisce che un utente abbia un workspace assegnato.
+ *
+ * Se l'utente non ha primary_workspace_id:
+ * 1. Cerca il platform workspace canonico
+ * 2. Aggiunge l'utente come membro (role: member)
+ * 3. Setta primary_workspace_id
+ *
+ * Questa funzione NON crea nuovi workspace — assegna al platform esistente.
+ * Per reseller, il workspace viene creato in supabase-callback/route.ts.
+ *
+ * @returns workspace ID assegnato, o null se fallisce
+ */
+export async function ensureUserWorkspace(
+  userId: string,
+  email?: string | null
+): Promise<string | null> {
+  try {
+    // 1. Controlla se ha gia' un workspace
+    const { data: user } = await supabaseAdmin
+      .from('users')
+      .select('primary_workspace_id, is_reseller, account_type')
+      .eq('id', userId)
+      .single();
+
+    if (user?.primary_workspace_id) {
+      return user.primary_workspace_id;
+    }
+
+    // 2. I reseller hanno il loro path dedicato (supabase-callback)
+    // Qui gestiamo solo utenti normali e byoc
+    if (user?.is_reseller === true) {
+      console.log('🔒 [ENSURE-WS] Reseller senza workspace — path dedicato in supabase-callback');
+      return null;
+    }
+
+    // 3. Trova il platform workspace canonico
+    const { data: platformWs } = await supabaseAdmin
+      .from('workspaces')
+      .select('id')
+      .eq('type', 'platform')
+      .eq('depth', 0)
+      .eq('status', 'active')
+      .limit(1)
+      .single();
+
+    if (!platformWs) {
+      console.error('❌ [ENSURE-WS] Nessun platform workspace trovato');
+      return null;
+    }
+
+    // 4. Verifica se e' gia' membro (idempotente)
+    const { data: existingMember } = await supabaseAdmin
+      .from('workspace_members')
+      .select('id')
+      .eq('workspace_id', platformWs.id)
+      .eq('user_id', userId)
+      .eq('status', 'active')
+      .maybeSingle();
+
+    if (!existingMember) {
+      // 5. Aggiungilo come membro
+      const { error: memberError } = await supabaseAdmin.from('workspace_members').insert({
+        workspace_id: platformWs.id,
+        user_id: userId,
+        role: 'member',
+        status: 'active',
+      });
+
+      if (memberError) {
+        console.error('❌ [ENSURE-WS] Errore aggiunta membro:', memberError.message);
+        return null;
+      }
+    }
+
+    // 6. Setta primary_workspace_id
+    const { error: updateError } = await supabaseAdmin
+      .from('users')
+      .update({ primary_workspace_id: platformWs.id })
+      .eq('id', userId);
+
+    if (updateError) {
+      console.error('❌ [ENSURE-WS] Errore update primary_workspace_id:', updateError.message);
+      return null;
+    }
+
+    console.log('✅ [ENSURE-WS] Utente assegnato a platform workspace:', {
+      userId,
+      email,
+      workspaceId: platformWs.id,
+    });
+
+    return platformWs.id;
+  } catch (error: any) {
+    console.error('❌ [ENSURE-WS] Errore ensureUserWorkspace:', error.message);
+    return null;
+  }
+}
+
+// ============================================
 // WORKSPACE AUTH FUNCTIONS
 // ============================================
 
@@ -135,15 +238,19 @@ export async function getWorkspaceAuth(): Promise<WorkspaceActingContext | null>
       }
     }
 
-    // 4. Se ancora no workspace ID, ritorna null (utente deve selezionare/assegnare workspace)
-    // Mitigazione bootstrap lockout: log dettagliato per diagnostica
+    // 4. Auto-provisioning: assegna utente al platform workspace se non ha workspace
     if (!workspaceId) {
-      console.warn('🔒 [WORKSPACE-AUTH] No workspace ID found for user:', {
+      console.warn('🔒 [WORKSPACE-AUTH] No workspace ID, tentativo auto-provisioning...', {
         userId: baseContext.target.id,
         email: baseContext.target.email,
-        hint: 'Utente senza primary_workspace_id e senza cookie/header workspace. Verificare assegnazione workspace.',
       });
-      return null;
+
+      workspaceId = await ensureUserWorkspace(baseContext.target.id, baseContext.target.email);
+
+      if (!workspaceId) {
+        console.error('❌ [WORKSPACE-AUTH] Auto-provisioning fallito — utente senza workspace');
+        return null;
+      }
     }
 
     // 5. Valida formato UUID

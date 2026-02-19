@@ -83,12 +83,12 @@ async function verifyAdminAccess(): Promise<{
 
     let user;
     if (context.actor.id === 'test-user-id') {
-      user = { role: 'admin' };
+      user = { account_type: 'admin' };
     } else {
       user = await findUserByEmail(context.actor.email);
     }
 
-    if (!user || user.role !== 'admin') {
+    if (!user || !isAdminOrAbove(user)) {
       return {
         isAdmin: false,
         error: 'Accesso negato. Solo gli admin possono gestire le configurazioni.',

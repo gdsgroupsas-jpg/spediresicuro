@@ -1336,45 +1336,47 @@ export default function AdminDashboardPage() {
               </div>
               <div className="p-6">
                 {/* AI Features Toggle for Resellers */}
-                {selectedUser.role !== 'admin' && (selectedUser as any).is_reseller && (
-                  <div className="mb-6">
-                    <AiFeaturesCard
-                      userId={selectedUser.id}
-                      initialCanManagePriceLists={
-                        selectedUser.metadata?.ai_can_manage_pricelists === true
-                      }
-                      userName={selectedUser.name || selectedUser.email}
-                      onToggleComplete={async () => {
-                        try {
-                          // Fetch fresh data for this specific user (including auth metadata)
-                          const response = await fetch(
-                            `/api/admin/users/${selectedUser.id}/features`
-                          );
-                          if (response.ok) {
-                            const data = await response.json();
-                            if (data.success && data.metadata) {
-                              // Update selected user state with new metadata
-                              const updatedUser = {
-                                ...selectedUser,
-                                metadata: data.metadata,
-                              };
-                              setSelectedUser(updatedUser);
-
-                              // Also update the user in the main list to keep it in sync
-                              setUsers((currentUsers) =>
-                                currentUsers.map((u) =>
-                                  u.id === selectedUser.id ? { ...u, metadata: data.metadata } : u
-                                )
-                              );
-                            }
-                          }
-                        } catch (error) {
-                          console.error('Error refreshing user data:', error);
+                {(selectedUser as any).account_type !== 'admin' &&
+                  (selectedUser as any).account_type !== 'superadmin' &&
+                  (selectedUser as any).is_reseller && (
+                    <div className="mb-6">
+                      <AiFeaturesCard
+                        userId={selectedUser.id}
+                        initialCanManagePriceLists={
+                          selectedUser.metadata?.ai_can_manage_pricelists === true
                         }
-                      }}
-                    />
-                  </div>
-                )}
+                        userName={selectedUser.name || selectedUser.email}
+                        onToggleComplete={async () => {
+                          try {
+                            // Fetch fresh data for this specific user (including auth metadata)
+                            const response = await fetch(
+                              `/api/admin/users/${selectedUser.id}/features`
+                            );
+                            if (response.ok) {
+                              const data = await response.json();
+                              if (data.success && data.metadata) {
+                                // Update selected user state with new metadata
+                                const updatedUser = {
+                                  ...selectedUser,
+                                  metadata: data.metadata,
+                                };
+                                setSelectedUser(updatedUser);
+
+                                // Also update the user in the main list to keep it in sync
+                                setUsers((currentUsers) =>
+                                  currentUsers.map((u) =>
+                                    u.id === selectedUser.id ? { ...u, metadata: data.metadata } : u
+                                  )
+                                );
+                              }
+                            }
+                          } catch (error) {
+                            console.error('Error refreshing user data:', error);
+                          }
+                        }}
+                      />
+                    </div>
+                  )}
 
                 {isLoadingFeatures ? (
                   <div className="text-center py-8">

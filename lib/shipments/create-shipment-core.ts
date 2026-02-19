@@ -6,6 +6,7 @@ import { withConcurrencyRetry } from '@/lib/wallet/retry';
 import { workspaceQuery } from '@/lib/db/workspace-query';
 import { getPlatformFeeSafe } from '@/lib/services/pricing/platform-fee';
 import { getUserWorkspaceId } from '@/lib/db/user-helpers';
+import { isSuperAdminCheck, isBYOC } from '@/lib/auth-helpers';
 // Sprint 1: Financial Tracking
 import {
   recordPlatformCost,
@@ -246,7 +247,7 @@ export async function createShipmentCore(params: {
   // ============================================
   const { data: user, error: userError } = await supabaseAdmin
     .from('users')
-    .select('wallet_balance, role, billing_mode')
+    .select('wallet_balance, role, account_type, billing_mode')
     .eq('id', targetId)
     .single();
 
@@ -332,8 +333,8 @@ export async function createShipmentCore(params: {
   // ============================================
   const platformFee = await getPlatformFeeSafe(targetId);
 
-  const isSuperadmin = user.role === 'SUPERADMIN' || user.role === 'superadmin';
-  const isByoc = user.role === 'BYOC' || user.role === 'byoc';
+  const isSuperadmin = isSuperAdminCheck(user);
+  const isByoc = isBYOC(user);
   const isPostpaid = (user as unknown as { billing_mode?: string }).billing_mode === 'postpagato';
 
   // H3 FIX: Se workspace non configurato, errore chiaro PRIMA di qualsiasi operazione wallet

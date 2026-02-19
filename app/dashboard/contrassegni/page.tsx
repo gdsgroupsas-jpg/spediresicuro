@@ -94,7 +94,8 @@ export default async function ContrassegniPage() {
     );
   }
 
-  const isAdmin = context.target.role === 'admin' || context.target.role === 'superadmin';
+  const isAdmin =
+    context.target.account_type === 'admin' || context.target.account_type === 'superadmin';
 
   // Admin: mostra vista admin con tabs
   if (isAdmin) {

@@ -39,7 +39,8 @@ export default async function ResiPage() {
       type: 'user',
       userId: context.target.id,
       userEmail: context.target.email || undefined,
-      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+      isAdmin:
+        context.target.account_type === 'admin' || context.target.account_type === 'superadmin',
     };
 
     // Ottieni userId per realtime
