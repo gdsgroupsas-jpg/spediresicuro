@@ -42,17 +42,19 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Verifica autenticazione cron (se configurato)
-    if (cronSecret) {
-      if (authHeader !== `Bearer ${cronSecret}`) {
-        console.warn('⚠️ [CRON SYNC] Tentativo accesso non autorizzato');
+    // FIX F2: Autenticazione cron fail-closed (OBBLIGATORIA)
+    const isVercelCron = request.headers.get('x-vercel-cron') === '1';
+    if (!isVercelCron) {
+      if (!cronSecret) {
+        console.error('[CRON SYNC] CRON_SECRET non configurato - endpoint disabilitato');
         return NextResponse.json(
-          {
-            success: false,
-            error: 'Unauthorized',
-          },
-          { status: 401 }
+          { success: false, error: 'CRON_SECRET not configured' },
+          { status: 503 }
         );
+      }
+      if (authHeader !== `Bearer ${cronSecret}`) {
+        console.warn('[CRON SYNC] Tentativo accesso non autorizzato');
+        return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       }
     }
 

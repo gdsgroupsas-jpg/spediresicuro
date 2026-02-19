@@ -16,14 +16,19 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: NextRequest) {
   try {
-    // Verifica secret token (protezione cron job)
+    // FIX F2: Autenticazione cron fail-closed
     const authHeader = request.headers.get('authorization');
-    const secretToken = process.env.CRON_SECRET_TOKEN;
+    const secretToken = process.env.CRON_SECRET_TOKEN || process.env.CRON_SECRET;
+    const isVercelCron = request.headers.get('x-vercel-cron') === '1';
 
-    if (secretToken && authHeader !== `Bearer ${secretToken}`) {
-      // Se non c'è secret token configurato, permettere solo da Vercel
-      const vercelCron = request.headers.get('x-vercel-cron');
-      if (!vercelCron) {
+    if (!isVercelCron) {
+      if (!secretToken) {
+        return NextResponse.json(
+          { success: false, error: 'CRON_SECRET not configured' },
+          { status: 503 }
+        );
+      }
+      if (authHeader !== `Bearer ${secretToken}`) {
         return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
       }
     }

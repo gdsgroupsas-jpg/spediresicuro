@@ -48,10 +48,10 @@ export async function GET() {
       .order('created_at', { ascending: false })
       .limit(100);
 
-    // Filtra per workspace se disponibile (include anche transazioni senza workspace_id)
+    // FIX F5: Filtra per workspace SENZA includere NULL (previene leak cross-tenant)
+    // Le transazioni legacy con workspace_id=NULL non devono leakare ad altri workspace
     if (workspaceId) {
-      query = query.or(`workspace_id.eq.${workspaceId},workspace_id.is.null`);
-      console.log(`🏢 [WALLET] Filtro workspace_id: ${workspaceId.substring(0, 8)}... (+ NULL)`);
+      query = query.eq('workspace_id', workspaceId);
     }
 
     const { data: transactions, error } = await query;

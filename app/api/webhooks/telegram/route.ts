@@ -41,13 +41,34 @@ function getAuthorizedChatIds(): number[] {
 }
 
 /**
+ * FIX F8: Verifica secret token nell'header per autenticare la sorgente Telegram.
+ * Telegram invia questo header se configurato via setWebhook({ secret_token }).
+ */
+function verifyTelegramSecret(request: NextRequest): boolean {
+  const expectedSecret = process.env.TELEGRAM_WEBHOOK_SECRET;
+  if (!expectedSecret) {
+    // Se non configurato, accetta (backward compat, ma loggare warning)
+    console.warn('[TELEGRAM_WEBHOOK] TELEGRAM_WEBHOOK_SECRET non configurato');
+    return true;
+  }
+
+  const receivedSecret = request.headers.get('x-telegram-bot-api-secret-token');
+  if (!receivedSecret || receivedSecret !== expectedSecret) {
+    console.warn('[TELEGRAM_WEBHOOK] Secret token non valido o mancante');
+    return false;
+  }
+
+  return true;
+}
+
+/**
  * Check if a chat is authorized to use bot commands
  */
 function isAuthorizedChat(chatId: number): boolean {
   const authorizedIds = getAuthorizedChatIds();
 
-  // If no IDs configured, allow /id command for setup
-  if (authorizedIds.length === 0) return true;
+  // FIX F8: Se nessun ID configurato, permettere SOLO /id (il check avviene nel caller)
+  if (authorizedIds.length === 0) return false;
 
   return authorizedIds.includes(chatId);
 }
@@ -196,8 +217,10 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
   console.log('[TELEGRAM_WEBHOOK] Parsed command:', { command, chatId });
 
-  // /id is always allowed (for setup)
-  if (command !== 'id' && !isAuthorizedChat(chatId)) {
+  // FIX F8: /id e' sempre permesso per setup; tutti gli altri richiedono chat autorizzata
+  if (command === 'id') {
+    // /id consentito sempre per permettere il setup iniziale
+  } else if (!isAuthorizedChat(chatId)) {
     console.log('[TELEGRAM_WEBHOOK] Chat not authorized:', { chatId });
     await sendTelegramMessageDirect('⛔ Non sei autorizzato ad usare questo bot.', {
       chatId: String(chatId),
@@ -246,6 +269,11 @@ export async function POST(request: NextRequest) {
   if (!isTelegramConfigured()) {
     console.warn('[TELEGRAM_WEBHOOK] Bot not configured');
     return NextResponse.json({ ok: true }); // Return OK to stop retries
+  }
+
+  // FIX F8: Verifica secret token Telegram
+  if (!verifyTelegramSecret(request)) {
+    return NextResponse.json({ ok: true }); // Return OK per non triggerare retry
   }
 
   try {

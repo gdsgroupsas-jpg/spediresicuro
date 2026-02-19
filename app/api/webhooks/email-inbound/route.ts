@@ -33,17 +33,16 @@ import { lookupWorkspaceByEmail, sanitizeEmailHtml } from '@/lib/email/workspace
  * Verifica la firma del webhook Resend/Svix.
  * FIX #13: Blocca payload non autenticati.
  *
- * Se RESEND_WEBHOOK_SECRET non è configurato, logga warning e permetti
- * (per non bloccare in dev/staging dove il secret potrebbe non esistere).
+ * FIX F2: Se RESEND_WEBHOOK_SECRET non è configurato, RIFIUTA (fail-closed).
+ * In dev/staging configurare il secret o mockare la verifica nei test.
  */
 async function verifyWebhookSignature(request: NextRequest, rawBody: string): Promise<boolean> {
   const webhookSecret = process.env.RESEND_WEBHOOK_SECRET;
 
+  // FIX F2: Fail-closed — se secret non configurato, rifiuta
   if (!webhookSecret) {
-    console.warn(
-      '[EMAIL-INBOUND] ⚠️ RESEND_WEBHOOK_SECRET non configurato, webhook non autenticato'
-    );
-    return true; // Permetti in dev/staging
+    console.error('[EMAIL-INBOUND] RESEND_WEBHOOK_SECRET non configurato - webhook rifiutato');
+    return false;
   }
 
   const svixId = request.headers.get('svix-id');

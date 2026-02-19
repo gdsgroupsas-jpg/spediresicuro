@@ -22,13 +22,19 @@ import { getQueueStats, requeueFailedMessages } from '@/lib/services/telegram-qu
  * GET - Get queue status (monitoring)
  */
 export async function GET(request: NextRequest) {
-  // Verify cron secret (optional for status endpoint)
+  // FIX F2: Autenticazione cron fail-closed
   const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET_TOKEN;
+  const cronSecret = process.env.CRON_SECRET_TOKEN || process.env.CRON_SECRET;
+  const isVercelCron = request.headers.get('x-vercel-cron') === '1';
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    console.warn('[TELEGRAM_QUEUE] Unauthorized request');
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isVercelCron) {
+    if (!cronSecret) {
+      return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
+    }
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      console.warn('[TELEGRAM_QUEUE] Unauthorized request');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   try {
@@ -64,13 +70,19 @@ export async function GET(request: NextRequest) {
  * POST - Retry failed messages
  */
 export async function POST(request: NextRequest) {
-  // Verify cron secret
+  // FIX F2: Autenticazione cron fail-closed
   const authHeader = request.headers.get('authorization');
-  const cronSecret = process.env.CRON_SECRET_TOKEN;
+  const cronSecret = process.env.CRON_SECRET_TOKEN || process.env.CRON_SECRET;
+  const isVercelCron = request.headers.get('x-vercel-cron') === '1';
 
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
-    console.warn('[TELEGRAM_QUEUE] Unauthorized retry request');
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!isVercelCron) {
+    if (!cronSecret) {
+      return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
+    }
+    if (authHeader !== `Bearer ${cronSecret}`) {
+      console.warn('[TELEGRAM_QUEUE] Unauthorized retry request');
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   console.log('[TELEGRAM_QUEUE] Manual retry of failed messages');

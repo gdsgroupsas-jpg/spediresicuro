@@ -338,8 +338,11 @@ export async function grantFeature(
     }
 
     // 4. Se non è gratis e non è un regalo, controlla credito e scala
+    let walletDebited = false;
+    let priceInEuros = 0;
+
     if (!isFree && !feature.is_free && feature.price_monthly_cents) {
-      const priceInEuros = feature.price_monthly_cents / 100;
+      priceInEuros = feature.price_monthly_cents / 100;
       const currentBalance = targetUser.wallet_balance || 0;
 
       if (currentBalance < priceInEuros) {
@@ -362,10 +365,10 @@ export async function grantFeature(
           error: deductResult.error || 'Errore durante la scala del credito.',
         };
       }
+      walletDebited = true;
     }
 
-    // 5. Attiva feature (usa funzione SQL esistente o insert diretto)
-    // Assumiamo che esista una tabella user_features o similar
+    // 5. Attiva feature
     const { error: activateError } = await supabaseAdmin.from('user_features').upsert(
       {
         user_id: userId,
@@ -382,10 +385,25 @@ export async function grantFeature(
 
     if (activateError) {
       console.error('Errore attivazione feature:', activateError);
-      // Potrebbe non esistere la tabella user_features, quindi proviamo con rpc se disponibile
+
+      // FIX F4: Compensazione — rimborsa wallet se il debit era avvenuto
+      if (walletDebited && priceInEuros > 0) {
+        console.warn(`[GRANT_FEATURE] Compensazione wallet: rimborso €${priceInEuros} a ${userId}`);
+        const refundResult = await manageWallet(
+          userId,
+          priceInEuros,
+          `Rimborso attivazione feature fallita: ${feature.name}`
+        );
+        if (!refundResult.success) {
+          console.error(
+            `[GRANT_FEATURE] CRITICAL: Rimborso fallito per ${userId}, €${priceInEuros}`
+          );
+        }
+      }
+
       return {
         success: false,
-        error: activateError.message || "Errore durante l'attivazione della feature.",
+        error: "Errore durante l'attivazione della feature. Il credito è stato rimborsato.",
       };
     }
 

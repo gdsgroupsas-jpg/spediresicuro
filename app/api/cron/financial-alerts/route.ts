@@ -19,10 +19,16 @@ const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: Request) {
   try {
-    // Verifica autorizzazione
+    // FIX F2: Autenticazione cron fail-closed
     const authHeader = request.headers.get('authorization');
-    if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    const isVercelCron = request.headers.get('x-vercel-cron') === '1';
+    if (!isVercelCron) {
+      if (!CRON_SECRET) {
+        return NextResponse.json({ error: 'CRON_SECRET not configured' }, { status: 503 });
+      }
+      if (authHeader !== `Bearer ${CRON_SECRET}`) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
     }
 
     console.log('[CRON] Starting financial alerts check...');
