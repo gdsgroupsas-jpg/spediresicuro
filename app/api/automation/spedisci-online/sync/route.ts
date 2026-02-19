@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { syncCourierConfig, syncAllEnabledConfigs } from '@/lib/automation/spedisci-online-agent';
 import { supabaseAdmin } from '@/lib/db/client';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -28,7 +29,7 @@ export async function POST(request: NextRequest) {
       .eq('email', context.actor.email)
       .single();
 
-    if (userError || !user || user.account_type !== 'superadmin') {
+    if (userError || !user || !isSuperAdminCheck(user)) {
       return NextResponse.json(
         { success: false, error: 'Solo superadmin può eseguire sync' },
         { status: 403 }

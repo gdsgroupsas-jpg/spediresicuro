@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { findUserByEmail } from '@/lib/database';
 import { isSupabaseConfigured, supabaseAdmin } from '@/lib/supabase';
@@ -168,9 +169,7 @@ export async function GET(request: NextRequest) {
       | 'newUsersThisMonth'
     > = {
       totalUsers: allUsers.length,
-      adminUsers: allUsers.filter(
-        (u) => u.account_type === 'admin' || u.account_type === 'superadmin'
-      ).length,
+      adminUsers: allUsers.filter((u) => isAdminOrAbove(u)).length,
       regularUsers: allUsers.filter((u) => !u.account_type || u.account_type === 'user').length,
       newUsersToday: allUsers.filter((u) => {
         const created = new Date(u.created_at);

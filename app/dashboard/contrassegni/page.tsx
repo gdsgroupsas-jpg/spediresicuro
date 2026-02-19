@@ -6,6 +6,7 @@
  */
 
 import { getSafeAuth } from '@/lib/safe-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { getSpedizioni, getSupabaseUserIdFromEmail } from '@/lib/database';
 import type { AuthContext } from '@/lib/auth-context';
 import DashboardNav from '@/components/dashboard-nav';
@@ -94,8 +95,7 @@ export default async function ContrassegniPage() {
     );
   }
 
-  const isAdmin =
-    context.target.account_type === 'admin' || context.target.account_type === 'superadmin';
+  const isAdmin = isAdminOrAbove(context.target);
 
   // Admin: mostra vista admin con tabs
   if (isAdmin) {

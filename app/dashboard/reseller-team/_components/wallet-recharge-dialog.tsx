@@ -30,6 +30,7 @@ import {
   WALLET_THRESHOLDS,
 } from '@/lib/validations/wallet-schema';
 import { formatCurrency, cn } from '@/lib/utils';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 interface User {
   id: string;
@@ -59,8 +60,8 @@ export function WalletRechargeDialog({
   // Determina se è un Reseller (solo ricariche) o Super Admin (ricariche + prelievi)
   const isReseller =
     (session?.user as any)?.is_reseller === true &&
-    (session?.user as any)?.account_type !== 'superadmin';
-  const isSuperAdmin = (session?.user as any)?.account_type === 'superadmin';
+    !isSuperAdminCheck((session?.user as any) || {});
+  const isSuperAdmin = isSuperAdminCheck((session?.user as any) || {});
 
   // Per Reseller: solo ricariche positive, schema modificato
   const resellerSchema = walletOperationSchema.extend({

@@ -13,6 +13,7 @@ import { CurrentFeeDisplay, FeeHistoryTable } from '@/components/admin/platform-
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { auth } from '@/lib/auth-config';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getPlatformFee, getPlatformFeeHistory } from '@/lib/services/pricing/platform-fee';
 import { ArrowLeft, Calendar, CreditCard, Mail, Shield, User } from 'lucide-react';
@@ -40,8 +41,7 @@ export default async function UserDetailPage({ params }: PageProps) {
     .eq('email', session.user.email)
     .single();
 
-  const isSuperAdmin =
-    adminUser?.account_type === 'superadmin' || adminUser?.account_type === 'admin';
+  const isSuperAdmin = isAdminOrAbove(adminUser || {});
 
   if (!isSuperAdmin) {
     redirect('/dashboard');

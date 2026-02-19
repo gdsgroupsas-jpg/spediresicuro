@@ -8,6 +8,7 @@
  * - Qualsiasi altro endpoint che necessita calcolo prezzi
  */
 
+import { isSuperAdminCheck, isResellerCheck } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { calculateBestPriceForReseller } from '@/lib/db/price-lists-advanced';
 
@@ -98,8 +99,8 @@ export async function calculatePriceFromPriceList(
       };
     }
 
-    const isSuperadmin = user.account_type === 'superadmin';
-    const isReseller = user.is_reseller === true;
+    const isSuperadmin = isSuperAdminCheck(user);
+    const isReseller = isResellerCheck(user);
 
     // Per reseller e superadmin: usa sistema listini avanzato
     if (isReseller || isSuperadmin) {

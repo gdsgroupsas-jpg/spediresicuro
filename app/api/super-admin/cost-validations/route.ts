@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { handleApiError } from '@/lib/api-responses';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
       .eq('email', context.actor.email)
       .single();
 
-    if (!user || user.account_type !== 'superadmin') {
+    if (!user || !isSuperAdminCheck(user)) {
       return NextResponse.json({ error: 'Accesso negato' }, { status: 403 });
     }
 

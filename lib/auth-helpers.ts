@@ -54,3 +54,35 @@ export function isResellerCheck(u: AuthCheckable): boolean {
 export function isBYOC(u: AuthCheckable): boolean {
   return u.account_type?.toLowerCase() === 'byoc';
 }
+
+// ─── Helper composti per pattern ricorrenti ───────────────────
+
+/**
+ * Reseller o Superadmin: accesso a listini avanzati, calcolo prezzi custom
+ */
+export function isResellerOrSuperadmin(u: AuthCheckable): boolean {
+  return isResellerCheck(u) || isSuperAdminCheck(u);
+}
+
+/**
+ * Admin, Reseller o BYOC: accesso a gestione listini/sync/config
+ *
+ * Pattern piu' comune nel codebase per azioni sui listini.
+ */
+export function canManagePriceLists(u: AuthCheckable): boolean {
+  return isAdminOrAbove(u) || isResellerCheck(u) || isBYOC(u);
+}
+
+/**
+ * Reseller o BYOC (ma non admin): utenti con listini propri
+ */
+export function isResellerOrBYOC(u: AuthCheckable): boolean {
+  return isResellerCheck(u) || isBYOC(u);
+}
+
+/**
+ * Reseller o Admin: accesso a fee sub-utenti, team management
+ */
+export function isResellerOrAdmin(u: AuthCheckable): boolean {
+  return isResellerCheck(u) || isAdminOrAbove(u);
+}

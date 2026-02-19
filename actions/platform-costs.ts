@@ -11,6 +11,7 @@
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 // ============================================
 // TYPES
@@ -96,7 +97,7 @@ async function verifySuperAdmin(): Promise<{
       return { success: false, error: 'Non autenticato' };
     }
 
-    if (wsContext.actor.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(wsContext.actor)) {
       return {
         success: false,
         error: 'Accesso non autorizzato: solo SuperAdmin',

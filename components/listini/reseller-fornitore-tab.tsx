@@ -26,6 +26,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Select } from '@/components/ui/select';
 import type { PriceList } from '@/types/listini';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { Package, Plus, RefreshCw, Search } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
@@ -62,9 +63,7 @@ export function ResellerFornitoreTab({
   useEffect(() => {
     // Se accountType passato come prop, calcola isResellerAdmin senza fetch extra
     if (accountType) {
-      setIsResellerAdmin(
-        resellerRole === 'admin' || accountType === 'superadmin' || accountType === 'admin'
-      );
+      setIsResellerAdmin(resellerRole === 'admin' || isAdminOrAbove({ account_type: accountType }));
     }
 
     async function loadInitialData() {
@@ -76,11 +75,7 @@ export function ResellerFornitoreTab({
             const data = await response.json();
             const userData = data.user || data;
 
-            setIsResellerAdmin(
-              userData.reseller_role === 'admin' ||
-                userData.account_type === 'superadmin' ||
-                userData.account_type === 'admin'
-            );
+            setIsResellerAdmin(userData.reseller_role === 'admin' || isAdminOrAbove(userData));
           }
         }
 

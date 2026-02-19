@@ -12,6 +12,7 @@ import type {
   UpdateShipmentInput,
 } from '@/types/shipments';
 import { assertValidUserId } from '@/lib/validators';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 /**
  * Genera tracking number univoco
@@ -116,7 +117,7 @@ async function getHierarchyUserIds(
       .single();
 
     // Se non è admin, ritorna solo l'ID utente
-    if (!user || (user.account_type !== 'admin' && user.account_type !== 'superadmin')) {
+    if (!user || !isAdminOrAbove(user)) {
       return [userId];
     }
 

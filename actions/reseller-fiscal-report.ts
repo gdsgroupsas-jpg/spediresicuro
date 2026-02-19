@@ -13,6 +13,7 @@ import { supabaseAdmin } from '@/lib/db/client';
 import { workspaceQuery } from '@/lib/db/workspace-query';
 import { getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { computeMargin } from '@/lib/financial';
+import { isResellerOrSuperadmin } from '@/lib/auth-helpers';
 import type {
   FiscalReportFilters,
   FiscalReportResult,
@@ -316,7 +317,7 @@ export async function getResellerFiscalReport(
       account_type: currentUser.account_type,
     });
 
-    if (!currentUser.is_reseller && currentUser.account_type !== 'superadmin') {
+    if (!isResellerOrSuperadmin(currentUser)) {
       return { success: false, error: 'Non sei un reseller' };
     }
 
@@ -547,7 +548,7 @@ export async function getResellerMarginByProvider(
       return { success: false, error: 'Utente non trovato' };
     }
 
-    if (!currentUser.is_reseller && currentUser.account_type !== 'superadmin') {
+    if (!isResellerOrSuperadmin(currentUser)) {
       return { success: false, error: 'Non sei un reseller' };
     }
 

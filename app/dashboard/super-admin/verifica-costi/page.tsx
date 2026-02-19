@@ -14,6 +14,7 @@ import { Shield, AlertTriangle, CheckCircle, RefreshCw, Download } from 'lucide-
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import DashboardNav from '@/components/dashboard-nav';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 import { toast } from 'sonner';
 
 interface CostValidation {
@@ -59,7 +60,7 @@ export default function VerificaCostiPage() {
           const userData = data.user || data;
           const accountType = userData.account_type || userData.accountType;
 
-          if (accountType === 'superadmin') {
+          if (isSuperAdminCheck({ account_type: accountType })) {
             setIsAuthorized(true);
           } else {
             router.push('/dashboard?error=unauthorized');

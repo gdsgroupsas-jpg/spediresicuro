@@ -13,6 +13,7 @@
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { canManagePriceLists } from '@/lib/auth-helpers';
 import { testSpedisciOnlineRates } from './spedisci-online-rates';
 import { PRICING_MATRIX, getZonesForMode, getWeightsForMode } from '@/lib/constants/pricing-matrix';
 import { getSpedisciOnlineCredentials } from '@/lib/actions/spedisci-online';
@@ -78,11 +79,7 @@ export async function syncIncrementalPriceListEntries(
     }
 
     // Verifica permessi
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
-    const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === 'byoc';
-
-    if (!isAdmin && !isReseller && !isBYOC) {
+    if (!canManagePriceLists(user)) {
       return {
         success: false,
         zonesProcessed: 0,

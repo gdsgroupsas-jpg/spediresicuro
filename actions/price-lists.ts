@@ -6,6 +6,7 @@
 
 'use server';
 
+import { isResellerOrBYOC } from '@/lib/auth-helpers';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { workspaceQuery } from '@/lib/db/workspace-query';
@@ -1977,7 +1978,7 @@ export async function listUsersForAssignmentAction(options?: { global?: boolean 
 
     const users = (members || [])
       .map((m: any) => m.user)
-      .filter((u: any) => u && (u.is_reseller || u.account_type === 'byoc'));
+      .filter((u: any) => u && isResellerOrBYOC(u));
 
     return { success: true, users };
   } catch (error: any) {

@@ -10,6 +10,7 @@
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { findUserByEmail } from '@/lib/database';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 /**
  * Verifica permessi superadmin
@@ -37,7 +38,7 @@ async function verifySuperAdminAccess(): Promise<{
       return { isAuthorized: false, error: 'Utente non trovato' };
     }
 
-    if ((user as any).account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(user as any)) {
       return {
         isAuthorized: false,
         error: 'Solo i superadmin possono gestire le assegnazioni listini',

@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (context.actor.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(context.actor)) {
       return NextResponse.json(
         { error: 'Solo i superadmin possono accedere alla posta' },
         { status: 403 }

@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 import { isTestUser } from '@/lib/utils/test-data-detection';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -63,7 +64,7 @@ export async function GET(
       .eq('email', context.actor.email)
       .single();
 
-    if (adminUser?.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(adminUser || {})) {
       return NextResponse.json(
         { error: 'Solo i superadmin possono eseguire il cleanup' },
         { status: 403 }
@@ -156,7 +157,7 @@ export async function POST(
       .eq('email', context.actor.email)
       .single();
 
-    if (adminUser?.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(adminUser || {})) {
       return NextResponse.json(
         { error: 'Solo i superadmin possono eseguire il cleanup' },
         { status: 403 }

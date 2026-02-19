@@ -5,6 +5,7 @@
  * matching intelligente e calcolo prezzi dinamico.
  */
 
+import { isSuperAdminCheck, isResellerCheck } from '@/lib/auth-helpers';
 import { featureFlags, pricingConfig } from '@/lib/config';
 import { calculatePriceFromList } from '@/lib/pricing/calculator';
 import {
@@ -1410,8 +1411,8 @@ export async function calculateBestPriceForReseller(
       .eq('id', userId)
       .single();
 
-    const isReseller = user?.is_reseller === true;
-    const isSuperadmin = user?.account_type === 'superadmin';
+    const isReseller = isResellerCheck(user || {});
+    const isSuperadmin = isSuperAdminCheck(user || {});
 
     // Per utenti normali (non reseller e non superadmin), usa calcolo base
     if (!user || (!isReseller && !isSuperadmin)) {

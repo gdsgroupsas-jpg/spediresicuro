@@ -25,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select } from '@/components/ui/select';
 import { getZonesForMode } from '@/lib/constants/pricing-matrix';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 import {
   AlertCircle,
   CheckCircle2,
@@ -183,7 +184,7 @@ export function SyncSpedisciOnlineDialog({
             const userInfo = await userInfoResponse.json();
             const userData = userInfo.user || userInfo;
 
-            if (userData.account_type === 'superadmin') {
+            if (isSuperAdminCheck(userData)) {
               // Superadmin vede solo:
               // 1. Config globali (is_default = true)
               // 2. Config proprie (owner_user_id = superadmin.id o created_by = superadmin.email)

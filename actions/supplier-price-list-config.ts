@@ -15,6 +15,7 @@
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getPriceListById } from '@/lib/db/price-lists';
+import { isAdminOrAbove, canManagePriceLists } from '@/lib/auth-helpers';
 import type {
   SupplierPriceListConfig,
   UpsertSupplierPriceListConfigInput,
@@ -52,7 +53,7 @@ export async function getSupplierPriceListConfig(priceListId: string): Promise<{
       return { success: false, error: 'Listino non trovato' };
     }
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
     const isOwner = priceList.created_by === user.id;
 
     if (!isAdmin && !isOwner) {
@@ -147,11 +148,7 @@ export async function upsertSupplierPriceListConfig(
     const workspaceId = context.workspace.id;
 
     // Verifica permessi
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
-    const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === 'byoc';
-
-    if (!isAdmin && !isReseller && !isBYOC) {
+    if (!canManagePriceLists(user)) {
       return {
         success: false,
         error: 'Solo admin, reseller e BYOC possono configurare listini fornitore',
@@ -166,7 +163,7 @@ export async function upsertSupplierPriceListConfig(
 
     const isOwner = priceList.created_by === user.id;
 
-    if (!isAdmin && !isOwner) {
+    if (!isAdminOrAbove(user) && !isOwner) {
       return {
         success: false,
         error: 'Non hai i permessi per modificare questa configurazione',
@@ -406,7 +403,7 @@ export async function deleteSupplierPriceListConfig(priceListId: string): Promis
       return { success: false, error: 'Listino non trovato' };
     }
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
     const isOwner = priceList.created_by === user.id;
 
     if (!isAdmin && !isOwner) {
@@ -457,7 +454,7 @@ export async function listSupplierPriceListConfigs(): Promise<{
       return { success: false, error: 'Utente non trovato' };
     }
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
 
     // Se non è admin, recupera solo i price_list_id dell'utente
     let priceListIds: string[] = [];

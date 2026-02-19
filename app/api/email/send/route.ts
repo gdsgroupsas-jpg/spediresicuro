@@ -11,6 +11,7 @@ import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { workspaceQuery } from '@/lib/db/workspace-query';
 import { Resend } from 'resend';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 const resend = new Resend(process.env.RESEND_API_KEY || 'placeholder');
 
@@ -21,7 +22,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    if (context.actor.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(context.actor)) {
       return NextResponse.json(
         { error: 'Solo i superadmin possono inviare email' },
         { status: 403 }

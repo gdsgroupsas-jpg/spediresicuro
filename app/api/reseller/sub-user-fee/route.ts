@@ -15,6 +15,7 @@ import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { setParentImposedFee, getSubUsersWithFees } from '@/lib/services/pricing/platform-fee';
+import { isResellerOrAdmin } from '@/lib/auth-helpers';
 
 /**
  * GET /api/reseller/sub-user-fee
@@ -37,10 +38,7 @@ export async function GET() {
       .eq('id', context.actor.id)
       .single();
 
-    if (
-      !actor ||
-      (!actor.is_reseller && actor.account_type !== 'superadmin' && actor.account_type !== 'admin')
-    ) {
+    if (!actor || !isResellerOrAdmin(actor)) {
       return NextResponse.json(
         { error: 'Solo i reseller possono gestire le fee' },
         { status: 403 }
@@ -86,10 +84,7 @@ export async function PUT(request: NextRequest) {
       .eq('id', context.actor.id)
       .single();
 
-    if (
-      !actor ||
-      (!actor.is_reseller && actor.account_type !== 'superadmin' && actor.account_type !== 'admin')
-    ) {
+    if (!actor || !isResellerOrAdmin(actor)) {
       return NextResponse.json(
         { error: 'Solo i reseller possono gestire le fee' },
         { status: 403 }

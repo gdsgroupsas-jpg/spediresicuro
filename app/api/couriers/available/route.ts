@@ -21,6 +21,7 @@
 
 import { requireAuth } from '@/lib/api-middleware';
 import { handleApiError } from '@/lib/api-responses';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getAvailableCouriersForUser } from '@/lib/db/price-lists';
 import { NextRequest, NextResponse } from 'next/server';
@@ -55,7 +56,7 @@ export async function GET(request: NextRequest) {
       .eq('id', userId)
       .single();
 
-    const isSuperadmin = userData?.account_type === 'superadmin';
+    const isSuperadmin = isSuperAdminCheck(userData || {});
 
     // Recupera corrieri disponibili dalla configurazione API
     let couriers = await getAvailableCouriersForUser(userId);

@@ -12,6 +12,7 @@
 import { auth } from '@/lib/auth-config';
 import { supabaseAdmin } from '@/lib/supabase';
 import { getSupabaseUserIdFromEmail } from '@/lib/database';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 export type AuthContextType = 'user' | 'service_role' | 'anonymous';
 
@@ -47,10 +48,7 @@ export async function createAuthContextFromSession(session?: any): Promise<AuthC
 
   // Verifica ruolo admin
   const userRole = (session.user as any).role || 'user';
-  const isAdmin =
-    userRole === 'admin' ||
-    (session.user as any).account_type === 'admin' ||
-    (session.user as any).account_type === 'superadmin';
+  const isAdmin = userRole === 'admin' || isAdminOrAbove(session.user as any);
 
   // Ottieni userId Supabase
   let supabaseUserId: string | null = null;

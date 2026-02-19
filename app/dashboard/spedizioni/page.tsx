@@ -48,6 +48,7 @@ import dynamic from 'next/dynamic';
 import { TrackingModal, TrackingToast } from '@/components/tracking';
 import { toast } from 'sonner';
 import { vibrateDevice } from '@/hooks/useRealtimeShipments';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 // Carica lo scanner solo quando serve (dynamic import per performance)
 const ReturnScanner = dynamic(() => import('@/components/ReturnScanner'), {
@@ -337,8 +338,7 @@ export default function ListaSpedizioniPage() {
               role === 'ADMIN' ||
               role === 'SUPERADMIN' ||
               role === 'RESELLER' ||
-              accountType === 'admin' ||
-              accountType === 'superadmin' ||
+              isAdminOrAbove({ account_type: accountType }) ||
               accountType === 'reseller';
             setIsAdminOrSuperadmin(canSeeBreakdown);
           }

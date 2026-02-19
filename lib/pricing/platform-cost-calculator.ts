@@ -10,6 +10,7 @@
  */
 
 import { SupabaseClient } from '@supabase/supabase-js';
+import { isSuperAdminCheck, isBYOC } from '@/lib/auth-helpers';
 import type { ApiSource, CostSource } from '@/lib/shipments/platform-cost-recorder';
 
 export interface DetermineApiSourceParams {
@@ -82,7 +83,7 @@ export async function determineApiSource(
           .eq('id', priceList.created_by)
           .single();
 
-        if (creator?.account_type === 'superadmin') {
+        if (isSuperAdminCheck(creator || {})) {
           return {
             apiSource: 'platform',
             priceListId: priceList.id,
@@ -137,7 +138,7 @@ export async function determineApiSource(
     .eq('id', userId)
     .single();
 
-  if (user?.account_type === 'byoc') {
+  if (isBYOC(user || {})) {
     return {
       apiSource: 'byoc_own',
       priceListId,

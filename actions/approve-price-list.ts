@@ -13,6 +13,7 @@ import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import { updatePriceList } from '@/lib/db/price-lists';
 import { PRICING_MATRIX, getZonesForMode } from '@/lib/constants/pricing-matrix';
+import { canManagePriceLists, isAdminOrAbove } from '@/lib/auth-helpers';
 
 interface ApprovePriceListResult {
   success: boolean;
@@ -49,11 +50,7 @@ export async function approvePriceListAction(
     const workspaceId = context.workspace.id;
 
     // Verifica permessi
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
-    const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === 'byoc';
-
-    if (!isAdmin && !isReseller && !isBYOC) {
+    if (!canManagePriceLists(user)) {
       return {
         success: false,
         error: 'Solo admin, reseller e BYOC possono approvare listini',
@@ -72,7 +69,7 @@ export async function approvePriceListAction(
     }
 
     // Verifica ownership (solo il creatore può approvare)
-    if (priceList.created_by !== user.id && !isAdmin) {
+    if (priceList.created_by !== user.id && !isAdminOrAbove(user)) {
       return {
         success: false,
         error: 'Puoi approvare solo i tuoi listini',

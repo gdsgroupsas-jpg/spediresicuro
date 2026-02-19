@@ -13,6 +13,7 @@
 
 import { syncPriceListsFromSpedisciOnline } from '@/actions/spedisci-online-rates';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { canManagePriceLists } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 
 /**
@@ -50,11 +51,7 @@ export async function autoSyncPriceListsAfterConfig(
       return { success: false, error: 'Utente non trovato' };
     }
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
-    const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === 'byoc';
-
-    if (!isAdmin && !isReseller && !isBYOC) {
+    if (!canManagePriceLists(user)) {
       console.log('⚠️ [AUTO-SYNC] Utente non autorizzato, salto sincronizzazione');
       return { success: false, error: 'Non autorizzato' };
     }

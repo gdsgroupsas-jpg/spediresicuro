@@ -11,6 +11,7 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import DashboardNav from '@/components/dashboard-nav';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import {
   Settings,
   Power,
@@ -79,7 +80,7 @@ export default function PlatformFeaturesPage() {
           });
 
           // Permetti accesso se account_type è admin o superadmin (source of truth)
-          if (accountType === 'superadmin' || accountType === 'admin') {
+          if (isAdminOrAbove({ account_type: accountType })) {
             console.log('✅ [FEATURES] Accesso autorizzato');
             setIsAuthorized(true);
             await loadFeatures();

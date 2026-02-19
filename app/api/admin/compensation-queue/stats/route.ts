@@ -12,6 +12,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 export const dynamic = 'force-dynamic';
 
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest) {
       .eq('id', context.actor.id)
       .single();
 
-    const isAdmin = user?.account_type === 'admin' || user?.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(user || {});
 
     if (!isAdmin) {
       return NextResponse.json(

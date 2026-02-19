@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 const EMAIL_REGEX = /^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
 const PHONE_REGEX = /^\+?[0-9\s\-()]{6,20}$/;
@@ -22,7 +23,7 @@ function sanitizeString(s: string | undefined | null, maxLen: number): string {
 async function requireSuperadmin() {
   const context = await getWorkspaceAuth();
   if (!context) return { error: 'Unauthorized', status: 401 };
-  if (context.actor.account_type !== 'superadmin') return { error: 'Forbidden', status: 403 };
+  if (!isSuperAdminCheck(context.actor)) return { error: 'Forbidden', status: 403 };
   return { context };
 }
 

@@ -8,7 +8,7 @@
  */
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
-import { isAdminOrAbove } from '@/lib/auth-helpers';
+import { isAdminOrAbove, isSuperAdminCheck } from '@/lib/auth-helpers';
 import { findUserByEmail } from '@/lib/database';
 import { supabaseAdmin } from '@/lib/db/client';
 import { logAuditEvent } from '@/lib/security/audit-log';
@@ -726,7 +726,7 @@ export async function deleteConfiguration(id: string): Promise<{
           if (
             currentUser?.is_reseller &&
             currentUser?.reseller_role !== 'admin' &&
-            currentUser?.account_type !== 'superadmin'
+            !isSuperAdminCheck(currentUser)
           ) {
             return {
               success: false,

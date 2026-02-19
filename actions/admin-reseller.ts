@@ -15,6 +15,7 @@ import crypto from 'crypto';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import bcrypt from 'bcryptjs';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 import { validateEmail } from '@/lib/validators';
 import { userExists, getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { hasCapability } from '@/lib/db/capability-helpers';
@@ -65,7 +66,7 @@ async function canViewAllClients(): Promise<{ canView: boolean; userId?: string;
     console.log('🔍 [canViewAllClients] Verifica per:', wsContext.actor.id);
 
     // Superadmin può sempre vedere tutto
-    if (accountType === 'superadmin') {
+    if (isSuperAdminCheck({ account_type: accountType })) {
       console.log('✅ [canViewAllClients] Superadmin - accesso concesso');
       return { canView: true, userId: actorId };
     }

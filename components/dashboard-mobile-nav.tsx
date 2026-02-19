@@ -24,6 +24,7 @@ import {
   type NavItem,
 } from '@/lib/config/navigationConfig';
 import { useGiacenzeCount } from '@/hooks/useGiacenzeCount';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 export default function DashboardMobileNav() {
   const pathname = usePathname();
@@ -83,7 +84,7 @@ export default function DashboardMobileNav() {
     return isNavItemActive(path, pathname || '');
   };
 
-  const isSuperAdmin = accountType === 'superadmin';
+  const isSuperAdmin = isSuperAdminCheck({ account_type: accountType });
 
   // 🆕 Flatten nested sections per mobile (UX semplificata)
   // Le subsections diventano items normali con un separatore visivo

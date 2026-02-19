@@ -7,6 +7,7 @@ import { Shield, DollarSign, FileText, AlertTriangle, UserPlus } from 'lucide-re
 
 import { Button } from '@/components/ui/button';
 import { QueryProvider } from '@/components/providers/query-provider';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 import { UsersTable } from './_components/users-table';
 import { AIProviderSelector } from './_components/ai-provider-selector';
 
@@ -33,7 +34,7 @@ export default function SuperAdminDashboard() {
           const userData = data.user || data;
           const accountType = userData.account_type || userData.accountType;
 
-          if (accountType === 'superadmin') {
+          if (isSuperAdminCheck({ account_type: accountType })) {
             setIsAuthorized(true);
           } else {
             router.push('/dashboard?error=unauthorized');

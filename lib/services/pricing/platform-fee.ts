@@ -14,6 +14,7 @@
  * - MIGRATION_MEMORY.md sezione FASE 2.7
  */
 
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 
 // ============================================
@@ -251,7 +252,7 @@ export async function updatePlatformFee(
     throw new Error('Error verifying admin privileges');
   }
 
-  const isSuperAdmin = adminData.account_type === 'superadmin';
+  const isSuperAdmin = isSuperAdminCheck(adminData);
 
   if (!isSuperAdmin) {
     throw new Error('Only SUPERADMIN can update platform fees');

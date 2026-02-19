@@ -39,6 +39,7 @@ import {
 import { formatCurrency, formatDate, formatUuid, cn } from '@/lib/utils';
 import { useCopyToClipboard } from '@/lib/hooks';
 import { WALLET_THRESHOLDS } from '@/lib/validations/wallet-schema';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 interface User {
   id: string;
@@ -242,7 +243,7 @@ export function UsersTable() {
 
   const canDeleteUser = (user: User) => {
     // Non può eliminare superadmin
-    if (user.account_type === 'superadmin') return false;
+    if (isSuperAdminCheck(user)) return false;
     return true;
   };
 
@@ -432,7 +433,7 @@ export function UsersTable() {
                       <Switch
                         checked={user.is_reseller === true}
                         onCheckedChange={(enabled) => handleResellerToggle(user, enabled)}
-                        disabled={user.account_type === 'superadmin'}
+                        disabled={isSuperAdminCheck(user)}
                       />
                     </td>
                     <td className="px-4 py-4 text-center">
@@ -453,10 +454,7 @@ export function UsersTable() {
                               toast.error(error.message || "Errore nell'aggiornamento del ruolo");
                             }
                           }}
-                          disabled={
-                            updateResellerRoleMutation.isPending ||
-                            user.account_type === 'superadmin'
-                          }
+                          disabled={updateResellerRoleMutation.isPending || isSuperAdminCheck(user)}
                           className="w-32 text-sm"
                         >
                           <option value="user">User</option>

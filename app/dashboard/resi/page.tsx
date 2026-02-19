@@ -6,6 +6,7 @@
  */
 
 import { getSafeAuth } from '@/lib/safe-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { getSpedizioni, getSupabaseUserIdFromEmail } from '@/lib/database';
 import type { AuthContext } from '@/lib/auth-context';
 import DashboardNav from '@/components/dashboard-nav';
@@ -39,8 +40,7 @@ export default async function ResiPage() {
       type: 'user',
       userId: context.target.id,
       userEmail: context.target.email || undefined,
-      isAdmin:
-        context.target.account_type === 'admin' || context.target.account_type === 'superadmin',
+      isAdmin: isAdminOrAbove(context.target),
     };
 
     // Ottieni userId per realtime

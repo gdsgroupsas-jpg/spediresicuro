@@ -17,6 +17,7 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
 import { QueryProvider } from '@/components/providers/query-provider';
 import { PriceListsTab } from '@/components/listini/price-lists-tab';
 import { MasterPriceListsTab } from '@/components/listini/master-price-lists-tab';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 export default function UnifiedPriceListsPage() {
   const { data: session, status } = useSession();
@@ -93,7 +94,7 @@ export default function UnifiedPriceListsPage() {
     );
   }
 
-  const isSuperAdmin = accountType === 'superadmin';
+  const isSuperAdmin = isSuperAdminCheck({ account_type: accountType });
 
   return (
     <QueryProvider>

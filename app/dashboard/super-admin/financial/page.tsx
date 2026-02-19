@@ -44,6 +44,7 @@ import {
   type ProviderMarginData,
   type TopResellerData,
 } from '@/actions/platform-costs';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 export default function FinancialDashboard() {
   const { data: session, status } = useSession();
@@ -96,7 +97,7 @@ export default function FinancialDashboard() {
           const userData = data.user || data;
           const accountType = userData.account_type || userData.accountType;
 
-          if (accountType === 'superadmin') {
+          if (isSuperAdminCheck({ account_type: accountType })) {
             setIsAuthorized(true);
           } else {
             router.push('/dashboard?error=unauthorized');

@@ -13,6 +13,7 @@ import { getSpedisciOnlineCredentials } from '@/lib/actions/spedisci-online';
 import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { getQuoteWithCache, type QuoteCacheParams } from '@/lib/cache/quote-cache';
+import { canManagePriceLists } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { workspaceQuery } from '@/lib/db/workspace-query';
 import { addPriceListEntries, createPriceList, upsertPriceListEntries } from '@/lib/db/price-lists';
@@ -276,11 +277,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
     const workspaceId = context.workspace.id;
     const wq = workspaceQuery(workspaceId);
 
-    const isAdmin = user.account_type === 'admin' || user.account_type === 'superadmin';
-    const isReseller = user.is_reseller === true;
-    const isBYOC = user.account_type === 'byoc';
-
-    if (!isAdmin && !isReseller && !isBYOC) {
+    if (!canManagePriceLists(user)) {
       return {
         success: false,
         error: 'Solo admin, reseller e BYOC possono sincronizzare listini',

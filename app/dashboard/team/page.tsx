@@ -38,6 +38,7 @@ import {
   getHierarchyStats,
   deleteSubAdmin,
 } from '@/actions/admin';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { toast } from 'sonner';
 
 interface SubAdmin {
@@ -101,7 +102,7 @@ export default function TeamManagementPage() {
         const userData = responseData.user || responseData;
 
         // Verifica account_type
-        if (userData.account_type !== 'admin' && userData.account_type !== 'superadmin') {
+        if (!isAdminOrAbove(userData)) {
           setError('Accesso negato. Solo gli admin possono gestire il team.');
           setIsAuthorized(false);
           setIsLoading(false);

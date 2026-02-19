@@ -13,6 +13,7 @@ import type { User } from '@/lib/database';
 import { validateEmail } from '@/lib/validators';
 import { getUserByEmail, userExists, getUserWorkspaceId } from '@/lib/db/user-helpers';
 import { workspaceQuery } from '@/lib/db/workspace-query';
+import { isAdminOrAbove, isSuperAdminCheck } from '@/lib/auth-helpers';
 
 /**
  * Verifica se un utente ha la killer feature multi_level_admin attiva
@@ -99,7 +100,7 @@ export async function createSubAdmin(
     }
 
     // 4. Verifica che parent sia admin o superadmin
-    if (parent.account_type !== 'admin' && parent.account_type !== 'superadmin') {
+    if (!isAdminOrAbove(parent)) {
       return {
         success: false,
         error: 'Solo gli admin possono creare sotto-admin.',
@@ -107,7 +108,7 @@ export async function createSubAdmin(
     }
 
     // 5. Verifica permessi (superadmin può sempre, altri devono avere feature)
-    if (parent.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(parent)) {
       // Verifica che abbia killer feature multi_level_admin
       const hasFeature = await hasMultiLevelAdminFeature(parentEmail);
 
@@ -399,7 +400,7 @@ export async function deleteSubAdmin(subAdminId: string): Promise<{
     }
 
     // 3. Verifica che sia admin o superadmin
-    if (parent.account_type !== 'admin' && parent.account_type !== 'superadmin') {
+    if (!isAdminOrAbove(parent)) {
       return {
         success: false,
         error: 'Solo gli admin possono eliminare sotto-admin.',
@@ -421,7 +422,7 @@ export async function deleteSubAdmin(subAdminId: string): Promise<{
     }
 
     // Superadmin può eliminare chiunque, admin solo i propri figli
-    if (parent.account_type !== 'superadmin' && subAdmin.parent_admin_id !== parent.id) {
+    if (!isSuperAdminCheck(parent) && subAdmin.parent_admin_id !== parent.id) {
       return {
         success: false,
         error: 'Non puoi eliminare un sotto-admin che non hai creato.',

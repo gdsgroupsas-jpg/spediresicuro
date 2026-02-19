@@ -12,6 +12,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 
@@ -46,9 +47,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // Verifica permessi
-    const isAdmin =
-      (invoice.user as any)?.account_type === 'admin' ||
-      (invoice.user as any)?.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove((invoice.user as any) || {});
     const isOwner = invoice.user_id === context.actor.id;
 
     if (!isAdmin && !isOwner) {

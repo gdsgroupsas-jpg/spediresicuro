@@ -24,6 +24,7 @@ import {
   FEATURES,
 } from '@/lib/config/navigationConfig';
 import { cn } from '@/lib/utils';
+import { isAdminOrAbove, isSuperAdminCheck } from '@/lib/auth-helpers';
 import { useKeyboardNav } from '@/hooks/useKeyboardNav';
 import { useGiacenzeCount } from '@/hooks/useGiacenzeCount';
 import { useWorkspaceUI } from '@/hooks/useWorkspaceUI';
@@ -256,8 +257,8 @@ export default function DashboardSidebar() {
     });
   };
 
-  const isAdmin = accountType === 'admin' || accountType === 'superadmin';
-  const isSuperAdmin = accountType === 'superadmin';
+  const isAdmin = isAdminOrAbove({ account_type: accountType });
+  const isSuperAdmin = isSuperAdminCheck({ account_type: accountType });
 
   // 🆕 Helper to get global nav index for an item (for keyboard nav)
   const getNavIndex = (item: NavItem): number => {

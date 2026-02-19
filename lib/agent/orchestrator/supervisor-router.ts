@@ -18,6 +18,7 @@
  * - 1 evento telemetria finale per ogni richiesta
  */
 
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { AgentState } from './state';
 import { pricingGraph, createPricingGraphWithCheckpointer } from './pricing-graph';
 import { decideNextStep, DecisionInput, SupervisorDecision } from './supervisor';
@@ -228,11 +229,7 @@ export async function supervisorRouter(
         {
           message,
           userId,
-          userRole:
-            actingContext.target.account_type === 'admin' ||
-            actingContext.target.account_type === 'superadmin'
-              ? 'admin'
-              : 'user',
+          userRole: isAdminOrAbove(actingContext.target) ? 'admin' : 'user',
         },
         logger
       );
@@ -283,11 +280,7 @@ export async function supervisorRouter(
         {
           message,
           userId,
-          userRole:
-            actingContext.target.account_type === 'admin' ||
-            actingContext.target.account_type === 'superadmin'
-              ? 'admin'
-              : 'user',
+          userRole: isAdminOrAbove(actingContext.target) ? 'admin' : 'user',
           // workspaceId derivato dal userId per reseller (il worker lo gestisce)
         },
         logger
@@ -338,11 +331,7 @@ export async function supervisorRouter(
         {
           message,
           userId,
-          userRole:
-            actingContext.target.account_type === 'admin' ||
-            actingContext.target.account_type === 'superadmin'
-              ? 'admin'
-              : 'user',
+          userRole: isAdminOrAbove(actingContext.target) ? 'admin' : 'user',
           // workspaceId derivato dal userId per reseller (il worker lo gestisce)
         },
         logger

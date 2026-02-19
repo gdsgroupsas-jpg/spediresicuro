@@ -11,11 +11,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { workspaceQuery } from '@/lib/db/workspace-query';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 async function requireSuperadmin() {
   const context = await getWorkspaceAuth();
   if (!context) return { error: 'Unauthorized', status: 401 };
-  if (context.actor.account_type !== 'superadmin') return { error: 'Forbidden', status: 403 };
+  if (!isSuperAdminCheck(context.actor)) return { error: 'Forbidden', status: 403 };
   return { context };
 }
 

@@ -14,6 +14,7 @@
  * ⚠️ SICUREZZA: RLS garantisce che ogni utente veda solo i suoi listini
  */
 
+import { isSuperAdminCheck, isResellerCheck } from '@/lib/auth-helpers';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
 import {
@@ -69,8 +70,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
     }
 
-    const isSuperadmin = user.account_type === 'superadmin';
-    const isReseller = user.is_reseller === true;
+    const isSuperadmin = isSuperAdminCheck(user);
+    const isReseller = isResellerCheck(user);
 
     // ✨ ENTERPRISE: Calcola preventivi da DB per ogni corriere disponibile
     // Recupera corrieri disponibili per l'utente

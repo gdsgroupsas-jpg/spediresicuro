@@ -8,6 +8,7 @@
  */
 
 import { SpedisciOnlineAdapter } from '@/lib/adapters/couriers/spedisci-online';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { getSafeAuth } from '@/lib/safe-auth';
 import { getShippingProvider } from '@/lib/couriers/factory';
 import { findUserByEmail } from '@/lib/database';
@@ -66,8 +67,7 @@ export async function getSpedisciOnlineCredentials(configId?: string) {
       .maybeSingle();
     const currentUserId = currentUser?.id ?? null;
     const assignedConfigId = currentUser?.assigned_config_id ?? null;
-    const isAdmin =
-      currentUser?.account_type === 'admin' || currentUser?.account_type === 'superadmin';
+    const isAdmin = isAdminOrAbove(currentUser || {});
 
     // PRIORITÀ 1: Configurazione API Corriere (courier_configs)
     // ============================================

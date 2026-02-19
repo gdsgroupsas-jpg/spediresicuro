@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/supabase';
 import { createReseller } from '@/actions/super-admin';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 
 /**
  * Verifica che l'utente sia superadmin
@@ -37,7 +38,7 @@ async function verifySuperAdmin(): Promise<{
       return { authorized: false, error: 'Utente non trovato' };
     }
 
-    if (user.account_type !== 'superadmin') {
+    if (!isSuperAdminCheck(user)) {
       return { authorized: false, error: 'Accesso non autorizzato' };
     }
 
