@@ -5,6 +5,7 @@
  */
 
 import { requireAuth } from '@/lib/api-middleware';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { ApiErrors, handleApiError } from '@/lib/api-responses';
 import type { DatiCliente } from '@/lib/database';
 import { updateUser } from '@/lib/database';
@@ -25,10 +26,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .eq('email', actorEmail)
       .single();
 
-    const isAdmin =
-      actorData?.account_type === 'superadmin' ||
-      actorData?.account_type === 'reseller_admin' ||
-      actorData?.role === 'admin';
+    const isAdmin = actorData ? isAdminOrAbove(actorData) : false;
 
     if (!isAdmin) {
       return ApiErrors.FORBIDDEN('Solo gli admin possono modificare i dati di altri utenti');

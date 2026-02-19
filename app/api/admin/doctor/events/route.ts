@@ -9,6 +9,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { requireWorkspaceAuth } from '@/lib/workspace-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 
 export async function GET(request: NextRequest) {
@@ -16,7 +17,7 @@ export async function GET(request: NextRequest) {
     const context = await requireWorkspaceAuth();
 
     // Verifica permessi admin
-    const isAdmin = context.actor.role === 'admin' || context.actor.role === 'superadmin';
+    const isAdmin = isAdminOrAbove(context.actor);
     if (!isAdmin) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
     }

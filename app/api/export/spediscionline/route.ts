@@ -15,6 +15,7 @@ import { supabaseAdmin, isSupabaseConfigured } from '@/lib/supabase';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { getSpedizioni } from '@/lib/database';
 import type { AuthContext } from '@/lib/auth-context';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 // Disabilita cache statica per garantire dati sempre aggiornati
 export const dynamic = 'force-dynamic';
@@ -51,7 +52,7 @@ export async function GET() {
       type: 'user',
       userId: context.target.id,
       userEmail: context.target.email || undefined,
-      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+      isAdmin: isAdminOrAbove(context.target),
     };
 
     // Workspace obbligatorio per isolamento multi-tenant

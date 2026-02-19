@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth, requireWorkspaceAuth } from '@/lib/workspace-auth';
 import { addSpedizione, getSpedizioni } from '@/lib/database';
 import type { AuthContext } from '@/lib/auth-context';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { createApiLogger, getRequestId } from '@/lib/api-helpers';
 import { handleApiError } from '@/lib/api-responses';
 import { supabaseAdmin } from '@/lib/db/client';
@@ -174,7 +175,7 @@ export async function GET(request: NextRequest) {
           type: 'user',
           userId: session.target.id,
           userEmail: session.target.email || undefined,
-          isAdmin: session.target.role === 'admin' || session.target.account_type === 'superadmin',
+          isAdmin: isAdminOrAbove(session.target),
         };
         spedizioni = await getSpedizioni(authContext);
       } catch (error: any) {
@@ -284,7 +285,7 @@ export async function GET(request: NextRequest) {
         type: 'user',
         userId: session.target.id,
         userEmail: session.target.email || undefined,
-        isAdmin: session.target.role === 'admin' || session.target.account_type === 'superadmin',
+        isAdmin: isAdminOrAbove(session.target),
       };
       spedizioni = await getSpedizioni(authContext);
     } catch (error: any) {

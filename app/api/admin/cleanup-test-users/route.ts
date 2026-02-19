@@ -86,11 +86,7 @@ export async function GET(
     for (const user of allUsers || []) {
       if (isTestUser(user)) {
         // Non includere admin/superadmin
-        if (
-          user.role === 'admin' ||
-          user.account_type === 'superadmin' ||
-          user.account_type === 'admin'
-        ) {
+        if (user.account_type === 'superadmin' || user.account_type === 'admin') {
           continue;
         }
 
@@ -199,11 +195,7 @@ export async function POST(
 
       if (isTestUser(user)) {
         // Non eliminare admin/superadmin
-        if (
-          user.role === 'admin' ||
-          user.account_type === 'superadmin' ||
-          user.account_type === 'admin'
-        ) {
+        if (user.account_type === 'superadmin' || user.account_type === 'admin') {
           continue;
         }
 

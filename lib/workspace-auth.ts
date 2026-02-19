@@ -135,9 +135,14 @@ export async function getWorkspaceAuth(): Promise<WorkspaceActingContext | null>
       }
     }
 
-    // 4. Se ancora no workspace ID, ritorna null (utente deve selezionare)
+    // 4. Se ancora no workspace ID, ritorna null (utente deve selezionare/assegnare workspace)
+    // Mitigazione bootstrap lockout: log dettagliato per diagnostica
     if (!workspaceId) {
-      console.log('🔒 [WORKSPACE-AUTH] No workspace ID found');
+      console.warn('🔒 [WORKSPACE-AUTH] No workspace ID found for user:', {
+        userId: baseContext.target.id,
+        email: baseContext.target.email,
+        hint: 'Utente senza primary_workspace_id e senza cookie/header workspace. Verificare assegnazione workspace.',
+      });
       return null;
     }
 

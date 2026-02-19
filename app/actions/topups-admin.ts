@@ -1,6 +1,7 @@
 'use server';
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { getSafeAuth } from '@/lib/safe-auth';
 
 /**
@@ -24,8 +25,7 @@ async function verifyAdminAccess(): Promise<{ isAdmin: boolean; userId?: string;
       return { isAdmin: false, error: 'Utente non trovato' };
     }
 
-    const isAdmin =
-      user.account_type === 'superadmin' || user.account_type === 'admin' || user.role === 'admin';
+    const isAdmin = isAdminOrAbove(user);
 
     return {
       isAdmin,

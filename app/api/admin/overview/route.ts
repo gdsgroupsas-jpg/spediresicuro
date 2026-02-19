@@ -168,8 +168,10 @@ export async function GET(request: NextRequest) {
       | 'newUsersThisMonth'
     > = {
       totalUsers: allUsers.length,
-      adminUsers: allUsers.filter((u) => u.role === 'admin').length,
-      regularUsers: allUsers.filter((u) => u.role === 'user').length,
+      adminUsers: allUsers.filter(
+        (u) => u.account_type === 'admin' || u.account_type === 'superadmin'
+      ).length,
+      regularUsers: allUsers.filter((u) => !u.account_type || u.account_type === 'user').length,
       newUsersToday: allUsers.filter((u) => {
         const created = new Date(u.created_at);
         return created >= today;

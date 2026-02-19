@@ -11,6 +11,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServerActionClient } from '@/lib/supabase-server';
 import { supabaseAdmin } from '@/lib/db/client';
 import { requireWorkspaceAuth } from '@/lib/workspace-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 export async function GET(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
@@ -29,7 +30,7 @@ export async function GET(request: NextRequest, { params }: { params: Promise<{ 
     }
 
     // 2. Verifica permessi (utente può vedere solo le proprie, admin tutte)
-    const isAdmin = context.actor.role === 'admin' || context.actor.role === 'superadmin';
+    const isAdmin = isAdminOrAbove(context.actor);
     const isOwner = invoice.user_id === context.target.id;
 
     if (!isAdmin && !isOwner) {

@@ -83,10 +83,10 @@ describe('Capability Helpers', () => {
       });
 
       const result = await hasCapability('user-id', 'can_manage_pricing', {
-        role: 'admin',
+        account_type: 'admin',
       });
 
-      // Dovrebbe usare fallback
+      // Dovrebbe usare fallback basato su account_type (source of truth)
       expect(result).toBe(true);
     });
   });

@@ -13,6 +13,7 @@
 import { NextResponse } from 'next/server';
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { isSuperAdminCheck } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { updatePlatformFee } from '@/lib/services/pricing/platform-fee';
 
@@ -37,11 +38,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Utente non trovato' }, { status: 401 });
     }
 
-    // Verifica ruolo
-    const isSuperAdmin =
-      adminUser.account_type === 'superadmin' ||
-      adminUser.role === 'admin' ||
-      adminUser.role === 'SUPERADMIN';
+    // Verifica ruolo — solo account_type (source of truth)
+    const isSuperAdmin = isSuperAdminCheck(adminUser);
 
     if (!isSuperAdmin) {
       return NextResponse.json(

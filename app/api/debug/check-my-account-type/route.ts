@@ -68,9 +68,7 @@ export async function GET(request: NextRequest) {
       isAdmin:
         supabaseUser?.account_type === 'admin' || supabaseUser?.account_type === 'superadmin',
       canAccessAdmin:
-        supabaseUser?.account_type === 'superadmin' ||
-        supabaseUser?.account_type === 'admin' ||
-        supabaseUser?.role === 'admin',
+        supabaseUser?.account_type === 'superadmin' || supabaseUser?.account_type === 'admin',
       recommendation: supabaseUser?.account_type
         ? `Account type: ${supabaseUser.account_type} - ${supabaseUser.account_type === 'superadmin' ? 'Dovresti vedere il badge 👑 SUPERADMIN' : supabaseUser.account_type === 'admin' ? 'Dovresti vedere il badge ⭐ ADMIN' : 'Dovresti vedere il badge 👤 USER'}`
         : 'Account type non trovato - esegui lo script SQL per fixare',

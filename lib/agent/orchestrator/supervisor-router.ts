@@ -229,7 +229,8 @@ export async function supervisorRouter(
           message,
           userId,
           userRole:
-            actingContext.target.role === 'admin' || actingContext.target.role === 'superadmin'
+            actingContext.target.account_type === 'admin' ||
+            actingContext.target.account_type === 'superadmin'
               ? 'admin'
               : 'user',
         },
@@ -283,7 +284,8 @@ export async function supervisorRouter(
           message,
           userId,
           userRole:
-            actingContext.target.role === 'admin' || actingContext.target.role === 'superadmin'
+            actingContext.target.account_type === 'admin' ||
+            actingContext.target.account_type === 'superadmin'
               ? 'admin'
               : 'user',
           // workspaceId derivato dal userId per reseller (il worker lo gestisce)
@@ -337,7 +339,8 @@ export async function supervisorRouter(
           message,
           userId,
           userRole:
-            actingContext.target.role === 'admin' || actingContext.target.role === 'superadmin'
+            actingContext.target.account_type === 'admin' ||
+            actingContext.target.account_type === 'superadmin'
               ? 'admin'
               : 'user',
           // workspaceId derivato dal userId per reseller (il worker lo gestisce)

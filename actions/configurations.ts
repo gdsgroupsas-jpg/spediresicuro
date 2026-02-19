@@ -8,6 +8,7 @@
  */
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { findUserByEmail } from '@/lib/database';
 import { supabaseAdmin } from '@/lib/db/client';
 import { logAuditEvent } from '@/lib/security/audit-log';
@@ -189,7 +190,7 @@ async function verifyConfigAccess(configOwnerUserId: string | null): Promise<{
     //   2. Config create da loro stessi
     // NON possono accedere a config di altri reseller!
 
-    if (accountType === 'superadmin' || user.role === 'admin') {
+    if (isAdminOrAbove(user)) {
       // Config globale: OK
       if (!configOwnerUserId) {
         console.log('✅ [verifyConfigAccess] Accesso OK: Admin/Superadmin, config globale');

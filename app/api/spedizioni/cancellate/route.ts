@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { isAdminOrAbove, isResellerCheck } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { getRequestId, createApiLogger } from '@/lib/api-helpers';
 import { handleApiError } from '@/lib/api-responses';
@@ -42,12 +43,12 @@ export async function GET(request: NextRequest) {
     // Verifica se è reseller
     const { data: userData } = await supabaseAdmin
       .from('users')
-      .select('id, email, is_reseller, role')
+      .select('id, email, is_reseller, role, account_type')
       .eq('email', session.actor.email)
       .single();
 
-    const isReseller = userData?.is_reseller === true;
-    const isAdmin = userData?.role === 'admin' || userData?.role === 'superadmin';
+    const isReseller = userData ? isResellerCheck(userData) : false;
+    const isAdmin = userData ? isAdminOrAbove(userData) : false;
     const userId = userData?.id;
 
     console.log('📋 [CANCELLATE] Filtro per:', {

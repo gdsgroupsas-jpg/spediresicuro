@@ -11,6 +11,7 @@
  */
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { syncCourierConfig } from '@/lib/automation/spedisci-online-agent';
 import type { AutomationSettings } from '@/lib/automation/spedisci-online-agent';
@@ -41,11 +42,7 @@ async function verifyAdminAccess(): Promise<{ isAdmin: boolean; error?: string }
     }
 
     // Verifica admin usando account_type o role (per compatibilità)
-    const isAdmin =
-      user.account_type === 'superadmin' ||
-      user.account_type === 'admin' ||
-      user.role === 'admin' ||
-      user.role === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
 
     if (!isAdmin) {
       return { isAdmin: false, error: 'Solo admin può gestire automation' };

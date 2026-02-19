@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { addSpedizione } from '@/lib/database';
 import type { AuthContext } from '@/lib/auth-context';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 export async function POST(request: NextRequest) {
   try {
@@ -136,7 +137,7 @@ export async function POST(request: NextRequest) {
       type: 'user',
       userId: context.target.id,
       userEmail: context.target.email || undefined,
-      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+      isAdmin: isAdminOrAbove(context.target),
     };
 
     // Crea spedizione

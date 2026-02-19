@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase';
 import { requireAuth, checkSupabaseConfig } from '@/lib/api-middleware';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { getUserByEmail } from '@/lib/db/user-helpers';
 import { ApiErrors, handleApiError } from '@/lib/api-responses';
 
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
 
     try {
       // 1. Ottieni ruolo utente
-      const user = await getUserByEmail(context!.actor.email!, 'role');
+      const user = await getUserByEmail(context!.actor.email!, 'role, account_type');
 
       if (!user) {
         return NextResponse.json({
@@ -48,8 +49,8 @@ export async function GET(request: NextRequest) {
         });
       }
 
-      // 2. Se admin, ha sempre accesso
-      if (user.role === 'admin') {
+      // 2. Se admin o superadmin, ha sempre accesso
+      if (isAdminOrAbove(user)) {
         return NextResponse.json({
           hasAccess: true,
           feature: featureCode,

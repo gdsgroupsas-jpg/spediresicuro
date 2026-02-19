@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/supabase';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { getTrackingService } from '@/lib/services/tracking';
 
 // Force dynamic rendering
@@ -43,7 +44,7 @@ export async function GET(
     }
 
     // Check access: user must own shipment or be admin
-    const isAdmin = context.actor.role === 'admin' || context.actor.role === 'superadmin';
+    const isAdmin = isAdminOrAbove(context.actor);
     const isOwner = shipment.user_id === context.actor.id;
 
     if (!isAdmin && !isOwner) {

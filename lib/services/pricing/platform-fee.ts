@@ -251,7 +251,7 @@ export async function updatePlatformFee(
     throw new Error('Error verifying admin privileges');
   }
 
-  const isSuperAdmin = adminData.account_type === 'superadmin' || adminData.role === 'admin';
+  const isSuperAdmin = adminData.account_type === 'superadmin';
 
   if (!isSuperAdmin) {
     throw new Error('Only SUPERADMIN can update platform fees');

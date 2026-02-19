@@ -8,6 +8,7 @@ import {
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { getSafeAuth } from '@/lib/safe-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { withConcurrencyRetry } from '@/lib/wallet/retry';
 import { requireSafeAuth } from '@/lib/safe-auth';
@@ -425,8 +426,7 @@ async function verifyAdminAccess(): Promise<{ isAdmin: boolean; userId?: string;
       return { isAdmin: false, error: 'Utente non trovato' };
     }
 
-    const isAdmin =
-      user.account_type === 'superadmin' || user.account_type === 'admin' || user.role === 'admin';
+    const isAdmin = isAdminOrAbove(user);
 
     return {
       isAdmin,

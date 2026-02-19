@@ -1586,7 +1586,7 @@ export async function createUser(userData: {
       console.log('🔄 [SUPABASE] Tentativo salvataggio utente in Supabase...');
 
       // Determina account_type basandosi su accountType o role
-      const accountType = userData.accountType || (userData.role === 'admin' ? 'admin' : 'user');
+      const accountType = userData.accountType || 'user';
 
       const { data: supabaseUser, error: supabaseError } = await supabaseAdmin
         .from('users')

@@ -11,6 +11,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { testCarrierCredentials } from '@/lib/integrations/carrier-configs-compat';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 
 export async function POST(request: NextRequest) {
@@ -47,11 +48,11 @@ export async function POST(request: NextRequest) {
     // Verifica permessi: admin o owner
     const user = await supabaseAdmin
       .from('users')
-      .select('id, role, email')
+      .select('id, role, account_type, email')
       .eq('email', context.actor.email)
       .single();
 
-    const isAdmin = user?.data?.role === 'admin';
+    const isAdmin = user?.data ? isAdminOrAbove(user.data) : false;
     const isOwner =
       config.owner_user_id === user?.data?.id || config.created_by === context.actor.email;
 

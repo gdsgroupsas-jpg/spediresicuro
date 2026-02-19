@@ -9,6 +9,7 @@ import { analyzeCorrieriPerformance, generateRoutingSuggestion } from '@/lib/cor
 import { Corriere } from '@/types/corrieri';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import type { AuthContext } from '@/lib/auth-context';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 
 // Forza rendering dinamico (usa nextUrl.searchParams)
 export const dynamic = 'force-dynamic';
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
       type: 'user',
       userId: context.target.id,
       userEmail: context.target.email || undefined,
-      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+      isAdmin: isAdminOrAbove(context.target),
     };
 
     const searchParams = request.nextUrl.searchParams;
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
       type: 'user',
       userId: context.target.id,
       userEmail: context.target.email || undefined,
-      isAdmin: context.target.role === 'admin' || context.target.account_type === 'superadmin',
+      isAdmin: isAdminOrAbove(context.target),
     };
 
     const body = await request.json();

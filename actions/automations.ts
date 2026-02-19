@@ -12,6 +12,7 @@
  */
 
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
+import { isAdminOrAbove } from '@/lib/auth-helpers';
 import { supabaseAdmin } from '@/lib/db/client';
 import { executeAutomation } from '@/lib/automations/dispatcher';
 import type { Automation, AutomationRun, AutomationWithLastRun } from '@/types/automations';
@@ -81,11 +82,7 @@ async function requireAdmin(): Promise<{ userId: string } | { error: string }> {
       return { error: 'Utente non trovato' };
     }
 
-    const isAdmin =
-      user.account_type === 'superadmin' ||
-      user.account_type === 'admin' ||
-      user.role === 'admin' ||
-      user.role === 'superadmin';
+    const isAdmin = isAdminOrAbove(user);
 
     if (!isAdmin) {
       return { error: 'Solo admin può gestire automazioni piattaforma' };

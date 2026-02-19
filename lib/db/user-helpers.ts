@@ -11,6 +11,8 @@ export interface User {
   id: string;
   email: string;
   role: string;
+  account_type?: string;
+  is_reseller?: boolean;
   name?: string;
   created_at?: string;
   parent_id?: string;
