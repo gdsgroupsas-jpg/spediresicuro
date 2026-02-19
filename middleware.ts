@@ -53,6 +53,7 @@ const PUBLIC_ROUTES = [
   '/api/cron', // Cron endpoints (have own token auth)
   '/api/webhooks', // External webhooks (UptimeRobot, etc. - have own secret auth)
   '/api/metrics/prometheus', // Prometheus scraping (has own Bearer token auth)
+  '/api/dev', // Dev-only test routes (e.g. test-anne-shipment); route returns 403 in production
   // Marketing routes
   '/come-funziona',
   '/contatti',

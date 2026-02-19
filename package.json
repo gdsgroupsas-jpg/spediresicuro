@@ -46,6 +46,7 @@
     "test:e2e:auto-fix": "node scripts/auto-fix-playwright-test.js",
     "test:smoke:golden": "ts-node --project tsconfig.scripts.json scripts/smoke-test-golden-path.ts",
     "test:smoke:golden:dry": "ts-node --project tsconfig.scripts.json scripts/smoke-test-golden-path.ts --dry-run",
+    "test:anne-shipment": "node scripts/test-anne-shipment-flow.js",
     "test:smoke:negative": "ts-node --project tsconfig.scripts.json scripts/smoke-test-negative-path.ts",
     "test:smoke:negative:dry": "ts-node --project tsconfig.scripts.json scripts/smoke-test-negative-path.ts --dry-run",
     "smoke:wallet": "npx tsx scripts/smoke-wallet.ts",

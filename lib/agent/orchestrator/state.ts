@@ -223,4 +223,20 @@ export interface AgentState {
     params: Record<string, any>;
     expiresAt: string;
   };
+
+  // ===== SHIPMENT CREATION CHAIN (catena creazione spedizione) =====
+
+  /**
+   * Fase nella catena "creazione spedizione".
+   * - collecting: in attesa di integrazioni dall'utente (missingFields non vuoto)
+   * - validating: in corso validazione dopo risposta utente
+   * - ready: dati completi, pronti per booking (o già eseguito)
+   */
+  shipment_creation_phase?: 'collecting' | 'validating' | 'ready';
+
+  /**
+   * Campi mancanti per la creazione spedizione (es. ['recipient.fullName', 'parcel.weightKg']).
+   * Usato dalla catena per richiedere integrazioni e ri-validare al messaggio successivo.
+   */
+  missingFields?: string[];
 }

@@ -294,3 +294,45 @@ export function detectOutreachIntent(message: string): boolean {
 
   return OUTREACH_KEYWORDS.some((kw) => lowerMessage.includes(kw));
 }
+
+// ============================================
+// SHIPMENT CREATION INTENT (catena creazione spedizione)
+// ============================================
+
+/**
+ * Keyword per "creazione spedizione": l'utente vuole creare/prenotare una spedizione.
+ */
+const SHIPMENT_CREATION_KEYWORDS = [
+  'voglio spedire',
+  'voglio fare una spedizione',
+  'fai una spedizione',
+  'crea una spedizione',
+  'crea spedizione',
+  'manda un pacco',
+  'manda una spedizione',
+  'invia un pacco',
+  'invia una spedizione',
+  'spedire un pacco',
+  'spedire da',
+  'spedire a',
+  'spedizione da',
+  'spedizione a',
+  'pacco da',
+  'pacco a',
+  'vorrei spedire',
+  'devo spedire',
+  'devo inviare',
+  'preparare una spedizione',
+  'prenotare una spedizione',
+  'fare una spedizione',
+  'effettuare una spedizione',
+];
+
+/**
+ * Rileva intento "creazione spedizione": l'utente vuole creare/prenotare una spedizione
+ * (non solo un preventivo). Usato dal Supervisor per instradare alla catena dedicata.
+ */
+export function detectShipmentCreationIntent(message: string): boolean {
+  const lowerMessage = message.toLowerCase().trim();
+  return SHIPMENT_CREATION_KEYWORDS.some((kw) => lowerMessage.includes(kw));
+}

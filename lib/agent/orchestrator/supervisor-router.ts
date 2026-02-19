@@ -29,11 +29,13 @@ import {
   detectPricingIntent,
   detectCrmIntent,
   detectOutreachIntent,
+  detectShipmentCreationIntent,
 } from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { detectSupportIntent, supportWorker } from '@/lib/agent/workers/support-worker';
 import { crmWorker } from '@/lib/agent/workers/crm-worker';
 import { outreachWorker } from '@/lib/agent/workers/outreach-worker';
+import { runShipmentCreationChain } from '@/lib/agent/workers/shipment-creation';
 import { HumanMessage } from '@langchain/core/messages';
 import {
   logIntentDetected,
@@ -364,6 +366,71 @@ export async function supervisorRouter(
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error('❌ [Supervisor Router] Errore outreach worker, fallback legacy:', errorMessage);
+      // Fallthrough al pricing/legacy handler
+    }
+  }
+
+  // 1.8. Catena "Creazione spedizione": stesso thread in attesa di integrazioni o intent esplicito
+  const sessionId = traceId;
+  const existingStateForShipment = await agentSessionService.getSession(userId, sessionId);
+  const isShipmentCreationInProgress =
+    existingStateForShipment?.shipment_creation_phase === 'collecting' ||
+    existingStateForShipment?.shipment_creation_phase === 'validating';
+  const isShipmentCreationIntent = detectShipmentCreationIntent(message);
+
+  if (isShipmentCreationInProgress || isShipmentCreationIntent) {
+    logger.log(
+      '📦 [Supervisor Router] Intent creazione spedizione (in corso o nuovo), invoco catena shipment creation'
+    );
+    intentDetected = isShipmentCreationIntent ? 'non_pricing' : intentDetected;
+    typing?.emit('working', 'Preparo la spedizione...', 'address').catch(() => {});
+
+    try {
+      const chainResult = await runShipmentCreationChain(
+        {
+          message,
+          existingState: existingStateForShipment,
+          userId,
+          userEmail,
+          traceId,
+        },
+        logger
+      );
+
+      const stateToPersist = chainResult.agentState as AgentState | undefined;
+      if (stateToPersist) {
+        if (existingStateForShipment) {
+          await agentSessionService.updateSession(userId, sessionId, stateToPersist);
+        } else {
+          await agentSessionService.createSession(userId, sessionId, stateToPersist);
+        }
+      }
+
+      supervisorDecision = 'end';
+      backendUsed = 'pricing_graph';
+      success = true;
+      hasClarification = !!chainResult.clarification_request;
+      missingFieldsCount = chainResult.missingFields?.length ?? 0;
+
+      const clarificationMessage =
+        chainResult.booking_result &&
+        typeof (chainResult.booking_result as { user_message?: string }).user_message === 'string'
+          ? (chainResult.booking_result as { user_message: string }).user_message
+          : chainResult.clarification_request;
+
+      return emitFinalTelemetryAndReturn({
+        decision: 'END',
+        clarificationRequest: clarificationMessage,
+        agentState: stateToPersist,
+        executionTimeMs: Date.now() - startTime,
+        source: 'supervisor_only',
+      });
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logger.error(
+        '❌ [Supervisor Router] Errore catena creazione spedizione, fallback legacy:',
+        errorMessage
+      );
       // Fallthrough al pricing/legacy handler
     }
   }
