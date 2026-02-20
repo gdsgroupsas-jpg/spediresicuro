@@ -127,6 +127,8 @@ export class DeepSeekClient implements AIClient {
     tools?: AITool[];
     maxTokens?: number;
   }): Promise<AIResponse> {
+    const startTime = Date.now();
+
     // DeepSeek usa formato OpenAI-compatible
     const openaiMessages = params.messages.map((m) => ({
       role: m.role,
@@ -173,15 +175,27 @@ export class DeepSeekClient implements AIClient {
         signal: controller.signal,
       });
     } catch (err: unknown) {
+      const durationMs = Date.now() - startTime;
       if (err instanceof Error && err.name === 'AbortError') {
+        console.log(
+          `[TELEMETRY] {"event":"deepseek_chat","status":"timeout","duration_ms":${durationMs},"model":"${params.model || 'deepseek-chat'}"}`
+        );
         throw new Error(`DeepSeek API timeout after ${this.timeoutMs}ms`);
       }
+      const errorType = err instanceof Error ? err.name : 'Unknown';
+      console.log(
+        `[TELEMETRY] {"event":"deepseek_chat","status":"error","duration_ms":${durationMs},"error_type":"${errorType}","model":"${params.model || 'deepseek-chat'}"}`
+      );
       throw err;
     } finally {
       clearTimeout(timeoutId);
     }
 
     if (!response.ok) {
+      const durationMs = Date.now() - startTime;
+      console.log(
+        `[TELEMETRY] {"event":"deepseek_chat","status":"http_error","duration_ms":${durationMs},"http_status":${response.status},"model":"${params.model || 'deepseek-chat'}"}`
+      );
       let errorMessage = `DeepSeek API error: ${response.status}`;
       try {
         const errorData = await response.json();
@@ -194,6 +208,7 @@ export class DeepSeekClient implements AIClient {
     }
 
     const data = await response.json();
+    const durationMs = Date.now() - startTime;
 
     // Estrae contenuto e tool calls
     let content = '';
@@ -232,9 +247,14 @@ export class DeepSeekClient implements AIClient {
       }
     }
 
+    const hasToolCalls = toolCalls.length > 0;
+    console.log(
+      `[TELEMETRY] {"event":"deepseek_chat","status":"success","duration_ms":${durationMs},"model":"${data.model || params.model}","has_tool_calls":${hasToolCalls}}`
+    );
+
     return {
       content,
-      toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+      toolCalls: hasToolCalls ? toolCalls : undefined,
       model: data.model || params.model,
       provider: 'deepseek',
     };
