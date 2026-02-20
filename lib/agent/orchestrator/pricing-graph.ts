@@ -22,6 +22,8 @@ import { mentorWorker } from '../workers/mentor';
 import { ocrWorker } from '../workers/ocr';
 import { priceListManagerWorker } from '../workers/price-list-manager';
 import { pricingWorker } from '../workers/pricing';
+import { shipmentCreationWorker } from '../workers/shipment-creation';
+import { shipmentBookingWorker } from '../workers/shipment-booking';
 import { AgentState } from './state';
 import { supervisor } from './supervisor';
 
@@ -70,6 +72,16 @@ const routeAfterSupervisor = (state: AgentState): string => {
   // P3: Se il supervisor dice di andare a price_list_worker, vai
   if (state.next_step === 'price_list_worker') {
     return 'price_list_worker';
+  }
+
+  // Creazione spedizione: se il supervisor dice shipment_creation_worker
+  if (state.next_step === 'shipment_creation_worker') {
+    return 'shipment_creation_worker';
+  }
+
+  // Booking spedizione: se il supervisor dice shipment_booking_worker
+  if (state.next_step === 'shipment_booking_worker') {
+    return 'shipment_booking_worker';
   }
 
   // P1: Se il supervisor dice di andare a mentor_worker, vai
@@ -275,8 +287,15 @@ const pricingWorkflow = new StateGraph<AgentState>({
       default: () => undefined,
     },
 
+    // MED-6 FIX: array vuoto [] non deve sovrascrivere pricing valido precedente.
+    // Solo array con contenuto o undefined sono accettati come update.
     pricing_options: {
-      reducer: (a, b) => b ?? a,
+      reducer: (a, b) => {
+        if (b && Array.isArray(b) && b.length > 0) return b; // nuovo pricing valido
+        if (b === undefined || b === null) return a; // nessun update, mantieni vecchio
+        // b è [] (errore pricing transitorio) — mantieni vecchio se presente
+        return a && Array.isArray(a) && a.length > 0 ? a : b;
+      },
       default: () => undefined,
     },
 
@@ -323,6 +342,21 @@ const pricingWorkflow = new StateGraph<AgentState>({
       default: () => undefined,
     },
 
+    // Fase creazione spedizione
+    shipment_creation_phase: {
+      reducer: (
+        a: AgentState['shipment_creation_phase'],
+        b: AgentState['shipment_creation_phase']
+      ) => b ?? a,
+      default: () => undefined as AgentState['shipment_creation_phase'],
+    },
+
+    // Riepilogo creazione spedizione
+    shipment_creation_summary: {
+      reducer: (a: string | undefined, b: string | undefined) => b ?? a,
+      default: () => undefined as string | undefined,
+    },
+
     // Campi esistenti (per compatibilità)
     shipmentId: { reducer: (a, b) => b ?? a },
     processingStatus: { reducer: (a, b) => b ?? a },
@@ -345,6 +379,8 @@ const mentorWorkerWrapper = (state: AgentState) => mentorWorker(state); // P1
 const debugWorkerWrapper = (state: AgentState) => debugWorker(state); // P2
 const explainWorkerWrapper = (state: AgentState) => explainWorker(state); // P2
 const priceListWorkerWrapper = (state: AgentState) => priceListManagerWorker(state); // P3
+const shipmentCreationWorkerWrapper = (state: AgentState) => shipmentCreationWorker(state);
+const shipmentBookingWorkerWrapper = (state: AgentState) => shipmentBookingWorker(state);
 
 // Aggiungi nodi
 pricingWorkflow.addNode('supervisor', supervisorWrapper);
@@ -356,6 +392,8 @@ pricingWorkflow.addNode('mentor_worker', mentorWorkerWrapper); // P1
 pricingWorkflow.addNode('debug_worker', debugWorkerWrapper); // P2
 pricingWorkflow.addNode('explain_worker', explainWorkerWrapper); // P2
 pricingWorkflow.addNode('price_list_worker', priceListWorkerWrapper); // P3
+pricingWorkflow.addNode('shipment_creation_worker', shipmentCreationWorkerWrapper);
+pricingWorkflow.addNode('shipment_booking_worker', shipmentBookingWorkerWrapper);
 
 // NOTE: I cast `as any` qui sono necessari a causa di limitazioni di tipo in LangGraph.
 // LangGraph non ha tipi perfetti per i nomi dei nodi (string literal types).
@@ -371,6 +409,8 @@ pricingWorkflow.addConditionalEdges('supervisor' as any, routeAfterSupervisor, {
   address_worker: 'address_worker', // Sprint 2.3
   ocr_worker: 'ocr_worker', // Sprint 2.4
   booking_worker: 'booking_worker', // Sprint 2.6
+  shipment_creation_worker: 'shipment_creation_worker',
+  shipment_booking_worker: 'shipment_booking_worker',
   mentor_worker: 'mentor_worker', // P1
   debug_worker: 'debug_worker', // P2
   explain_worker: 'explain_worker', // P2
@@ -419,6 +459,16 @@ pricingWorkflow.addConditionalEdges('explain_worker' as any, routeAfterExplainWo
 
 // P3: Conditional edge dopo price_list_worker
 pricingWorkflow.addConditionalEdges('price_list_worker' as any, routeAfterPriceListWorker, {
+  END: END,
+} as any);
+
+// Creazione spedizione: sempre termina con END
+pricingWorkflow.addConditionalEdges('shipment_creation_worker' as any, () => 'END', {
+  END: END,
+} as any);
+
+// Booking spedizione: sempre termina con END
+pricingWorkflow.addConditionalEdges('shipment_booking_worker' as any, () => 'END', {
   END: END,
 } as any);
 

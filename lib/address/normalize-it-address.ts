@@ -7,7 +7,7 @@
  * ⚠️ NO PII nei log
  */
 
-import { Recipient, Parcel, ShipmentDraft, mergeShipmentDraft } from './shipment-draft';
+import { Recipient, Sender, Parcel, ShipmentDraft, mergeShipmentDraft } from './shipment-draft';
 
 // ==================== REGEX PATTERNS ====================
 
@@ -378,9 +378,61 @@ export function extractStreetNumber(address: string): { street: string; number: 
   return { street: cleaned, number: null };
 }
 
+// ==================== SENDER / PHONE EXTRACTION ====================
+
+/**
+ * Pattern per estrarre il nome del mittente dal testo.
+ * Cerca "da Mario Rossi", "mittente: Mario Rossi", "mi chiamo Mario Rossi".
+ */
+const SENDER_NAME_PATTERNS = [
+  /(?:da parte di|mittente|spedente|mi chiamo)\s*[:\s]+([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)+)/i,
+  /(?:^|\.\s+)da\s+([A-Z][a-zà-ÿ]+(?:\s+[A-Z][a-zà-ÿ]+)+)/m,
+];
+
+/**
+ * Estrae il nome del mittente dal testo
+ *
+ * @example extractSenderName("mittente: Mario Rossi") → "Mario Rossi"
+ * @example extractSenderName("da parte di Luca Bianchi") → "Luca Bianchi"
+ */
+export function extractSenderName(text: string): string | undefined {
+  for (const pattern of SENDER_NAME_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) {
+      return normalizeText(match[1]);
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Regex per numeri di telefono italiani: mobile (3xx) e fissi (0xx), con prefisso +39 opzionale
+ */
+const PHONE_REGEX = /(?:\+39\s?)?(?:3[0-9]{2}[\s.]?\d{3}[\s.]?\d{4}|0[0-9]{1,3}[\s.]?\d{5,8})/g;
+
+/**
+ * Estrae numeri di telefono italiani dal testo (max 2).
+ * Normalizza rimuovendo spazi e il prefisso +39.
+ *
+ * @example extractPhones("tel 3331234567, destinatario 0612345678") → ["3331234567", "0612345678"]
+ */
+export function extractPhones(text: string): string[] {
+  const phones: string[] = [];
+  PHONE_REGEX.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = PHONE_REGEX.exec(text)) !== null) {
+    const normalized = m[0].replace(/[\s.]/g, '').replace(/^\+39/, '');
+    if (normalized.length >= 9 && normalized.length <= 11 && !phones.includes(normalized)) {
+      phones.push(normalized);
+    }
+  }
+  return phones.slice(0, 2);
+}
+
 // ==================== MAIN EXTRACTION ====================
 
 export interface AddressExtractionResult {
+  sender: Partial<Sender>;
   recipient: Partial<Recipient>;
   parcel: Partial<Parcel>;
   extractedAnything: boolean;
@@ -393,16 +445,34 @@ export interface AddressExtractionResult {
  * @returns Dati estratti (parziali)
  */
 export function extractAddressDataFromText(text: string): AddressExtractionResult {
+  const sender: Partial<Sender> = {};
   const recipient: Partial<Recipient> = {};
   const parcel: Partial<Parcel> = {};
 
-  // Estrai dati
+  // Estrai dati destinatario
   const postalCode = extractPostalCode(text);
   const province = extractProvince(text);
   const city = extractCity(text);
   const addressLine1 = extractAddressLine1(text);
   const fullName = extractFullName(text);
   const weightKg = extractWeight(text);
+
+  // Estrai dati mittente
+  const senderName = extractSenderName(text);
+
+  // Estrai telefoni (primo = mittente se c'è contesto, secondo = destinatario)
+  const phones = extractPhones(text);
+
+  // Popola sender
+  if (senderName) sender.name = senderName;
+  if (phones.length > 1) {
+    // Due telefoni: primo mittente, secondo destinatario
+    sender.phone = phones[0];
+    recipient.phone = phones[1];
+  } else if (phones.length === 1) {
+    // Un solo telefono: assegnato al destinatario (piu comune per spedizioni)
+    recipient.phone = phones[0];
+  }
 
   // Popola recipient
   if (postalCode) recipient.postalCode = postalCode;
@@ -421,10 +491,13 @@ export function extractAddressDataFromText(text: string): AddressExtractionResul
     city ||
     addressLine1 ||
     fullName ||
-    weightKg
+    weightKg ||
+    senderName ||
+    phones.length > 0
   );
 
   return {
+    sender,
     recipient,
     parcel,
     extractedAnything,
@@ -435,9 +508,10 @@ export function extractAddressDataFromText(text: string): AddressExtractionResul
  * Estrae dati e li merge con draft esistente
  */
 export function extractAndMerge(text: string, existingDraft?: ShipmentDraft): ShipmentDraft {
-  const { recipient, parcel } = extractAddressDataFromText(text);
+  const { sender, recipient, parcel } = extractAddressDataFromText(text);
 
   return mergeShipmentDraft(existingDraft, {
+    sender,
     recipient,
     parcel,
   });

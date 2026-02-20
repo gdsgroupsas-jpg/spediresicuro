@@ -2,28 +2,14 @@ import { AgentState } from './state';
 import { createOCRAdapter } from '../../adapters/ocr';
 import { analyzeCorrieriPerformance } from '../../corrieri-performance';
 import { addSpedizione } from '../../database';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { CourierServiceType } from '@/types/shipments';
 import { getSupabaseUserIdFromEmail } from '../../database';
 import type { AuthContext } from '../../auth-context';
 import type { CorrierePerformance } from '@/types/corrieri';
 import { defaultLogger, type ILogger } from '../logger';
+import { createGraphLLM, createVisionLLM } from '../llm-factory';
 import { llmConfig, pricingConfig } from '@/lib/config';
-
-// Helper to get LLM instance (returns null if no key)
-const getLLM = (logger: ILogger = defaultLogger) => {
-  if (!process.env.GOOGLE_API_KEY) {
-    logger.warn('⚠️ GOOGLE_API_KEY mancante - Skipping LLM features');
-    return null;
-  }
-  return new ChatGoogleGenerativeAI({
-    model: llmConfig.MODEL,
-    maxOutputTokens: llmConfig.EXTRACT_DATA_MAX_OUTPUT_TOKENS,
-    temperature: llmConfig.SUPERVISOR_TEMPERATURE,
-    apiKey: process.env.GOOGLE_API_KEY,
-  });
-};
 
 /**
  * Node: Extract Data
@@ -48,8 +34,8 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
       if (base64Data) imageBuffer = Buffer.from(base64Data, 'base64');
     }
 
-    // Initialize LLM once
-    const llm = getLLM(defaultLogger);
+    // Vision LLM (sempre Gemini per multimodale)
+    const llm = createVisionLLM(defaultLogger);
 
     if (!imageBuffer) {
       return {
@@ -141,28 +127,28 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
 
     let shipmentData = { ...state.shipmentData, ...ocrResult.extractedData };
 
-    // 3. LLM Cleanup (Legacy/Fallback)
-    // Reuse 'llm' from above if available
+    // 3. LLM Cleanup (DeepSeek per testo puro — NON riusare Vision)
+    const textLlm = createGraphLLM({ maxOutputTokens: llmConfig.EXTRACT_DATA_MAX_OUTPUT_TOKENS });
     if (
-      llm &&
+      textLlm &&
       ocrResult.rawText &&
       (!shipmentData.recipient_address || !shipmentData.recipient_zip)
     ) {
-      defaultLogger.log('🧠 Using LLM to structure raw OCR text...');
+      defaultLogger.log('🧠 Using DeepSeek to structure raw OCR text...');
 
       const prompt = `
         Sei un esperto di logistica e analisi conversazioni. Analizza il testo estratto da una chat o documento di spedizione.
-        
+
         Obiettivi:
         1. Estrai i dati del destinatario (Nome, Indirizzo, Città, CAP, ecc).
         2. Cerca importi relativi al CONTRASSEGNO (COD). Se c'è una discussione sul prezzo, estrai l'importo finale concordato o menzionato dal mittente.
         3. Estrai note utili (orari preferiti, istruzioni consegna).
-        
+
         Testo OCR:
         """
         ${ocrResult.rawText}
         """
-        
+
         Rispondi ESCLUSIVAMENTE con un JSON valido:
         {
             "recipient_name": "...",
@@ -178,7 +164,7 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
         `;
 
       try {
-        const result = await llm.invoke([new HumanMessage(prompt)]);
+        const result = await textLlm.invoke([new HumanMessage(prompt)]);
         const jsonText = result.content
           .toString()
           .replace(/```json/g, '')
@@ -236,8 +222,8 @@ export async function validateGeo(state: AgentState): Promise<Partial<AgentState
   if (!data.recipient_city) errors.push('Città mancante');
   if (!data.recipient_zip) errors.push('CAP mancante');
 
-  // Logic validation via LLM if fields are present but maybe fishy
-  const llm = getLLM(defaultLogger);
+  // Logic validation via LLM if fields are present but maybe fishy (DeepSeek per testo)
+  const llm = createGraphLLM({ maxOutputTokens: llmConfig.EXTRACT_DATA_MAX_OUTPUT_TOKENS });
   if (llm && errors.length === 0) {
     const prompt = `
       Verifica questo indirizzo di spedizione italiano:

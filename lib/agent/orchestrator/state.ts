@@ -70,6 +70,8 @@ export interface AgentState {
     | 'address_worker'
     | 'ocr_worker'
     | 'booking_worker'
+    | 'shipment_creation_worker'
+    | 'shipment_booking_worker'
     | 'mentor_worker'
     | 'debug_worker'
     | 'explain_worker'
@@ -223,4 +225,19 @@ export interface AgentState {
     params: Record<string, any>;
     expiresAt: string;
   };
+
+  // ===== CATENA CREAZIONE SPEDIZIONE =====
+
+  /**
+   * Fase nella catena "creazione spedizione".
+   * - collecting: in attesa di integrazioni dall'utente (campi mancanti)
+   * - ready: dati completi, mostrato riepilogo + pricing, in attesa conferma
+   */
+  shipment_creation_phase?: 'collecting' | 'ready';
+
+  /**
+   * Riepilogo formattato della spedizione per conferma utente.
+   * Contiene mittente, destinatario, pacco, opzioni prezzo.
+   */
+  shipment_creation_summary?: string;
 }

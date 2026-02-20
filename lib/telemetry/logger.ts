@@ -229,7 +229,13 @@ export function logRequestCompleted(
 
 // ====== TIPI TELEMETRIA STEP 2.2 + 2.3 ======
 
-export type IntentType = 'pricing' | 'non_pricing' | 'crm' | 'outreach' | 'unknown';
+export type IntentType =
+  | 'pricing'
+  | 'non_pricing'
+  | 'crm'
+  | 'outreach'
+  | 'shipment_creation'
+  | 'unknown';
 export type BackendUsed = 'pricing_graph' | 'legacy';
 export type FallbackReason =
   | 'graph_error'

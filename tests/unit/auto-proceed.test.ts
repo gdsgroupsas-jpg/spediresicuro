@@ -15,6 +15,8 @@ import { autoProceedConfig } from '@/lib/config';
 // Mock dependencies
 vi.mock('@/lib/agent/intent-detector', () => ({
   detectPricingIntent: vi.fn(),
+  detectShipmentCreationIntent: vi.fn().mockReturnValue(false),
+  detectCancelCreationIntent: vi.fn().mockReturnValue(false),
 }));
 
 vi.mock('@/lib/agent/workers/ocr', () => ({

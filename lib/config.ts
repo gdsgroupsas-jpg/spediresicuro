@@ -35,9 +35,30 @@ export const graphConfig = {
  */
 export const llmConfig = {
   /**
-   * Modello Gemini da usare per tutti i worker
+   * Provider LLM per il pricing graph.
+   * 'deepseek' (default, economico) | 'gemini' (fallback)
+   */
+  PROVIDER: (process.env.LLM_PROVIDER || 'deepseek') as 'deepseek' | 'gemini',
+
+  /**
+   * Modello DeepSeek (OpenAI-compatible)
+   */
+  DEEPSEEK_MODEL: 'deepseek-chat',
+
+  /**
+   * Modello Gemini (usato per Vision OCR e come fallback)
+   */
+  GEMINI_MODEL: 'gemini-2.0-flash-001',
+
+  /**
+   * @deprecated Usa GEMINI_MODEL. Mantenuto per retrocompatibilita.
    */
   MODEL: 'gemini-2.0-flash-001',
+
+  /**
+   * Modello Vision (sempre Gemini — DeepSeek non supporta multimodale)
+   */
+  VISION_MODEL: 'gemini-2.0-flash-001',
 
   /**
    * Temperature per il supervisor (bassa = più deterministico)
@@ -58,6 +79,22 @@ export const llmConfig = {
    * Max output tokens per i nodi di estrazione dati
    */
   EXTRACT_DATA_MAX_OUTPUT_TOKENS: 2048,
+
+  /**
+   * Max output tokens per il worker creazione spedizione (LLM)
+   */
+  CREATION_WORKER_MAX_OUTPUT_TOKENS: 1024,
+
+  /**
+   * Temperature per il worker creazione spedizione
+   */
+  CREATION_WORKER_TEMPERATURE: 0.2,
+
+  /**
+   * Timeout per chiamate LLM (ms). Default 10s.
+   * Evita che l'utente aspetti indefinitamente se il provider e lento/down.
+   */
+  LLM_TIMEOUT_MS: Number(process.env.LLM_TIMEOUT_MS) || 10_000,
 } as const;
 
 /**

@@ -166,6 +166,13 @@ export function hasEnoughDataForPricing(draft?: ShipmentDraft): boolean {
 }
 
 /**
+ * Verifica se abbiamo abbastanza dati per creare una spedizione completa
+ */
+export function hasEnoughDataForShipmentCreation(draft?: ShipmentDraft): boolean {
+  return calculateMissingFieldsForShipment(draft).length === 0;
+}
+
+/**
  * Tipo per updates parziali (permette Partial di ogni sottooggetto)
  */
 export interface ShipmentDraftUpdates {

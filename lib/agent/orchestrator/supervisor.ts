@@ -14,6 +14,10 @@ import { detectExplainIntent } from '@/lib/agent/workers/explain';
 import { detectMentorIntent } from '@/lib/agent/workers/mentor';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { detectPriceListIntent } from '@/lib/agent/workers/price-list-manager';
+import {
+  detectShipmentCreationIntent,
+  detectCancelCreationIntent,
+} from '@/lib/agent/intent-detector';
 import { autoProceedConfig, llmConfig } from '@/lib/config';
 import { getPlatformFeeSafe } from '@/lib/services/pricing/platform-fee';
 import {
@@ -21,23 +25,9 @@ import {
   formatInsufficientCreditMessage,
 } from '@/lib/wallet/credit-check';
 import { HumanMessage } from '@langchain/core/messages';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { defaultLogger, type ILogger } from '../logger';
+import { createGraphLLM } from '../llm-factory';
 import { AgentState } from './state';
-
-// Helper per ottenere LLM (stesso pattern di nodes.ts)
-const getLLM = (logger: ILogger = defaultLogger) => {
-  if (!process.env.GOOGLE_API_KEY) {
-    logger.warn('⚠️ GOOGLE_API_KEY mancante - Supervisor userà logica base');
-    return null;
-  }
-  return new ChatGoogleGenerativeAI({
-    model: llmConfig.MODEL,
-    maxOutputTokens: llmConfig.SUPERVISOR_MAX_OUTPUT_TOKENS,
-    temperature: llmConfig.SUPERVISOR_TEMPERATURE,
-    apiKey: process.env.GOOGLE_API_KEY,
-  });
-};
 
 /**
  * Estrae dati spedizione dal messaggio usando LLM (se disponibile) o logica base
@@ -47,7 +37,7 @@ async function extractShipmentDetailsFromMessage(
   existingDetails?: AgentState['shipment_details'],
   logger: ILogger = defaultLogger
 ): Promise<AgentState['shipment_details']> {
-  const llm = getLLM(logger);
+  const llm = createGraphLLM({ maxOutputTokens: llmConfig.SUPERVISOR_MAX_OUTPUT_TOKENS, logger });
 
   // Se abbiamo già dati completi, non serve ri-estrarre
   if (
@@ -174,6 +164,102 @@ export async function supervisor(
     // Estrai ultimo messaggio utente
     const lastMessage = state.messages[state.messages.length - 1];
     const messageText = lastMessage && 'content' in lastMessage ? String(lastMessage.content) : '';
+
+    // === CREAZIONE SPEDIZIONE ===
+
+    // HIGH-2 FIX: escape hatch — l'utente può annullare la creazione in qualsiasi momento
+    if (state.shipment_creation_phase && detectCancelCreationIntent(messageText)) {
+      logger.log('📦 [Supervisor] Annullamento creazione spedizione richiesto');
+      return {
+        shipment_creation_phase: undefined,
+        shipmentDraft: undefined,
+        pricing_options: undefined,
+        shipment_creation_summary: undefined,
+        clarification_request: 'Creazione spedizione annullata. Come posso aiutarti?',
+        next_step: 'END',
+        processingStatus: 'idle',
+      };
+    }
+
+    // Se fase ready + conferma utente → shipment_booking_worker
+    if (
+      state.shipment_creation_phase === 'ready' &&
+      state.pricing_options &&
+      state.pricing_options.length > 0 &&
+      containsBookingConfirmation(messageText)
+    ) {
+      logger.log(
+        '🚀 [Supervisor] Conferma creazione spedizione, routing a shipment_booking_worker'
+      );
+
+      // Credit check prima del booking
+      try {
+        const selectedOption = state.pricing_options[0];
+        const platformFee = await getPlatformFeeSafe(state.userId);
+        const estimatedCost = (selectedOption.finalPrice || 0) + platformFee;
+
+        const creditCheck = await checkCreditBeforeBooking(
+          state.userId,
+          estimatedCost,
+          state.agent_context?.acting_context
+        );
+
+        if (!creditCheck.sufficient) {
+          logger.log(`⚠️ [Supervisor] Credito insufficiente per creazione spedizione`);
+          return {
+            clarification_request: formatInsufficientCreditMessage(creditCheck),
+            next_step: 'END',
+            processingStatus: 'idle',
+          };
+        }
+      } catch (error) {
+        logger.warn('⚠️ [Supervisor] Errore credit check creazione, procedo comunque');
+      }
+
+      return {
+        next_step: 'shipment_booking_worker',
+        processingStatus: 'calculating',
+        iteration_count: (state.iteration_count || 0) + 1,
+      };
+    }
+
+    // CRIT-2 FIX: Fase ready ma pricing vuoto (pricing engine fallito) → reset e ritenta
+    if (
+      state.shipment_creation_phase === 'ready' &&
+      (!state.pricing_options || state.pricing_options.length === 0)
+    ) {
+      logger.log('📦 [Supervisor] Fase ready ma pricing vuoto, reset a collecting per ritentare');
+      return {
+        next_step: 'shipment_creation_worker',
+        shipment_creation_phase: undefined,
+        processingStatus: 'idle',
+        iteration_count: (state.iteration_count || 0) + 1,
+      };
+    }
+
+    // Se fase collecting in corso → shipment_creation_worker (continua raccolta dati)
+    if (state.shipment_creation_phase === 'collecting') {
+      logger.log('📦 [Supervisor] Fase collecting in corso, routing a shipment_creation_worker');
+      return {
+        next_step: 'shipment_creation_worker',
+        processingStatus: 'idle',
+        iteration_count: (state.iteration_count || 0) + 1,
+      };
+    }
+
+    // Nuovo intent creazione spedizione (nessuna fase attiva)
+    if (!state.shipment_creation_phase && detectShipmentCreationIntent(messageText)) {
+      logger.log(
+        '📦 [Supervisor] Intent creazione spedizione rilevato, routing a shipment_creation_worker'
+      );
+      return {
+        next_step: 'shipment_creation_worker',
+        processingStatus: 'idle',
+        iteration_count: (state.iteration_count || 0) + 1,
+      };
+    }
+
+    // === FINE CREAZIONE SPEDIZIONE ===
 
     // Sprint 2.6: Controlla se l'utente sta confermando un booking
     // REQUISITI per booking_worker:
@@ -395,9 +481,10 @@ export async function supervisor(
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error('❌ [Supervisor] Errore:', errorMessage);
+    // MED-1 FIX: mai esporre error.message al client — può contenere dettagli interni
     return {
-      clarification_request: `Errore nell'analisi della richiesta: ${errorMessage}. Riprova.`,
-      next_step: 'legacy', // Fallback a legacy in caso di errore
+      clarification_request: "Si è verificato un errore nell'analisi della richiesta. Riprova.",
+      next_step: 'legacy',
       processingStatus: 'error',
       validationErrors: [...(state.validationErrors || []), errorMessage],
     };
@@ -428,6 +515,8 @@ export type SupervisorDecision =
   | 'address_worker'
   | 'ocr_worker'
   | 'booking_worker'
+  | 'shipment_creation_worker'
+  | 'shipment_booking_worker'
   | 'mentor_worker'
   | 'explain_worker'
   | 'debug_worker'

@@ -71,7 +71,13 @@ export type BookingErrorCode =
   | 'RATE_LIMITED' // Rate limit raggiunto
   | 'INVALID_DATA' // Dati non validi
   | 'DUPLICATE_BOOKING' // Booking già effettuato (idempotency)
-  | 'UNKNOWN_ERROR'; // Errore sconosciuto
+  | 'UNKNOWN_ERROR' // Errore sconosciuto
+  | 'MISSING_CONTEXT' // ActingContext mancante (shipment-booking worker)
+  | 'INCOMPLETE_DATA' // Draft incompleto (shipment-booking worker)
+  | 'MISSING_SENDER' // Dati mittente non trovati nel DB
+  | 'NO_PRICING' // Nessuna opzione pricing disponibile
+  | 'SYSTEM_ERROR' // Errore di sistema generico
+  | 'INVALID_ADDRESS'; // Indirizzo non valido secondo il corriere
 
 /**
  * Risultato del pre-flight check

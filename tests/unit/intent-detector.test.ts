@@ -6,7 +6,11 @@
  */
 
 import { describe, it, expect } from 'vitest';
-import { detectPricingIntentSimple } from '@/lib/agent/intent-detector';
+import {
+  detectPricingIntentSimple,
+  detectShipmentCreationIntent,
+  detectCancelCreationIntent,
+} from '@/lib/agent/intent-detector';
 
 describe('detectPricingIntentSimple', () => {
   describe('Positive Cases (keyword + CAP o peso)', () => {
@@ -142,5 +146,127 @@ describe('detectPricingIntentSimple', () => {
     it('should NOT detect for peso "zero kg"', () => {
       expect(detectPricingIntentSimple('Preventivo per 0 kg')).toBe(true); // Regex matcha, ma logica business potrebbe filtrare
     });
+  });
+});
+
+// ==================== SHIPMENT CREATION INTENT ====================
+
+describe('detectShipmentCreationIntent', () => {
+  describe('Positive Cases', () => {
+    it('dovrebbe rilevare "voglio spedire"', () => {
+      expect(detectShipmentCreationIntent('Voglio spedire un pacco a Milano')).toBe(true);
+    });
+
+    it('dovrebbe rilevare "crea spedizione"', () => {
+      expect(detectShipmentCreationIntent('Crea una spedizione per me')).toBe(true);
+    });
+
+    it('dovrebbe rilevare "devo spedire"', () => {
+      expect(detectShipmentCreationIntent('Devo spedire un pacco urgente')).toBe(true);
+    });
+
+    it('dovrebbe rilevare "manda un pacco"', () => {
+      expect(detectShipmentCreationIntent('Manda un pacco a Roma')).toBe(true);
+    });
+
+    it('dovrebbe rilevare "prenota spedizione"', () => {
+      expect(detectShipmentCreationIntent('Prenota spedizione per domani')).toBe(true);
+    });
+
+    it('dovrebbe rilevare "fare una spedizione"', () => {
+      expect(detectShipmentCreationIntent('Voglio fare una spedizione')).toBe(true);
+    });
+
+    it('HIGH-3 FIX: "spedire a" generico NON deve catturare (va in pricing)', () => {
+      expect(detectShipmentCreationIntent('Spedire a Napoli 5kg')).toBe(false);
+    });
+
+    it('dovrebbe rilevare "spedire un pacco" (esplicito)', () => {
+      expect(detectShipmentCreationIntent('Spedire un pacco a Napoli')).toBe(true);
+    });
+
+    it('dovrebbe rilevare "ordina spedizione"', () => {
+      expect(detectShipmentCreationIntent('Ordina spedizione per domani')).toBe(true);
+    });
+
+    it('dovrebbe rilevare "vorrei mandare"', () => {
+      expect(detectShipmentCreationIntent('Vorrei mandare un regalo a mia madre')).toBe(true);
+    });
+
+    it('dovrebbe essere case insensitive', () => {
+      expect(detectShipmentCreationIntent('VOGLIO SPEDIRE')).toBe(true);
+      expect(detectShipmentCreationIntent('Crea Spedizione')).toBe(true);
+    });
+  });
+
+  describe('Negative Cases - Exclude Keywords', () => {
+    it('NON dovrebbe rilevare intent con "traccia"', () => {
+      expect(detectShipmentCreationIntent('Traccia la mia spedizione')).toBe(false);
+    });
+
+    it('NON dovrebbe rilevare intent con "tracking"', () => {
+      expect(detectShipmentCreationIntent('Tracking della spedizione')).toBe(false);
+    });
+
+    it('NON dovrebbe rilevare intent con "annulla spedizione"', () => {
+      expect(detectShipmentCreationIntent('Annulla spedizione 12345')).toBe(false);
+    });
+
+    it('NON dovrebbe rilevare intent con "preventivo"', () => {
+      expect(detectShipmentCreationIntent('Preventivo per spedire 5kg')).toBe(false);
+    });
+
+    it('NON dovrebbe rilevare intent con "quanto costa"', () => {
+      expect(detectShipmentCreationIntent('Quanto costa spedire a Milano?')).toBe(false);
+    });
+
+    it('NON dovrebbe rilevare intent con "report"', () => {
+      expect(detectShipmentCreationIntent('Report spedizioni mensile')).toBe(false);
+    });
+  });
+
+  describe('Negative Cases - Non-matching', () => {
+    it('NON dovrebbe rilevare messaggi generici', () => {
+      expect(detectShipmentCreationIntent('Ciao come stai')).toBe(false);
+    });
+
+    it('NON dovrebbe rilevare stringa vuota', () => {
+      expect(detectShipmentCreationIntent('')).toBe(false);
+    });
+
+    it('NON dovrebbe rilevare domande su spedizioni esistenti', () => {
+      expect(detectShipmentCreationIntent('Dove si trova la mia spedizione?')).toBe(false);
+    });
+  });
+});
+
+// ==================== CANCEL CREATION INTENT (HIGH-2) ====================
+
+describe('detectCancelCreationIntent', () => {
+  it('dovrebbe rilevare "annulla"', () => {
+    expect(detectCancelCreationIntent('annulla')).toBe(true);
+    expect(detectCancelCreationIntent('Annulla la spedizione')).toBe(true);
+  });
+
+  it('dovrebbe rilevare "lascia perdere"', () => {
+    expect(detectCancelCreationIntent('lascia perdere')).toBe(true);
+  });
+
+  it('dovrebbe rilevare "basta"', () => {
+    expect(detectCancelCreationIntent('basta')).toBe(true);
+  });
+
+  it('dovrebbe rilevare "stop"', () => {
+    expect(detectCancelCreationIntent('stop')).toBe(true);
+  });
+
+  it('dovrebbe rilevare "ricomincia"', () => {
+    expect(detectCancelCreationIntent('ricomincia')).toBe(true);
+  });
+
+  it('NON dovrebbe rilevare messaggi normali', () => {
+    expect(detectCancelCreationIntent('Mario Rossi, Via Roma 1')).toBe(false);
+    expect(detectCancelCreationIntent('5kg a Milano')).toBe(false);
+    expect(detectCancelCreationIntent('procedi')).toBe(false);
   });
 });

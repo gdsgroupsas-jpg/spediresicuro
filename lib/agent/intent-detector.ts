@@ -5,7 +5,6 @@
  * Usa pattern matching semplice + LLM opzionale per maggiore accuratezza.
  */
 
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage } from '@langchain/core/messages';
 import { defaultLogger } from './logger';
 
@@ -78,7 +77,7 @@ export function detectPricingIntentSimple(message: string): boolean {
  * Rileva intento preventivo con LLM (più accurato ma più lento)
  */
 export async function detectPricingIntentLLM(message: string): Promise<boolean> {
-  const llm = getLLM();
+  const llm = createGraphLLM({ maxOutputTokens: llmConfig.INTENT_DETECTOR_MAX_OUTPUT_TOKENS });
 
   if (!llm) {
     // Fallback a pattern matching se LLM non disponibile
@@ -113,22 +112,8 @@ Rispondi ESCLUSIVAMENTE con JSON:
   }
 }
 
-/**
- * Helper per ottenere LLM
- */
 import { llmConfig } from '@/lib/config';
-
-function getLLM() {
-  if (!process.env.GOOGLE_API_KEY) {
-    return null;
-  }
-  return new ChatGoogleGenerativeAI({
-    model: llmConfig.MODEL,
-    maxOutputTokens: llmConfig.INTENT_DETECTOR_MAX_OUTPUT_TOKENS,
-    temperature: llmConfig.SUPERVISOR_TEMPERATURE,
-    apiKey: process.env.GOOGLE_API_KEY,
-  });
-}
+import { createGraphLLM } from './llm-factory';
 
 /**
  * Rileva intento preventivo (usa LLM se disponibile, altrimenti pattern matching)
@@ -293,4 +278,106 @@ export function detectOutreachIntent(message: string): boolean {
   }
 
   return OUTREACH_KEYWORDS.some((kw) => lowerMessage.includes(kw));
+}
+
+// ============================================
+// SHIPMENT CREATION INTENT DETECTION
+// ============================================
+
+/**
+ * Keyword per rilevare l'intento di CREARE una spedizione (non solo un preventivo).
+ * L'utente vuole effettivamente spedire, non solo sapere il prezzo.
+ */
+// HIGH-3 FIX: rimosse keyword troppo generiche ('spedire a', 'spedire da', 'spedisci a')
+// che catturavano anche richieste pricing tipo "spedire 5kg a Milano".
+// Tenute solo frasi esplicite di CREAZIONE/PRENOTAZIONE spedizione.
+const SHIPMENT_CREATION_KEYWORDS = [
+  'voglio spedire',
+  'vorrei spedire',
+  'devo spedire',
+  'devo inviare',
+  'crea spedizione',
+  'crea una spedizione',
+  'creare una spedizione',
+  'nuova spedizione',
+  'fare una spedizione',
+  'fai una spedizione',
+  'manda un pacco',
+  'manda pacco',
+  'mandare un pacco',
+  'invia un pacco',
+  'invia pacco',
+  'inviare un pacco',
+  'spedire un pacco',
+  'prenota spedizione',
+  'prenotare spedizione',
+  'prenotare una spedizione',
+  'preparare una spedizione',
+  'effettuare una spedizione',
+  'organizza spedizione',
+  'spedisci questo',
+  'voglio fare una spedizione',
+  'voglio mandare',
+  'vorrei mandare',
+  'vorrei inviare',
+  'ordina spedizione',
+  'ordinare una spedizione',
+];
+
+/**
+ * Keyword di esclusione — non sono richieste di creazione spedizione
+ */
+const SHIPMENT_CREATION_EXCLUDE_KEYWORDS = [
+  'traccia',
+  'tracking',
+  'dove si trova',
+  'stato spedizione',
+  'annulla spedizione',
+  'cancella spedizione',
+  'fattura',
+  'report',
+  'statistiche',
+  'preventivo',
+  'quanto costa',
+];
+
+/**
+ * Rileva intento "creazione spedizione": l'utente vuole creare/prenotare una spedizione
+ * (non solo un preventivo).
+ *
+ * Usato dal Supervisor Router per instradare alla catena creazione spedizione.
+ * Posizionato DOPO outreach e PRIMA di pricing nel flusso di intent detection.
+ */
+export function detectShipmentCreationIntent(message: string): boolean {
+  const lowerMessage = message.toLowerCase().trim();
+
+  if (SHIPMENT_CREATION_EXCLUDE_KEYWORDS.some((kw) => lowerMessage.includes(kw))) {
+    return false;
+  }
+
+  return SHIPMENT_CREATION_KEYWORDS.some((kw) => lowerMessage.includes(kw));
+}
+
+/**
+ * HIGH-2 FIX: Rileva se l'utente vuole annullare/abbandonare la creazione spedizione in corso.
+ * Usato dal supervisor per resettare shipment_creation_phase.
+ */
+const CANCEL_CREATION_KEYWORDS = [
+  'annulla',
+  'cancella',
+  'lascia perdere',
+  'lascia stare',
+  'basta',
+  'stop',
+  'ricomincia',
+  'non voglio più',
+  'non voglio piu',
+  'ferma',
+  'dimentica',
+  'abort',
+];
+
+export function detectCancelCreationIntent(message: string): boolean {
+  const lowerMessage = message.toLowerCase().trim();
+  return CANCEL_CREATION_KEYWORDS.some((kw) => lowerMessage.includes(kw));
 }

@@ -103,6 +103,18 @@ vi.mock('next/server', async () => {
 });
 
 /**
+ * Mock di @langchain/openai per evitare problemi ESM con ContextOverflowError
+ * ChatOpenAI usato con baseURL DeepSeek nel pricing graph
+ */
+vi.mock('@langchain/openai', () => ({
+  ChatOpenAI: vi.fn().mockImplementation((config: Record<string, unknown>) => ({
+    invoke: vi.fn().mockResolvedValue({ content: '' }),
+    bindTools: vi.fn().mockReturnThis(),
+    _config: config,
+  })),
+}));
+
+/**
  * Mock anche per next/server.js (variante che next-auth potrebbe cercare)
  */
 vi.mock('next/server.js', async () => {

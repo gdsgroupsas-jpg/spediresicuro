@@ -60,6 +60,13 @@ vi.mock('@langchain/google-genai', () => ({
   })),
 }));
 
+vi.mock('@langchain/openai', () => ({
+  ChatOpenAI: vi.fn().mockImplementation(() => ({
+    invoke: vi.fn().mockResolvedValue({ content: '' }),
+    bindTools: vi.fn().mockReturnThis(),
+  })),
+}));
+
 // ==================== MOCK NEXT/SERVER ====================
 vi.mock('next/server', () => {
   class NextRequest extends Request {}

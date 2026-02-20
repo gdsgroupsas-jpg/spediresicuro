@@ -20,6 +20,8 @@ import {
   extractAddressLine1,
   extractCity,
   extractFullName,
+  extractSenderName,
+  extractPhones,
   normalizeText,
   capitalizeWords,
   extractAddressDataFromText,
@@ -494,6 +496,143 @@ describe('extractAndMerge', () => {
     expect(result.recipient?.city).toBe('Milano');
     expect(result.parcel?.weightKg).toBe(5);
     expect(result.missingFields).toHaveLength(0);
+  });
+});
+
+// ==================== SENDER NAME EXTRACTION ====================
+
+describe('extractSenderName', () => {
+  it('should extract sender name with "mittente:" prefix', () => {
+    expect(extractSenderName('mittente: Mario Rossi')).toBe('Mario Rossi');
+    expect(extractSenderName('Mittente Mario Bianchi')).toBe('Mario Bianchi');
+  });
+
+  it('should extract sender name with "da parte di" prefix', () => {
+    expect(extractSenderName('da parte di Luca Verdi')).toBe('Luca Verdi');
+  });
+
+  it('should extract sender name with "mi chiamo" prefix', () => {
+    expect(extractSenderName('mi chiamo Anna Neri')).toBe('Anna Neri');
+  });
+
+  it('should extract sender name with "spedente" prefix', () => {
+    expect(extractSenderName('spedente: Giuseppe Conte')).toBe('Giuseppe Conte');
+  });
+
+  it('should handle multi-word names with accents', () => {
+    expect(extractSenderName('mittente: María José García')).toBe('María José García');
+  });
+
+  it('should return undefined when no sender pattern', () => {
+    expect(extractSenderName('spedire a Milano')).toBeUndefined();
+    expect(extractSenderName('')).toBeUndefined();
+    expect(extractSenderName('ciao come stai')).toBeUndefined();
+  });
+
+  it('should NOT confuse sender with recipient', () => {
+    // "a Mario Rossi" e un destinatario, non un mittente
+    expect(extractSenderName('a Mario Rossi')).toBeUndefined();
+    expect(extractSenderName('per Luigi Bianchi')).toBeUndefined();
+  });
+});
+
+// ==================== PHONE EXTRACTION ====================
+
+describe('extractPhones', () => {
+  it('should extract Italian mobile numbers', () => {
+    expect(extractPhones('tel 3331234567')).toEqual(['3331234567']);
+    expect(extractPhones('cellulare 3489876543')).toEqual(['3489876543']);
+  });
+
+  it('should extract Italian landline numbers', () => {
+    expect(extractPhones('telefono 0612345678')).toEqual(['0612345678']);
+    expect(extractPhones('tel fisso 02 12345678')).toEqual(['0212345678']);
+  });
+
+  it('should extract numbers with +39 prefix', () => {
+    expect(extractPhones('+39 3331234567')).toEqual(['3331234567']);
+    expect(extractPhones('+393489876543')).toEqual(['3489876543']);
+  });
+
+  it('should extract max 2 phone numbers', () => {
+    const result = extractPhones('mitt: 3331234567, dest: 3489876543, extra: 3551112233');
+    expect(result).toHaveLength(2);
+    expect(result[0]).toBe('3331234567');
+    expect(result[1]).toBe('3489876543');
+  });
+
+  it('should normalize removing spaces and dots', () => {
+    expect(extractPhones('333 123 4567')).toEqual(['3331234567']);
+    expect(extractPhones('333.123.4567')).toEqual(['3331234567']);
+  });
+
+  it('should deduplicate identical numbers', () => {
+    expect(extractPhones('3331234567 3331234567')).toEqual(['3331234567']);
+  });
+
+  it('should return empty array when no phones', () => {
+    expect(extractPhones('spedire a Milano')).toEqual([]);
+    expect(extractPhones('')).toEqual([]);
+    expect(extractPhones('12345')).toEqual([]);
+  });
+
+  it('should NOT match short numbers', () => {
+    // Numeri troppo corti non sono telefoni
+    expect(extractPhones('codice 12345')).toEqual([]);
+  });
+});
+
+// ==================== EXTRACT ADDRESS DATA WITH SENDER ====================
+
+describe('extractAddressDataFromText - sender fields', () => {
+  it('should extract sender name in result', () => {
+    const result = extractAddressDataFromText('mittente: Mario Rossi, a 20100 Milano MI');
+    expect(result.sender.name).toBe('Mario Rossi');
+    expect(result.recipient.postalCode).toBe('20100');
+    expect(result.extractedAnything).toBe(true);
+  });
+
+  it('should assign single phone to recipient', () => {
+    const result = extractAddressDataFromText('a Milano, tel 3331234567');
+    expect(result.recipient.phone).toBe('3331234567');
+    expect(result.sender.phone).toBeUndefined();
+  });
+
+  it('should assign two phones: first=sender, second=recipient', () => {
+    const result = extractAddressDataFromText('mitt tel 3331234567, dest tel 3489876543');
+    expect(result.sender.phone).toBe('3331234567');
+    expect(result.recipient.phone).toBe('3489876543');
+  });
+
+  it('should return empty sender when no sender data', () => {
+    const result = extractAddressDataFromText('20100 Milano MI');
+    expect(result.sender).toEqual({});
+  });
+});
+
+// ==================== EXTRACT AND MERGE WITH SENDER ====================
+
+describe('extractAndMerge - sender data', () => {
+  it('should merge sender name into draft', () => {
+    const result = extractAndMerge('mittente: Mario Rossi');
+    expect(result.sender?.name).toBe('Mario Rossi');
+  });
+
+  it('should preserve existing sender when no new sender data', () => {
+    const existing: ShipmentDraft = {
+      sender: { name: 'Existing Sender' },
+      recipient: { country: 'IT' },
+      parcel: {},
+      missingFields: [],
+    };
+    const result = extractAndMerge('20100 Milano', existing);
+    expect(result.sender?.name).toBe('Existing Sender');
+    expect(result.recipient?.postalCode).toBe('20100');
+  });
+
+  it('should merge phone into recipient from single phone', () => {
+    const result = extractAndMerge('tel 3331234567');
+    expect(result.recipient?.phone).toBe('3331234567');
   });
 });
 

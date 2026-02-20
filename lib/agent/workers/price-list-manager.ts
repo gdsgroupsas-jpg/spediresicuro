@@ -17,23 +17,9 @@ import {
 import { toolRegistry } from '@/lib/agent/tools/registry'; // Usa il registry per compatibilità
 import { llmConfig } from '@/lib/config';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { defaultLogger, type ILogger } from '../logger';
+import { createGraphLLM } from '../llm-factory';
 import { AgentState } from '../orchestrator/state';
-
-// Helper per ottenere LLM
-const getLLM = (logger: ILogger = defaultLogger) => {
-  if (!process.env.GOOGLE_API_KEY) {
-    logger.warn('⚠️ GOOGLE_API_KEY mancante - Price List Worker disabilitato');
-    return null;
-  }
-  return new ChatGoogleGenerativeAI({
-    model: llmConfig.MODEL,
-    maxOutputTokens: llmConfig.SUPERVISOR_MAX_OUTPUT_TOKENS,
-    temperature: 0, // Deterministico per tool calling
-    apiKey: process.env.GOOGLE_API_KEY,
-  });
-};
 
 /**
  * Price List Manager Worker Node
@@ -45,7 +31,11 @@ export async function priceListManagerWorker(
   logger.log('🏷️ [Price List Worker] Esecuzione...');
 
   try {
-    const llm = getLLM(logger);
+    const llm = createGraphLLM({
+      maxOutputTokens: llmConfig.SUPERVISOR_MAX_OUTPUT_TOKENS,
+      temperature: 0,
+      logger,
+    });
     if (!llm) {
       return {
         clarification_request: 'Servizio AI non configurato correttamente (API Key mancante).',
@@ -72,8 +62,8 @@ export async function priceListManagerWorker(
       toolRegistry.toLangChainTool(assignPriceListTool),
     ];
 
-    // Bind tools to LLM
-    const llmWithTools = llm.bindTools(tools);
+    // Bind tools to LLM (ChatOpenAI e ChatGoogleGenerativeAI supportano entrambi bindTools)
+    const llmWithTools = llm.bindTools!(tools);
 
     const systemPrompt = `Sei un assistente specializzato nella gestione dei listini prezzi per SpedireSicuro.
 Il tuo compito è aiutare Superadmin e Reseller (autorizzati) a gestire i listini.

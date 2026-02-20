@@ -29,6 +29,7 @@ import {
   detectPricingIntent,
   detectCrmIntent,
   detectOutreachIntent,
+  detectShipmentCreationIntent,
 } from '@/lib/agent/intent-detector';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { detectSupportIntent, supportWorker } from '@/lib/agent/workers/support-worker';
@@ -368,6 +369,24 @@ export async function supervisorRouter(
     }
   }
 
+  // 1.8. Shipment Creation intent check (DOPO outreach, PRIMA di pricing)
+  // Sessione in corso o nuovo intent → instrada al pricing graph
+  // Il supervisor interno routerà al worker corretto
+  const existingCreationPhase = (await agentSessionService.getSession(userId, traceId))
+    ?.shipment_creation_phase;
+  const isShipmentCreationIntent =
+    existingCreationPhase === 'collecting' ||
+    existingCreationPhase === 'ready' ||
+    detectShipmentCreationIntent(message);
+
+  if (isShipmentCreationIntent) {
+    logger.log(
+      `📦 [Supervisor Router] Intent creazione spedizione (fase: ${existingCreationPhase || 'new'})`
+    );
+    intentDetected = 'shipment_creation';
+    isPricingIntent = true; // Forza passaggio al pricing graph
+  }
+
   // 2. Decisione iniziale (prima di invocare graph)
   const initialDecision: DecisionInput = {
     isPricingIntent,
@@ -451,9 +470,19 @@ export async function supervisorRouter(
       },
     };
 
-    // P3 Task 1: Se stato esistente, aggiungi nuovo messaggio
+    // P3 Task 1: Se stato esistente, aggiungi nuovo messaggio + AGGIORNA SEMPRE agent_context
+    // ⚠️ CRIT-1 FIX: agent_context DEVE essere fresco ad ogni request.
+    // Senza questo fix, sessioni riprese usano acting_context stale
+    // (es. impersonation terminata, ruolo cambiato).
     if (existingState) {
       initialState.messages = [...(existingState.messages || []), new HumanMessage(message)];
+      initialState.agent_context = {
+        session_id: sessionId,
+        conversation_history: initialState.messages!,
+        user_role: (actingContext.target.role || 'user') as AccountType,
+        is_impersonating: actingContext.isImpersonating,
+        acting_context: actingContext,
+      };
     }
 
     // P3 Task 1: Crea checkpointer e graph con persistenza
@@ -493,6 +522,44 @@ export async function supervisorRouter(
     logUsingPricingGraph(traceId, userId, graphExecutionTime, pricingOptionsCount);
 
     // 4. Valuta risultato del graph
+
+    // Creazione spedizione: booking completato
+    if (result.booking_result && result.booking_result.status === 'success') {
+      supervisorDecision = 'end';
+      return emitFinalTelemetryAndReturn({
+        decision: 'END',
+        clarificationRequest: result.booking_result.user_message,
+        agentState: result,
+        executionTimeMs: Date.now() - startTime,
+        source: 'pricing_graph',
+      });
+    }
+
+    // Creazione spedizione: booking fallito
+    if (result.booking_result && result.booking_result.status !== 'success') {
+      supervisorDecision = 'end';
+      return emitFinalTelemetryAndReturn({
+        decision: 'END',
+        clarificationRequest: result.booking_result.user_message,
+        agentState: result,
+        executionTimeMs: Date.now() - startTime,
+        source: 'pricing_graph',
+      });
+    }
+
+    // Creazione spedizione: riepilogo pronto (fase ready)
+    if (result.shipment_creation_summary) {
+      supervisorDecision = 'end';
+      return emitFinalTelemetryAndReturn({
+        decision: 'END',
+        clarificationRequest: result.shipment_creation_summary,
+        pricingOptions: result.pricing_options,
+        agentState: result,
+        executionTimeMs: Date.now() - startTime,
+        source: 'pricing_graph',
+      });
+    }
+
     if (result.pricing_options && result.pricing_options.length > 0) {
       // Abbiamo preventivi!
       supervisorDecision = 'end';
