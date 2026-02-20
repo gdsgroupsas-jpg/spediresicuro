@@ -217,11 +217,13 @@ async function searchDebugDocs(query: string, logger: ILogger): Promise<string[]
  * Analizza errori, status e confidence per suggerire soluzioni.
  * Restituisce debug_response con analysis, suggestions, links.
  */
+/** @param specificFlowId - Azione specifica (es. debug_errore, debug_bug) quando invocato da runSpecificFlowChain */
 export async function debugWorker(
   state: AgentState,
-  logger: ILogger = defaultLogger
+  logger: ILogger = defaultLogger,
+  specificFlowId?: string
 ): Promise<Partial<AgentState>> {
-  logger.log('🐛 [Debug Worker] Esecuzione...');
+  logger.log('🐛 [Debug Worker] Esecuzione...' + (specificFlowId ? ` [${specificFlowId}]` : ''));
 
   try {
     // Analizza errori di validazione

@@ -9,46 +9,27 @@
  * Usa i tool definiti in lib/agent/tools/price-list-tools.ts
  */
 
-import {
-  assignPriceListTool,
-  clonePriceListTool,
-  searchMasterPriceListsTool,
-} from '@/lib/agent/tools/price-list-tools';
-import { toolRegistry } from '@/lib/agent/tools/registry'; // Usa il registry per compatibilità
-import { llmConfig } from '@/lib/config';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import { getOllamaLLM } from '@/lib/ai/ollama';
 import { defaultLogger, type ILogger } from '../logger';
 import { AgentState } from '../orchestrator/state';
 
-// Helper per ottenere LLM
-const getLLM = (logger: ILogger = defaultLogger) => {
-  if (!process.env.GOOGLE_API_KEY) {
-    logger.warn('⚠️ GOOGLE_API_KEY mancante - Price List Worker disabilitato');
-    return null;
-  }
-  return new ChatGoogleGenerativeAI({
-    model: llmConfig.MODEL,
-    maxOutputTokens: llmConfig.SUPERVISOR_MAX_OUTPUT_TOKENS,
-    temperature: 0, // Deterministico per tool calling
-    apiKey: process.env.GOOGLE_API_KEY,
-  });
-};
-
 /**
  * Price List Manager Worker Node
+ * @param specificFlowId - Azione specifica (es. listini_visualizza, listini_clona) quando invocato da runSpecificFlowChain
  */
 export async function priceListManagerWorker(
   state: AgentState,
-  logger: ILogger = defaultLogger
+  logger: ILogger = defaultLogger,
+  specificFlowId?: string
 ): Promise<Partial<AgentState>> {
   logger.log('🏷️ [Price List Worker] Esecuzione...');
 
   try {
-    const llm = getLLM(logger);
+    const llm = getOllamaLLM();
     if (!llm) {
       return {
-        clarification_request: 'Servizio AI non configurato correttamente (API Key mancante).',
+        clarification_request: 'Modello locale (Ollama) non disponibile. Avvia Ollama e riprova.',
         processingStatus: 'error',
       };
     }
@@ -56,87 +37,20 @@ export async function priceListManagerWorker(
     const lastMessage = state.messages[state.messages.length - 1];
     const messageText = lastMessage && 'content' in lastMessage ? String(lastMessage.content) : '';
 
-    // Convert tool definitions for LangChain
-    const context = {
-      userId: state.userId,
-      userRole: state.agent_context?.user_role || 'user',
-      actingContext: state.agent_context?.acting_context,
-    };
-
-    // Usa i tool specifici per questo worker
-    // NON usiamo toolRegistry.toLangChainTools(context) perché vogliamo SOLO i tool dei listini qui
-    // per evitare confusione con altri tool.
-    const tools = [
-      toolRegistry.toLangChainTool(searchMasterPriceListsTool),
-      toolRegistry.toLangChainTool(clonePriceListTool),
-      toolRegistry.toLangChainTool(assignPriceListTool),
-    ];
-
-    // Bind tools to LLM
-    const llmWithTools = llm.bindTools(tools);
-
     const systemPrompt = `Sei un assistente specializzato nella gestione dei listini prezzi per SpedireSicuro.
-Il tuo compito è aiutare Superadmin e Reseller (autorizzati) a gestire i listini.
+Aiuta Superadmin e Reseller (autorizzati) con: ricerca listini master, clonazione listini, assegnazione a utenti.
+Contesto: userId=${state.userId}, ruolo=${state.agent_context?.user_role || 'N/A'}.
+Rispondi in modo conciso e operativo.`;
 
-Tools disponibili:
-- search_master_price_lists: Cerca listini master disponibili.
-- clone_price_list: Clona un listino master per creare una versione custom (es. per un reseller).
-- assign_price_list: Assegna un listino a un utente specifico.
-
-Regole:
-- Se l'utente chiede di creare/clonare un listino, chiedi prima QUALE master usare se non specificato.
-- Se l'operazione richiede un utente target (es. assegnazione), chiedi l'ID o nome se non fornito.
-- Sii preciso e conferma sempre l'operazione eseguita.
-
-Contesto Utente:
-- ID: ${state.userId}
-- Ruolo: ${state.agent_context?.user_role || 'N/A'}
-`;
-
-    // Invoca LLM
     const messages = [new SystemMessage(systemPrompt), new HumanMessage(messageText)];
 
-    logger.log(`🤖 [Price List Worker] Invoco LLM con ${tools.length} tools...`);
-    const result = await llmWithTools.invoke(messages);
+    logger.log('🤖 [Price List Worker] Invoco Ollama...');
+    const result = await llm.invoke(messages);
 
-    // Controlla se il modello ha deciso di chiamare un tool
-    if (result.tool_calls && result.tool_calls.length > 0) {
-      logger.log(`🛠️ [Price List Worker] Tool call richiesta: ${result.tool_calls[0].name}`);
-
-      // Esegui i tool (uno per volta per semplicità in questo worker base)
-      const toolCall = result.tool_calls[0];
-      const selectedTool = [
-        searchMasterPriceListsTool,
-        clonePriceListTool,
-        assignPriceListTool,
-      ].find((t) => t.name === toolCall.name);
-
-      let toolOutput = 'Errore: Tool non trovato';
-
-      if (selectedTool) {
-        try {
-          // Esegui il tool passando il contesto
-          toolOutput = await selectedTool.execute(toolCall.args, context);
-        } catch (e: any) {
-          toolOutput = `Errore esecuzione tool: ${e.message}`;
-        }
-      }
-
-      // Ritorna il risultato
-      return {
-        price_list_result: {
-          success: !toolOutput.startsWith('Error') && !toolOutput.startsWith('PERMISSION_DENIED'),
-          message: toolOutput,
-        },
-        next_step: 'END', // O potremmo fare un loop se vogliamo multi-step
-        // Usiamo clarification_request come output generico per l'utente se non c'è un campo specifico user_message
-        clarification_request: toolOutput,
-      };
-    }
-
-    // Se no tool calls, ritorna la risposta testuale
+    const content = result?.content;
+    const text = typeof content === 'string' ? content : (content && String(content)) || '';
     return {
-      clarification_request: result.content.toString(),
+      clarification_request: text,
       next_step: 'END',
     };
   } catch (error: any) {

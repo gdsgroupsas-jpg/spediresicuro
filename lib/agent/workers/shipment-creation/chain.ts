@@ -1,13 +1,14 @@
 /**
  * Orchestratore della catena "Creazione spedizione".
- * Esegue i 7 worker di validazione, aggrega il draft, e:
+ * Invoca worker LLM per estrazione dati, fa merge e validazione, poi:
  * - se mancano campi: ritorna clarification_request e stato da persistere;
  * - se tutto completo: calcola preventivo, esegue booking, ritorna booking_result.
  */
 
 import { HumanMessage } from '@langchain/core/messages';
 import type { AgentState } from '@/lib/agent/orchestrator/state';
-import { runAllValidationWorkers } from './validation-workers';
+import { runLlmExtractionWorker } from './llm-extraction-workers';
+import { getMissingFromDraft } from './validation-workers';
 import { generateClarificationFromMissingFields } from './clarification';
 import { pricingWorker } from '../pricing';
 import { bookingWorker } from '../booking';
@@ -35,7 +36,9 @@ export async function runShipmentCreationChain(
   const { message, existingState, userId, userEmail } = input;
   const existingDraft = existingState?.shipmentDraft;
 
-  const { updatedDraft, missingFields } = runAllValidationWorkers(message, existingDraft);
+  const updatedDraft = await runLlmExtractionWorker(message, existingDraft, logger);
+  const missingFields = getMissingFromDraft(updatedDraft);
+  updatedDraft.missingFields = missingFields;
 
   const baseState: AgentState = {
     ...(existingState || {}),

@@ -80,7 +80,6 @@ vi.mock('@/lib/outreach/template-engine', () => ({
 // IMPORTS (dopo i mock)
 // ============================================
 
-import { detectOutreachIntent } from '@/lib/agent/intent-detector';
 import {
   checkConsent,
   grantConsent,
@@ -89,57 +88,6 @@ import {
 } from '@/lib/outreach/consent-service';
 import { getOutreachMetrics } from '@/lib/outreach/outreach-analytics';
 import type { OutreachMetrics } from '@/types/outreach';
-
-// ============================================
-// INTENT DETECTION — OUTREACH
-// ============================================
-
-describe('Outreach Intent Detection', () => {
-  describe('detectOutreachIntent — positivi', () => {
-    const positiveCases = [
-      'iscrivi alla sequenza followup',
-      'attiva sequenza per Farmacia Rossi',
-      'invia email a TechShop',
-      'manda whatsapp a Farmacia',
-      'manda messaggio telegram',
-      'mostra template email',
-      'quali canali attivi abbiamo?',
-      'disabilita canale whatsapp',
-      'abilita canale telegram',
-      'metriche outreach',
-      'statistiche outreach',
-      'pausa sequenza per Acme',
-      'riprendi sequenza',
-      'cancella sequenza enrollment',
-      'stop sequenza per TechShop',
-      'campagna followup automatico',
-    ];
-
-    for (const msg of positiveCases) {
-      it(`rileva outreach: "${msg}"`, () => {
-        expect(detectOutreachIntent(msg)).toBe(true);
-      });
-    }
-  });
-
-  describe('detectOutreachIntent — negativi', () => {
-    const negativeCases = [
-      'quanto costa spedire 5kg a Roma?',
-      'preventivo spedizione',
-      'traccia il mio pacco',
-      'come va la pipeline?',
-      'quanti lead abbiamo?',
-      'aggiorna stato TechShop',
-      'buongiorno',
-    ];
-
-    for (const msg of negativeCases) {
-      it(`NON rileva outreach: "${msg}"`, () => {
-        expect(detectOutreachIntent(msg)).toBe(false);
-      });
-    }
-  });
-});
 
 // ============================================
 // CONSENT SERVICE
@@ -342,24 +290,5 @@ describe('Telemetry IntentType', () => {
   it('IntentType include outreach', () => {
     const intent: import('@/lib/telemetry/logger').IntentType = 'outreach';
     expect(intent).toBe('outreach');
-  });
-});
-
-// ============================================
-// SUPERVISOR ROUTER — import detectOutreachIntent
-// ============================================
-
-describe('Supervisor Router outreach integration', () => {
-  it("detectOutreachIntent e' importabile da intent-detector", () => {
-    expect(typeof detectOutreachIntent).toBe('function');
-  });
-
-  it('outreach keywords non collide con CRM', () => {
-    // Outreach specifico non deve matchare CRM
-    expect(detectOutreachIntent('manda email a Farmacia Rossi')).toBe(true);
-    // CRM specifico non deve matchare outreach
-    expect(detectOutreachIntent('quanti lead abbiamo?')).toBe(false);
-    // Pricing non deve matchare outreach
-    expect(detectOutreachIntent('preventivo spedizione 5kg')).toBe(false);
   });
 });

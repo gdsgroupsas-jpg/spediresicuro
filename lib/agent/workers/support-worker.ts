@@ -143,6 +143,10 @@ export interface SupportWorkerInput {
   message: string;
   userId: string;
   userRole: 'admin' | 'user';
+  /** Workspace per dati reali (tracking, giacenze, ecc.) */
+  workspaceId?: string;
+  /** Azione specifica (es. support_tracking, support_giacenza) quando invocato da runSpecificFlowChain */
+  specificFlowId?: string;
 }
 
 export interface SupportWorkerResult {

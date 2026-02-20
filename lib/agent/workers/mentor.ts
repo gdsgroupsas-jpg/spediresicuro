@@ -179,11 +179,13 @@ function generateAnswer(
  * Risponde a domande tecniche usando RAG su documentazione.
  * Restituisce risposta con sources e confidence.
  */
+/** @param specificFlowId - Azione specifica (es. mentor_architettura, mentor_wallet) quando invocato da runSpecificFlowChain */
 export async function mentorWorker(
   state: AgentState,
-  logger: ILogger = defaultLogger
+  logger: ILogger = defaultLogger,
+  specificFlowId?: string
 ): Promise<Partial<AgentState>> {
-  logger.log('🎓 [Mentor Worker] Esecuzione...');
+  logger.log('🎓 [Mentor Worker] Esecuzione...' + (specificFlowId ? ` [${specificFlowId}]` : ''));
 
   try {
     // Estrai query dal messaggio più recente

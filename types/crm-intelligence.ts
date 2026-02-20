@@ -161,6 +161,8 @@ export interface CrmWorkerInput {
   userId: string;
   userRole: 'admin' | 'user';
   workspaceId?: string;
+  /** Azione specifica (es. crm_lead, crm_pipeline) quando invocato da runSpecificFlowChain */
+  specificFlowId?: string;
 }
 
 export type CrmSubIntent =

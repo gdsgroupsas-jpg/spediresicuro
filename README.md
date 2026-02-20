@@ -56,7 +56,7 @@ SpedireSicuro e' un **Logistics Operating System** che supporta **3 modelli oper
 2. **Atomicita':** Solo funzioni SQL atomiche per wallet (`decrement_wallet_balance`, `increment_wallet_balance`)
 3. **Idempotenza:** Ogni operazione ha `idempotency_key`
 4. **Multi-Tenant:** Isolamento completo via RLS (Row Level Security)
-5. **AI-First:** LangGraph Supervisor coordina worker specializzati (OCR, Address, Pricing, Booking)
+5. **AI-First:** Anne (Supervisor unico + runFlow) coordina i flussi: classificazione con Ollama, poi runFlow per richiesta preventivo, crea spedizione, support, crm, outreach, listini, mentor, debug, explain
 
 ### Documenti Chiave da Leggere
 

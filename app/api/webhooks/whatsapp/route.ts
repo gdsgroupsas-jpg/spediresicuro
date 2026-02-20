@@ -11,7 +11,7 @@
  * 2. Meta forwards to this webhook
  * 3. We parse and extract text
  * 4. Look up user by phone number (anne_user_memory.preferences.whatsapp_phone)
- * 5. Route to supervisorRouter (same as web chat)
+ * 5. Route via supervisorRoute + runFlow (same as web chat)
  * 6. Format response and send back via WhatsApp
  *
  * Security:
@@ -36,13 +36,14 @@ import {
   sendTrackingToWhatsApp,
   sendBookingToWhatsApp,
 } from '@/lib/services/whatsapp-formatter';
-import {
-  supervisorRouter,
-  formatPricingResponse,
-} from '@/lib/agent/orchestrator/supervisor-router';
+import type { BookingResult } from '@/lib/agent/workers/booking';
+import { supervisorRoute } from '@/lib/agent/supervisor';
+import { runFlow } from '@/lib/agent/flows';
+import { formatPricingResponse } from '@/lib/agent/format-pricing';
 import { generateTraceId } from '@/lib/telemetry/logger';
 import type { ActingContext } from '@/lib/safe-auth';
 import type { AccountType } from '@/lib/safe-auth';
+import { isAdminOrAbove, isResellerCheck } from '@/lib/auth-helpers';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -249,58 +250,55 @@ async function processIncomingMessage(
       isImpersonating: false,
     };
 
-    // 3. Call supervisor (same as web chat)
-    const result = await supervisorRouter({
+    // 3. Route via supervisor + runFlow (same as web chat)
+    const { flowId } = await supervisorRoute({ message: text, userId: user.id });
+    const userRole: 'admin' | 'user' =
+      isAdminOrAbove(user) || isResellerCheck(user) ? 'admin' : 'user';
+    const flowResult = await runFlow(flowId, {
       message: text,
       userId: user.id,
       userEmail: user.email,
+      userRole,
       traceId,
       actingContext,
-      // No typingNonce for WhatsApp (no realtime channel)
     });
 
-    // 4. Send response back via WhatsApp
-    if (result.decision === 'END') {
-      const state = result.agentState;
+    // 4. Send response back via WhatsApp (FlowResult)
+    const state = flowResult.agentState;
 
-      // Try to send rich card formats first
-      if (state?.pricing_options && state.pricing_options.length > 0) {
-        await sendPricingToWhatsApp(phone, state.pricing_options);
-        return;
-      }
-
-      if (state?.booking_result) {
-        await sendBookingToWhatsApp(phone, state.booking_result);
-        return;
-      }
-
-      // Build response text
-      let responseText = '';
-      if (result.pricingOptions?.length) {
-        responseText = formatPricingResponse(result.pricingOptions);
-      } else if (result.clarificationRequest) {
-        responseText = result.clarificationRequest;
-      } else if (state?.support_response) {
-        responseText =
-          typeof state.support_response === 'string'
-            ? state.support_response
-            : state.support_response.message || '';
-      } else if (state?.userMessage) {
-        responseText = state.userMessage;
-      } else {
-        responseText = 'Mi dispiace, non sono riuscita a elaborare la richiesta. Riprova.';
-      }
-
-      await sendWhatsAppText(phone, responseText);
-    } else {
-      // Legacy/fallback path - supervisor didn't produce a final answer
-      // This means it went through the legacy Claude handler which
-      // doesn't return a message in supervisorResult
-      await sendWhatsAppText(
-        phone,
-        'Ho ricevuto il tuo messaggio. Per questa richiesta ti consiglio di usare la chat dalla dashboard per una risposta completa.'
-      );
+    // Rich cards first
+    if (flowResult.pricingOptions && flowResult.pricingOptions.length > 0) {
+      await sendPricingToWhatsApp(phone, flowResult.pricingOptions);
+      return;
     }
+    const rawBooking = state?.booking_result;
+    if (
+      rawBooking &&
+      typeof rawBooking === 'object' &&
+      'status' in rawBooking &&
+      'user_message' in rawBooking
+    ) {
+      await sendBookingToWhatsApp(phone, rawBooking as BookingResult);
+      return;
+    }
+
+    // Text response
+    let responseText = '';
+    if (flowResult.message) {
+      responseText = flowResult.message;
+    } else if (flowResult.clarificationRequest) {
+      responseText = flowResult.clarificationRequest;
+    } else if (state?.support_response) {
+      responseText =
+        typeof state.support_response === 'string'
+          ? state.support_response
+          : (state.support_response as { message?: string })?.message || '';
+    } else if (state?.userMessage) {
+      responseText = String(state.userMessage);
+    } else {
+      responseText = 'Mi dispiace, non sono riuscita a elaborare la richiesta. Riprova.';
+    }
+    await sendWhatsAppText(phone, responseText);
   } catch (error) {
     console.error('[WHATSAPP_WEBHOOK] Error processing message:', {
       phone: maskPhone(phone),
@@ -416,10 +414,10 @@ async function lookupUserByPhone(
 
   if (!memory?.user_id) return null;
 
-  // Get user details
+  // Get user details (account_type, is_reseller for auth-helpers; role for ActingContext compatibility)
   const { data: user } = await supabaseAdmin
     .from('users')
-    .select('id, email, role, name')
+    .select('id, email, role, name, account_type, is_reseller')
     .eq('id', memory.user_id)
     .single();
 
@@ -428,7 +426,9 @@ async function lookupUserByPhone(
   return {
     id: user.id,
     email: user.email || '',
-    role: user.role || 'user',
+    role: (user.role || 'user') as AccountType,
     name: user.name,
+    account_type: user.account_type ?? undefined,
+    is_reseller: user.is_reseller ?? false,
   };
 }

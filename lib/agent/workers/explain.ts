@@ -330,11 +330,13 @@ function generateExplanation(
  * Spiega business flows usando RAG su documentazione.
  * Restituisce explain_response con explanation e diagrammi testuali.
  */
+/** @param specificFlowId - Azione specifica (es. explain_margini, explain_wallet) quando invocato da runSpecificFlowChain */
 export async function explainWorker(
   state: AgentState,
-  logger: ILogger = defaultLogger
+  logger: ILogger = defaultLogger,
+  specificFlowId?: string
 ): Promise<Partial<AgentState>> {
-  logger.log('📚 [Explain Worker] Esecuzione...');
+  logger.log('📚 [Explain Worker] Esecuzione...' + (specificFlowId ? ` [${specificFlowId}]` : ''));
 
   try {
     // Estrai query dal messaggio più recente

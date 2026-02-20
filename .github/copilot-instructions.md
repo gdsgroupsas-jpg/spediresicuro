@@ -35,13 +35,15 @@ SpedireSicuro is a **Logistics Operating System (Logistics OS)** - a B2B infrast
 - `lib/rbac.ts` - Role-based access control (superadmin, admin, reseller, user)
 - `supabase/migrations/` - Database migrations
 
-## AI Agent Architecture (LangGraph)
+## AI Agent Architecture (Anne)
 
-Entry point: `lib/agent/orchestrator/supervisor-router.ts`
+Entry point: **Supervisor + runFlow** (unico flusso).
 
-- Workers: `lib/agent/workers/{pricing,address,ocr,booking}.ts`
-- Intent detector: `lib/agent/intent-detector.ts`
-- **Strangler Fig Pattern**: Legacy code is the parachute - never delete it
+- **Classificazione:** `lib/agent/supervisor.ts` – `supervisorRoute()` classifica il messaggio in un `flowId` (Ollama).
+- **Esecuzione:** `lib/agent/flows/run-flow.ts` – `runFlow(flowId, input)` esegue il flusso (richiesta_preventivo, crea_spedizione, support, crm, outreach, listini, mentor, debug, explain).
+- **Macro flussi:** Per support/crm/outreach/listini/mentor/debug/explain, `runFlow` delega a **Intermediary** (`lib/agent/intermediary.ts`) che risolve il flusso specifico con `runSpecificFlow()`.
+- **Route:** `app/api/ai/agent-chat` e webhook WhatsApp (`app/api/webhooks/whatsapp`) usano entrambi questo flusso.
+- Workers: `lib/agent/workers/` (pricing, address, ocr, booking, support, crm, outreach, ecc.).
 
 ## Commands
 

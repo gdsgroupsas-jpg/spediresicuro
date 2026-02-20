@@ -47,6 +47,8 @@ export interface OutreachWorkerInput {
   userId: string;
   userRole: 'admin' | 'user';
   workspaceId?: string;
+  /** Azione specifica (es. outreach_campagne, outreach_comunicazioni) quando invocato da runSpecificFlowChain */
+  specificFlowId?: string;
 }
 
 export interface OutreachWorkerResult {

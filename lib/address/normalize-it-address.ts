@@ -270,16 +270,18 @@ export function extractCity(text: string): string | undefined {
  * Estrae nome/destinatario dal testo
  */
 export function extractFullName(text: string): string | undefined {
-  // Pattern: "a Mario Rossi" o "per Mario Rossi" o "destinatario: Mario Rossi"
+  // Pattern: "a Mario Rossi", "per Mario Rossi", "destinatario Mario Rossi", "destinatario: Mario Rossi" (con o senza due punti)
   const patterns = [
     /(?:a|per|destinatario|consegna)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)+)/i,
+    /(?:destinatario|consegna)\s*:\s*([A-Za-zÀ-ÿ]+(?:\s+[A-Za-zÀ-ÿ]+)+?)(?=[,\s]|$)/i,
     NAME_BEFORE_ADDRESS_REGEX,
   ];
 
   for (const pattern of patterns) {
     const match = text.match(pattern);
     if (match) {
-      return normalizeText(match[1]);
+      const name = normalizeText(match[1].replace(/[,;.]$/, ''));
+      if (name.length >= 3) return name;
     }
   }
 

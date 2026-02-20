@@ -1,0 +1,90 @@
+
+--- Live run 2026-02-20T09:55:29.695Z BASE_URL=http://localhost:3000 AUTH=no ---
+
+[richiesta_preventivo] ERRORE RICHIESTA: fetch failed
+  prompt: Vorrei un preventivo per 2 kg destinazione 00100 Roma
+
+[crea_spedizione] ERRORE RICHIESTA: fetch failed
+  prompt: Voglio fare una spedizione da Milano a Roma
+
+[support] ERRORE RICHIESTA: fetch failed
+  prompt: Dove si trova il mio pacco?
+
+[crm] ERRORE RICHIESTA: fetch failed
+  prompt: Come va la pipeline commerciale?
+
+[outreach] ERRORE RICHIESTA: fetch failed
+  prompt: Attiva una campagna email per i prospect
+
+[listini] ERRORE RICHIESTA: fetch failed
+  prompt: Mostrami il listino prezzi attivo
+
+[mentor] ERRORE RICHIESTA: fetch failed
+  prompt: Spiegami come funziona il wallet nel sistema
+
+[debug] ERRORE RICHIESTA: fetch failed
+  prompt: Ho un errore 500 sulla creazione spedizione
+
+[explain] ERRORE RICHIESTA: fetch failed
+  prompt: Come funzionano i margini sulle spedizioni?
+
+[pricing] ERRORE RICHIESTA: fetch failed
+  message: Preventivo per 2 kg a 00100 Roma
+
+[pricing] ERRORE RICHIESTA: fetch failed
+  message: Quanto costa spedire 1.5 kg a 20100 Milano?
+
+[pricing] ERRORE RICHIESTA: fetch failed
+  message: Preventivo per 2 kg
+
+[pricing] ERRORE RICHIESTA: fetch failed
+  message: Ciao Anne, come va?
+
+[pricing] ERRORE RICHIESTA: fetch failed
+  message: 
+
+
+--- Live run 2026-02-20T09:56:30.017Z BASE_URL=http://localhost:3000 AUTH=no ---
+
+[richiesta_preventivo] ERRORE RICHIESTA: fetch failed
+  prompt: Vorrei un preventivo per 2 kg destinazione 00100 Roma
+
+[crea_spedizione] ERRORE RICHIESTA: fetch failed
+  prompt: Voglio fare una spedizione da Milano a Roma
+
+[support] ERRORE RICHIESTA: fetch failed
+  prompt: Dove si trova il mio pacco?
+
+[crm] ERRORE RICHIESTA: fetch failed
+  prompt: Come va la pipeline commerciale?
+
+[outreach] ERRORE RICHIESTA: fetch failed
+  prompt: Attiva una campagna email per i prospect
+
+[listini] ERRORE RICHIESTA: fetch failed
+  prompt: Mostrami il listino prezzi attivo
+
+[mentor] ERRORE RICHIESTA: fetch failed
+  prompt: Spiegami come funziona il wallet nel sistema
+
+[debug] ERRORE RICHIESTA: fetch failed
+  prompt: Ho un errore 500 sulla creazione spedizione
+
+[explain] ERRORE RICHIESTA: fetch failed
+  prompt: Come funzionano i margini sulle spedizioni?
+
+[pricing] ERRORE RICHIESTA: fetch failed
+  message: Preventivo per 2 kg a 00100 Roma
+
+[pricing] ERRORE RICHIESTA: fetch failed
+  message: Quanto costa spedire 1.5 kg a 20100 Milano?
+
+[pricing] ERRORE RICHIESTA: fetch failed
+  message: Preventivo per 2 kg
+
+[pricing] ERRORE RICHIESTA: fetch failed
+  message: Ciao Anne, come va?
+
+[pricing] ERRORE RICHIESTA: fetch failed
+  message: 
+

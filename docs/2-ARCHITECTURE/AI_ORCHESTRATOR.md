@@ -37,79 +37,64 @@ Questo documento descrive l'architettura dell'AI Orchestrator (Anne) basata su L
 
 **Soluzione:** Architettura LangGraph Supervisor con worker specializzati e Single Decision Point.
 
-#### Architettura Logica
+#### Architettura Logica (flusso unico: Supervisor + runFlow)
 
 ```text
 User Input (messaggio)
     │
     ▼
-supervisorRouter()  ← Entry point UNICO (/api/ai/agent-chat)
+supervisorRoute(message, userId)  ← Entry point UNICO (lib/agent/supervisor.ts)
+    │  Ollama classifica in un flowId macro
+    ▼
+runFlow(flowId, input)  ← lib/agent/flows/run-flow.ts
     │
-    ├─── Support Intent Detection → Support Worker (gestito direttamente)
-    ├─── CRM Intent Detection → CRM Worker (gestito direttamente, Sprint S1)
-    ├─── Outreach Intent Detection → Outreach Worker (gestito direttamente, Sprint S3)
-    ├─── Pricing/OCR Intent Detection → Pricing Graph (LangGraph)
-    ├─── Booking Confirmation Detection
+    ├─── richiesta_preventivo → runRichiestaPreventivoFlow()
+    ├─── crea_spedizione → runShipmentCreationChain()
+    └─── support | crm | outreach | listini | mentor | debug | explain
+         → runIntermediary(flowId, input) → Ollama risolve specificFlowId → runSpecificFlow()
     │
-    ▼ (se pricing/OCR)
-supervisor.decideNextStep()  ← SINGLE DECISION POINT (funzione pura)
-    │
-    ├─── next_step: 'ocr_worker' → OCR Worker → arricchisce shipmentDraft
-    ├─── next_step: 'address_worker' → Address Worker → normalizza indirizzi
-    ├─── next_step: 'pricing_worker' → Pricing Worker → calcola preventivi
-    ├─── next_step: 'booking_worker' → Booking Worker → prenota spedizione
-    ├─── next_step: 'legacy' → Claude Legacy Handler
-    └─── next_step: 'END' → Risposta finale al client
-    │
-    ▼ (dopo ogni worker, torna a supervisor)
-supervisor.decideNextStep()  ← Valuta nuovo stato, decide prossimo step
-    │
-    └─── ... (loop fino a END o MAX_ITERATIONS raggiunto)
+    ▼
+FlowResult (message, pricingOptions, clarificationRequest, agentState, …) → Risposta al client
 ```
+
+**WhatsApp:** lo stesso flusso: webhook `/api/webhooks/whatsapp` chiama `supervisorRoute()` e `runFlow()`, poi formatta la risposta per WhatsApp.
+
+**Deprecato/rimosso:** `supervisorRouter`, pricing-graph LangGraph e nodo supervisor dell’orchestrator non sono più utilizzati; l’unico entry point è Supervisor + runFlow + Intermediary.
 
 #### Data Flow Pattern
 
-1. **Input Utente** → `supervisorRouter()` rileva intent/pattern
-2. **Direct Workers** → Support, CRM e Outreach intent gestiti direttamente (no LangGraph):
-   - Support intent → `supportWorker()` → risposta diretta
-   - CRM intent → `crmWorker()` → risposta con knowledge enrichment
-   - Outreach intent → `outreachWorker()` → gestione sequenze multi-canale
-3. **Pricing/OCR** → `decideNextStep()` (funzione pura) decide routing basato su stato
-4. **Worker Execution** → Worker arricchisce `AgentState` (merge non distruttivo in `shipmentDraft`)
-5. **Loop Back** → Torna a supervisor, valuta nuovo stato
-6. **Termination** → `next_step: 'END'` → Risposta al client o azione DB (booking)
+1. **Input Utente** → `supervisorRoute()` classifica il messaggio (Ollama) in un `flowId`.
+2. **runFlow(flowId)** → Esegue il flusso corrispondente (richiesta_preventivo, crea_spedizione, o macro support/crm/outreach/…).
+3. **Flussi diretti** → richiesta_preventivo e crea_spedizione hanno chain dedicate (runRichiestaPreventivoFlow, runShipmentCreationChain).
+4. **Flussi macro** → support, crm, outreach, listini, mentor, debug, explain passano da **Intermediary**, che risolve l’azione specifica (Ollama) e invoca `runSpecificFlow(specificFlowId)`.
+5. **FlowResult** → Ogni flusso restituisce `FlowResult` (message, pricingOptions, clarificationRequest, agentState); la route (e il webhook WhatsApp) formattano la risposta per il client.
+6. **Telemetria** → Evento `anneFlowComplete` (flowId, duration_ms, pricing_options_count).
 
 ---
 
 ### Componenti
 
-#### 1. Supervisor Router
+#### 1. Supervisor (classificazione)
 
-**File:** `lib/agent/orchestrator/supervisor-router.ts`
+**File:** `lib/agent/supervisor.ts`
 
-- Entry point unico per `/api/ai/agent-chat`
-- Rileva intent, pattern OCR, conferma booking
-- Invoca pricing graph o legacy handler
-- Emette telemetria finale (`supervisorRouterComplete`)
+- **supervisorRoute(message, userId)** – Entry point unico: classifica il messaggio con Ollama in un `flowId` (richiesta_preventivo, crea_spedizione, support, crm, outreach, listini, mentor, debug, explain).
+- In caso di errore Ollama restituisce `support` come default.
 
-#### 2. Supervisor
+#### 2. runFlow
 
-**File:** `lib/agent/orchestrator/supervisor.ts`
+**File:** `lib/agent/flows/run-flow.ts`
 
-- `decideNextStep()` - Funzione pura, SINGLE DECISION POINT
-- `supervisor()` - Node LangGraph che estrae dati e decide routing
-- Estrae dati spedizione dal messaggio (LLM opzionale, fallback regex)
-- Determina routing basato su stato e intent
-- **Nessun altro componente decide routing** (verificabile con grep)
+- **runFlow(flowId, input)** – Esegue il flusso indicato da `flowId`.
+- Flussi diretti: `richiesta_preventivo` → runRichiestaPreventivoFlow; `crea_spedizione` → runShipmentCreationChain.
+- Flussi macro (support, crm, outreach, listini, mentor, debug, explain) → delega a **Intermediary** che risolve il flusso specifico e invoca runSpecificFlow.
 
-#### 3. Pricing Graph
+#### 3. Intermediary
 
-**File:** `lib/agent/orchestrator/pricing-graph.ts`
+**File:** `lib/agent/intermediary.ts`
 
-- LangGraph StateGraph con nodi: supervisor, ocr_worker, address_worker, pricing_worker, booking_worker
-- Conditional edges basati su `next_step` dallo stato
-- MAX_ITERATIONS guard (2) per prevenire loop infiniti
-- Configurazione: `lib/config.ts` (`graphConfig.MAX_ITERATIONS`)
+- Per i flowId macro: usa Ollama per risolvere l’azione specifica (es. support_tracking, crm_lead), poi **runSpecificFlow(specificFlowId, input)**.
+- Gestisce approval/validazione e fallback dove previsto.
 
 #### 4. Workers Specializzati
 
@@ -333,43 +318,28 @@ grep -r "logger\.\(log\|info\|warn\|error\)" lib/agent/ | grep -i "addressLine\|
 ### Invocare Agent
 
 ```typescript
-// API Route: /api/ai/agent-chat
-import { supervisorRouter } from '@/lib/agent/orchestrator/supervisor-router';
+// API Route: /api/ai/agent-chat (e webhook WhatsApp)
+import { supervisorRoute } from '@/lib/agent/supervisor';
+import { runFlow } from '@/lib/agent/flows';
 
 export async function POST(request: Request) {
-  const { message, sessionId } = await request.json();
-
-  const result = await supervisorRouter({
+  const { message } = await request.json();
+  const { flowId } = await supervisorRoute({ message, userId: context.target.id });
+  const flowResult = await runFlow(flowId, {
     message,
-    sessionId,
     userId: context.target.id,
+    userEmail: context.target.email,
+    userRole: 'user',
+    traceId,
+    actingContext: context,
   });
-
-  return Response.json(result);
+  return Response.json({ success: true, message: flowResult.message, metadata: { flowId } });
 }
 ```
 
-### Aggiungere Nuovo Worker
+### Aggiungere un nuovo flusso specifico
 
-```typescript
-// lib/agent/workers/custom-worker.ts
-export async function customWorker(state: AgentState): Promise<Partial<AgentState>> {
-  // Arricchisci shipmentDraft (merge non distruttivo)
-  return {
-    shipmentDraft: {
-      ...state.shipmentDraft,
-      customField: 'value',
-    },
-  };
-}
-
-// Aggiungi a pricing-graph.ts
-graph.addNode('custom_worker', customWorker);
-graph.addConditionalEdges('supervisor', (state) => {
-  if (state.next_step === 'custom_worker') return 'custom_worker';
-  // ... altri edge
-});
-```
+I flussi macro (support, crm, outreach, listini, mentor, debug, explain) sono risolti dall’**Intermediary** in flussi specifici (es. support_tracking, crm_lead). Per aggiungere un nuovo flusso specifico: definirlo in `lib/agent/specific-flows.ts` e implementare la logica in un worker o in un handler dedicato; l’Intermediary invoca `runSpecificFlow(specificFlowId, input)`.
 
 ---
 

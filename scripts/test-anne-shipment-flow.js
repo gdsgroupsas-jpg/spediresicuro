@@ -1,14 +1,21 @@
 /**
- * Test flusso Anne – Creazione spedizione con prompt generico
+ * Test flusso Anne – Creazione spedizione
  *
- * Chiama l'API di test (solo dev) che esegue il supervisor con un prompt generico
- * e scrive tutto l'output su un file TXT per debug.
+ * Chiama POST /api/ai/agent-chat con messaggi di creazione spedizione e scrive
+ * l'output su un file TXT per debug.
  *
- * Prerequisito: app in esecuzione in dev (npm run dev).
+ * Prerequisiti:
+ * - App in esecuzione (npm run dev)
+ * - Autenticazione: imposta AUTH_COOKIE con il valore del cookie di sessione
+ *   (es. copia da DevTools > Application > Cookies dopo login su dashboard)
  *
  * Uso (dalla root del progetto):
  *   node scripts/test-anne-shipment-flow.js [baseUrl]
  *   baseUrl default: http://localhost:3000
+ *
+ * Esempio con cookie:
+ *   set AUTH_COOKIE=sb-...=eyJ...
+ *   node scripts/test-anne-shipment-flow.js
  *
  * Output: scripts/anne-shipment-test-output.txt
  */
@@ -18,59 +25,63 @@ const path = require('path');
 
 const BASE_URL = process.argv[2] || process.env.TEST_ANNE_BASE_URL || 'http://localhost:3000';
 const OUTPUT_FILE = path.resolve(process.cwd(), 'scripts', 'anne-shipment-test-output.txt');
+const AUTH_COOKIE = process.env.AUTH_COOKIE || '';
 
-const PROMPT1 = 'Voglio fare una spedizione';
-const PROMPT2 =
-  'Mittente: Mario Rossi, telefono 3331234567. Destinatario: Luigi Verdi, Via Roma 1, 00100 Roma RM, telefono 3339876543. Pacco 2 kg.';
+const PROMPTS = [
+  'Voglio fare una spedizione',
+  'Mittente: Mario Rossi, telefono 3331234567. Destinatario: Luigi Verdi, Via Roma 1, 00100 Roma RM, telefono 3339876543. Pacco 2 kg.',
+  'Luigi Verdi',
+];
 
-async function main() {
-  console.log('Test Anne – Flusso creazione spedizione');
-  console.log('Base URL:', BASE_URL);
-  console.log('Prompt 1:', PROMPT1);
-  console.log('Prompt 2 (se serve integrazione):', PROMPT2);
-  console.log('');
-
-  const url = `${BASE_URL.replace(/\/$/, '')}/api/dev/test-anne-shipment`;
-  const body = {
-    message: PROMPT1,
-    secondMessage: PROMPT2,
-  };
-
-  try {
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-
-    const data = await res.json().catch(() => ({}));
-
-    if (!res.ok) {
-      console.error('Errore HTTP', res.status, data.error || res.statusText);
-      if (data.outputForFile) {
-        fs.writeFileSync(OUTPUT_FILE, data.outputForFile, 'utf8');
-        console.log('Output parziale scritto in:', OUTPUT_FILE);
-      }
-      process.exit(1);
-    }
-
-    if (data.outputForFile) {
-      const dir = path.dirname(OUTPUT_FILE);
-      if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-      fs.writeFileSync(OUTPUT_FILE, data.outputForFile, 'utf8');
-      console.log('Output scritto in:', OUTPUT_FILE);
-    }
-
-    console.log('Risposta:', data.success ? 'OK' : 'Errore');
-    if (data.error) console.error(data.error);
-    process.exit(data.success ? 0 : 1);
-  } catch (err) {
-    console.error('Errore di connessione:', err.message);
-    console.error(
-      "Assicurati che l'app sia in esecuzione (npm run dev) e che BASE_URL sia corretto."
-    );
-    process.exit(1);
-  }
+async function postAgentChat(message, headers = {}) {
+  const url = `${BASE_URL.replace(/\/$/, '')}/api/ai/agent-chat`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(AUTH_COOKIE ? { Cookie: AUTH_COOKIE } : {}),
+      ...headers,
+    },
+    body: JSON.stringify({ message }),
+  });
+  const data = await res.json().catch(() => ({}));
+  return { ok: res.ok, status: res.status, data };
 }
 
-main();
+async function main() {
+  console.log('Test Anne – Creazione spedizione via /api/ai/agent-chat');
+  console.log('Base URL:', BASE_URL);
+  if (!AUTH_COOKIE) {
+    console.warn('AUTH_COOKIE non impostato: le richieste potrebbero restituire 401.');
+  }
+  console.log('');
+
+  const lines = [];
+
+  for (let i = 0; i < PROMPTS.length; i++) {
+    const msg = PROMPTS[i];
+    console.log(`Round ${i + 1}:`, msg);
+    const { ok, status, data } = await postAgentChat(msg);
+    const reply = data?.message ?? data?.error ?? JSON.stringify(data);
+    lines.push(`--- Round ${i + 1}: ${msg}`);
+    lines.push(`HTTP ${status} ${ok ? 'OK' : 'ERR'}`);
+    lines.push(reply);
+    lines.push('');
+    if (!ok) {
+      console.error('Errore HTTP', status, data?.error || '');
+      break;
+    }
+  }
+
+  const out = lines.join('\n');
+  const dir = path.dirname(OUTPUT_FILE);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(OUTPUT_FILE, out, 'utf8');
+  console.log('Output scritto in:', OUTPUT_FILE);
+  process.exit(0);
+}
+
+main().catch((err) => {
+  console.error('Errore:', err.message);
+  process.exit(1);
+});

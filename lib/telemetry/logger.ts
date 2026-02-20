@@ -272,7 +272,41 @@ export interface SupervisorRouterTelemetry {
 }
 
 /**
- * Log: Supervisor Router Complete (EVENTO FINALE UNIFICATO)
+ * Telemetria flusso Anne (Supervisor + runFlow).
+ * Usato da agent-chat e opzionalmente da WhatsApp.
+ */
+export interface AnneFlowTelemetry {
+  flowId: string;
+  specificFlowId?: string;
+  duration_ms: number;
+  pricing_options_count?: number;
+}
+
+/**
+ * Log: Anne Flow Complete (nuovo flusso unico: supervisorRoute + runFlow)
+ *
+ * Emesso 1 volta per richiesta dopo runFlow.
+ * ⚠️ NO PII: userId è hashato
+ */
+export function logAnneFlowComplete(
+  traceId: string,
+  userId: string,
+  telemetry: AnneFlowTelemetry
+): void {
+  logStructured('info', {
+    event: 'anneFlowComplete',
+    trace_id: traceId,
+    timestamp: new Date().toISOString(),
+    user_id_hash: hashUserId(userId),
+    flow_id: telemetry.flowId,
+    specific_flow_id: telemetry.specificFlowId ?? null,
+    duration_ms: telemetry.duration_ms,
+    pricing_options_count: telemetry.pricing_options_count ?? 0,
+  });
+}
+
+/**
+ * Log: Supervisor Router Complete (DEPRECATO – non più emesso; sostituito da anneFlowComplete)
  *
  * Emesso SEMPRE 1 volta per richiesta, anche in caso di errore.
  * Contiene tutti i campi per tracciare il flusso decisionale.

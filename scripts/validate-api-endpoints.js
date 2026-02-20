@@ -63,7 +63,7 @@ const endpoints = [
   },
   {
     method: 'POST',
-    path: '/api/anne/chat',
+    path: '/api/ai/agent-chat',
     requiresAuth: true,
     expectedStatuses: [200, 401],
     description: 'AI agent chat (Anne)',

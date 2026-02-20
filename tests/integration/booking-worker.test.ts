@@ -15,7 +15,6 @@ import {
   BookingResult,
   PreflightResult,
 } from '@/lib/agent/workers/booking';
-import { decideNextStep, DecisionInput } from '@/lib/agent/orchestrator/supervisor';
 import { AgentState } from '@/lib/agent/orchestrator/state';
 import { ShipmentDraft } from '@/lib/address/shipment-draft';
 import { PricingResult } from '@/lib/ai/pricing-engine';
@@ -186,82 +185,6 @@ describe('containsBookingConfirmation', () => {
   });
 });
 
-// ==================== SUPERVISOR DECISION TESTS ====================
-
-describe('Supervisor Decision with Booking', () => {
-  it('should route to booking_worker when confirmation + preflight passed', () => {
-    const input: DecisionInput = {
-      isPricingIntent: true,
-      hasPricingOptions: true,
-      hasClarificationRequest: false,
-      hasEnoughData: true,
-      hasBookingConfirmation: true,
-      preflightPassed: true,
-    };
-
-    const decision = decideNextStep(input);
-    expect(decision).toBe('booking_worker');
-  });
-
-  it('should NOT route to booking_worker when no confirmation', () => {
-    const input: DecisionInput = {
-      isPricingIntent: true,
-      hasPricingOptions: true,
-      hasClarificationRequest: false,
-      hasEnoughData: true,
-      hasBookingConfirmation: false,
-      preflightPassed: true,
-    };
-
-    const decision = decideNextStep(input);
-    expect(decision).toBe('END'); // Aspetta conferma
-  });
-
-  it('should NOT route to booking_worker when preflight failed', () => {
-    const input: DecisionInput = {
-      isPricingIntent: true,
-      hasPricingOptions: true,
-      hasClarificationRequest: false,
-      hasEnoughData: true,
-      hasBookingConfirmation: true,
-      preflightPassed: false,
-    };
-
-    const decision = decideNextStep(input);
-    expect(decision).toBe('END'); // Mancano dati
-  });
-
-  it('should return END when booking already completed', () => {
-    const input: DecisionInput = {
-      isPricingIntent: true,
-      hasPricingOptions: true,
-      hasClarificationRequest: false,
-      hasEnoughData: true,
-      hasBookingConfirmation: true,
-      preflightPassed: true,
-      hasBookingResult: true,
-    };
-
-    const decision = decideNextStep(input);
-    expect(decision).toBe('END');
-  });
-
-  it('should prioritize booking_result over booking_confirmation', () => {
-    const input: DecisionInput = {
-      isPricingIntent: true,
-      hasPricingOptions: true,
-      hasClarificationRequest: false,
-      hasEnoughData: true,
-      hasBookingConfirmation: true,
-      preflightPassed: true,
-      hasBookingResult: true, // Già prenotato
-    };
-
-    const decision = decideNextStep(input);
-    expect(decision).toBe('END'); // Non riprenotare
-  });
-});
-
 // ==================== BOOKING WORKER TESTS ====================
 
 describe('bookingWorker', () => {
@@ -366,41 +289,14 @@ describe('BookingResult shape', () => {
 // ==================== INTEGRATION: NO BOOKING WITHOUT CONFIRMATION ====================
 
 describe('Integration: Booking only after explicit confirmation', () => {
-  it('should NOT call booking when user asks for price only', async () => {
-    // Simula scenario: utente chiede preventivo, non conferma
+  it('should NOT detect confirmation when user asks for price only', () => {
     const hasConfirmation = containsBookingConfirmation('Quanto costa spedire a Milano?');
-
     expect(hasConfirmation).toBe(false);
-
-    const decision = decideNextStep({
-      isPricingIntent: true,
-      hasPricingOptions: true,
-      hasClarificationRequest: false,
-      hasEnoughData: true,
-      hasBookingConfirmation: hasConfirmation,
-      preflightPassed: true,
-    });
-
-    expect(decision).not.toBe('booking_worker');
-    expect(decision).toBe('END'); // Aspetta conferma esplicita
   });
 
-  it('should call booking when user explicitly confirms', async () => {
-    // Simula scenario: utente conferma
+  it('should detect confirmation when user explicitly confirms', () => {
     const hasConfirmation = containsBookingConfirmation('Sì, procedi con la prenotazione');
-
     expect(hasConfirmation).toBe(true);
-
-    const decision = decideNextStep({
-      isPricingIntent: true,
-      hasPricingOptions: true,
-      hasClarificationRequest: false,
-      hasEnoughData: true,
-      hasBookingConfirmation: hasConfirmation,
-      preflightPassed: true,
-    });
-
-    expect(decision).toBe('booking_worker');
   });
 });
 

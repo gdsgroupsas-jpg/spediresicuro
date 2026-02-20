@@ -1,0 +1,30 @@
+TEST ANNE – FLUSSO CREAZIONE SPEDIZIONE (prompt generico)
+Data/ora: 2026-02-19T22:06:20.009Z
+Messaggio Round 1: "Voglio fare una spedizione"
+detectShipmentCreationIntent: true
+
+(Test completo: catena fino a tentativo di creazione spedizione)
+
+Round 1 – Messaggio: "Voglio fare una spedizione"
+============================================================
+missingFields: ["sender.name","sender.phone","recipient.fullName","recipient.addressLine1","recipient.city","recipient.postalCode","recipient.province","recipient.phone","parcel.weightKg"]
+clarification_request: Per procedere mi servono: **nome mittente, telefono mittente, nome destinatario, indirizzo destinatario (via e numero civico), città destinatario, CAP destinatario, provincia destinatario (2 lettere), telefono destinatario** e **peso del pacco in kg**.
+shipmentDraft:
+  sender: {}
+  recipient: {"country":"IT"}
+  parcel: {}
+
+Round 2 – Messaggio: "Mittente: Mario Rossi, telefono 3331234567. Destinatario: Lu..."
+============================================================
+missingFields: []
+clarification_request: Non sono riuscito a calcolare preventivi per questa destinazione. Verifica che il CAP e la provincia siano corretti.
+shipmentDraft:
+  sender: {"name":"Mario Rossi","phone":"3331234567"}
+  recipient: {"country":"IT","postalCode":"00100","province":"RM","city":"Roma","addressLine1":"V. Roma 1","fullName":"Luigi Verdi","phone":"3339876543"}
+  parcel: {"weightKg":2}
+
+============================================================
+Fine test completo
+
+============================================================
+Fine test
