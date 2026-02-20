@@ -1,0 +1,5 @@
+Traceback (most recent call last):
+  File "tests/fixtures/test_channel_debug.py", line 6, in test_add_positive
+    assert add(2, 3) == 5
+AssertionError: assert '23' == 5
+ +  where '23' = add(2, 3)

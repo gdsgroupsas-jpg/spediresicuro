@@ -1,2 +1,84 @@
-[{{TIME}}] TEST: resilient_flag
-[{{TIME}}] PROMPT: Set MAGIC_FLAG to True in the correct file. It appears only in tests/fixtures/resilient_target.py. Use replace_text; if no replacements, treat as failure. Report the change.
+[21:46:17] TEST: resilient_flag
+[21:46:17] PROMPT: Set MAGIC_FLAG to True in the correct file. It appears only in tests/fixtures/resilient_target.py. Use replace_text; if no replacements, treat as failure. Report the change.
+[21:46:17] MODEL_INPUT: Set MAGIC_FLAG to True in the correct file. It appears only in tests/fixtures/resilient_target.py. Use replace_text; if no replacements, treat as failure. Report the change.
+[21:46:17] SYS: Models: task_planner=gpt-oss:20b-cloud planner=gpt-oss:20b-cloud tool=gpt-oss:20b-cloud final=gpt-oss:20b-cloud summary=gpt-oss:20b-cloud translator=gpt-oss:20b-cloud coder=gpt-oss:20b-cloud tool_analysis=gpt-oss:20b-cloud tool_argument=gpt-oss:20b-cloud
+[21:46:18] TRANSLATED_CLEAN: Set MAGIC_FLAG to True in the correct file. It appears only in tests/fixtures/resilient_target.py. Use replace_text; if no replacements, treat as failure. Report the change.
+[21:46:18] SYS: Task planner: generazione piano JSON...
+[21:46:21] TASK_PLAN: {"tasks":[{"step":1,"goal":"Read the file at tests/fixtures/resilient_target.py to inspect its contents."},{"step":2,"goal":"Replace the text 'MAGIC_FLAG = False' with 'MAGIC_FLAG = True' in tests/fixtures/resilient_target.py. Treat the operation as a failure if no replacements are made."},{"step":3,"goal":"Report that MAGIC_FLAG has been set to True in tests/fixtures/resilient_target.py."}]}
+[21:46:21] ATTEMPT: task_planner:global:1
+[21:46:21] SYS: Task planner: 3 task
+[21:46:21] SYS: Task 1/3: Read the file at tests/fixtures/resilient_target.py to inspect its contents.
+[21:46:21] SYS: Tool planner: generazione piano JSON...
+[21:46:23] PLAN: {"plan":[{"step":1,"tool":"read_file","goal":"Read the file at tests/fixtures/resilient_target.py to inspect its contents."}]}
+[21:46:23] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file","goal":"Read the file at tests/fixtures/resilient_target.py to inspect its contents."}]}
+[21:46:23] ATTEMPT: planner:global:1
+[21:46:23] SYS: Tool planner: 1 step
+[21:46:23] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Read the file at tests/fixtures/resilient_target.py to inspect its contents.", "args_template": {}, "workspace_files": [], "repo_index": {"files": []}}
+[21:46:24] ATTEMPT: tool_analysis:read_file:1
+[21:46:24] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Read the file at tests/fixtures/resilient_target.py to inspect its contents.", "path": "tests/fixtures/resilient_target.py", "tool_context": {}, "args_template": {}}
+[21:46:25] ATTEMPT: tool_argument:read_file:1
+[21:46:25] SYS: Tool-caller: prepara args per read_file
+[21:46:26] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/resilient_target.py"}, "required": ["path"], "example": {"tool": "read_file", "args": {"path": "path/to/file_or_dir"}}}
+[21:46:26] TOOL_CALLER_RAW: {"tool":"read_file","args":{"path":"tests/fixtures/resilient_target.py"}}
+[21:46:26] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/resilient_target.py\"}}"}]
+[21:46:26] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/resilient_target.py\"}}"}]
+[21:46:26] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/resilient_target.py\"}}"}]
+[21:46:26] ATTEMPT: tool:read_file:1
+[21:46:26] TOOL: Chiamata tool: read_file {"path": "tests/fixtures/resilient_target.py"}
+[21:46:26] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/resilient_target.py", "content": "MAGIC_FLAG = False\n"}
+[21:46:26] SYS: Generazione output finale (task)...
+[21:46:27] ATTEMPT: final:global:1
+[21:46:27] SYS: Task 2/3: Replace the text 'MAGIC_FLAG = False' with 'MAGIC_FLAG = True' in tests/fixtures/resilient_target.py. Treat the operation as a failure if no replacements are made.
+[21:46:27] SYS: Tool planner: generazione piano JSON...
+[21:46:31] PLAN: {"plan":[{"step":1,"tool":"replace_text","goal":"Replace the text 'MAGIC_FLAG = False' with 'MAGIC_FLAG = True' in tests/fixtures/resilient_target.py."}]}
+[21:46:31] PLAN_JSON: {"plan":[{"step":1,"tool":"replace_text","goal":"Replace the text 'MAGIC_FLAG = False' with 'MAGIC_FLAG = True' in tests/fixtures/resilient_target.py."}]}
+[21:46:31] ATTEMPT: planner:global:1
+[21:46:31] SYS: Tool planner: 1 step
+[21:46:31] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "goal": "Replace the text 'MAGIC_FLAG = False' with 'MAGIC_FLAG = True' in tests/fixtures/resilient_target.py.", "args_template": {}, "workspace_files": [], "repo_index": {"files": []}}
+[21:46:35] ATTEMPT: tool_analysis:replace_text:1
+[21:46:35] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "goal": "Replace the text 'MAGIC_FLAG = False' with 'MAGIC_FLAG = True' in tests/fixtures/resilient_target.py.", "path": "", "tool_context": {}, "args_template": {}}
+[21:46:36] ATTEMPT: tool_argument:replace_text:1
+[21:46:36] SYS: Coder: genera replacement (attempt 1)
+[21:46:37] CODER_RAW: MAGIC_FLAG = True
+[21:46:37] ATTEMPT: coder:replace_text:1
+[21:46:37] SYS: Tool-caller: prepara args per replace_text
+[21:46:39] TOOL_CALLER_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "args": {"path": "tests/fixtures/resilient_target.py", "old": "MAGIC_FLAG = False", "new": "MAGIC_FLAG = True"}, "required": ["path", "old", "new"], "example": {"tool": "replace_text", "args": {"path": "path/to/file_or_dir", "old": "...", "new": "..."}}}
+[21:46:39] TOOL_CALLER_RAW: {"tool":"replace_text","args":{"path":"tests/fixtures/resilient_target.py","old":"MAGIC_FLAG = False","new":"MAGIC_FLAG = True"}}
+[21:46:39] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/resilient_target.py\",\"old\":\"MAGIC_FLAG = False\",\"new\":\"MAGIC_FLAG = True\"}}"}]
+[21:46:39] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/resilient_target.py\",\"old\":\"MAGIC_FLAG = False\",\"new\":\"MAGIC_FLAG = True\"}}"}]
+[21:46:39] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/resilient_target.py\",\"old\":\"MAGIC_FLAG = False\",\"new\":\"MAGIC_FLAG = True\"}}"}]
+[21:46:39] ATTEMPT: tool:replace_text:1
+[21:46:39] TOOL: Chiamata tool: replace_text {"path": "tests/fixtures/resilient_target.py", "old": "MAGIC_FLAG = False", "new": "MAGIC_FLAG = True"}
+[21:46:39] REQUEST_APPROVAL: {"name": "replace_text", "args": {"path": "tests/fixtures/resilient_target.py", "old": "MAGIC_FLAG = False", "new": "MAGIC_FLAG = True"}}
+[21:46:39] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/resilient_target.py", "replacements": 1}
+[21:46:39] SYS: Generazione output finale (task)...
+[21:46:41] ATTEMPT: final:global:1
+[21:46:41] SYS: Task 3/3: Report that MAGIC_FLAG has been set to True in tests/fixtures/resilient_target.py.
+[21:46:41] SYS: Tool planner: generazione piano JSON...
+[21:46:44] PLAN: {"plan":[{"step":1,"tool":"python_exec","goal":"Report that MAGIC_FLAG has been set to True in tests/fixtures/resilient_target.py"}]}
+[21:46:44] PLAN_JSON: {"plan":[{"step":1,"tool":"python_exec","goal":"Report that MAGIC_FLAG has been set to True in tests/fixtures/resilient_target.py"}]}
+[21:46:44] ATTEMPT: planner:global:1
+[21:46:44] SYS: Tool planner: 1 step
+[21:46:44] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "python_exec", "description": "Execute Python code (requires approval). A path or paths array is required as execution context. If multiple files are needed, use paths array.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "Single file path (for backward compatibility)"}, "paths": {"type": "array", "items": {"type": "string"}, "description": "Array of file paths to load as modules"}, "code": {"type": "string"}, "timeout_sec": {"type": "integer"}}, "required": ["code"]}}, "goal": "Report that MAGIC_FLAG has been set to True in tests/fixtures/resilient_target.py", "args_template": {}, "workspace_files": [], "repo_index": {"files": []}}
+[21:46:47] ATTEMPT: tool_analysis:python_exec:1
+[21:46:47] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "python_exec", "description": "Execute Python code (requires approval). A path or paths array is required as execution context. If multiple files are needed, use paths array.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "Single file path (for backward compatibility)"}, "paths": {"type": "array", "items": {"type": "string"}, "description": "Array of file paths to load as modules"}, "code": {"type": "string"}, "timeout_sec": {"type": "integer"}}, "required": ["code"]}}, "goal": "Report that MAGIC_FLAG has been set to True in tests/fixtures/resilient_target.py", "path": "tests/fixtures/resilient_target.py", "tool_context": {}, "args_template": {}}
+[21:46:50] ATTEMPT: tool_argument:python_exec:1
+[21:46:50] SYS: Tool-caller: prepara args per python_exec
+[21:46:53] TOOL_CALLER_PROMPT: {"tool": {"name": "python_exec", "description": "Execute Python code (requires approval). A path or paths array is required as execution context. If multiple files are needed, use paths array.", "parameters": {"type": "object", "properties": {"path": {"type": "string", "description": "Single file path (for backward compatibility)"}, "paths": {"type": "array", "items": {"type": "string"}, "description": "Array of file paths to load as modules"}, "code": {"type": "string"}, "timeout_sec": {"type": "integer"}}, "required": ["code"]}}, "args": {"path": "tests/fixtures/resilient_target.py", "code": "assert MAGIC_FLAG is True"}, "required": ["code"], "example": {"tool": "python_exec", "args": {"code": "..."}}}
+[21:46:53] TOOL_CALLER_RAW: {"tool":"python_exec","args":{"path":"tests/fixtures/resilient_target.py","code":"assert MAGIC_FLAG is True"}}
+[21:46:53] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"python_exec\",\"args\":{\"path\":\"tests/fixtures/resilient_target.py\",\"code\":\"assert MAGIC_FLAG is True\"}}"}]
+[21:46:53] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"python_exec\",\"args\":{\"path\":\"tests/fixtures/resilient_target.py\",\"code\":\"assert MAGIC_FLAG is True\"}}"}]
+[21:46:53] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"python_exec\",\"args\":{\"path\":\"tests/fixtures/resilient_target.py\",\"code\":\"assert MAGIC_FLAG is True\"}}"}]
+[21:46:53] ATTEMPT: tool:python_exec:1
+[21:46:53] TOOL: Chiamata tool: python_exec {"path": "tests/fixtures/resilient_target.py", "code": "assert MAGIC_FLAG is True"}
+[21:46:53] REQUEST_APPROVAL: {"name": "python_exec", "args": {"path": "tests/fixtures/resilient_target.py", "code": "assert MAGIC_FLAG is True"}}
+[21:46:53] TOOL_RESULT: {"ok": true, "returncode": 0, "stdout": "", "stderr": ""}
+[21:46:53] SYS: Generazione output finale (task)...
+[21:46:55] ATTEMPT: final:global:1
+[21:46:55] SYS: Generazione riepilogo finale...
+[21:46:55] SYS: Summary: un solo passaggio.
+[21:46:59] ATTEMPT: summary:global:1
+[21:46:59] MODEL_OUTPUT: Il file **tests/fixtures/resilient_target.py** è stato aggiornato: la linea `MAGIC_FLAG = False` è stata sostituita con `MAGIC_FLAG = True`. Una sostituzione è stata registrata, confermando la modifica.
+[21:46:59] ATTEMPTS: planner=1 toolcaller={'read_file': 1, 'replace_text': 1, 'python_exec': 1} final=1
+[21:46:59] RESULT: PASS
+

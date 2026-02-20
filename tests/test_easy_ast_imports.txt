@@ -1,0 +1,53 @@
+[02:50:24] TEST: easy_ast_imports
+[02:50:24] PROMPT: Use python_ast_imports on path tests/fixtures/easy_imports_sample.py. Report the imports found.
+[02:50:24] MODEL_INPUT: Use python_ast_imports on path tests/fixtures/easy_imports_sample.py. Report the imports found.
+[02:50:24] SYS: Models: task_planner=gpt-oss:20b-cloud planner=gpt-oss:20b-cloud tool=gpt-oss:20b-cloud final=gpt-oss:20b-cloud summary=gpt-oss:20b-cloud translator=gpt-oss:20b-cloud coder=gpt-oss:20b-cloud debugger=gpt-oss:20b-cloud tool_analysis=gpt-oss:20b-cloud tool_argument=gpt-oss:20b-cloud
+[02:50:24] SYS: Translator: traduzione in inglese...
+[02:50:27] TOKEN_USAGE: {"client": "translator", "input_tokens": 299, "output_tokens": 51}
+[02:50:27] TRANSLATED_CLEAN: Use python_ast_imports on path tests/fixtures/easy_imports_sample.py. Report the imports found.
+[02:50:27] ATTEMPT: translator:global:1
+[02:50:27] SYS: Request Manager: classificazione richiesta...
+[02:50:31] TOKEN_USAGE: {"client": "request_manager", "input_tokens": 1250, "output_tokens": 118}
+[02:50:31] REQUEST_MANAGER_RAW: {"channel":"tool","reason":"User requests to use the tool python_ast_imports"}
+[02:50:31] ATTEMPT: request_manager:global:1
+[02:50:31] SYS: Request Manager: tool
+[02:50:31] SYS: Task planner: generazione piano JSON...
+[02:50:38] TOKEN_USAGE: {"client": "task_planner", "input_tokens": 326, "output_tokens": 465}
+[02:50:38] TASK_PLAN: {"tasks":[{"step":1,"goal":"Use python_ast_imports on path tests/fixtures/easy_imports_sample.py. Report the imports found."}]}
+[02:50:38] ATTEMPT: task_planner:global:1
+[02:50:38] SYS: Esecuzione 1 task...
+[02:50:38] SYS: Task 1/1: Use python_ast_imports on path tests/fixtures/easy_imports_sample.py. Report the imports found.
+[02:50:38] SYS: Tool planner: generazione piano JSON...
+[02:50:42] TOKEN_USAGE: {"client": "planner", "input_tokens": 1174, "output_tokens": 158}
+[02:50:42] PLAN: {"plan":[{"step":1,"tool":"python_ast_imports","goal":"tests/fixtures/easy_imports_sample.py"}]}
+[02:50:42] PLAN_JSON: {"plan":[{"step":1,"tool":"python_ast_imports","goal":"tests/fixtures/easy_imports_sample.py"}]}
+[02:50:42] ATTEMPT: planner:global:1
+[02:50:42] SYS: Tool planner: 1 step
+[02:50:42] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "python_ast_imports", "description": "List imports from a Python file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "tests/fixtures/easy_imports_sample.py", "args_template": {}, "workspace_files": ["tests/fixtures/easy_imports_sample.py"], "repo_index": {"files": ["tests/fixtures/easy_imports_sample.py"], "py_symbols": [{"path": "tests/fixtures/easy_imports_sample.py", "classes": [], "functions": ["use_imports"], "globals": []}]}}
+[02:50:46] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 322, "output_tokens": 108}
+[02:50:46] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "python_ast_imports", "description": "List imports from a Python file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "tests/fixtures/easy_imports_sample.py", "path": "tests/fixtures/easy_imports_sample.py", "tool_context": {}, "args_template": {}}
+[02:50:50] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 648, "output_tokens": 118}
+[02:50:50] ATTEMPT: tool_argument:python_ast_imports:1
+[02:50:50] SYS: Tool-caller: prepara args per python_ast_imports
+[02:50:55] TOKEN_USAGE: {"client": "tool", "input_tokens": 348, "output_tokens": 311}
+[02:50:55] TOOL_CALLER_PROMPT: {"tool": {"name": "python_ast_imports", "description": "List imports from a Python file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/easy_imports_sample.py"}, "required": ["path"], "example": {"tool": "python_ast_imports", "args": {"path": "path/to/file_or_dir"}}}
+[02:50:55] TOOL_CALLER_RAW: {"tool":"python_ast_imports","args":{"path":"tests/fixtures/easy_imports_sample.py"}}
+[02:50:55] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"python_ast_imports\",\"args\":{\"path\":\"tests/fixtures/easy_imports_sample.py\"}}"}, {"type": "token_usage", "input_tokens": 348, "output_tokens": 311}]
+[02:50:55] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"python_ast_imports\",\"args\":{\"path\":\"tests/fixtures/easy_imports_sample.py\"}}"}, {"type": "token_usage", "input_tokens": 348, "output_tokens": 311}]
+[02:50:55] ATTEMPT: tool:python_ast_imports:1
+[02:50:55] TOOL: Chiamata tool: python_ast_imports {"path": "tests/fixtures/easy_imports_sample.py"}
+[02:50:55] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/easy_imports_sample.py", "imports": ["os", "pathlib"]}
+[02:50:55] SYS: Generazione output finale (task)...
+[02:51:00] TOKEN_USAGE: {"client": "final", "input_tokens": 307, "output_tokens": 209}
+[02:51:00] ATTEMPT: final:global:1
+[02:51:00] SYS: Generazione riepilogo finale...
+[02:51:00] SYS: Summary: un solo passaggio.
+[02:51:03] TOKEN_USAGE: {"client": "summary", "input_tokens": 353, "output_tokens": 93}
+[02:51:03] SUMMARY_RESULT: **Summary**  
+The `python_ast_imports` tool was run on `tests/fixtures/easy_imports_sample.py`. It identified the imports `os` and `pathlib`. No changes were applied.
+[02:51:08] ATTEMPT: summary:global:1
+[02:51:08] MODEL_OUTPUT: **Sommario**  
+Lo strumento `python_ast_imports` è stato eseguito su `tests/fixtures/easy_imports_sample.py`. Ha individuato gli import `os` e `pathlib`. Nessuna modifica è stata applicata.
+[02:51:08] ATTEMPTS: planner=1 toolcaller={'python_ast_imports': 1} final=1
+[02:51:08] RESULT: PASS
+

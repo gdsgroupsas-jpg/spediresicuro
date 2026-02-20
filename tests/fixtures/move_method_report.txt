@@ -1,0 +1,4 @@
+Method Move Report
+==================
+- Method 'extract_data' is moved from 'DataProcessor' to 'DataExtractor'.
+- Updated references were checked and confirmed.

@@ -1,0 +1,2 @@
+Fixture for easy_stat_path test.
+Size must be consistent for hash/stat checks.

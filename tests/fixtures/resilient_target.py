@@ -1,1 +1,1 @@
-MAGIC_FLAG = False
+MAGIC_FLAG = True

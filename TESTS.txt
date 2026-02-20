@@ -1,0 +1,19 @@
+
+FACILI
+
+
+
+
+
+
+
+
+
+
+DIFFICILI
+
+
+
+
+py tests/run_tests.py hard_config_three
+py tests/run_tests.py hard_docstring_update

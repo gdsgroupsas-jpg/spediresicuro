@@ -1,9 +1,14 @@
 def slugify(text: str) -> str:
     import re
+    # Lowercase
     text = text.lower()
-    text = re.sub(r'[^a-z0-9]+', '-', text)
-    return text.strip('-')
+    # Replace spaces, underscores, hyphens with hyphen
+    text = re.sub(r"[ _-]+", "-", text)
+    # Remove non-alphanumeric or hyphen
+    text = re.sub(r"[^a-z0-9-]", "", text)
+    # Trim hyphens
+    text = text.strip('-')
+    return text
 
-# Self‑check
-result = slugify("Hello, World!")
-print(f"Slugify('Hello, World!') -> {result}; equals 'hello-world': {result == 'hello-world'}")
+# Self-check
+assert slugify("Hello, World!") == "hello-world"

@@ -1,0 +1,11 @@
+{
+  "app": {
+    "name": "test",
+    "settings": {
+      "database": {
+        "host": "localhost",
+        "port": 3306
+      }
+    }
+  }
+}

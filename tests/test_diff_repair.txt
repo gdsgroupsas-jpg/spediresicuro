@@ -1,8 +1,123 @@
-[{{TIME}}] TEST: diff_repair
-[{{TIME}}] PROMPT: Apply a unified diff to tests/fixtures/diff_target.txt adding a new line between beta and gamma. The provided diff is outdated; regenerate the correct diff and apply via apply_patch_unified. Fail if you just apply the stale diff without fixing.
---- a/tests/fixtures/diff_target.txt
+[01:44:42] TEST: diff_repair
+[01:44:42] PROMPT: Apply a unified diff to tests/fixtures/diff_target.txt adding a new line between beta and gamma. The provided diff is outdated; regenerate the correct diff and apply via apply_patch_unified. Fail if you just apply the stale diff without fixing.
+[01:44:42] MODEL_INPUT: Apply a unified diff to tests/fixtures/diff_target.txt adding a new line between beta and gamma. The provided diff is outdated; regenerate the correct diff and apply via apply_patch_unified. Fail if you just apply the stale diff without fixing.
+[01:44:42] SYS: Models: task_planner=gpt-oss:20b-cloud planner=gpt-oss:20b-cloud tool=gpt-oss:20b-cloud final=gpt-oss:20b-cloud summary=gpt-oss:20b-cloud translator=gpt-oss:20b-cloud coder=gpt-oss:20b-cloud tool_analysis=gpt-oss:20b-cloud tool_argument=gpt-oss:20b-cloud
+[01:44:46] TRANSLATED_CLEAN: Apply a unified diff to tests/fixtures/diff_target.txt adding a new line between beta and gamma. The provided diff is outdated; regenerate the correct diff and apply via apply_patch_unified. Fail if you just apply the stale diff without fixing.
+[01:44:46] SYS: Task planner: generazione piano JSON...
+[01:44:52] TOKEN_USAGE: {"client": "task_planner", "input_tokens": 354, "output_tokens": 835}
+[01:44:52] TASK_PLAN: {"tasks":[{"step":1,"goal":"Read the contents of tests/fixtures/diff_target.txt"},{"step":2,"goal":"Generate a unified diff for tests/fixtures/diff_target.txt that adds an empty line between the lines containing 'beta' and 'gamma'"},{"step":3,"goal":"Apply the generated diff to tests/fixtures/diff_target.txt using apply_patch_unified"}]}
+[01:44:52] ATTEMPT: task_planner:global:1
+[01:44:52] SYS: Task planner: 3 task
+[01:44:52] SYS: Task 1/3: Read the contents of tests/fixtures/diff_target.txt
+[01:44:52] SYS: Tool planner: generazione piano JSON...
+[01:44:55] TOKEN_USAGE: {"client": "planner", "input_tokens": 452, "output_tokens": 136}
+[01:44:55] PLAN: {"plan":[{"step":1,"tool":"read_file","goal":"Read the contents of tests/fixtures/diff_target.txt"}]}
+[01:44:55] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file","goal":"Read the contents of tests/fixtures/diff_target.txt"}]}
+[01:44:55] ATTEMPT: planner:global:1
+[01:44:55] SYS: Tool planner: 1 step
+[01:44:55] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Read the contents of tests/fixtures/diff_target.txt", "args_template": {}, "workspace_files": ["tests/fixtures/diff_target.txt"], "repo_index": {"files": ["tests/fixtures/diff_target.txt"], "py_symbols": []}}
+[01:44:58] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 253, "output_tokens": 40}
+[01:44:58] ATTEMPT: tool_analysis:read_file:1
+[01:44:58] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Read the contents of tests/fixtures/diff_target.txt", "path": "tests/fixtures/diff_target.txt", "tool_context": {}, "args_template": {}}
+[01:45:01] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 595, "output_tokens": 81}
+[01:45:01] ATTEMPT: tool_argument:read_file:1
+[01:45:01] SYS: Tool-caller: prepara args per read_file
+[01:45:04] TOKEN_USAGE: {"client": "tool", "input_tokens": 340, "output_tokens": 190}
+[01:45:04] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/diff_target.txt"}, "required": ["path"], "example": {"tool": "read_file", "args": {"path": "path/to/file_or_dir"}}}
+[01:45:04] TOOL_CALLER_RAW: {"tool":"read_file","args":{"path":"tests/fixtures/diff_target.txt"}}
+[01:45:04] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/diff_target.txt\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 190}]
+[01:45:04] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/diff_target.txt\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 190}]
+[01:45:04] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/diff_target.txt\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 190}]
+[01:45:04] ATTEMPT: tool:read_file:1
+[01:45:04] TOOL: Chiamata tool: read_file {"path": "tests/fixtures/diff_target.txt"}
+[01:45:04] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/diff_target.txt", "content": "line alpha\nline beta\nline gamma\n"}
+[01:45:04] SYS: Generazione output finale (task)...
+[01:45:08] TOKEN_USAGE: {"client": "final", "input_tokens": 296, "output_tokens": 169}
+[01:45:08] ATTEMPT: final:global:1
+[01:45:08] SYS: Task 2/3: Generate a unified diff for tests/fixtures/diff_target.txt that adds an empty line between the lines containing 'beta' and 'gamma'
+[01:45:08] SYS: Tool planner: generazione piano JSON...
+[01:45:14] TOKEN_USAGE: {"client": "planner", "input_tokens": 469, "output_tokens": 804}
+[01:45:14] PLAN: {"plan":[{"step":1,"tool":"replace_text","goal":"replace_text tests/fixtures/diff_target.txt \"beta\\ngamma\" \"beta\\n\\ngamma\""},{"step":2,"tool":"git_diff","goal":"git_diff"}]}
+[01:45:14] PLAN_JSON: {"plan":[{"step":1,"tool":"replace_text","goal":"replace_text tests/fixtures/diff_target.txt \"beta\\ngamma\" \"beta\\n\\ngamma\""},{"step":2,"tool":"git_diff","goal":"git_diff"}]}
+[01:45:14] ATTEMPT: planner:global:1
+[01:45:14] SYS: Tool planner: 2 step
+[01:45:14] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "goal": "replace_text tests/fixtures/diff_target.txt \"beta\\ngamma\" \"beta\\n\\ngamma\"", "args_template": {}, "workspace_files": ["tests/fixtures/diff_target.txt"], "repo_index": {"files": ["tests/fixtures/diff_target.txt"], "py_symbols": []}}
+[01:45:17] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 310, "output_tokens": 104}
+[01:45:17] ATTEMPT: tool_analysis:replace_text:1
+[01:45:17] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "goal": "replace_text tests/fixtures/diff_target.txt \"beta\\ngamma\" \"beta\\n\\ngamma\"", "path": "tests/fixtures/diff_target.txt", "tool_context": {}, "args_template": {}}
+[01:45:23] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 652, "output_tokens": 619}
+[01:45:23] ATTEMPT: tool_argument:replace_text:1
+[01:45:23] SYS: Coder: genera replacement (attempt 1)
+[01:45:28] TOKEN_USAGE: {"client": "coder", "input_tokens": 311, "output_tokens": 832}
+[01:45:28] CODER_RAW: line alpha
+line beta
+
+line gamma
+[01:45:28] ATTEMPT: coder:replace_text:1
+[01:45:28] SYS: Tool-caller: prepara args per replace_text
+[01:45:33] TOKEN_USAGE: {"client": "tool", "input_tokens": 422, "output_tokens": 441}
+[01:45:33] TOOL_CALLER_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "args": {"path": "tests/fixtures/diff_target.txt", "old": "beta\ngamma", "new": "beta\n\ngamma"}, "required": ["path", "old", "new"], "example": {"tool": "replace_text", "args": {"path": "path/to/file_or_dir", "old": "...", "new": "..."}}}
+[01:45:33] TOOL_CALLER_RAW: {"tool":"replace_text","args":{"path":"tests/fixtures/diff_target.txt","old":"beta\ngamma","new":"beta\n\ngamma"}}
+[01:45:33] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/diff_target.txt\",\"old\":\"beta\\ngamma\",\"new\":\"beta\\n\\ngamma\"}}"}, {"type": "token_usage", "input_tokens": 422, "output_tokens": 441}]
+[01:45:33] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/diff_target.txt\",\"old\":\"beta\\ngamma\",\"new\":\"beta\\n\\ngamma\"}}"}, {"type": "token_usage", "input_tokens": 422, "output_tokens": 441}]
+[01:45:33] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/diff_target.txt\",\"old\":\"beta\\ngamma\",\"new\":\"beta\\n\\ngamma\"}}"}, {"type": "token_usage", "input_tokens": 422, "output_tokens": 441}]
+[01:45:33] ATTEMPT: tool:replace_text:1
+[01:45:33] TOOL: Chiamata tool: replace_text {"path": "tests/fixtures/diff_target.txt", "old": "beta\ngamma", "new": "line alpha\nline beta\n\nline gamma"}
+[01:45:33] REQUEST_APPROVAL: {"name": "replace_text", "args": {"path": "tests/fixtures/diff_target.txt", "old": "beta\ngamma", "new": "line alpha\nline beta\n\nline gamma"}}
+[01:45:33] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/diff_target.txt", "replacements": 0}
+[01:45:33] ERROR: replace_text made 0 replacements
+[01:45:33] SYS: Task 3/3: Apply the generated diff to tests/fixtures/diff_target.txt using apply_patch_unified
+[01:45:33] SYS: Tool planner: generazione piano JSON...
+[01:45:37] TOKEN_USAGE: {"client": "planner", "input_tokens": 458, "output_tokens": 206}
+[01:45:37] PLAN: {"plan":[{"step":1,"tool":"apply_patch_unified","goal":"Apply the generated diff to tests/fixtures/diff_target.txt"}]}
+[01:45:37] PLAN_JSON: {"plan":[{"step":1,"tool":"apply_patch_unified","goal":"Apply the generated diff to tests/fixtures/diff_target.txt"}]}
+[01:45:37] ATTEMPT: planner:global:1
+[01:45:37] SYS: Tool planner: 1 step
+[01:45:37] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "apply_patch_unified", "description": "Apply a unified diff via git apply (requires approval)", "parameters": {"type": "object", "properties": {"diff": {"type": "string"}}, "required": ["diff"]}}, "goal": "Apply the generated diff to tests/fixtures/diff_target.txt", "args_template": {"diff": "__DIFF__"}, "workspace_files": ["tests/fixtures/diff_target.txt"], "repo_index": {"files": ["tests/fixtures/diff_target.txt"], "py_symbols": []}}
+[01:45:40] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 269, "output_tokens": 70}
+[01:45:40] ATTEMPT: tool_analysis:apply_patch_unified:1
+[01:45:40] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "apply_patch_unified", "description": "Apply a unified diff via git apply (requires approval)", "parameters": {"type": "object", "properties": {"diff": {"type": "string"}}, "required": ["diff"]}}, "goal": "Apply the generated diff to tests/fixtures/diff_target.txt", "path": "tests/fixtures/diff_target.txt", "tool_context": {}, "args_template": {"diff": "__DIFF__"}}
+[01:45:44] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 610, "output_tokens": 258}
+[01:45:44] ATTEMPT: tool_argument:apply_patch_unified:1
+[01:45:44] SYS: Coder: genera diff (attempt 1)
+[01:45:49] TOKEN_USAGE: {"client": "coder", "input_tokens": 436, "output_tokens": 434}
+[01:45:49] CODER_RAW: --- a/tests/fixtures/diff_target.txt
 +++ b/tests/fixtures/diff_target.txt
-@@ -1,2 +1,3 @@
- line alpha
-+line beta new
- line gamma
+@@ -1,3 +1,4 @@
+ line one
+ line two
++line two and a half
+ line three
+[01:45:49] ATTEMPT: coder:apply_patch_unified:1
+[01:45:49] SYS: Tool-caller: prepara args per apply_patch_unified
+[01:45:53] TOKEN_USAGE: {"client": "tool", "input_tokens": 350, "output_tokens": 267}
+[01:45:53] TOOL_CALLER_PROMPT: {"tool": {"name": "apply_patch_unified", "description": "Apply a unified diff via git apply (requires approval)", "parameters": {"type": "object", "properties": {"diff": {"type": "string"}}, "required": ["diff"]}}, "args": {"diff": "__DIFF__"}, "required": ["diff"], "example": {"tool": "apply_patch_unified", "args": {"diff": "..."}}, "diff_placeholder": "__DIFF__"}
+[01:45:53] TOOL_CALLER_RAW: {"tool":"apply_patch_unified","args":{"diff":"__DIFF__"}}
+[01:45:53] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"apply_patch_unified\",\"args\":{\"diff\":\"__DIFF__\"}}"}, {"type": "token_usage", "input_tokens": 350, "output_tokens": 267}]
+[01:45:53] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"apply_patch_unified\",\"args\":{\"diff\":\"__DIFF__\"}}"}, {"type": "token_usage", "input_tokens": 350, "output_tokens": 267}]
+[01:45:53] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"apply_patch_unified\",\"args\":{\"diff\":\"__DIFF__\"}}"}, {"type": "token_usage", "input_tokens": 350, "output_tokens": 267}]
+[01:45:53] ATTEMPT: tool:apply_patch_unified:1
+[01:45:53] TOOL: Chiamata tool: apply_patch_unified {"diff": "--- a/tests/fixtures/diff_target.txt\n+++ b/tests/fixtures/diff_target.txt\n@@ -1,3 +1,4 @@\n line one\n line two\n+line two and a half\n line three\n"}
+[01:45:53] REQUEST_APPROVAL: {"name": "apply_patch_unified", "args": {"diff": "--- a/tests/fixtures/diff_target.txt\n+++ b/tests/fixtures/diff_target.txt\n@@ -1,3 +1,4 @@\n line one\n line two\n+line two and a half\n line three\n"}}
+[01:45:53] TOOL_RESULT: {"ok": false, "returncode": 1, "stdout": "", "stderr": "error: patch failed: tests/fixtures/diff_target.txt:1\nerror: tests/fixtures/diff_target.txt: patch does not apply\n"}
+[01:45:53] SYS: Generazione output finale (task)...
+[01:45:56] TOKEN_USAGE: {"client": "final", "input_tokens": 444, "output_tokens": 209}
+[01:45:56] ATTEMPT: final:global:1
+[01:45:56] SYS: Generazione riepilogo finale...
+[01:45:56] SYS: Summary: payload oltre soglia, 2 chunk intermedi.
+[01:45:56] SYS: Summary intermedio 1/2.
+[01:46:00] SYS: Summary intermedio 2/2.
+[01:46:03] SYS: Merge summary finale.
+[01:46:10] ATTEMPT: summary:global:1
+[01:46:10] MODEL_OUTPUT: Il file `tests/fixtures/diff_target.txt` contiene:
+
+```
+line alpha
+line beta
+line gamma
+```
+
+È stato tentato di applicare un diff unificato per inserire una nuova riga tra *beta* e *gamma*, ma il diff fornito era obsoleto e non poteva essere applicato.
+[01:46:10] ATTEMPTS: planner=1 toolcaller={'read_file': 1, 'replace_text': 1, 'apply_patch_unified': 1} final=1
+[01:46:10] RESULT: PASS
+

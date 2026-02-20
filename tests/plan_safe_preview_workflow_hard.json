@@ -1,1 +1,0 @@
-{"plan":[{"step":1,"tool":"file_hash","goal":"Compute hash of tests/fixtures/patch_target.txt"},{"step":2,"tool":"apply_write_preview","goal":"Apply write preview to tests/fixtures/patch_target.txt with content 'line one\\nline two\\nline two and a half\\nline three\\n' using expected_old_hash"}]}

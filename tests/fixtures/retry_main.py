@@ -1,4 +1,4 @@
-RETRY_LIMIT = 3
+RETRY_LIMIT = 5
 
 def main():
     return RETRY_LIMIT

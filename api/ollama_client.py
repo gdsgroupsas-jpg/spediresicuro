@@ -1,10 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
 import time
 from typing import Any, Dict, Iterable, List, Optional
 
 import requests
+
+# Pausa (secondi) prima di ogni request; da env OLLAMA_REQUEST_DELAY (default 2.0). 0 = disattivato.
+REQUEST_DELAY_SEC = float(os.environ.get("OLLAMA_REQUEST_DELAY", "2"))
 
 
 class OllamaClient:
@@ -23,7 +27,10 @@ class OllamaClient:
         messages: List[Dict[str, Any]],
         tools: Optional[List[Dict[str, Any]]] = None,
         stream: bool = True,
+        options: Optional[Dict[str, Any]] = None,
     ) -> Iterable[Dict[str, Any]]:
+        if REQUEST_DELAY_SEC > 0:
+            time.sleep(REQUEST_DELAY_SEC)
         url = f"{self.host}/api/chat"
         payload: Dict[str, Any] = {
             "model": self.model,
@@ -32,6 +39,8 @@ class OllamaClient:
         }
         if tools:
             payload["tools"] = tools
+        if options:
+            payload["options"] = {**(payload.get("options") or {}), **options}
 
         max_retries = 3
         backoff_sec = 1.0
@@ -65,6 +74,15 @@ class OllamaClient:
             if not stream:
                 data = resp.json()
                 yield {"type": "token", "content": data.get("message", {}).get("content", "")}
+                # Conto token in entrata e uscita (Ollama: prompt_eval_count, eval_count)
+                prompt_count = data.get("prompt_eval_count")
+                eval_count = data.get("eval_count")
+                if prompt_count is not None or eval_count is not None:
+                    yield {
+                        "type": "token_usage",
+                        "input_tokens": prompt_count if prompt_count is not None else 0,
+                        "output_tokens": eval_count if eval_count is not None else 0,
+                    }
                 return
 
             for line in resp.iter_lines(decode_unicode=True):
@@ -81,6 +99,14 @@ class OllamaClient:
                     yield {"type": "tool_calls", "tool_calls": tool_calls}
 
                 if data.get("done"):
+                    prompt_count = data.get("prompt_eval_count")
+                    eval_count = data.get("eval_count")
+                    if prompt_count is not None or eval_count is not None:
+                        yield {
+                            "type": "token_usage",
+                            "input_tokens": prompt_count if prompt_count is not None else 0,
+                            "output_tokens": eval_count if eval_count is not None else 0,
+                        }
                     return
 
                 content = message.get("content")

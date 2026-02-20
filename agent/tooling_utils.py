@@ -1,6 +1,6 @@
 from __future__ import annotations
 import re
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 class ToolingUtilsMixin:
     def _extract_target_path(self, text: str) -> str:
@@ -75,20 +75,51 @@ class ToolingUtilsMixin:
         raw = match.group(1)
         return raw.encode("utf-8").decode("unicode_escape")
 
-    def _fallback_path_from_goal(self, goal: str, repo_index_light: Dict[str, Any]) -> str:
-        candidates = self._extract_paths(goal)
-        files = []
-        if isinstance(repo_index_light, dict):
-            raw = repo_index_light.get("files", [])
-            if isinstance(raw, list):
-                files = raw
-        norm_files = [str(f).replace("\\", "/") for f in files]
-        for cand in candidates:
-            cand_norm = str(cand).replace("\\", "/")
-            if cand_norm in norm_files:
-                return cand
-            prefix = cand_norm.rstrip("/") + "/"
-            for f in norm_files:
-                if f.startswith(prefix):
-                    return cand
-        return ""
+    def _get_format_instruction_for_path(self, path: str) -> str:
+        """Restituisce l'istruzione di formato automatica per le operazioni di scrittura, basata sull'estensione."""
+        path_lower = (path or "").lower()
+        if path_lower.endswith(".json"):
+            return "Output valid JSON only. Preserve or add only the keys requested in the goal. No plain key=value lines. Use double quotes for strings."
+        if path_lower.endswith(".env"):
+            return "(.env specialist applies: one KEY=VALUE per line, UPPERCASE keys, no commas.)"
+        if path_lower.endswith(".yaml") or path_lower.endswith(".yml"):
+            return "Output valid YAML. One key per line, correct indentation. No leading/trailing spaces on key names."
+        if path_lower.endswith(".ini"):
+            return "Output INI format: optional [section] headers, then key = value. One key per line."
+        if "config_like" in path_lower or ("config" in path_lower and path_lower.endswith(".txt")):
+            return "Output key-value config format (e.g. KEY = value or key = value). One key per line. Preserve style if file_content is provided."
+        return "Output the full file content that satisfies the goal. Preserve format of the file type."
+
+    def _build_coder_payload(
+        self,
+        goal: str,
+        path: str,
+        file_content: str,
+        *,
+        format_instruction: str = "",
+        error_hint: Optional[Dict[str, Any]] = None,
+        removal_hint: str = "",
+        constraints: Optional[Dict[str, Any]] = None,
+        intent: str = "",
+        instruction: str = "",
+        pattern_hint: str = "",
+        replacement_hint: str = "",
+        template: str = "",
+    ) -> Dict[str, Any]:
+        """Payload unificato per il coder: stesso ordine di chiavi per tutti i tool (apply_patch_unified, safe_write, replace_text, write_file)."""
+        payload: Dict[str, Any] = {
+            "goal": goal,
+            "path": path or "",
+            "file_content": file_content or "",
+            "format_instruction": format_instruction or "",
+            "error_hint": error_hint if error_hint else {},
+            "removal_hint": removal_hint or "",
+            "constraints": constraints if constraints else {},
+            "intent": intent or "",
+            "instruction": instruction or "",
+            "pattern_hint": pattern_hint or "",
+            "replacement_hint": replacement_hint or "",
+            "template": template or "",
+        }
+        return payload
+

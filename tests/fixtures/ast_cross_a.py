@@ -1,6 +1,5 @@
 class Foo:
-    def util(self):
-        return "ok"
+    pass
 
 class Placeholder:
     pass

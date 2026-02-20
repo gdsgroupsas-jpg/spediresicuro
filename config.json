@@ -1,14 +1,26 @@
 {
-  "base_dir": "C:/Users/delgi/OneDrive/Desktop/AGENTE ANYA",
-  "ollama_model": "gpt-oss:20b-cloud",
-  "ollama_host": "http://localhost:11434",
+  "features": {
+    "debug": true
+  },
+  "ollama_request_manager_model": "gpt-oss:20b-cloud",
+  "ollama_project_manager_model": "gpt-oss:20b-cloud",
+  "ollama_project_planner_model": "gpt-oss:20b-cloud",
+  "ollama_route_planner_model": "gpt-oss:20b-cloud",
+  "ollama_plan_enhancer_model": "gpt-oss:20b-cloud",
+  "ollama_function_planner_model": "gpt-oss:20b-cloud",
+  "ollama_discovery_model": "gpt-oss:20b-cloud",
+  "ollama_reasoner_model": "gpt-oss:20b-cloud",
+  "ollama_plan_resolver_model": "gpt-oss:20b-cloud",
+  "ollama_explainer_model": "gpt-oss:20b-cloud",
+  "ollama_explain_discovery_model": "gpt-oss:20b-cloud",
+  "ollama_explain_planner_model": "gpt-oss:20b-cloud",
   "ollama_planner_model": "gpt-oss:20b-cloud",
+  "ollama_task_planner_model": "gpt-oss:20b-cloud",
   "ollama_tool_model": "gpt-oss:20b-cloud",
   "ollama_final_model": "gpt-oss:20b-cloud",
+  "ollama_summary_model": "gpt-oss:20b-cloud",
   "ollama_translator_model": "gpt-oss:20b-cloud",
   "ollama_coder_model": "gpt-oss:20b-cloud",
-  "ollama_task_planner_model": "gpt-oss:20b-cloud",
-  "ollama_summary_model": "gpt-oss:20b-cloud",
-  "version": "v2",
-  "API_URL": "https://api.example.com/v2"
+  "ollama_debugger_model": "gpt-oss:20b-cloud",
+  "ollama_model": "gpt-oss:20b-cloud"
 }

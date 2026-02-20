@@ -1,0 +1,12 @@
+{
+  "config": {
+    "features": {
+      "debug": true,
+      "verbose": true
+    },
+    "server": {
+      "port": 8080,
+      "host": "localhost"
+    }
+  }
+}

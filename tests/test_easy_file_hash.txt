@@ -1,0 +1,5 @@
+[03:17:27] TEST: easy_file_hash
+[03:17:27] PROMPT: Use file_hash on path tests/fixtures/easy_hash_target.txt. Report the hash value.
+[03:17:27] MODEL_INPUT: Use file_hash on path tests/fixtures/easy_hash_target.txt. Report the hash value.
+[03:17:27] SYS: Models: task_planner=gpt-oss:20b-cloud planner=gpt-oss:20b-cloud tool=gpt-oss:20b-cloud final=gpt-oss:20b-cloud summary=gpt-oss:20b-cloud translator=gpt-oss:20b-cloud coder=gpt-oss:20b-cloud debugger=gpt-oss:20b-cloud tool_analysis=gpt-oss:20b-cloud tool_argument=gpt-oss:20b-cloud
+[03:17:27] SYS: Translator: traduzione in inglese...

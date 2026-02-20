@@ -75,7 +75,7 @@ class FileSystemTools:
             return {"ok": False, "error": err}
         results: List[Dict[str, Any]] = []
         try:
-            rx = re.compile(pattern)
+            rx = re.compile(re.escape(pattern))
             for root, _, files in os.walk(path):
                 for file in files:
                     full = os.path.join(root, file)

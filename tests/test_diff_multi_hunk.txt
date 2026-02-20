@@ -1,0 +1,84 @@
+[02:38:00] TEST: diff_multi_hunk
+[02:38:00] PROMPT: In tests/fixtures/diff_multi_target.txt add a new line after 'second' in Block A, after 'beta' in Block B, and after 'two' in Block C. Use apply_patch_unified with a single valid unified diff (multiple hunks). Report success.
+[02:38:00] MODEL_INPUT: In tests/fixtures/diff_multi_target.txt add a new line after 'second' in Block A, after 'beta' in Block B, and after 'two' in Block C. Use apply_patch_unified with a single valid unified diff (multiple hunks). Report success.
+[02:38:00] SYS: Models: task_planner=gpt-oss:20b-cloud planner=gpt-oss:20b-cloud tool=gpt-oss:20b-cloud final=gpt-oss:20b-cloud summary=gpt-oss:20b-cloud translator=gpt-oss:20b-cloud coder=gpt-oss:20b-cloud tool_analysis=gpt-oss:20b-cloud tool_argument=gpt-oss:20b-cloud
+[02:38:05] TRANSLATED_CLEAN: In tests/fixtures/diff_multi_target.txt add a new line after 'second' in Block A, after 'beta' in Block B, and after 'two' in Block C. Use apply_patch_unified with a single valid unified diff (multiple hunks). Report success.
+[02:38:05] SYS: Task planner: generazione piano JSON...
+[02:38:11] TOKEN_USAGE: {"client": "task_planner", "input_tokens": 361, "output_tokens": 865}
+[02:38:11] TASK_PLAN: {"tasks":[{"step":1,"goal":"Read file tests/fixtures/diff_multi_target.txt"},{"step":2,"goal":"apply_patch_unified with a single valid unified diff. The patch must contain multiple hunks to add a new line after 'second' in Block A, a new line after 'beta' in Block B, and a new line after 'two' in Block C. The patch content must be written verbatim as a unified diff showing the additions. Once applied, report success."}]}
+[02:38:11] ATTEMPT: task_planner:global:1
+[02:38:11] SYS: Task planner: 2 task
+[02:38:11] SYS: Task 1/2: Read file tests/fixtures/diff_multi_target.txt
+[02:38:11] SYS: Tool planner: generazione piano JSON...
+[02:38:14] TOKEN_USAGE: {"client": "planner", "input_tokens": 451, "output_tokens": 108}
+[02:38:14] PLAN: {"plan":[{"step":1,"tool":"read_file","goal":"Read file tests/fixtures/diff_multi_target.txt"}]}
+[02:38:14] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file","goal":"Read file tests/fixtures/diff_multi_target.txt"}]}
+[02:38:14] ATTEMPT: planner:global:1
+[02:38:14] SYS: Tool planner: 1 step
+[02:38:14] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Read file tests/fixtures/diff_multi_target.txt", "args_template": {}, "workspace_files": ["tests/fixtures/diff_multi_target.txt"], "repo_index": {"files": ["tests/fixtures/diff_multi_target.txt"], "py_symbols": []}}
+[02:38:18] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 254, "output_tokens": 91}
+[02:38:18] ATTEMPT: tool_analysis:read_file:1
+[02:38:18] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Read file tests/fixtures/diff_multi_target.txt", "path": "tests/fixtures/diff_multi_target.txt", "tool_context": {}, "args_template": {}}
+[02:38:21] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 595, "output_tokens": 106}
+[02:38:21] ATTEMPT: tool_argument:read_file:1
+[02:38:21] SYS: Tool-caller: prepara args per read_file
+[02:38:24] TOKEN_USAGE: {"client": "tool", "input_tokens": 341, "output_tokens": 173}
+[02:38:24] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/diff_multi_target.txt"}, "required": ["path"], "example": {"tool": "read_file", "args": {"path": "path/to/file_or_dir"}}}
+[02:38:24] TOOL_CALLER_RAW: {"tool":"read_file","args":{"path":"tests/fixtures/diff_multi_target.txt"}}
+[02:38:24] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/diff_multi_target.txt\"}}"}, {"type": "token_usage", "input_tokens": 341, "output_tokens": 173}]
+[02:38:24] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/diff_multi_target.txt\"}}"}, {"type": "token_usage", "input_tokens": 341, "output_tokens": 173}]
+[02:38:24] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/diff_multi_target.txt\"}}"}, {"type": "token_usage", "input_tokens": 341, "output_tokens": 173}]
+[02:38:24] ATTEMPT: tool:read_file:1
+[02:38:24] TOOL: Chiamata tool: read_file {"path": "tests/fixtures/diff_multi_target.txt"}
+[02:38:24] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/diff_multi_target.txt", "content": "# Block A\nfirst\nsecond\nthird\n\n# Block B\nalpha\nbeta\ngamma\n\n# Block C\none\ntwo\nthree\n"}
+[02:38:24] SYS: Generazione output finale (task)...
+[02:38:28] TOKEN_USAGE: {"client": "final", "input_tokens": 320, "output_tokens": 201}
+[02:38:28] ATTEMPT: final:global:1
+[02:38:28] SYS: Task 2/2: apply_patch_unified with a single valid unified diff. The patch must contain multiple hunks to add a new line after 'second' in Block A, a new line after 'beta' in Block B, and a new line after 'two' in Block C. The patch content must be written verbatim as a unified diff showing the additions. Once applied, report success.
+[02:38:28] SYS: Tool planner: generazione piano JSON...
+[02:38:36] TOKEN_USAGE: {"client": "planner", "input_tokens": 517, "output_tokens": 1092}
+[02:38:36] PLAN: {"plan":[{"step":1,"tool":"apply_patch_unified","goal":"Apply patch with unified diff adding lines after \"second\" in Block A, after \"beta\" in Block B, and after \"two\" in Block C. Patch:\n--- a/example.txt\n+++ b/example.txt\n@@\n second\n+Added after second\n@@\n beta\n+Added after beta\n@@\n two\n+Added after two"}]}
+[02:38:36] PLAN_JSON: {"plan":[{"step":1,"tool":"apply_patch_unified","goal":"Apply patch with unified diff adding lines after \"second\" in Block A, after \"beta\" in Block B, and after \"two\" in Block C. Patch:\n--- a/example.txt\n+++ b/example.txt\n@@\n second\n+Added after second\n@@\n beta\n+Added after beta\n@@\n two\n+Added after two"}]}
+[02:38:36] ATTEMPT: planner:global:1
+[02:38:36] SYS: Tool planner: 1 step
+[02:38:36] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "apply_patch_unified", "description": "Apply a unified diff via git apply (requires approval)", "parameters": {"type": "object", "properties": {"diff": {"type": "string"}}, "required": ["diff"]}}, "goal": "Apply patch with unified diff adding lines after \"second\" in Block A, after \"beta\" in Block B, and after \"two\" in Block C. Patch:\n--- a/example.txt\n+++ b/example.txt\n@@\n second\n+Added after second\n@@\n beta\n+Added after beta\n@@\n two\n+Added after two", "args_template": {"diff": "__DIFF__"}, "workspace_files": ["tests/fixtures/diff_multi_target.txt"], "repo_index": {"files": ["tests/fixtures/diff_multi_target.txt"], "py_symbols": []}}
+[02:38:39] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 333, "output_tokens": 73}
+[02:38:39] ATTEMPT: tool_analysis:apply_patch_unified:1
+[02:38:39] SYS: Scrittura: path da tool_analysis, contenuto da coder (no tool_argument)
+[02:38:39] SYS: Coder: genera diff (attempt 1)
+[02:38:48] TOKEN_USAGE: {"client": "coder", "input_tokens": 581, "output_tokens": 1220}
+[02:38:48] CODER_RAW: --- a/tests/fixtures/diff_multi_target.txt
++++ b/tests/fixtures/diff_multi_target.txt
+@@ -2,3 +2,4 @@
+ first
+ second
++Added after second
+ third
+@@ -7,3 +7,4 @@
+ alpha
+ beta
++Added after beta
+ gamma
+@@ -12,3 +12,4 @@
+ one
+ two
++Added after two
+ three
+[02:38:48] ATTEMPT: coder:apply_patch_unified:1
+[02:38:48] SYS: Scrittura: esecuzione diretta (no tool_caller)
+[02:38:48] TOOL: Chiamata tool: apply_patch_unified {"path": "tests/fixtures/diff_multi_target.txt", "diff": "diff --git a/tests/fixtures/diff_multi_target.txt b/tests/fixtures/diff_multi_target.txt\n--- a/tests/fixtures/diff_multi_target.txt\n+++ b/tests/fixtures/diff_multi_target.txt\n@@ -2,3 +2,4 @@\n first\n second\n+Added after second\n third\n@@ -7,3 +7,4 @@\n alpha\n beta\n+Added after beta\n gamma\n@@ -12,3 +12,4 @@\n one\n two\n+Added after two\n three\n"}
+[02:38:48] REQUEST_APPROVAL: {"name": "apply_patch_unified", "args": {"path": "tests/fixtures/diff_multi_target.txt", "diff": "diff --git a/tests/fixtures/diff_multi_target.txt b/tests/fixtures/diff_multi_target.txt\n--- a/tests/fixtures/diff_multi_target.txt\n+++ b/tests/fixtures/diff_multi_target.txt\n@@ -2,3 +2,4 @@\n first\n second\n+Added after second\n third\n@@ -7,3 +7,4 @@\n alpha\n beta\n+Added after beta\n gamma\n@@ -12,3 +12,4 @@\n one\n two\n+Added after two\n three\n"}}
+[02:38:48] TOOL_RESULT: {"ok": true, "returncode": 0, "stdout": "", "stderr": ""}
+[02:38:48] SYS: Generazione output finale (task)...
+[02:38:54] TOKEN_USAGE: {"client": "final", "input_tokens": 638, "output_tokens": 491}
+[02:38:54] ATTEMPT: final:global:1
+[02:38:54] SYS: Generazione riepilogo finale...
+[02:38:54] SYS: Summary: payload oltre soglia, 2 chunk intermedi.
+[02:38:54] SYS: Summary intermedio 1/2.
+[02:38:58] SYS: Summary intermedio 2/2.
+[02:39:01] SYS: Merge summary finale.
+[02:39:10] ATTEMPT: summary:global:1
+[02:39:10] MODEL_OUTPUT: Leggi `tests/fixtures/diff_multi_target.txt`. Hai applicato un singolo diff unificato che aggiungeva una riga dopo “second” nel Blocco A, dopo “beta” nel Blocco B e dopo “two” nel Blocco C. La patch è stata applicata con successo (ok: true, returncode: 0). ✅ Tutte le modifiche richieste completate.
+[02:39:10] ATTEMPTS: planner=1 toolcaller={'read_file': 1} final=1
+[02:39:10] RESULT: PASS
+

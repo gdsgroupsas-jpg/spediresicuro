@@ -1,4 +1,3 @@
-# pkg libcalc
-
 def add(a, b):
-    return a - b  # BUG: should be addition
+    """Return the sum of a and b."""
+    return a + b

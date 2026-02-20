@@ -1,0 +1,4 @@
+Traceback (most recent call last):
+  File "tests/fixtures/two_bugs_sample.py", line 6, in foo
+    return undefined_var
+NameError: name 'undefined_var' is not defined

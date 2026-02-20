@@ -1,2 +1,2 @@
-[15:27:31] SUMMARY: Test run summary
-[15:27:31] TEST_RESULT: new_function_slugify: PASS
+[16:12:57] SUMMARY: Test run summary
+[16:12:57] TEST_RESULT: hard_config_three: FAIL

@@ -1,0 +1,90 @@
+[02:44:08] TEST: easy_ast_outline
+[02:44:08] PROMPT: Use python_ast_outline on path tests/fixtures/easy_ast_sample.py. Report the classes and functions found.
+[02:44:08] MODEL_INPUT: Use python_ast_outline on path tests/fixtures/easy_ast_sample.py. Report the classes and functions found.
+[02:44:08] SYS: Models: task_planner=gpt-oss:20b-cloud planner=gpt-oss:20b-cloud tool=gpt-oss:20b-cloud final=gpt-oss:20b-cloud summary=gpt-oss:20b-cloud translator=gpt-oss:20b-cloud coder=gpt-oss:20b-cloud debugger=gpt-oss:20b-cloud tool_analysis=gpt-oss:20b-cloud tool_argument=gpt-oss:20b-cloud
+[02:44:08] SYS: Translator: traduzione in inglese...
+[02:44:12] TOKEN_USAGE: {"client": "translator", "input_tokens": 299, "output_tokens": 169}
+[02:44:12] TRANSLATED_CLEAN: Use python_ast_outline on path tests/fixtures/easy_ast_sample.py. Report the classes and functions found.
+[02:44:12] ATTEMPT: translator:global:1
+[02:44:12] SYS: Request Manager: classificazione richiesta...
+[02:44:15] TOKEN_USAGE: {"client": "request_manager", "input_tokens": 1250, "output_tokens": 72}
+[02:44:15] REQUEST_MANAGER_RAW: {"channel":"tool","reason":"User explicitly requested using the python_ast_outline tool"}
+[02:44:15] ATTEMPT: request_manager:global:1
+[02:44:15] SYS: Request Manager: tool
+[02:44:15] SYS: Task planner: generazione piano JSON...
+[02:44:21] TOKEN_USAGE: {"client": "task_planner", "input_tokens": 326, "output_tokens": 322}
+[02:44:21] TASK_PLAN: {"tasks":[{"step":1,"goal":"Run python_ast_outline on path tests/fixtures/easy_ast_sample.py"},{"step":2,"goal":"Print the report of classes and functions found"}]}
+[02:44:21] ATTEMPT: task_planner:global:1
+[02:44:21] SYS: Esecuzione 2 task...
+[02:44:21] SYS: Task 1/2: Run python_ast_outline on path tests/fixtures/easy_ast_sample.py
+[02:44:21] SYS: Tool planner: generazione piano JSON...
+[02:44:25] TOKEN_USAGE: {"client": "planner", "input_tokens": 1166, "output_tokens": 184}
+[02:44:25] PLAN: {"plan":[{"step":1,"tool":"python_ast_outline","goal":"Run python_ast_outline on path tests/fixtures/easy_ast_sample.py"}]}
+[02:44:25] PLAN_JSON: {"plan":[{"step":1,"tool":"python_ast_outline","goal":"Run python_ast_outline on path tests/fixtures/easy_ast_sample.py"}]}
+[02:44:25] ATTEMPT: planner:global:1
+[02:44:25] SYS: Tool planner: 1 step
+[02:44:25] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "python_ast_outline", "description": "Extract AST outline (functions/classes) from a Python file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Run python_ast_outline on path tests/fixtures/easy_ast_sample.py", "args_template": {}, "workspace_files": ["tests/fixtures/easy_ast_sample.py"], "repo_index": {"files": ["tests/fixtures/easy_ast_sample.py"], "py_symbols": [{"path": "tests/fixtures/easy_ast_sample.py", "classes": ["HelperClass"], "functions": ["method_a", "method_b", "standalone_func"], "globals": []}]}}
+[02:44:29] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 339, "output_tokens": 55}
+[02:44:29] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "python_ast_outline", "description": "Extract AST outline (functions/classes) from a Python file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Run python_ast_outline on path tests/fixtures/easy_ast_sample.py", "path": "tests/fixtures/easy_ast_sample.py", "tool_context": {}, "args_template": {}}
+[02:44:32] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 656, "output_tokens": 100}
+[02:44:32] ATTEMPT: tool_argument:python_ast_outline:1
+[02:44:32] SYS: Tool-caller: prepara args per python_ast_outline
+[02:44:35] TOKEN_USAGE: {"client": "tool", "input_tokens": 350, "output_tokens": 61}
+[02:44:35] TOOL_CALLER_PROMPT: {"tool": {"name": "python_ast_outline", "description": "Extract AST outline (functions/classes) from a Python file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/easy_ast_sample.py"}, "required": ["path"], "example": {"tool": "python_ast_outline", "args": {"path": "path/to/file_or_dir"}}}
+[02:44:35] TOOL_CALLER_RAW: {"tool":"python_ast_outline","args":{"path":"tests/fixtures/easy_ast_sample.py"}}
+[02:44:35] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"python_ast_outline\",\"args\":{\"path\":\"tests/fixtures/easy_ast_sample.py\"}}"}, {"type": "token_usage", "input_tokens": 350, "output_tokens": 61}]
+[02:44:35] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"python_ast_outline\",\"args\":{\"path\":\"tests/fixtures/easy_ast_sample.py\"}}"}, {"type": "token_usage", "input_tokens": 350, "output_tokens": 61}]
+[02:44:35] ATTEMPT: tool:python_ast_outline:1
+[02:44:35] TOOL: Chiamata tool: python_ast_outline {"path": "tests/fixtures/easy_ast_sample.py"}
+[02:44:35] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/easy_ast_sample.py", "items": [{"type": "ClassDef", "name": "HelperClass", "lineno": 3, "end_lineno": 8}, {"type": "FunctionDef", "name": "method_a", "lineno": 4, "end_lineno": 5, "args": ["self"]}, {"type": "FunctionDef", "name": "method_b", "lineno": 7, "end_lineno": 8, "args": ["self", "x"]}, {"type": "FunctionDef", "name": "standalone_func", "lineno": 10, "end_lineno": 11, "args": []}]}
+[02:44:35] SYS: Generazione output finale (task)...
+[02:44:41] TOKEN_USAGE: {"client": "final", "input_tokens": 430, "output_tokens": 301}
+[02:44:41] ATTEMPT: final:global:1
+[02:44:41] SYS: Task 2/2: Print the report of classes and functions found
+[02:44:41] SYS: Tool planner: generazione piano JSON...
+[02:44:53] TOKEN_USAGE: {"client": "planner", "input_tokens": 1160, "output_tokens": 1012}
+[02:44:53] PLAN: {"plan":[{"step":1,"tool":"python_ast_outline","goal":"Extract AST outline from the current repository"}]}
+[02:44:53] PLAN_JSON: {"plan":[{"step":1,"tool":"python_ast_outline","goal":"Extract AST outline from the current repository"}]}
+[02:44:53] ATTEMPT: planner:global:1
+[02:44:53] SYS: Tool planner: 1 step
+[02:44:53] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "python_ast_outline", "description": "Extract AST outline (functions/classes) from a Python file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Extract AST outline from the current repository", "args_template": {}, "workspace_files": ["tests/fixtures/easy_ast_sample.py"], "repo_index": {"files": ["tests/fixtures/easy_ast_sample.py"], "py_symbols": [{"path": "tests/fixtures/easy_ast_sample.py", "classes": ["HelperClass"], "functions": ["method_a", "method_b", "standalone_func"], "globals": []}]}}
+[02:44:57] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 332, "output_tokens": 47}
+[02:44:57] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "python_ast_outline", "description": "Extract AST outline (functions/classes) from a Python file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Extract AST outline from the current repository", "path": "tests/fixtures/easy_ast_sample.py", "tool_context": {}, "args_template": {}}
+[02:45:00] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 649, "output_tokens": 105}
+[02:45:00] ATTEMPT: tool_argument:python_ast_outline:1
+[02:45:00] SYS: Tool-caller: prepara args per python_ast_outline
+[02:45:04] TOKEN_USAGE: {"client": "tool", "input_tokens": 350, "output_tokens": 120}
+[02:45:04] TOOL_CALLER_PROMPT: {"tool": {"name": "python_ast_outline", "description": "Extract AST outline (functions/classes) from a Python file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/easy_ast_sample.py"}, "required": ["path"], "example": {"tool": "python_ast_outline", "args": {"path": "path/to/file_or_dir"}}}
+[02:45:04] TOOL_CALLER_RAW: {"tool":"python_ast_outline","args":{"path":"tests/fixtures/easy_ast_sample.py"}}
+[02:45:04] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"python_ast_outline\",\"args\":{\"path\":\"tests/fixtures/easy_ast_sample.py\"}}"}, {"type": "token_usage", "input_tokens": 350, "output_tokens": 120}]
+[02:45:04] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"python_ast_outline\",\"args\":{\"path\":\"tests/fixtures/easy_ast_sample.py\"}}"}, {"type": "token_usage", "input_tokens": 350, "output_tokens": 120}]
+[02:45:04] ATTEMPT: tool:python_ast_outline:1
+[02:45:04] TOOL: Chiamata tool: python_ast_outline {"path": "tests/fixtures/easy_ast_sample.py"}
+[02:45:04] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/easy_ast_sample.py", "items": [{"type": "ClassDef", "name": "HelperClass", "lineno": 3, "end_lineno": 8}, {"type": "FunctionDef", "name": "method_a", "lineno": 4, "end_lineno": 5, "args": ["self"]}, {"type": "FunctionDef", "name": "method_b", "lineno": 7, "end_lineno": 8, "args": ["self", "x"]}, {"type": "FunctionDef", "name": "standalone_func", "lineno": 10, "end_lineno": 11, "args": []}]}
+[02:45:04] SYS: Generazione output finale (task)...
+[02:45:12] TOKEN_USAGE: {"client": "final", "input_tokens": 627, "output_tokens": 570}
+[02:45:12] ATTEMPT: final:global:1
+[02:45:12] SYS: Generazione riepilogo finale...
+[02:45:12] SYS: Summary: payload oltre soglia, 2 chunk intermedi.
+[02:45:12] SYS: Summary intermedio 1/2.
+[02:45:17] TOKEN_USAGE: {"client": "summary", "input_tokens": 660, "output_tokens": 240}
+[02:45:17] SYS: Summary intermedio 2/2.
+[02:45:23] TOKEN_USAGE: {"client": "summary", "input_tokens": 962, "output_tokens": 234}
+[02:45:23] SYS: Merge summary finale.
+[02:45:27] TOKEN_USAGE: {"client": "summary", "input_tokens": 386, "output_tokens": 136}
+[02:45:27] SUMMARY_RESULT: - Ran `python_ast_outline` on `tests/fixtures/easy_ast_sample.py`.  
+- Found one class: `HelperClass` on lines 3–8.  
+- Inside the class there are two methods:  
+  - `method_a` on lines 4–5 (argument `self`).  
+  - `method_b` on lines 7–8 (arguments `self`, `x`).  
+- Found one top‑level function: `standalone_func` on lines 10–11 (no arguments).
+[02:45:34] ATTEMPT: summary:global:1
+[02:45:34] MODEL_OUTPUT: - Eseguito `python_ast_outline` su `tests/fixtures/easy_ast_sample.py`.  
+- Trovata una classe: `HelperClass` alle righe 3–8.  
+- All'interno della classe ci sono due metodi:  
+  - `method_a` alle righe 4–5 (argomento `self`).  
+  - `method_b` alle righe 7–8 (argomenti `self`, `x`).  
+- Trovata una funzione di livello superiore: `standalone_func` alle righe 10–11 (nessun argomento).
+[02:45:34] ATTEMPTS: planner=1 toolcaller={'python_ast_outline': 1} final=1
+[02:45:34] RESULT: PASS
+

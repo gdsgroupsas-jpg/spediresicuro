@@ -1,5 +1,1 @@
-{
-  "api_url": "https://old.example.com/api",
-  "version": 1,
-  "feature_x": false
-}
+{"API_URL": "https://api.example.com/v4", "version": 4, "feature_x": true}\n

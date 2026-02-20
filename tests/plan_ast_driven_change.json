@@ -1,1 +1,0 @@
-{"plan":[{"step":1,"tool":"git_status","goal":"Report that tests/fixtures/ast_sample.py was modified."}]}

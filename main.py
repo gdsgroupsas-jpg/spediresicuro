@@ -12,6 +12,9 @@ from urllib.parse import urlparse
 
 from PySide6 import QtCore, QtGui, QtWidgets
 
+# Default 2 sec tra una request e l'altra ai modelli (tutti i flussi).
+os.environ.setdefault("OLLAMA_REQUEST_DELAY", "2")
+
 from agent.core import Agent
 
 
@@ -159,8 +162,65 @@ class MainWindow(QtWidgets.QMainWindow):
             "TOOL_RESULT": QtGui.QColor("#6c3483"),
             "ERROR": QtGui.QColor("#922b21"),
             "MODEL": QtGui.QColor("#17202a"),
+            "TOKEN_USAGE": QtGui.QColor("#5b2c6f"),
+            "TRANSLATED_CLEAN": QtGui.QColor("#1a5276"),
+            "ATTEMPT": QtGui.QColor("#6c3483"),
+            "REQUEST_MANAGER_RAW": QtGui.QColor("#1f618d"),
+            "DEBUG_ENGINEERING_RAW": QtGui.QColor("#1f618d"),
+            "DISCOVERY_RAW": QtGui.QColor("#1f618d"),
+            "REASONER_RAW": QtGui.QColor("#1f618d"),
+            "TASK_PLAN": QtGui.QColor("#2874a6"),
+            "PLAN": QtGui.QColor("#2874a6"),
+            "PLAN_JSON": QtGui.QColor("#2874a6"),
+            "PROJECT_MANAGER_RAW": QtGui.QColor("#1f618d"),
+            "ROUTE_PLANNER_RAW": QtGui.QColor("#1f618d"),
+            "EXPLAINER_RAW": QtGui.QColor("#1f618d"),
+            "EXPLAIN_DISCOVERY_RAW": QtGui.QColor("#1f618d"),
+            "TOOL_ANALYSIS_PROMPT": QtGui.QColor("#3498db"),
+            "TOOL_ARGUMENT_PROMPT": QtGui.QColor("#3498db"),
+            "TOOL_CALLER_PROMPT": QtGui.QColor("#3498db"),
+            "TOOL_CALLER_RAW": QtGui.QColor("#3498db"),
+            "TOOL_CALLER_EVENTS": QtGui.QColor("#5d6d7e"),
+            "TOOL_CALLER_EVENTS_RETRY": QtGui.QColor("#5d6d7e"),
+            "CODER_RAW": QtGui.QColor("#2980b9"),
+            "REQUEST_APPROVAL": QtGui.QColor("#8e44ad"),
+            "SUMMARY_RESULT": QtGui.QColor("#1a5276"),
+            "TOKEN_LIMIT_PREVIEW": QtGui.QColor("#5b2c6f"),
         }
         return mapping.get(kind, QtGui.QColor("#17202a"))
+
+    def _format_log_text(self, text: str) -> str:
+        """Formatta JSON come lista a punti; altrimenti restituisce il testo originale."""
+        if not text or not isinstance(text, str):
+            return text or ""
+        s = text.strip()
+        if not s:
+            return text
+        try:
+            data = json.loads(s)
+        except json.JSONDecodeError:
+            return text
+
+        def _to_bullets(obj, indent: int = 0) -> str:
+            pad = "  " * indent
+            lines: list[str] = []
+            if isinstance(obj, dict):
+                for k, v in obj.items():
+                    if isinstance(v, (dict, list)):
+                        lines.append(f"{pad}• {k}:")
+                        lines.append(_to_bullets(v, indent + 1))
+                    else:
+                        lines.append(f"{pad}• {k}: {v}")
+            elif isinstance(obj, list):
+                for i, item in enumerate(obj):
+                    if isinstance(item, (dict, list)):
+                        lines.append(f"{pad}• [{i}]:")
+                        lines.append(_to_bullets(item, indent + 1))
+                    else:
+                        lines.append(f"{pad}• {item}")
+            return "\n".join(lines).rstrip()
+
+        return _to_bullets(data)
 
     def _append_text(self, text: str, color: QtGui.QColor) -> None:
         cursor = self._output.textCursor()
@@ -170,13 +230,15 @@ class MainWindow(QtWidgets.QMainWindow):
         cursor.insertText(text, fmt)
         self._output.setTextCursor(cursor)
         self._output.ensureCursorVisible()
+        QtWidgets.QApplication.processEvents(QtCore.QEventLoop.ProcessEventsFlag.ExcludeUserInputEvents)
 
     def _log_line(self, kind: str, text: str) -> None:
         if self._model_line_open:
             self._append_text("\n", QtGui.QColor("#17202a"))
             self._model_line_open = False
         timestamp = time.strftime("%H:%M:%S")
-        line = f"[{timestamp}] {kind}: {text}\n"
+        formatted = self._format_log_text(str(text)) if text else ""
+        line = f"[{timestamp}] {kind}: {formatted}\n"
         self._append_text(line, self._color_for_kind(kind))
 
     def _log_token(self, token: str) -> None:
@@ -228,11 +290,12 @@ class MainWindow(QtWidgets.QMainWindow):
             self._log_token(text)
         elif kind == "PLAN":
             self._plan_view.setPlainText(text)
+            self._log_line("PLAN", text)
         else:
             self._log_line(kind, text)
 
     def _on_request_approval(self, args_json: str) -> None:
-        self._log_line("SYS", f"Richiesta autorizzazione: {args_json}")
+        self._log_line("REQUEST_APPROVAL", args_json)
         self._maybe_show_diff(args_json)
         self._approve_write_btn.setVisible(True)
         self._deny_write_btn.setVisible(True)
@@ -346,7 +409,7 @@ class MainWindow(QtWidgets.QMainWindow):
     def _build_settings_menu(self) -> QtWidgets.QMenu:
         menu = QtWidgets.QMenu(self)
         container = QtWidgets.QWidget()
-        layout = QtWidgets.QVBoxLayout(container)
+        layout = QtWidgets.QGridLayout(container)
         layout.setContentsMargins(8, 8, 8, 8)
         layout.setSpacing(6)
 
@@ -369,6 +432,32 @@ class MainWindow(QtWidgets.QMainWindow):
         self._translator_model_combo = QtWidgets.QComboBox()
         coder_model_label = QtWidgets.QLabel("Coder Model:")
         self._coder_model_combo = QtWidgets.QComboBox()
+        debugger_model_label = QtWidgets.QLabel("Debugger Model:")
+        self._debugger_model_combo = QtWidgets.QComboBox()
+        request_manager_label = QtWidgets.QLabel("Request Manager Model:")
+        self._request_manager_model_combo = QtWidgets.QComboBox()
+        project_manager_label = QtWidgets.QLabel("Project Manager Model:")
+        self._project_manager_model_combo = QtWidgets.QComboBox()
+        project_planner_label = QtWidgets.QLabel("Project Planner Model:")
+        self._project_planner_model_combo = QtWidgets.QComboBox()
+        route_planner_label = QtWidgets.QLabel("Route Planner Model:")
+        self._route_planner_model_combo = QtWidgets.QComboBox()
+        plan_enhancer_label = QtWidgets.QLabel("Plan Enhancer Model:")
+        self._plan_enhancer_model_combo = QtWidgets.QComboBox()
+        function_planner_label = QtWidgets.QLabel("Function Planner Model:")
+        self._function_planner_model_combo = QtWidgets.QComboBox()
+        discovery_label = QtWidgets.QLabel("Discovery Model:")
+        self._discovery_model_combo = QtWidgets.QComboBox()
+        reasoner_label = QtWidgets.QLabel("Reasoner Model:")
+        self._reasoner_model_combo = QtWidgets.QComboBox()
+        plan_resolver_label = QtWidgets.QLabel("Plan Resolver Model:")
+        self._plan_resolver_model_combo = QtWidgets.QComboBox()
+        explainer_label = QtWidgets.QLabel("Explainer Model:")
+        self._explainer_model_combo = QtWidgets.QComboBox()
+        explain_discovery_label = QtWidgets.QLabel("Explain Discovery Model:")
+        self._explain_discovery_model_combo = QtWidgets.QComboBox()
+        explain_planner_label = QtWidgets.QLabel("Explain Planner Model:")
+        self._explain_planner_model_combo = QtWidgets.QComboBox()
         refresh_btn = QtWidgets.QPushButton("Aggiorna Modelli")
         apply_planner_model_btn = QtWidgets.QPushButton("Usa Planner Model")
         apply_task_planner_model_btn = QtWidgets.QPushButton("Usa Task Planner Model")
@@ -377,33 +466,99 @@ class MainWindow(QtWidgets.QMainWindow):
         apply_summary_model_btn = QtWidgets.QPushButton("Usa Summary Model")
         apply_translator_model_btn = QtWidgets.QPushButton("Usa Translator Model")
         apply_coder_model_btn = QtWidgets.QPushButton("Usa Coder Model")
+        apply_debugger_model_btn = QtWidgets.QPushButton("Usa Debugger Model")
+        apply_request_manager_btn = QtWidgets.QPushButton("Usa Request Manager Model")
+        apply_project_manager_btn = QtWidgets.QPushButton("Usa Project Manager Model")
+        apply_project_planner_btn = QtWidgets.QPushButton("Usa Project Planner Model")
+        apply_route_planner_btn = QtWidgets.QPushButton("Usa Route Planner Model")
+        apply_plan_enhancer_btn = QtWidgets.QPushButton("Usa Plan Enhancer Model")
+        apply_function_planner_btn = QtWidgets.QPushButton("Usa Function Planner Model")
+        apply_discovery_btn = QtWidgets.QPushButton("Usa Discovery Model")
+        apply_reasoner_btn = QtWidgets.QPushButton("Usa Reasoner Model")
+        apply_plan_resolver_btn = QtWidgets.QPushButton("Usa Plan Resolver Model")
+        apply_explainer_btn = QtWidgets.QPushButton("Usa Explainer Model")
+        apply_explain_discovery_btn = QtWidgets.QPushButton("Usa Explain Discovery Model")
+        apply_explain_planner_btn = QtWidgets.QPushButton("Usa Explain Planner Model")
 
-        layout.addWidget(host_label)
-        layout.addWidget(self._host_input)
-        layout.addWidget(save_host_btn)
-        layout.addSpacing(6)
-        layout.addWidget(planner_model_label)
-        layout.addWidget(self._planner_model_combo)
-        layout.addWidget(task_planner_model_label)
-        layout.addWidget(self._task_planner_model_combo)
-        layout.addWidget(tool_model_label)
-        layout.addWidget(self._tool_model_combo)
-        layout.addWidget(final_model_label)
-        layout.addWidget(self._final_model_combo)
-        layout.addWidget(summary_model_label)
-        layout.addWidget(self._summary_model_combo)
-        layout.addWidget(translator_model_label)
-        layout.addWidget(self._translator_model_combo)
-        layout.addWidget(coder_model_label)
-        layout.addWidget(self._coder_model_combo)
-        layout.addWidget(refresh_btn)
-        layout.addWidget(apply_planner_model_btn)
-        layout.addWidget(apply_task_planner_model_btn)
-        layout.addWidget(apply_tool_model_btn)
-        layout.addWidget(apply_final_model_btn)
-        layout.addWidget(apply_summary_model_btn)
-        layout.addWidget(apply_translator_model_btn)
-        layout.addWidget(apply_coder_model_btn)
+        # Host row
+        layout.addWidget(host_label, 0, 0)
+        layout.addWidget(self._host_input, 0, 1, 1, 2)
+        layout.addWidget(save_host_btn, 1, 0, 1, 3)
+
+        def add_section(title: str, row: int, col: int) -> int:
+            """Aggiunge intestazione categoria nella colonna e restituisce riga+1."""
+            sep = QtWidgets.QLabel(title)
+            sep.setStyleSheet("font-weight: bold; color: #5a9fd4; margin-top: 6px;")
+            layout.addWidget(sep, row, col, 1, 2)
+            return row + 1
+
+        def add_pairs(pairs_list: list, start_row: int, col: int) -> int:
+            """Aggiunge coppie label+combo e restituisce la riga successiva."""
+            for i, (lb, cb) in enumerate(pairs_list):
+                layout.addWidget(lb, start_row + i, col)
+                layout.addWidget(cb, start_row + i, col + 1)
+            return start_row + len(pairs_list)
+
+        # Col 0: Ingresso + Channel Project (ordine flusso)
+        r0 = 2
+        r0 = add_section("Ingresso", r0, 0)
+        r0 = add_pairs([
+            (translator_model_label, self._translator_model_combo),
+            (request_manager_label, self._request_manager_model_combo),
+        ], r0, 0)
+        r0 = add_section("Channel Project", r0, 0)
+        r0 = add_pairs([
+            (project_manager_label, self._project_manager_model_combo),
+            (project_planner_label, self._project_planner_model_combo),
+            (route_planner_label, self._route_planner_model_combo),
+            (plan_enhancer_label, self._plan_enhancer_model_combo),
+            (function_planner_label, self._function_planner_model_combo),
+        ], r0, 0)
+
+        # Col 1: Channel Debug + Channel Explain
+        r1 = 2
+        r1 = add_section("Channel Debug", r1, 2)
+        r1 = add_pairs([
+            (discovery_label, self._discovery_model_combo),
+            (reasoner_label, self._reasoner_model_combo),
+            (plan_resolver_label, self._plan_resolver_model_combo),
+        ], r1, 2)
+        r1 = add_section("Channel Explain", r1, 2)
+        r1 = add_pairs([
+            (explainer_label, self._explainer_model_combo),
+            (explain_discovery_label, self._explain_discovery_model_combo),
+            (explain_planner_label, self._explain_planner_model_combo),
+        ], r1, 2)
+
+        # Col 2: Tool Plan + Scrittura & Output
+        r2 = 2
+        r2 = add_section("Tool Plan", r2, 4)
+        r2 = add_pairs([
+            (planner_model_label, self._planner_model_combo),
+            (task_planner_model_label, self._task_planner_model_combo),
+            (tool_model_label, self._tool_model_combo),
+        ], r2, 4)
+        r2 = add_section("Scrittura & Output", r2, 4)
+        r2 = add_pairs([
+            (coder_model_label, self._coder_model_combo),
+            (debugger_model_label, self._debugger_model_combo),
+            (final_model_label, self._final_model_combo),
+            (summary_model_label, self._summary_model_combo),
+        ], r2, 4)
+
+        start_row = max(r0, r1, r2)
+        layout.addWidget(refresh_btn, start_row, 0, 1, 6)
+        apply_btns = [
+            apply_planner_model_btn, apply_task_planner_model_btn, apply_tool_model_btn,
+            apply_final_model_btn, apply_summary_model_btn, apply_translator_model_btn,
+            apply_coder_model_btn, apply_debugger_model_btn, apply_request_manager_btn,
+            apply_project_manager_btn, apply_project_planner_btn, apply_route_planner_btn,
+            apply_plan_enhancer_btn, apply_function_planner_btn, apply_discovery_btn,
+            apply_reasoner_btn, apply_plan_resolver_btn, apply_explainer_btn,
+            apply_explain_discovery_btn, apply_explain_planner_btn,
+        ]
+        for i, btn in enumerate(apply_btns):
+            layout.addWidget(btn, start_row + 1 + (i // 3), (i % 3) * 2, 1, 2)
 
         action = QtWidgets.QWidgetAction(menu)
         action.setDefaultWidget(container)
@@ -418,14 +573,24 @@ class MainWindow(QtWidgets.QMainWindow):
         apply_summary_model_btn.clicked.connect(self._on_apply_summary_model)
         apply_translator_model_btn.clicked.connect(self._on_apply_translator_model)
         apply_coder_model_btn.clicked.connect(self._on_apply_coder_model)
+        apply_debugger_model_btn.clicked.connect(self._on_apply_debugger_model)
+        apply_request_manager_btn.clicked.connect(self._on_apply_request_manager_model)
+        apply_project_manager_btn.clicked.connect(self._on_apply_project_manager_model)
+        apply_project_planner_btn.clicked.connect(self._on_apply_project_planner_model)
+        apply_route_planner_btn.clicked.connect(self._on_apply_route_planner_model)
+        apply_plan_enhancer_btn.clicked.connect(self._on_apply_plan_enhancer_model)
+        apply_function_planner_btn.clicked.connect(self._on_apply_function_planner_model)
+        apply_discovery_btn.clicked.connect(self._on_apply_discovery_model)
+        apply_reasoner_btn.clicked.connect(self._on_apply_reasoner_model)
+        apply_plan_resolver_btn.clicked.connect(self._on_apply_plan_resolver_model)
+        apply_explainer_btn.clicked.connect(self._on_apply_explainer_model)
+        apply_explain_discovery_btn.clicked.connect(self._on_apply_explain_discovery_model)
+        apply_explain_planner_btn.clicked.connect(self._on_apply_explain_planner_model)
 
         return menu
 
     def _open_settings_menu(self) -> None:
-        size = self._settings_menu.sizeHint()
-        btn_pos = self._settings_btn.mapToGlobal(
-            QtCore.QPoint(self._settings_btn.width(), -size.height())
-        )
+        btn_pos = self._settings_btn.mapToGlobal(QtCore.QPoint(0, self._settings_btn.height()))
         self._settings_menu.exec(btn_pos)
 
     def _config_path(self) -> str:
@@ -457,26 +622,42 @@ class MainWindow(QtWidgets.QMainWindow):
         summary_model = cfg.get("ollama_summary_model") or final_model
         translator_model = cfg.get("ollama_translator_model") or base_model
         coder_model = cfg.get("ollama_coder_model") or base_model
+        debugger_model = cfg.get("ollama_debugger_model") or coder_model
+        request_manager_model = cfg.get("ollama_request_manager_model") or base_model
+        project_manager_model = cfg.get("ollama_project_manager_model") or base_model
+        project_planner_model = cfg.get("ollama_project_planner_model") or base_model
+        route_planner_model = cfg.get("ollama_route_planner_model") or base_model
+        plan_enhancer_model = cfg.get("ollama_plan_enhancer_model") or base_model
+        function_planner_model = cfg.get("ollama_function_planner_model") or base_model
+        discovery_model = cfg.get("ollama_discovery_model") or base_model
+        reasoner_model = cfg.get("ollama_reasoner_model") or base_model
+        plan_resolver_model = cfg.get("ollama_plan_resolver_model") or base_model
+        explainer_model = cfg.get("ollama_explainer_model") or base_model
+        explain_discovery_model = cfg.get("ollama_explain_discovery_model") or base_model
+        explain_planner_model = cfg.get("ollama_explain_planner_model") or base_model
 
-        # one default config: if specific keys missing, persist them from base
-        if (
-            "ollama_planner_model" not in cfg
-            or "ollama_tool_model" not in cfg
-            or "ollama_final_model" not in cfg
-            or "ollama_task_planner_model" not in cfg
-            or "ollama_summary_model" not in cfg
-            or "ollama_translator_model" not in cfg
-            or "ollama_coder_model" not in cfg
-        ):
-            cfg["ollama_planner_model"] = planner_model
-            cfg["ollama_task_planner_model"] = task_planner_model
-            cfg["ollama_tool_model"] = tool_model
-            cfg["ollama_final_model"] = final_model
-            cfg["ollama_summary_model"] = summary_model
-            cfg["ollama_translator_model"] = translator_model
-            cfg["ollama_coder_model"] = coder_model
-            cfg["ollama_model"] = base_model
-            self._save_config(cfg)
+        cfg["ollama_planner_model"] = planner_model
+        cfg["ollama_task_planner_model"] = task_planner_model
+        cfg["ollama_tool_model"] = tool_model
+        cfg["ollama_final_model"] = final_model
+        cfg["ollama_summary_model"] = summary_model
+        cfg["ollama_translator_model"] = translator_model
+        cfg["ollama_coder_model"] = coder_model
+        cfg["ollama_debugger_model"] = debugger_model
+        cfg["ollama_request_manager_model"] = request_manager_model
+        cfg["ollama_project_manager_model"] = project_manager_model
+        cfg["ollama_project_planner_model"] = project_planner_model
+        cfg["ollama_route_planner_model"] = route_planner_model
+        cfg["ollama_plan_enhancer_model"] = plan_enhancer_model
+        cfg["ollama_function_planner_model"] = function_planner_model
+        cfg["ollama_discovery_model"] = discovery_model
+        cfg["ollama_reasoner_model"] = reasoner_model
+        cfg["ollama_plan_resolver_model"] = plan_resolver_model
+        cfg["ollama_explainer_model"] = explainer_model
+        cfg["ollama_explain_discovery_model"] = explain_discovery_model
+        cfg["ollama_explain_planner_model"] = explain_planner_model
+        cfg["ollama_model"] = base_model
+        self._save_config(cfg)
 
         self._host_input.setText(host)
         self._agent.set_host(host)
@@ -487,6 +668,19 @@ class MainWindow(QtWidgets.QMainWindow):
         self._agent.set_summary_model(summary_model)
         self._agent.set_translator_model(translator_model)
         self._agent.set_coder_model(coder_model)
+        self._agent.set_debugger_model(debugger_model)
+        self._agent.set_request_manager_model(request_manager_model)
+        self._agent.set_project_manager_model(project_manager_model)
+        self._agent.set_project_planner_model(project_planner_model)
+        self._agent.set_route_planner_model(route_planner_model)
+        self._agent.set_plan_enhancer_model(plan_enhancer_model)
+        self._agent.set_function_planner_model(function_planner_model)
+        self._agent.set_discovery_model(discovery_model)
+        self._agent.set_reasoner_model(reasoner_model)
+        self._agent.set_plan_resolver_model(plan_resolver_model)
+        self._agent.set_explainer_model(explainer_model)
+        self._agent.set_explain_discovery_model(explain_discovery_model)
+        self._agent.set_explain_planner_model(explain_planner_model)
         self._log_line("SYS", f"Host Ollama: {host}")
         self._log_line("SYS", f"Planner model: {planner_model}")
         self._log_line("SYS", f"Task planner model: {task_planner_model}")
@@ -495,6 +689,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._log_line("SYS", f"Summary model: {summary_model}")
         self._log_line("SYS", f"Translator model: {translator_model}")
         self._log_line("SYS", f"Coder model: {coder_model}")
+        self._log_line("SYS", f"Debugger model: {debugger_model}")
         self._on_refresh_models(
             select_planner=planner_model,
             select_task_planner=task_planner_model,
@@ -503,6 +698,19 @@ class MainWindow(QtWidgets.QMainWindow):
             select_summary=summary_model,
             select_translator=translator_model,
             select_coder=coder_model,
+            select_debugger=debugger_model,
+            select_request_manager=request_manager_model,
+            select_project_manager=project_manager_model,
+            select_project_planner=project_planner_model,
+            select_route_planner=route_planner_model,
+            select_plan_enhancer=plan_enhancer_model,
+            select_function_planner=function_planner_model,
+            select_discovery=discovery_model,
+            select_reasoner=reasoner_model,
+            select_plan_resolver=plan_resolver_model,
+            select_explainer=explainer_model,
+            select_explain_discovery=explain_discovery_model,
+            select_explain_planner=explain_planner_model,
         )
 
     def _on_save_host(self) -> None:
@@ -532,6 +740,19 @@ class MainWindow(QtWidgets.QMainWindow):
         select_summary: str | None = None,
         select_translator: str | None = None,
         select_coder: str | None = None,
+        select_debugger: str | None = None,
+        select_request_manager: str | None = None,
+        select_project_manager: str | None = None,
+        select_project_planner: str | None = None,
+        select_route_planner: str | None = None,
+        select_plan_enhancer: str | None = None,
+        select_function_planner: str | None = None,
+        select_discovery: str | None = None,
+        select_reasoner: str | None = None,
+        select_plan_resolver: str | None = None,
+        select_explainer: str | None = None,
+        select_explain_discovery: str | None = None,
+        select_explain_planner: str | None = None,
     ) -> None:
         host = self._host_input.text().strip() or "http://localhost:11434"
         err = self._validate_host(host)
@@ -557,6 +778,28 @@ class MainWindow(QtWidgets.QMainWindow):
         self._translator_model_combo.addItems(models)
         self._coder_model_combo.clear()
         self._coder_model_combo.addItems(models)
+        self._debugger_model_combo.clear()
+        self._debugger_model_combo.addItems(models)
+        for combo, sel in [
+            (self._request_manager_model_combo, select_request_manager),
+            (self._project_manager_model_combo, select_project_manager),
+            (self._project_planner_model_combo, select_project_planner),
+            (self._route_planner_model_combo, select_route_planner),
+            (self._plan_enhancer_model_combo, select_plan_enhancer),
+            (self._function_planner_model_combo, select_function_planner),
+            (self._discovery_model_combo, select_discovery),
+            (self._reasoner_model_combo, select_reasoner),
+            (self._plan_resolver_model_combo, select_plan_resolver),
+            (self._explainer_model_combo, select_explainer),
+            (self._explain_discovery_model_combo, select_explain_discovery),
+            (self._explain_planner_model_combo, select_explain_planner),
+        ]:
+            combo.clear()
+            combo.addItems(models)
+            if sel and sel in models:
+                combo.setCurrentText(sel)
+            elif models:
+                combo.setCurrentIndex(0)
         if select_planner and select_planner in models:
             self._planner_model_combo.setCurrentText(select_planner)
         elif models:
@@ -585,6 +828,10 @@ class MainWindow(QtWidgets.QMainWindow):
             self._coder_model_combo.setCurrentText(select_coder)
         elif models:
             self._coder_model_combo.setCurrentIndex(0)
+        if select_debugger and select_debugger in models:
+            self._debugger_model_combo.setCurrentText(select_debugger)
+        elif models:
+            self._debugger_model_combo.setCurrentIndex(0)
 
     def _on_apply_planner_model(self) -> None:
         model = self._planner_model_combo.currentText().strip()
@@ -655,6 +902,136 @@ class MainWindow(QtWidgets.QMainWindow):
         cfg["ollama_coder_model"] = model
         self._save_config(cfg)
         self._log_line("SYS", f"Coder model: {model}")
+
+    def _on_apply_debugger_model(self) -> None:
+        model = self._debugger_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_debugger_model(model)
+        cfg = self._load_config()
+        cfg["ollama_debugger_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Debugger model: {model}")
+
+    def _on_apply_request_manager_model(self) -> None:
+        model = self._request_manager_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_request_manager_model(model)
+        cfg = self._load_config()
+        cfg["ollama_request_manager_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Request manager model: {model}")
+
+    def _on_apply_project_manager_model(self) -> None:
+        model = self._project_manager_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_project_manager_model(model)
+        cfg = self._load_config()
+        cfg["ollama_project_manager_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Project manager model: {model}")
+
+    def _on_apply_project_planner_model(self) -> None:
+        model = self._project_planner_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_project_planner_model(model)
+        cfg = self._load_config()
+        cfg["ollama_project_planner_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Project planner model: {model}")
+
+    def _on_apply_route_planner_model(self) -> None:
+        model = self._route_planner_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_route_planner_model(model)
+        cfg = self._load_config()
+        cfg["ollama_route_planner_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Route planner model: {model}")
+
+    def _on_apply_plan_enhancer_model(self) -> None:
+        model = self._plan_enhancer_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_plan_enhancer_model(model)
+        cfg = self._load_config()
+        cfg["ollama_plan_enhancer_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Plan enhancer model: {model}")
+
+    def _on_apply_function_planner_model(self) -> None:
+        model = self._function_planner_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_function_planner_model(model)
+        cfg = self._load_config()
+        cfg["ollama_function_planner_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Function planner model: {model}")
+
+    def _on_apply_discovery_model(self) -> None:
+        model = self._discovery_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_discovery_model(model)
+        cfg = self._load_config()
+        cfg["ollama_discovery_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Discovery model: {model}")
+
+    def _on_apply_reasoner_model(self) -> None:
+        model = self._reasoner_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_reasoner_model(model)
+        cfg = self._load_config()
+        cfg["ollama_reasoner_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Reasoner model: {model}")
+
+    def _on_apply_plan_resolver_model(self) -> None:
+        model = self._plan_resolver_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_plan_resolver_model(model)
+        cfg = self._load_config()
+        cfg["ollama_plan_resolver_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Plan resolver model: {model}")
+
+    def _on_apply_explainer_model(self) -> None:
+        model = self._explainer_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_explainer_model(model)
+        cfg = self._load_config()
+        cfg["ollama_explainer_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Explainer model: {model}")
+
+    def _on_apply_explain_discovery_model(self) -> None:
+        model = self._explain_discovery_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_explain_discovery_model(model)
+        cfg = self._load_config()
+        cfg["ollama_explain_discovery_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Explain discovery model: {model}")
+
+    def _on_apply_explain_planner_model(self) -> None:
+        model = self._explain_planner_model_combo.currentText().strip()
+        if not model:
+            return
+        self._agent.set_explain_planner_model(model)
+        cfg = self._load_config()
+        cfg["ollama_explain_planner_model"] = model
+        self._save_config(cfg)
+        self._log_line("SYS", f"Explain planner model: {model}")
 
     def _fetch_models(self, host: str) -> list[str]:
         url = f"{host.rstrip('/')}/api/tags"

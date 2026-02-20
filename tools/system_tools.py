@@ -8,6 +8,7 @@ import shutil
 import hashlib
 import difflib
 import subprocess
+import sys
 from typing import Any, Dict, List
 
 
@@ -290,7 +291,8 @@ class SystemTools:
             return {"ok": False, "error": err}
         results: List[Dict[str, Any]] = []
         try:
-            rx = re.compile(pattern)
+            # Use literal search: escape regex special chars so "def add(" etc. work
+            rx = re.compile(re.escape(pattern))
             for root, _, files in os.walk(path):
                 for file in files:
                     full = os.path.join(root, file)
@@ -447,6 +449,8 @@ class SystemTools:
                 ["git", "apply", "--whitespace=nowarn", "--ignore-space-change", "--ignore-whitespace", diff_path],
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=120,
             )
             ok = proc.returncode == 0
@@ -468,12 +472,18 @@ class SystemTools:
 
     def run_command(self, command: str, cwd: str | None = None, timeout_sec: int = 120) -> Dict[str, Any]:
         try:
+            # Con cwd impostata, pytest va eseguito come modulo così la root è su sys.path (import tests.*)
+            if cwd and command.strip().startswith("pytest "):
+                rest = command.strip()[7:].lstrip()
+                command = f"{sys.executable} -m pytest {rest}"
             proc = subprocess.run(
                 command,
                 cwd=cwd,
                 shell=True,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=timeout_sec,
             )
             return {

@@ -1,2 +1,2 @@
-api_url: https://old.example.com/api
-version: 1
+api_url: https://api.example.com/v3
+version: 3

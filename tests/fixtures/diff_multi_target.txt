@@ -1,0 +1,17 @@
+# Block A
+first
+second
+Added after second
+third
+
+# Block B
+alpha
+beta
+Added after beta
+gamma
+
+# Block C
+one
+two
+Added after two
+three

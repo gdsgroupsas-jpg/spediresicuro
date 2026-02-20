@@ -1,4 +1,4 @@
 # libref module for distributed refactor
 
-def compute_total(a, b):
+def compute_sum(a, b):
     return a + b

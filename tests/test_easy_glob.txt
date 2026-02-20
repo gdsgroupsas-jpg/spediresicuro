@@ -1,0 +1,56 @@
+[03:17:32] TEST: easy_glob
+[03:17:32] PROMPT: Use glob_paths with pattern 'tests/fixtures/easy_glob*.py'. Report the paths returned.
+[03:17:32] MODEL_INPUT: Use glob_paths with pattern 'tests/fixtures/easy_glob*.py'. Report the paths returned.
+[03:17:32] SYS: Models: task_planner=gpt-oss:20b-cloud planner=gpt-oss:20b-cloud tool=gpt-oss:20b-cloud final=gpt-oss:20b-cloud summary=gpt-oss:20b-cloud translator=gpt-oss:20b-cloud coder=gpt-oss:20b-cloud debugger=gpt-oss:20b-cloud tool_analysis=gpt-oss:20b-cloud tool_argument=gpt-oss:20b-cloud
+[03:17:32] SYS: Translator: traduzione in inglese...
+[03:17:36] TOKEN_USAGE: {"client": "translator", "input_tokens": 298, "output_tokens": 104}
+[03:17:36] TRANSLATED_CLEAN: Use glob_paths with pattern 'tests/fixtures/easy_glob*.py'. Report the paths returned.
+[03:17:36] ATTEMPT: translator:global:1
+[03:17:36] SYS: Request Manager: classificazione richiesta...
+[03:17:39] TOKEN_USAGE: {"client": "request_manager", "input_tokens": 1488, "output_tokens": 112}
+[03:17:39] REQUEST_MANAGER_RAW: {"channel":"tool","reason":"User explicitly requests use of the 'glob_paths' tool."}
+[03:17:39] ATTEMPT: request_manager:global:1
+[03:17:39] SYS: Request Manager: tool
+[03:17:39] SYS: Task planner: generazione piano JSON...
+[03:17:44] TOKEN_USAGE: {"client": "task_planner", "input_tokens": 1541, "output_tokens": 199}
+[03:17:44] TASK_PLAN: {"tasks":[{"step":1,"goal":"glob_paths with pattern 'tests/fixtures/easy_glob*.py'"}]}
+[03:17:44] ATTEMPT: task_planner:global:1
+[03:17:44] SYS: Esecuzione 1 task...
+[03:17:44] SYS: Task 1/1: glob_paths with pattern 'tests/fixtures/easy_glob*.py'
+[03:17:44] SYS: Tool planner: generazione piano JSON...
+[03:17:48] TOKEN_USAGE: {"client": "planner", "input_tokens": 1406, "output_tokens": 176}
+[03:17:48] PLAN: {"plan":[{"step":1,"tool":"glob_paths","goal":"glob_paths with pattern 'tests/fixtures/easy_glob*.py'"}]}
+[03:17:48] PLAN_JSON: {"plan":[{"step":1,"tool":"glob_paths","goal":"glob_paths with pattern 'tests/fixtures/easy_glob*.py'"}]}
+[03:17:48] ATTEMPT: planner:global:1
+[03:17:48] SYS: Tool planner: 1 step
+[03:17:48] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "glob_paths", "description": "Expand a glob pattern to a list of paths. Returns the path list; that is the result to report.", "parameters": {"type": "object", "properties": {"pattern": {"type": "string"}, "recursive": {"type": "boolean"}}, "required": ["pattern"]}}, "goal": "glob_paths with pattern 'tests/fixtures/easy_glob*.py'", "args_template": {}, "workspace_files": ["tests/fixtures/easy_glob", "tests/fixtures/easy_glob_a.py", "tests/fixtures/easy_glob_b.py"], "repo_index": {"files": ["tests/fixtures/easy_glob", "tests/fixtures/easy_glob_a.py", "tests/fixtures/easy_glob_b.py"], "py_symbols": []}}
+[03:17:57] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 359, "output_tokens": 604}
+[03:18:03] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 304, "output_tokens": 307}
+[03:18:03] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "glob_paths", "description": "Expand a glob pattern to a list of paths. Returns the path list; that is the result to report.", "parameters": {"type": "object", "properties": {"pattern": {"type": "string"}, "recursive": {"type": "boolean"}}, "required": ["pattern"]}}, "goal": "glob_paths with pattern 'tests/fixtures/easy_glob*.py'", "path": "tests/fixtures/easy_glob_a.py", "tool_context": {}, "args_template": {}}
+[03:18:07] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 675, "output_tokens": 218}
+[03:18:07] ATTEMPT: tool_argument:glob_paths:1
+[03:18:07] SYS: Tool-caller: prepara args per glob_paths
+[03:18:11] TOKEN_USAGE: {"client": "tool", "input_tokens": 364, "output_tokens": 109}
+[03:18:11] TOOL_CALLER_PROMPT: {"tool": {"name": "glob_paths", "description": "Expand a glob pattern to a list of paths. Returns the path list; that is the result to report.", "parameters": {"type": "object", "properties": {"pattern": {"type": "string"}, "recursive": {"type": "boolean"}}, "required": ["pattern"]}}, "args": {"pattern": "tests/fixtures/easy_glob*.py"}, "required": ["pattern"], "example": {"tool": "glob_paths", "args": {"pattern": "..."}}}
+[03:18:11] TOOL_CALLER_RAW: {"tool":"glob_paths","args":{"pattern":"tests/fixtures/easy_glob*.py"}}
+[03:18:11] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"glob_paths\",\"args\":{\"pattern\":\"tests/fixtures/easy_glob*.py\"}}"}, {"type": "token_usage", "input_tokens": 364, "output_tokens": 109}]
+[03:18:11] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"glob_paths\",\"args\":{\"pattern\":\"tests/fixtures/easy_glob*.py\"}}"}, {"type": "token_usage", "input_tokens": 364, "output_tokens": 109}]
+[03:18:11] ATTEMPT: tool:glob_paths:1
+[03:18:11] TOOL: Chiamata tool: glob_paths {"pattern": "tests/fixtures/easy_glob*.py"}
+[03:18:11] TOOL_RESULT: {"ok": true, "pattern": "tests/fixtures/easy_glob*.py", "paths": ["tests/fixtures\\easy_glob_a.py", "tests/fixtures\\easy_glob_b.py"]}
+[03:18:11] SYS: Generazione output finale (task)...
+[03:18:16] TOKEN_USAGE: {"client": "final", "input_tokens": 318, "output_tokens": 302}
+[03:18:16] ATTEMPT: final:global:1
+[03:18:16] SYS: Generazione riepilogo finale...
+[03:18:16] SYS: Summary: un solo passaggio.
+[03:18:20] TOKEN_USAGE: {"client": "summary", "input_tokens": 407, "output_tokens": 113}
+[03:18:20] SUMMARY_RESULT: The `glob_paths` tool was run with the pattern `tests/fixtures/easy_glob*.py`. It returned the following paths:  
+- `tests/fixtures\\easy_glob_a.py`  
+- `tests/fixtures\\easy_glob_b.py`
+[03:18:25] ATTEMPT: summary:global:1
+[03:18:25] MODEL_OUTPUT: Il tool `glob_paths` è stato eseguito con il pattern `tests/fixtures/easy_glob*.py`. Ha restituito i seguenti percorsi:
+- `tests/fixtures\\easy_glob_a.py`
+- `tests/fixtures\\easy_glob_b.py`
+[03:18:25] ATTEMPTS: planner=1 toolcaller={'glob_paths': 1} final=1
+[03:18:25] RESULT: PASS
+

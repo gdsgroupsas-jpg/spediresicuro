@@ -1,1 +1,0 @@
-{"plan":[{"step":1,"tool":"python_exec","goal":"Assert Alpha().beta_extra() == 'beta extra' and Beta has no beta_extra"}]}

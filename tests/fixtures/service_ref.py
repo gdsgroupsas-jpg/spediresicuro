@@ -1,4 +1,3 @@
-from tests.fixtures.libref import compute_total
+from tests.fixtures.libref import compute_sum
 
-def service_value(x):
-    return compute_total(x, 2)
+__all__ = ["compute_sum"]

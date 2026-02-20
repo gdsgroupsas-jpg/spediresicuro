@@ -1,1 +1,0 @@
-{"plan":[{"step":1,"tool":"python_ast_outline","goal":"agent/core.py"},{"step":2,"tool":"search","goal":"Search for references of each class defined in agent/core.py throughout the repository"}]}

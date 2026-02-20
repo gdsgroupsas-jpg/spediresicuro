@@ -8,7 +8,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="list_dir",
-                description="List files and folders in a path",
+                description="List files and folders in a path. Returns the list; that is the result to report to the user.",
                 parameters={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
                 func=lambda a: self.system_tools.list_dir(a.get("path", "")),
             )
@@ -16,7 +16,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="count_dir",
-                description="Count files and folders in a path",
+                description="Count files and folders in a path. Returns counts; that is the result to report.",
                 parameters={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
                 func=lambda a: self.system_tools.count_dir(a.get("path", "")),
             )
@@ -24,7 +24,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="read_file",
-                description="Read a text file",
+                description="Read a text file. Returns the content; that is the result to report.",
                 parameters={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
                 func=lambda a: self.system_tools.read_file(a.get("path", "")),
             )
@@ -32,7 +32,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="read_file_lines",
-                description="Read a range of lines from a file",
+                description="Read a range of lines from a file. Returns the content; that is the result to report.",
                 parameters={
                     "type": "object",
                     "properties": {
@@ -50,7 +50,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="search_text",
-                description="Search a string inside files in a directory",
+                description="Search a string inside files in a directory. Returns matches; that is the result to report.",
                 parameters={
                     "type": "object",
                     "properties": {
@@ -68,7 +68,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="search",
-                description="Alias of search_text",
+                description="Alias of search_text. Returns matches; that is the result to report.",
                 parameters={
                     "type": "object",
                     "properties": {
@@ -86,7 +86,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="stat_path",
-                description="File or directory info",
+                description="File or directory info. Returns the info; that is the result to report.",
                 parameters={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
                 func=lambda a: self.system_tools.stat_path(a.get("path", "")),
             )
@@ -94,7 +94,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="stat",
-                description="Alias of stat_path",
+                description="Alias of stat_path. Returns the info; that is the result to report.",
                 parameters={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
                 func=lambda a: self.system_tools.stat_path(a.get("path", "")),
             )
@@ -102,7 +102,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="preview_write",
-                description="Show diff between current and new content (safe, no write)",
+                description="Show diff between current and new content (safe, no write). Returns the diff; that is the result to report.",
                 parameters={
                     "type": "object",
                     "properties": {"path": {"type": "string"}, "content": {"type": "string"}},
@@ -133,7 +133,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="safe_write",
-                description="Safely write a file with diff preview (requires approval). Set dry_run=true to only preview.",
+                description="Write full file content (requires approval). Use for multi-line edits, new files, or when the change is not a simple literal replacement. Requires path + full new content. Orchestration provides content from coder.",
                 parameters={
                     "type": "object",
                     "properties": {
@@ -191,7 +191,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="replace_text",
-                description="Replace text in a file (requires approval)",
+                description="Replace exact literal string in a file (requires approval). Use when goal specifies 'replace X with Y' and X/Y are known. Requires path, old (exact text), new (replacement). Orchestration extracts old/new from goal.",
                 parameters={
                     "type": "object",
                     "properties": {
@@ -310,7 +310,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="glob_paths",
-                description="Expand a glob pattern to a list of paths",
+                description="Expand a glob pattern to a list of paths. Returns the path list; that is the result to report.",
                 parameters={
                     "type": "object",
                     "properties": {"pattern": {"type": "string"}, "recursive": {"type": "boolean"}},
@@ -322,7 +322,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="file_hash",
-                description="Compute a file hash",
+                description="Compute a file hash. Returns the hash; that is the result to report.",
                 parameters={
                     "type": "object",
                     "properties": {"path": {"type": "string"}, "algo": {"type": "string"}},
@@ -349,7 +349,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="git_status",
-                description="Show git status",
+                description="Show git status. Returns the status; that is the result to report.",
                 parameters={"type": "object", "properties": {"cwd": {"type": "string"}}, "required": []},
                 func=lambda a: self.system_tools.git_status(a.get("cwd")),
             )
@@ -357,7 +357,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="git_diff",
-                description="Show git diff",
+                description="Show git diff. Returns the diff; that is the result to report.",
                 parameters={"type": "object", "properties": {"cwd": {"type": "string"}}, "required": []},
                 func=lambda a: self.system_tools.git_diff(a.get("cwd")),
             )
@@ -365,7 +365,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="git_log",
-                description="Show git log (short)",
+                description="Show git log (short). Returns the log; that is the result to report.",
                 parameters={
                     "type": "object",
                     "properties": {"cwd": {"type": "string"}, "max_count": {"type": "integer"}},
@@ -377,20 +377,22 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="python_exec",
-                description="Execute Python code (requires approval). A path is required as execution context.",
+                description="Execute Python code (requires approval). A path or paths array is required as execution context. If multiple files are needed, use paths array.",
                 parameters={
                     "type": "object",
                     "properties": {
-                        "path": {"type": "string"},
+                        "path": {"type": "string", "description": "Single file path (for backward compatibility)"},
+                        "paths": {"type": "array", "items": {"type": "string"}, "description": "Array of file paths to load as modules"},
                         "code": {"type": "string"},
                         "timeout_sec": {"type": "integer"},
                     },
-                    "required": ["path", "code"],
+                    "required": ["code"],
                 },
                 func=lambda a: self.python_tools.python_exec(
                     a.get("code", ""),
                     int(a.get("timeout_sec", 120)),
                     a.get("path", ""),
+                    a.get("paths"),
                 ),
                 requires_approval=True,
             )
@@ -398,7 +400,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="python_ast_outline",
-                description="Extract AST outline (functions/classes) from a Python file",
+                description="Extract AST outline (functions/classes) from a Python file. Returns the outline; that is the result to report.",
                 parameters={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
                 func=lambda a: self.python_tools.ast_outline(a.get("path", "")),
             )
@@ -406,7 +408,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="python_ast_imports",
-                description="List imports from a Python file",
+                description="List imports from a Python file. Returns the imports; that is the result to report.",
                 parameters={"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]},
                 func=lambda a: self.python_tools.ast_imports(a.get("path", "")),
             )
@@ -414,7 +416,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="python_ast_find",
-                description="Find symbol definitions (functions/classes) in a Python file. If name is omitted, returns all matching symbols by type.",
+                description="Find symbol definitions (functions/classes) in a Python file. If name is omitted, returns all matching symbols by type. Returns the symbols; that is the result to report.",
                 parameters={
                     "type": "object",
                     "properties": {
@@ -432,7 +434,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="python_project_deps",
-                description="Collect dependencies from requirements.txt and pyproject.toml",
+                description="Collect dependencies from requirements.txt and pyproject.toml. Returns the deps; that is the result to report.",
                 parameters={"type": "object", "properties": {"root": {"type": "string"}}, "required": ["root"]},
                 func=lambda a: self.python_tools.project_deps(a.get("root", "")),
             )
@@ -440,7 +442,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="python_project_deps_toml",
-                description="Read pyproject.toml using a TOML parser",
+                description="Read pyproject.toml using a TOML parser. Returns the parsed content; that is the result to report.",
                 parameters={"type": "object", "properties": {"root": {"type": "string"}}, "required": ["root"]},
                 func=lambda a: self.python_tools.project_deps_toml(a.get("root", "")),
             )
@@ -461,7 +463,7 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="pip_list",
-                description="List installed Python packages",
+                description="List installed Python packages. Returns the list; that is the result to report.",
                 parameters={"type": "object", "properties": {}, "required": []},
                 func=lambda a: self.python_tools.pip_list(),
             )
@@ -482,9 +484,9 @@ class ToolingRegistryMixin:
         reg.add(
             ToolDef(
                 name="pytest_run",
-                description="Run pytest (requires approval)",
-                parameters={"type": "object", "properties": {"args": {"type": "string"}}, "required": []},
-                func=lambda a: self.python_tools.pytest_run(a.get("args", "")),
+                description="Run pytest (requires approval). Test files/modules always have names starting with 'test_' (e.g. test_libcalc.py). Pass the test file path in args, e.g. '-q path/to/test_foo.py'.",
+                parameters={"type": "object", "properties": {"args": {"type": "string"}, "cwd": {"type": "string"}}, "required": []},
+                func=lambda a: self.python_tools.pytest_run(a.get("args", ""), cwd=a.get("cwd") or None),
                 requires_approval=True,
             )
         )

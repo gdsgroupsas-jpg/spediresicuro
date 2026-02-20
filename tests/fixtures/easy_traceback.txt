@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "test_easy_buggy.py", line 5, in test_get_first
+    get_first([])
+  File "easy_buggy_sample.py", line 3, in get_first
+    return items[0]
+IndexError: list index out of range
+
+Fix: handle empty list, return None when items is empty.

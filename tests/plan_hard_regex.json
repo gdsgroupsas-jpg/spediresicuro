@@ -1,1 +1,0 @@
-{"plan":[{"step":1,"tool":"search_text","goal":"Search the repo for regex pattern 'def\\s+_on_[a-z_]+' and return up to five matches."}]}

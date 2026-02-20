@@ -1,0 +1,343 @@
+[03:48:36] TEST: hard_config_five_formats
+[03:48:36] PROMPT: Set LOG_LEVEL to DEBUG in all five config files: tests/fixtures/config_five.json, config_five.yaml, config_five.ini, config_five.env, config_five.txt. Use safe_write or write_file. Preserve each file format. Report success.
+[03:48:36] MODEL_INPUT: Set LOG_LEVEL to DEBUG in all five config files: tests/fixtures/config_five.json, config_five.yaml, config_five.ini, config_five.env, config_five.txt. Use safe_write or write_file. Preserve each file format. Report success.
+[03:48:36] SYS: Models: task_planner=gpt-oss:20b-cloud planner=gpt-oss:20b-cloud tool=gpt-oss:20b-cloud final=gpt-oss:20b-cloud summary=gpt-oss:20b-cloud translator=gpt-oss:20b-cloud coder=gpt-oss:20b-cloud debugger=gpt-oss:20b-cloud tool_analysis=gpt-oss:20b-cloud tool_argument=gpt-oss:20b-cloud
+[03:48:40] TRANSLATED_CLEAN: Set LOG_LEVEL to DEBUG in all five config files: tests/fixtures/config_five.json, config_five.yaml, config_five.ini, config_five.env, config_five.txt. Use safe_write or write_file. Preserve each file format. Report success.
+[03:48:40] SYS: Task planner: generazione piano JSON...
+[03:48:48] TOKEN_USAGE: {"client": "task_planner", "input_tokens": 358, "output_tokens": 1095}
+[03:48:48] TASK_PLAN: {"tasks":[{"step":1,"goal":"Inspect tests/fixtures/config_five.json"},{"step":2,"goal":"Update LOG_LEVEL to DEBUG in tests/fixtures/config_five.json"},{"step":3,"goal":"Inspect config_five.yaml"},{"step":4,"goal":"Update LOG_LEVEL to DEBUG in config_five.yaml"},{"step":5,"goal":"Inspect config_five.ini"},{"step":6,"goal":"Update LOG_LEVEL to DEBUG in config_five.ini"},{"step":7,"goal":"Inspect config_five.env"},{"step":8,"goal":"Update LOG_LEVEL to DEBUG in config_five.env"},{"step":9,"goal":"Inspect config_five.txt"},{"step":10,"goal":"Update LOG_LEVEL to DEBUG in config_five.txt"},{"step":11,"goal":"Report success"}]}
+[03:48:48] ATTEMPT: task_planner:global:1
+[03:48:48] SYS: Task planner: 11 task
+[03:48:48] SYS: Task 1/11: Inspect tests/fixtures/config_five.json
+[03:48:48] SYS: Tool planner: generazione piano JSON...
+[03:48:55] TOKEN_USAGE: {"client": "planner", "input_tokens": 449, "output_tokens": 208}
+[03:48:55] PLAN: {"plan":[{"step":1,"tool":"read_file","goal":"Inspect tests/fixtures/config_five.json"}]}
+[03:48:55] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file","goal":"Inspect tests/fixtures/config_five.json"}]}
+[03:48:55] ATTEMPT: planner:global:1
+[03:48:55] SYS: Tool planner: 1 step
+[03:48:55] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Inspect tests/fixtures/config_five.json", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:48:58] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 322, "output_tokens": 63}
+[03:49:01] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 286, "output_tokens": 97}
+[03:49:01] ATTEMPT: tool_analysis:read_file:2
+[03:49:01] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Inspect tests/fixtures/config_five.json", "path": "tests/fixtures/config_five.json", "tool_context": {}, "args_template": {}}
+[03:49:04] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 592, "output_tokens": 76}
+[03:49:04] ATTEMPT: tool_argument:read_file:1
+[03:49:04] SYS: Tool-caller: prepara args per read_file
+[03:49:09] TOKEN_USAGE: {"client": "tool", "input_tokens": 340, "output_tokens": 286}
+[03:49:09] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/config_five.json"}, "required": ["path"], "example": {"tool": "read_file", "args": {"path": "path/to/file_or_dir"}}}
+[03:49:09] TOOL_CALLER_RAW: {"tool":"read_file","args":{"path":"tests/fixtures/config_five.json"}}
+[03:49:09] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.json\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 286}]
+[03:49:09] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.json\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 286}]
+[03:49:09] ATTEMPT: tool:read_file:1
+[03:49:09] TOOL: Chiamata tool: read_file {"path": "tests/fixtures/config_five.json"}
+[03:49:09] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.json", "content": "{\"LOG_LEVEL\": \"INFO\"}\n"}
+[03:49:09] SYS: Generazione output finale (task)...
+[03:49:12] TOKEN_USAGE: {"client": "final", "input_tokens": 289, "output_tokens": 171}
+[03:49:12] ATTEMPT: final:global:1
+[03:49:12] SYS: Task 2/11: Update LOG_LEVEL to DEBUG in tests/fixtures/config_five.json
+[03:49:12] SYS: Tool planner: generazione piano JSON...
+[03:49:17] TOKEN_USAGE: {"client": "planner", "input_tokens": 454, "output_tokens": 357}
+[03:49:17] PLAN: {"plan":[{"step":1,"tool":"replace_text","goal":"Update LOG_LEVEL to DEBUG in tests/fixtures/config_five.json"}]}
+[03:49:17] PLAN_JSON: {"plan":[{"step":1,"tool":"replace_text","goal":"Update LOG_LEVEL to DEBUG in tests/fixtures/config_five.json"}]}
+[03:49:17] ATTEMPT: planner:global:1
+[03:49:17] SYS: Tool planner: 1 step
+[03:49:17] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "goal": "Update LOG_LEVEL to DEBUG in tests/fixtures/config_five.json", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:49:20] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 373, "output_tokens": 53}
+[03:49:20] ATTEMPT: tool_analysis:replace_text:1
+[03:49:20] SYS: Scrittura: path da tool_analysis, contenuto da coder (no tool_argument)
+[03:49:20] SYS: Coder: genera replacement (attempt 1)
+[03:49:23] TOKEN_USAGE: {"client": "coder", "input_tokens": 285, "output_tokens": 181}
+[03:49:23] CODER_RAW: {"LOG_LEVEL": "DEBUG"}
+[03:49:23] ATTEMPT: coder:replace_text:1
+[03:49:23] SYS: Tool-caller: prepara args per replace_text
+[03:49:30] TOKEN_USAGE: {"client": "tool", "input_tokens": 403, "output_tokens": 802}
+[03:49:30] TOOL_CALLER_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "args": {"path": "tests/fixtures/config_five.json"}, "required": ["path", "old", "new"], "example": {"tool": "replace_text", "args": {"path": "path/to/file_or_dir", "old": "...", "new": "..."}}}
+[03:49:30] TOOL_CALLER_RAW: {"tool":"replace_text","args":{"path":"tests/fixtures/config_five.json","old":"...","new":"..."} }
+[03:49:30] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/config_five.json\",\"old\":\"...\",\"new\":\"...\"} }"}, {"type": "token_usage", "input_tokens": 403, "output_tokens": 802}]
+[03:49:30] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/config_five.json\",\"old\":\"...\",\"new\":\"...\"} }"}, {"type": "token_usage", "input_tokens": 403, "output_tokens": 802}]
+[03:49:30] ATTEMPT: tool:replace_text:1
+[03:49:30] TOOL: Chiamata tool: replace_text {"path": "tests/fixtures/config_five.json", "old": "...", "new": "{\"LOG_LEVEL\": \"DEBUG\"}"}
+[03:49:30] REQUEST_APPROVAL: {"name": "replace_text", "args": {"path": "tests/fixtures/config_five.json", "old": "...", "new": "{\"LOG_LEVEL\": \"DEBUG\"}"}}
+[03:49:30] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.json", "replacements": 0}
+[03:49:30] ERROR: replace_text made 0 replacements
+[03:49:30] SYS: Task 3/11: Inspect config_five.yaml
+[03:49:30] SYS: Tool planner: generazione piano JSON...
+[03:49:33] TOKEN_USAGE: {"client": "planner", "input_tokens": 446, "output_tokens": 173}
+[03:49:33] PLAN: {"plan":[{"step":1,"tool":"read_file","goal":"Inspect config_five.yaml"}]}
+[03:49:33] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file","goal":"Inspect config_five.yaml"}]}
+[03:49:33] ATTEMPT: planner:global:1
+[03:49:33] SYS: Tool planner: 1 step
+[03:49:33] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Inspect config_five.yaml", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:49:36] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 319, "output_tokens": 54}
+[03:49:36] ATTEMPT: tool_analysis:read_file:1
+[03:49:36] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Inspect config_five.yaml", "path": "tests/fixtures/config_five.yaml", "tool_context": {}, "args_template": {}}
+[03:49:39] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 589, "output_tokens": 61}
+[03:49:39] ATTEMPT: tool_argument:read_file:1
+[03:49:39] SYS: Tool-caller: prepara args per read_file
+[03:49:43] TOKEN_USAGE: {"client": "tool", "input_tokens": 340, "output_tokens": 126}
+[03:49:43] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/config_five.yaml"}, "required": ["path"], "example": {"tool": "read_file", "args": {"path": "path/to/file_or_dir"}}}
+[03:49:43] TOOL_CALLER_RAW: {"tool":"read_file","args":{"path":"tests/fixtures/config_five.yaml"}}
+[03:49:43] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.yaml\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 126}]
+[03:49:43] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.yaml\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 126}]
+[03:49:43] ATTEMPT: tool:read_file:1
+[03:49:43] TOOL: Chiamata tool: read_file {"path": "tests/fixtures/config_five.yaml"}
+[03:49:43] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.yaml", "content": "LOG_LEVEL: INFO\n"}
+[03:49:43] SYS: Generazione output finale (task)...
+[03:49:46] TOKEN_USAGE: {"client": "final", "input_tokens": 355, "output_tokens": 162}
+[03:49:46] ATTEMPT: final:global:1
+[03:49:46] SYS: Task 4/11: Update LOG_LEVEL to DEBUG in config_five.yaml
+[03:49:46] SYS: Tool planner: generazione piano JSON...
+[03:49:51] TOKEN_USAGE: {"client": "planner", "input_tokens": 451, "output_tokens": 294}
+[03:49:51] PLAN: {"plan":[{"step":1,"tool":"replace_text","goal":"Replace LOG_LEVEL value with DEBUG in config_five.yaml"}]}
+[03:49:51] PLAN_JSON: {"plan":[{"step":1,"tool":"replace_text","goal":"Replace LOG_LEVEL value with DEBUG in config_five.yaml"}]}
+[03:49:51] ATTEMPT: planner:global:1
+[03:49:51] SYS: Tool planner: 1 step
+[03:49:51] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "goal": "Replace LOG_LEVEL value with DEBUG in config_five.yaml", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:49:55] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 371, "output_tokens": 65}
+[03:49:55] ATTEMPT: tool_analysis:replace_text:1
+[03:49:55] SYS: Scrittura: path da tool_analysis, contenuto da coder (no tool_argument)
+[03:49:55] SYS: Coder: genera replacement (attempt 1)
+[03:49:59] TOKEN_USAGE: {"client": "coder", "input_tokens": 273, "output_tokens": 93}
+[03:49:59] CODER_RAW: LOG_LEVEL: DEBUG
+[03:49:59] ATTEMPT: coder:replace_text:1
+[03:49:59] SYS: Tool-caller: prepara args per replace_text
+[03:50:06] TOKEN_USAGE: {"client": "tool", "input_tokens": 403, "output_tokens": 866}
+[03:50:06] TOOL_CALLER_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "args": {"path": "tests/fixtures/config_five.yaml"}, "required": ["path", "old", "new"], "example": {"tool": "replace_text", "args": {"path": "path/to/file_or_dir", "old": "...", "new": "..."}}}
+[03:50:06] TOOL_CALLER_RAW: {"tool":"replace_text","args":{"path":"tests/fixtures/config_five.yaml","old":"PLACEHOLDER","new":"PLACEHOLDER"}}
+[03:50:06] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/config_five.yaml\",\"old\":\"PLACEHOLDER\",\"new\":\"PLACEHOLDER\"}}"}, {"type": "token_usage", "input_tokens": 403, "output_tokens": 866}]
+[03:50:06] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/config_five.yaml\",\"old\":\"PLACEHOLDER\",\"new\":\"PLACEHOLDER\"}}"}, {"type": "token_usage", "input_tokens": 403, "output_tokens": 866}]
+[03:50:06] ATTEMPT: tool:replace_text:1
+[03:50:06] TOOL: Chiamata tool: replace_text {"path": "tests/fixtures/config_five.yaml", "old": "PLACEHOLDER", "new": "LOG_LEVEL: DEBUG"}
+[03:50:06] REQUEST_APPROVAL: {"name": "replace_text", "args": {"path": "tests/fixtures/config_five.yaml", "old": "PLACEHOLDER", "new": "LOG_LEVEL: DEBUG"}}
+[03:50:06] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.yaml", "replacements": 0}
+[03:50:06] ERROR: replace_text made 0 replacements
+[03:50:06] SYS: Task 5/11: Inspect config_five.ini
+[03:50:06] SYS: Tool planner: generazione piano JSON...
+[03:50:10] TOKEN_USAGE: {"client": "planner", "input_tokens": 446, "output_tokens": 237}
+[03:50:10] PLAN: {"plan":[{"step":1,"tool":"read_file_lines","goal":"Inspect config_five.ini"}]}
+[03:50:10] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file_lines","goal":"Inspect config_five.ini"}]}
+[03:50:10] ATTEMPT: planner:global:1
+[03:50:10] SYS: Tool planner: 1 step
+[03:50:10] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file_lines", "description": "Read a range of lines from a file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "start_line": {"type": "integer"}, "end_line": {"type": "integer"}}, "required": ["path", "start_line", "end_line"]}}, "goal": "Inspect config_five.ini", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:50:13] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 352, "output_tokens": 90}
+[03:50:13] ATTEMPT: tool_analysis:read_file_lines:1
+[03:50:13] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file_lines", "description": "Read a range of lines from a file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "start_line": {"type": "integer"}, "end_line": {"type": "integer"}}, "required": ["path", "start_line", "end_line"]}}, "goal": "Inspect config_five.ini", "path": "tests/fixtures/config_five.ini", "tool_context": {}, "args_template": {}}
+[03:50:16] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 622, "output_tokens": 270}
+[03:50:16] ATTEMPT: tool_argument:read_file_lines:1
+[03:50:16] SYS: Tool-caller: prepara args per read_file_lines
+[03:50:20] TOKEN_USAGE: {"client": "tool", "input_tokens": 411, "output_tokens": 249}
+[03:50:20] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file_lines", "description": "Read a range of lines from a file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "start_line": {"type": "integer"}, "end_line": {"type": "integer"}}, "required": ["path", "start_line", "end_line"]}}, "args": {"path": "tests/fixtures/config_five.ini", "start_line": 1, "end_line": 9999}, "required": ["path", "start_line", "end_line"], "example": {"tool": "read_file_lines", "args": {"path": "path/to/file_or_dir", "start_line": 1, "end_line": 1}}}
+[03:50:20] TOOL_CALLER_RAW: {"tool":"read_file_lines","args":{"path":"tests/fixtures/config_five.ini","start_line":1,"end_line":9999}}
+[03:50:20] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file_lines\",\"args\":{\"path\":\"tests/fixtures/config_five.ini\",\"start_line\":1,\"end_line\":9999}}"}, {"type": "token_usage", "input_tokens": 411, "output_tokens": 249}]
+[03:50:20] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"read_file_lines\",\"args\":{\"path\":\"tests/fixtures/config_five.ini\",\"start_line\":1,\"end_line\":9999}}"}, {"type": "token_usage", "input_tokens": 411, "output_tokens": 249}]
+[03:50:20] ATTEMPT: tool:read_file_lines:1
+[03:50:20] TOOL: Chiamata tool: read_file_lines {"path": "tests/fixtures/config_five.ini", "start_line": 1, "end_line": 9999}
+[03:50:20] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.ini", "start_line": 1, "end_line": 9999, "lines": ["[default]", "LOG_LEVEL = INFO"]}
+[03:50:20] SYS: Generazione output finale (task)...
+[03:50:24] TOKEN_USAGE: {"client": "final", "input_tokens": 534, "output_tokens": 231}
+[03:50:24] ATTEMPT: final:global:1
+[03:50:24] SYS: Task 6/11: Update LOG_LEVEL to DEBUG in config_five.ini
+[03:50:24] SYS: Tool planner: generazione piano JSON...
+[03:50:30] TOKEN_USAGE: {"client": "planner", "input_tokens": 451, "output_tokens": 561}
+[03:50:30] PLAN: {"plan":[{"step":1,"tool":"read_file","goal":"Read config_five.ini"},{"step":2,"tool":"replace_text","goal":"Update LOG_LEVEL to DEBUG in config_five.ini"}]}
+[03:50:30] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file","goal":"Read config_five.ini"},{"step":2,"tool":"replace_text","goal":"Update LOG_LEVEL to DEBUG in config_five.ini"}]}
+[03:50:30] ATTEMPT: planner:global:1
+[03:50:30] SYS: Tool planner: 2 step
+[03:50:30] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Read config_five.ini", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:50:33] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 319, "output_tokens": 51}
+[03:50:33] ATTEMPT: tool_analysis:read_file:1
+[03:50:33] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Read config_five.ini", "path": "tests/fixtures/config_five.ini", "tool_context": {}, "args_template": {}}
+[03:50:36] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 589, "output_tokens": 70}
+[03:50:36] ATTEMPT: tool_argument:read_file:1
+[03:50:36] SYS: Tool-caller: prepara args per read_file
+[03:50:39] TOKEN_USAGE: {"client": "tool", "input_tokens": 340, "output_tokens": 159}
+[03:50:39] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/config_five.ini"}, "required": ["path"], "example": {"tool": "read_file", "args": {"path": "path/to/file_or_dir"}}}
+[03:50:39] TOOL_CALLER_RAW: {"tool":"read_file","args":{"path":"tests/fixtures/config_five.ini"}}
+[03:50:39] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.ini\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 159}]
+[03:50:39] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.ini\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 159}]
+[03:50:39] ATTEMPT: tool:read_file:1
+[03:50:39] TOOL: Chiamata tool: read_file {"path": "tests/fixtures/config_five.ini"}
+[03:50:39] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.ini", "content": "[default]\nLOG_LEVEL = INFO\n"}
+[03:50:39] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "goal": "Update LOG_LEVEL to DEBUG in config_five.ini", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:50:42] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 370, "output_tokens": 69}
+[03:50:42] ATTEMPT: tool_analysis:replace_text:1
+[03:50:42] SYS: Scrittura: path da tool_analysis, contenuto da coder (no tool_argument)
+[03:50:42] SYS: Coder: genera replacement (attempt 1)
+[03:50:45] TOKEN_USAGE: {"client": "coder", "input_tokens": 275, "output_tokens": 83}
+[03:50:45] CODER_RAW: [default]
+LOG_LEVEL = DEBUG
+[03:50:45] ATTEMPT: coder:replace_text:1
+[03:50:45] SYS: Tool-caller: prepara args per replace_text
+[03:50:51] TOKEN_USAGE: {"client": "tool", "input_tokens": 403, "output_tokens": 457}
+[03:50:51] TOOL_CALLER_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "args": {"path": "tests/fixtures/config_five.ini"}, "required": ["path", "old", "new"], "example": {"tool": "replace_text", "args": {"path": "path/to/file_or_dir", "old": "...", "new": "..."}}}
+[03:50:51] TOOL_CALLER_RAW: {"error":"Missing required arguments"}
+[03:50:51] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"error\":\"Missing required arguments\"}"}, {"type": "token_usage", "input_tokens": 403, "output_tokens": 457}]
+[03:50:51] ERROR: Tool-caller JSON non valido per replace_text, retry...
+[03:50:56] TOKEN_USAGE: {"client": "tool", "input_tokens": 310, "output_tokens": 443}
+[03:50:56] TOOL_CALLER_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "args": {"path": "tests/fixtures/config_five.ini"}, "required": ["path", "old", "new"], "example": {"tool": "replace_text", "args": {"path": "path/to/file_or_dir", "old": "...", "new": "..."}}}
+[03:50:56] TOOL_CALLER_RAW: {"tool":"replace_text","args":{"path":"tests/fixtures/config_five.ini","old":"old_value","new":"new_value"}}
+[03:50:56] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/config_five.ini\",\"old\":\"old_value\",\"new\":\"new_value\"}}"}, {"type": "token_usage", "input_tokens": 310, "output_tokens": 443}]
+[03:50:56] ATTEMPT: tool:replace_text:2
+[03:50:56] TOOL: Chiamata tool: replace_text {"path": "tests/fixtures/config_five.ini", "old": "old_value", "new": "[default]\nLOG_LEVEL = DEBUG"}
+[03:50:56] REQUEST_APPROVAL: {"name": "replace_text", "args": {"path": "tests/fixtures/config_five.ini", "old": "old_value", "new": "[default]\nLOG_LEVEL = DEBUG"}}
+[03:50:56] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.ini", "replacements": 0}
+[03:50:56] ERROR: replace_text made 0 replacements
+[03:50:56] SYS: Task 7/11: Inspect config_five.env
+[03:50:56] SYS: Tool planner: generazione piano JSON...
+[03:50:59] TOKEN_USAGE: {"client": "planner", "input_tokens": 446, "output_tokens": 97}
+[03:50:59] PLAN: {"plan":[{"step":1,"tool":"read_file","goal":"Inspect config_five.env"}]}
+[03:50:59] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file","goal":"Inspect config_five.env"}]}
+[03:50:59] ATTEMPT: planner:global:1
+[03:50:59] SYS: Tool planner: 1 step
+[03:50:59] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Inspect config_five.env", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:51:02] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 319, "output_tokens": 56}
+[03:51:02] ATTEMPT: tool_analysis:read_file:1
+[03:51:02] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Inspect config_five.env", "path": "tests/fixtures/config_five.env", "tool_context": {}, "args_template": {}}
+[03:51:05] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 589, "output_tokens": 119}
+[03:51:05] ATTEMPT: tool_argument:read_file:1
+[03:51:05] SYS: Tool-caller: prepara args per read_file
+[03:51:08] TOKEN_USAGE: {"client": "tool", "input_tokens": 340, "output_tokens": 171}
+[03:51:08] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/config_five.env"}, "required": ["path"], "example": {"tool": "read_file", "args": {"path": "path/to/file_or_dir"}}}
+[03:51:08] TOOL_CALLER_RAW: {"tool":"read_file","args":{"path":"tests/fixtures/config_five.env"}}
+[03:51:08] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.env\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 171}]
+[03:51:08] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.env\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 171}]
+[03:51:08] ATTEMPT: tool:read_file:1
+[03:51:08] TOOL: Chiamata tool: read_file {"path": "tests/fixtures/config_five.env"}
+[03:51:08] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.env", "content": "LOG_LEVEL=INFO\n"}
+[03:51:08] SYS: Generazione output finale (task)...
+[03:51:13] TOKEN_USAGE: {"client": "final", "input_tokens": 821, "output_tokens": 237}
+[03:51:13] ATTEMPT: final:global:1
+[03:51:13] SYS: Task 8/11: Update LOG_LEVEL to DEBUG in config_five.env
+[03:51:13] SYS: Tool planner: generazione piano JSON...
+[03:51:19] TOKEN_USAGE: {"client": "planner", "input_tokens": 451, "output_tokens": 598}
+[03:51:19] PLAN: {"plan":[{"step":1,"tool":"read_file","goal":"Read config_five.env"},{"step":2,"tool":"replace_text","goal":"Update LOG_LEVEL to DEBUG in config_five.env"}]}
+[03:51:19] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file","goal":"Read config_five.env"},{"step":2,"tool":"replace_text","goal":"Update LOG_LEVEL to DEBUG in config_five.env"}]}
+[03:51:19] ATTEMPT: planner:global:1
+[03:51:19] SYS: Tool planner: 2 step
+[03:51:19] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Read config_five.env", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:51:22] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 319, "output_tokens": 86}
+[03:51:22] ATTEMPT: tool_analysis:read_file:1
+[03:51:22] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Read config_five.env", "path": "tests/fixtures/config_five.env", "tool_context": {}, "args_template": {}}
+[03:51:25] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 589, "output_tokens": 92}
+[03:51:25] ATTEMPT: tool_argument:read_file:1
+[03:51:25] SYS: Tool-caller: prepara args per read_file
+[03:51:28] TOKEN_USAGE: {"client": "tool", "input_tokens": 340, "output_tokens": 201}
+[03:51:28] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/config_five.env"}, "required": ["path"], "example": {"tool": "read_file", "args": {"path": "path/to/file_or_dir"}}}
+[03:51:28] TOOL_CALLER_RAW: {"tool":"read_file","args":{"path":"tests/fixtures/config_five.env"}}
+[03:51:28] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.env\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 201}]
+[03:51:28] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.env\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 201}]
+[03:51:28] ATTEMPT: tool:read_file:1
+[03:51:28] TOOL: Chiamata tool: read_file {"path": "tests/fixtures/config_five.env"}
+[03:51:28] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.env", "content": "LOG_LEVEL=INFO\n"}
+[03:51:28] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "goal": "Update LOG_LEVEL to DEBUG in config_five.env", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:51:32] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 370, "output_tokens": 66}
+[03:51:32] ATTEMPT: tool_analysis:replace_text:1
+[03:51:32] SYS: Scrittura: path da tool_analysis, contenuto da coder (no tool_argument)
+[03:51:32] SYS: Coder: genera replacement (attempt 1)
+[03:51:36] TOKEN_USAGE: {"client": "coder", "input_tokens": 272, "output_tokens": 227}
+[03:51:36] CODER_RAW: LOG_LEVEL=DEBUG
+[03:51:36] ATTEMPT: coder:replace_text:1
+[03:51:36] SYS: Tool-caller: prepara args per replace_text
+[03:51:41] TOKEN_USAGE: {"client": "tool", "input_tokens": 403, "output_tokens": 559}
+[03:51:41] TOOL_CALLER_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "args": {"path": "tests/fixtures/config_five.env"}, "required": ["path", "old", "new"], "example": {"tool": "replace_text", "args": {"path": "path/to/file_or_dir", "old": "...", "new": "..."}}}
+[03:51:41] TOOL_CALLER_RAW: {"tool":"replace_text","args":{"path":"tests/fixtures/config_five.env","old":"","new":""}}
+[03:51:41] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/config_five.env\",\"old\":\"\",\"new\":\"\"}}"}, {"type": "token_usage", "input_tokens": 403, "output_tokens": 559}]
+[03:51:41] ERROR: Tool-caller JSON non valido per replace_text, retry...
+[03:51:46] TOKEN_USAGE: {"client": "tool", "input_tokens": 310, "output_tokens": 433}
+[03:51:46] TOOL_CALLER_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "args": {"path": "tests/fixtures/config_five.env"}, "required": ["path", "old", "new"], "example": {"tool": "replace_text", "args": {"path": "path/to/file_or_dir", "old": "...", "new": "..."}}}
+[03:51:46] TOOL_CALLER_RAW: {"tool":"replace_text","args":{"path":"tests/fixtures/config_five.env","old":"PLACEHOLDER_OLD","new":"PLACEHOLDER_NEW"}}
+[03:51:46] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/config_five.env\",\"old\":\"PLACEHOLDER_OLD\",\"new\":\"PLACEHOLDER_NEW\"}}"}, {"type": "token_usage", "input_tokens": 310, "output_tokens": 433}]
+[03:51:46] ATTEMPT: tool:replace_text:2
+[03:51:46] TOOL: Chiamata tool: replace_text {"path": "tests/fixtures/config_five.env", "old": "PLACEHOLDER_OLD", "new": "LOG_LEVEL=DEBUG"}
+[03:51:46] REQUEST_APPROVAL: {"name": "replace_text", "args": {"path": "tests/fixtures/config_five.env", "old": "PLACEHOLDER_OLD", "new": "LOG_LEVEL=DEBUG"}}
+[03:51:46] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.env", "replacements": 0}
+[03:51:46] ERROR: replace_text made 0 replacements
+[03:51:46] SYS: Task 9/11: Inspect config_five.txt
+[03:51:46] SYS: Tool planner: generazione piano JSON...
+[03:51:49] TOKEN_USAGE: {"client": "planner", "input_tokens": 446, "output_tokens": 94}
+[03:51:49] PLAN: {"plan":[{"step":1,"tool":"read_file","goal":"Inspect config_five.txt"}]}
+[03:51:49] PLAN_JSON: {"plan":[{"step":1,"tool":"read_file","goal":"Inspect config_five.txt"}]}
+[03:51:49] ATTEMPT: planner:global:1
+[03:51:49] SYS: Tool planner: 1 step
+[03:51:49] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Inspect config_five.txt", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:51:52] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 319, "output_tokens": 120}
+[03:51:52] ATTEMPT: tool_analysis:read_file:1
+[03:51:52] TOOL_ARGUMENT_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "goal": "Inspect config_five.txt", "path": "tests/fixtures/config_five.txt", "tool_context": {}, "args_template": {}}
+[03:51:56] TOKEN_USAGE: {"client": "tool_argument", "input_tokens": 589, "output_tokens": 217}
+[03:51:56] ATTEMPT: tool_argument:read_file:1
+[03:51:56] SYS: Tool-caller: prepara args per read_file
+[03:51:59] TOKEN_USAGE: {"client": "tool", "input_tokens": 340, "output_tokens": 50}
+[03:51:59] TOOL_CALLER_PROMPT: {"tool": {"name": "read_file", "description": "Read a text file", "parameters": {"type": "object", "properties": {"path": {"type": "string"}}, "required": ["path"]}}, "args": {"path": "tests/fixtures/config_five.txt"}, "required": ["path"], "example": {"tool": "read_file", "args": {"path": "path/to/file_or_dir"}}}
+[03:51:59] TOOL_CALLER_RAW: {"tool":"read_file","args":{"path":"tests/fixtures/config_five.txt"}}
+[03:51:59] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.txt\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 50}]
+[03:51:59] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"read_file\",\"args\":{\"path\":\"tests/fixtures/config_five.txt\"}}"}, {"type": "token_usage", "input_tokens": 340, "output_tokens": 50}]
+[03:51:59] ATTEMPT: tool:read_file:1
+[03:51:59] TOOL: Chiamata tool: read_file {"path": "tests/fixtures/config_five.txt"}
+[03:51:59] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.txt", "content": "LOG_LEVEL=INFO\n"}
+[03:51:59] SYS: Generazione output finale (task)...
+[03:52:03] TOKEN_USAGE: {"client": "final", "input_tokens": 1431, "output_tokens": 263}
+[03:52:03] ATTEMPT: final:global:1
+[03:52:03] SYS: Task 10/11: Update LOG_LEVEL to DEBUG in config_five.txt
+[03:52:03] SYS: Tool planner: generazione piano JSON...
+[03:52:06] TOKEN_USAGE: {"client": "planner", "input_tokens": 451, "output_tokens": 177}
+[03:52:06] PLAN: {"plan":[{"step":1,"tool":"replace_text","goal":"Change LOG_LEVEL=INFO to LOG_LEVEL=DEBUG in config_five.txt"}]}
+[03:52:06] PLAN_JSON: {"plan":[{"step":1,"tool":"replace_text","goal":"Change LOG_LEVEL=INFO to LOG_LEVEL=DEBUG in config_five.txt"}]}
+[03:52:06] ATTEMPT: planner:global:1
+[03:52:06] SYS: Tool planner: 1 step
+[03:52:06] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "goal": "Change LOG_LEVEL=INFO to LOG_LEVEL=DEBUG in config_five.txt", "args_template": {}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:52:09] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 375, "output_tokens": 85}
+[03:52:09] ATTEMPT: tool_analysis:replace_text:1
+[03:52:09] SYS: Scrittura: path da tool_analysis, contenuto da coder (no tool_argument)
+[03:52:09] SYS: Coder: genera replacement (attempt 1)
+[03:52:12] TOKEN_USAGE: {"client": "coder", "input_tokens": 286, "output_tokens": 83}
+[03:52:12] CODER_RAW: LOG_LEVEL=DEBUG
+[03:52:12] ATTEMPT: coder:replace_text:1
+[03:52:12] SYS: Tool-caller: prepara args per replace_text
+[03:52:19] TOKEN_USAGE: {"client": "tool", "input_tokens": 403, "output_tokens": 562}
+[03:52:19] TOOL_CALLER_PROMPT: {"tool": {"name": "replace_text", "description": "Replace text in a file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "old": {"type": "string"}, "new": {"type": "string"}, "count": {"type": "integer"}, "regex": {"type": "boolean"}}, "required": ["path", "old", "new"]}}, "args": {"path": "tests/fixtures/config_five.txt"}, "required": ["path", "old", "new"], "example": {"tool": "replace_text", "args": {"path": "path/to/file_or_dir", "old": "...", "new": "..."}}}
+[03:52:19] TOOL_CALLER_RAW: {"tool":"replace_text","args":{"path":"tests/fixtures/config_five.txt","old":"...","new":"..."} }
+[03:52:19] TOOL_CALLER_EVENTS: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/config_five.txt\",\"old\":\"...\",\"new\":\"...\"} }"}, {"type": "token_usage", "input_tokens": 403, "output_tokens": 562}]
+[03:52:19] TOOL_CALLER_EVENTS_RETRY: [{"type": "token", "content": "{\"tool\":\"replace_text\",\"args\":{\"path\":\"tests/fixtures/config_five.txt\",\"old\":\"...\",\"new\":\"...\"} }"}, {"type": "token_usage", "input_tokens": 403, "output_tokens": 562}]
+[03:52:19] ATTEMPT: tool:replace_text:1
+[03:52:19] TOOL: Chiamata tool: replace_text {"path": "tests/fixtures/config_five.txt", "old": "...", "new": "LOG_LEVEL=DEBUG"}
+[03:52:19] REQUEST_APPROVAL: {"name": "replace_text", "args": {"path": "tests/fixtures/config_five.txt", "old": "...", "new": "LOG_LEVEL=DEBUG"}}
+[03:52:19] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.txt", "replacements": 0}
+[03:52:19] ERROR: replace_text made 0 replacements
+[03:52:19] SYS: Task 11/11: Report success
+[03:52:19] SYS: Tool planner: generazione piano JSON...
+[03:52:24] TOKEN_USAGE: {"client": "planner", "input_tokens": 443, "output_tokens": 427}
+[03:52:24] PLAN: {"plan":[{"step":1,"tool":"write_file","goal":"Report success"}]}
+[03:52:24] PLAN_JSON: {"plan":[{"step":1,"tool":"write_file","goal":"Report success"}]}
+[03:52:24] ATTEMPT: planner:global:1
+[03:52:24] SYS: Tool planner: 1 step
+[03:52:24] TOOL_ANALYSIS_PROMPT: {"tool": {"name": "write_file", "description": "Write a text file (requires approval)", "parameters": {"type": "object", "properties": {"path": {"type": "string"}, "content": {"type": "string"}}, "required": ["path", "content"]}}, "goal": "Report success", "args_template": {"content": "__CONTENT__"}, "workspace_files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "repo_index": {"files": ["tests/fixtures/config_five.env", "tests/fixtures/config_five.ini", "tests/fixtures/config_five.json", "tests/fixtures/config_five.txt", "tests/fixtures/config_five.yaml"], "py_symbols": []}}
+[03:52:28] TOKEN_USAGE: {"client": "tool_analysis", "input_tokens": 337, "output_tokens": 162}
+[03:52:28] ATTEMPT: tool_analysis:write_file:1
+[03:52:28] SYS: Scrittura: path da tool_analysis, contenuto da coder (no tool_argument)
+[03:52:28] SYS: Coder: genera contenuto per write_file (attempt 1)
+[03:52:32] TOKEN_USAGE: {"client": "coder", "input_tokens": 815, "output_tokens": 282}
+[03:52:32] CODER_RAW: LOG_LEVEL=INFO
+[03:52:32] ATTEMPT: coder:write_file:1
+[03:52:32] SYS: Scrittura: esecuzione diretta (no tool_caller)
+[03:52:32] TOOL: Chiamata tool: write_file {"path": "tests/fixtures/config_five.txt", "content": "LOG_LEVEL=INFO"}
+[03:52:32] REQUEST_APPROVAL: {"name": "write_file", "args": {"path": "tests/fixtures/config_five.txt", "content": "LOG_LEVEL=INFO"}}
+[03:52:32] TOOL_RESULT: {"ok": true, "path": "tests/fixtures/config_five.txt", "bytes": 14}
+[03:52:32] SYS: Generazione output finale (task)...
+[03:52:37] TOKEN_USAGE: {"client": "final", "input_tokens": 1740, "output_tokens": 497}
+[03:52:37] ATTEMPT: final:global:1
+[03:52:37] SYS: Generazione riepilogo finale...
+[03:52:37] SYS: Summary: payload oltre soglia, 5 chunk intermedi.
+[03:52:37] SYS: Summary intermedio 1/5.
+[03:52:40] SYS: Summary intermedio 2/5.
+[03:52:44] SYS: Summary intermedio 3/5.
+[03:52:48] SYS: Summary intermedio 4/5.
+[03:52:51] SYS: Summary intermedio 5/5.
+[03:52:55] SYS: Merge summary finale.
+[03:53:09] ATTEMPT: summary:global:1
+[03:53:09] MODEL_OUTPUT: - Aperto e letto `tests/fixtures/config_five.json`, `config_five.yaml`, `config_five.ini`, `config_five.env`, e `config_five.txt`.  
+- Tutti e cinque i file contengono un'impostazione `LOG_LEVEL` con il valore `INFO`.  
+- Non sono state apportate modifiche per impostare `LOG_LEVEL` su `DEBUG`.  
+- `config_five.txt` è stato sovrascritto con il suo contenuto esistente `LOG_LEVEL=INFO` e la scrittura è stata riportata come riuscita.
+[03:53:09] ATTEMPTS: planner=1 toolcaller={'read_file': 1, 'replace_text': 1, 'read_file_lines': 1} final=1
+[03:53:09] RESULT: PASS
+

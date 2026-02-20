@@ -161,25 +161,47 @@ class PythonTools:
         except Exception as exc:
             return {"ok": False, "error": str(exc)}
 
-    def python_exec(self, code: str, timeout_sec: int = 120, path: str = "") -> Dict[str, Any]:
+    def python_exec(self, code: str, timeout_sec: int = 120, path: str = "", paths: List[str] = None) -> Dict[str, Any]:
         try:
-            # If a target file path is provided, load it as a module and expose its globals.
+            # Support both single path (backward compat) and multiple paths
+            file_paths: List[str] = []
+            if paths and isinstance(paths, list):
+                file_paths = [p for p in paths if p and isinstance(p, str)]
+            elif path:
+                file_paths = [path]
+
+            # python_exec non deve essere eseguito su file .json (solo moduli Python)
+            for p in file_paths:
+                if (p or "").lower().endswith(".json"):
+                    return {
+                        "ok": False,
+                        "returncode": 1,
+                        "stdout": "",
+                        "stderr": "python_exec cannot be run on .json files; use read_file or a .py script instead.",
+                        "error": "python_exec cannot be run on .json files",
+                    }
+
+            # Build prefix to load all modules
             prefix = ''
-            if path:
-                prefix = (
-                    'import importlib.util\n'
-                    f"_p = r\"{path}\"\n"
-                    'spec = importlib.util.spec_from_file_location("_target", _p)\n'
-                    'mod = importlib.util.module_from_spec(spec)\n'
-                    'assert spec and spec.loader\n'
-                    'spec.loader.exec_module(mod)\n'
-                    'globals().update(mod.__dict__)\n'
-                )
+            if file_paths:
+                prefix = 'import importlib.util\n'
+                for idx, file_path in enumerate(file_paths):
+                    mod_name = f"_mod_{idx}"
+                    prefix += (
+                        f'_p_{idx} = r"{file_path}"\n'
+                        f'spec_{idx} = importlib.util.spec_from_file_location("{mod_name}", _p_{idx})\n'
+                        f'{mod_name} = importlib.util.module_from_spec(spec_{idx})\n'
+                        f'assert spec_{idx} and spec_{idx}.loader\n'
+                        f'spec_{idx}.loader.exec_module({mod_name})\n'
+                        f'globals().update({mod_name}.__dict__)\n'
+                    )
 
             proc = subprocess.run(
                 ["py", "-"],
-                input=(prefix + code) if path else code,
+                input=(prefix + code) if file_paths else code,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=timeout_sec,
             )
@@ -193,10 +215,19 @@ class PythonTools:
             return {"ok": False, "error": str(exc)}
 
     def python_run_file(self, path: str, timeout_sec: int = 120) -> Dict[str, Any]:
+        if not (path or "").strip().lower().endswith(".py"):
+            return {
+                "ok": False,
+                "returncode": -1,
+                "stdout": "",
+                "stderr": "python_run_file accepts only .py files. Do not pass .json, .yaml, .env or other non-Python files.",
+            }
         try:
             proc = subprocess.run(
                 ["py", path],
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=timeout_sec,
             )
@@ -214,6 +245,8 @@ class PythonTools:
             proc = subprocess.run(
                 ["py", "-m", "pip", "list"],
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=120,
             )
@@ -231,6 +264,8 @@ class PythonTools:
             proc = subprocess.run(
                 ["py", "-m", "pip", "install", package],
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=600,
             )
@@ -243,16 +278,39 @@ class PythonTools:
         except Exception as exc:
             return {"ok": False, "error": str(exc)}
 
-    def pytest_run(self, args: str = "") -> Dict[str, Any]:
+    def pytest_run(self, args: str = "", cwd: str | None = None) -> Dict[str, Any]:
         cmd = ["py", "-m", "pytest"]
         if args:
             cmd.extend(args.split(" "))
         try:
             proc = subprocess.run(
                 cmd,
+                cwd=cwd,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=600,
+            )
+            return {
+                "ok": proc.returncode == 0,
+                "returncode": proc.returncode,
+                "stdout": proc.stdout,
+                "stderr": proc.stderr,
+            }
+        except Exception as exc:
+            return {"ok": False, "error": str(exc)}
+
+    def ruff_format(self, path: str, timeout_sec: int = 60) -> Dict[str, Any]:
+        """Esegue ruff format sul path. Formattazione automatica lato orchestratore."""
+        try:
+            proc = subprocess.run(
+                ["py", "-m", "ruff", "format", path],
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                capture_output=True,
+                timeout=timeout_sec,
             )
             return {
                 "ok": proc.returncode == 0,
@@ -271,6 +329,8 @@ class PythonTools:
             proc = subprocess.run(
                 cmd,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=timeout_sec,
             )
@@ -291,6 +351,8 @@ class PythonTools:
             proc = subprocess.run(
                 cmd,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 capture_output=True,
                 timeout=timeout_sec,
             )
