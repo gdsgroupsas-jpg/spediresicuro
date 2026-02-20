@@ -392,7 +392,14 @@ async function processWhatsAppStatusEvents(body: WhatsAppWebhookBody): Promise<v
  */
 async function lookupUserByPhone(
   phone: string
-): Promise<{ id: string; email: string; role: string; name?: string } | null> {
+): Promise<{
+  id: string;
+  email: string;
+  role: string;
+  name?: string;
+  account_type?: string;
+  is_reseller?: boolean;
+} | null> {
   // Normalize phone: remove + prefix, ensure starts with country code
   const normalizedPhone = phone.replace(/^\+/, '');
 

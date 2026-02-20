@@ -9,7 +9,6 @@
  * Usa i tool definiti in lib/agent/tools/price-list-tools.ts
  */
 
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import { getOllamaLLM } from '@/lib/ai/ollama';
 import { defaultLogger, type ILogger } from '../logger';
 import { AgentState } from '../orchestrator/state';
@@ -42,7 +41,7 @@ Aiuta Superadmin e Reseller (autorizzati) con: ricerca listini master, clonazion
 Contesto: userId=${state.userId}, ruolo=${state.agent_context?.user_role || 'N/A'}.
 Rispondi in modo conciso e operativo.`;
 
-    const messages = [new SystemMessage(systemPrompt), new HumanMessage(messageText)];
+    const messages = [{ content: systemPrompt, role: 'system' as const }, { content: messageText }];
 
     logger.log('🤖 [Price List Worker] Invoco Ollama...');
     const result = await llm.invoke(messages);

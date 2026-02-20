@@ -2,7 +2,7 @@ import { AgentState } from './state';
 import { createOCRAdapter } from '../../adapters/ocr';
 import { analyzeCorrieriPerformance } from '../../corrieri-performance';
 import { addSpedizione } from '../../database';
-import { HumanMessage, SystemMessage } from '@langchain/core/messages';
+import { HumanMessage } from '@langchain/core/messages';
 import { CourierServiceType } from '@/types/shipments';
 import { getSupabaseUserIdFromEmail } from '../../database';
 import type { AuthContext } from '../../auth-context';
@@ -93,7 +93,7 @@ export async function extractData(state: AgentState): Promise<Partial<AgentState
         `;
 
       try {
-        const result = await llm.invoke([new HumanMessage(prompt)]);
+        const result = await llm.invoke([{ content: prompt }]);
         const jsonText = result.content
           .toString()
           .replace(/```json/g, '')
@@ -173,7 +173,7 @@ export async function validateGeo(state: AgentState): Promise<Partial<AgentState
       `;
 
     try {
-      const result = await llm.invoke([new HumanMessage(prompt)]);
+      const result = await llm.invoke([{ content: prompt }]);
       const jsonText = result.content
         .toString()
         .replace(/```json/g, '')

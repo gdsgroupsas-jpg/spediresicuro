@@ -197,7 +197,10 @@ export async function POST(request: NextRequest) {
     const executionTime = Date.now() - startTime;
     logAnneFlowComplete(traceId, userId as string, {
       flowId,
-      specificFlowId: 'specificFlowId' in flowResult ? flowResult.specificFlowId : undefined,
+      specificFlowId:
+        'specificFlowId' in flowResult
+          ? ((flowResult as Record<string, unknown>).specificFlowId as string | undefined)
+          : undefined,
       duration_ms: executionTime,
       pricing_options_count: flowResult.pricingOptions?.length ?? 0,
     });

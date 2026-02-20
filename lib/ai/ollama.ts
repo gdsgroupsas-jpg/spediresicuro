@@ -83,15 +83,36 @@ export async function chatWithOllama(params: OllamaChatParams): Promise<OllamaCh
  */
 export function getOllamaLLM(): {
   invoke: (
-    messages: Array<{ content: string; getType?: () => string }>
+    messages: Array<{
+      content: string;
+      role?: 'system' | 'user' | 'assistant';
+      getType?: () => string;
+    }>
   ) => Promise<{ content: string }>;
 } | null {
   return {
-    invoke: async (messages: Array<{ content: string }>) => {
-      const ollamaMessages: OllamaMessage[] = messages.map((m) => ({
-        role: 'user',
-        content: typeof m.content === 'string' ? m.content : String(m.content),
-      }));
+    invoke: async (
+      messages: Array<{
+        content: string;
+        role?: 'system' | 'user' | 'assistant';
+        getType?: () => string;
+      }>
+    ) => {
+      const ollamaMessages: OllamaMessage[] = messages.map((m) => {
+        // Determina role: campo esplicito > getType() > default 'user'
+        let role: OllamaMessage['role'] = 'user';
+        if (m.role) {
+          role = m.role;
+        } else if (m.getType) {
+          const t = m.getType();
+          if (t === 'system') role = 'system';
+          else if (t === 'ai' || t === 'assistant') role = 'assistant';
+        }
+        return {
+          role,
+          content: typeof m.content === 'string' ? m.content : String(m.content),
+        };
+      });
       const out = await chatWithOllama({
         messages: ollamaMessages,
         temperature: 0.1,
