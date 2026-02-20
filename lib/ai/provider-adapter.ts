@@ -114,6 +114,7 @@ export class AnthropicClient implements AIClient {
 export class DeepSeekClient implements AIClient {
   private apiKey: string;
   private baseUrl: string = 'https://api.deepseek.com/v1';
+  private timeoutMs: number = 10_000;
 
   constructor(apiKey: string) {
     this.apiKey = apiKey;
@@ -150,20 +151,35 @@ export class DeepSeekClient implements AIClient {
       },
     }));
 
-    const response = await fetch(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${this.apiKey}`,
-      },
-      body: JSON.stringify({
-        model: params.model || 'deepseek-chat',
-        messages: openaiMessages,
-        tools: openaiTools && openaiTools.length > 0 ? openaiTools : undefined,
-        max_tokens: params.maxTokens || 4096,
-        temperature: 0.7, // Default temperature per DeepSeek
-      }),
-    });
+    // Timeout per evitare hang infinito se DeepSeek non risponde
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeoutMs);
+
+    let response: Response;
+    try {
+      response = await fetch(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${this.apiKey}`,
+        },
+        body: JSON.stringify({
+          model: params.model || 'deepseek-chat',
+          messages: openaiMessages,
+          tools: openaiTools && openaiTools.length > 0 ? openaiTools : undefined,
+          max_tokens: params.maxTokens || 4096,
+          temperature: 0.7,
+        }),
+        signal: controller.signal,
+      });
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw new Error(`DeepSeek API timeout after ${this.timeoutMs}ms`);
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeoutId);
+    }
 
     if (!response.ok) {
       let errorMessage = `DeepSeek API error: ${response.status}`;
