@@ -122,6 +122,17 @@ export function sanitizeString(str: string): string {
 }
 
 /**
+ * Sanitizza un valore per uso sicuro nei log.
+ * Previene log injection rimuovendo newline, carriage return e null bytes.
+ */
+export function sanitizeForLog(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+   
+  return str.replace(/[\n\r\0]/g, ' ').slice(0, 500);
+}
+
+/**
  * Asserisce che workspaceId sia valido (definito, non vuoto, UUID valido)
  *
  * ⚠️ SICUREZZA: Previene SQL injection nel filtro workspace

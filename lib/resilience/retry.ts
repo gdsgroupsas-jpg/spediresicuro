@@ -68,8 +68,9 @@ export async function withRetry<T>(
       const result = await operation();
 
       if (attempt > 0) {
+        const safeName = String(operationName).replace(/[\n\r\0]/g, '');
         console.info(
-          `✅ [RETRY] ${operationName} succeeded on attempt ${attempt + 1}/${maxRetries + 1}`
+          `✅ [RETRY] ${safeName} succeeded on attempt ${attempt + 1}/${maxRetries + 1}`
         );
       }
 
@@ -82,8 +83,9 @@ export async function withRetry<T>(
 
       if (!isRetryable || isLastAttempt) {
         if (attempt > 0) {
-          console.error(`❌ [RETRY] ${operationName} failed after ${attempt + 1} attempts`, {
-            error: error?.message,
+          const safeName = String(operationName).replace(/[\n\r\0]/g, '');
+          console.error(`❌ [RETRY] ${safeName} failed after ${attempt + 1} attempts`, {
+            error: String(error?.message || '').replace(/[\n\r\0]/g, ''),
             status: error?.response?.status || error?.status,
             retryable: isRetryable,
           });
@@ -92,9 +94,13 @@ export async function withRetry<T>(
       }
 
       const delay = calculateDelay(attempt, baseDelayMs, maxDelayMs);
+      const safeName = String(operationName).replace(/[\n\r\0]/g, '');
       console.warn(
-        `⚠️ [RETRY] ${operationName} attempt ${attempt + 1}/${maxRetries + 1} failed, retrying in ${Math.round(delay)}ms`,
-        { error: error?.message, status: error?.response?.status || error?.status }
+        `⚠️ [RETRY] ${safeName} attempt ${attempt + 1}/${maxRetries + 1} failed, retrying in ${Math.round(delay)}ms`,
+        {
+          error: String(error?.message || '').replace(/[\n\r\0]/g, ''),
+          status: error?.response?.status || error?.status,
+        }
       );
 
       await new Promise((resolve) => setTimeout(resolve, delay));

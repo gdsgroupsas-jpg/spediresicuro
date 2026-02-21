@@ -1467,7 +1467,7 @@ export async function clonePriceListAction(input: ClonePriceListInput): Promise<
     const clonedPriceList = await getPriceListById(clonedId, workspaceId);
 
     console.log(
-      `✅ [CLONE] Listino ${input.source_price_list_id} clonato come ${clonedId} (${input.name})`
+      `✅ [CLONE] Listino ${String(input.source_price_list_id).replace(/[\n\r\0]/g, '')} clonato come ${String(clonedId).replace(/[\n\r\0]/g, '')} (${String(input.name).replace(/[\n\r\0]/g, '')})`
     );
 
     // H8 FIX: Invalida cache master list dopo clonazione

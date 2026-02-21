@@ -147,11 +147,15 @@ export class CircuitBreaker {
       // Fallimento in HALF_OPEN → torna OPEN
       circuit.state = 'OPEN';
       circuit.openedAt = now;
-      console.warn(`🔴 [CB:${this.name}] HALF_OPEN → OPEN (test request failed)`);
+      console.warn(
+        `🔴 [CB:${String(this.name).replace(/[\n\r\0]/g, '')}] HALF_OPEN → OPEN (test request failed)`
+      );
     } else if (circuit.failures >= this.failureThreshold) {
       circuit.state = 'OPEN';
       circuit.openedAt = now;
-      console.warn(`🔴 [CB:${this.name}] CLOSED → OPEN after ${circuit.failures} failures`);
+      console.warn(
+        `🔴 [CB:${String(this.name).replace(/[\n\r\0]/g, '')}] CLOSED → OPEN after ${circuit.failures} failures`
+      );
     }
 
     await setCircuitData(this.name, circuit);

@@ -388,7 +388,10 @@ export async function grantFeature(
 
       // FIX F4: Compensazione — rimborsa wallet se il debit era avvenuto
       if (walletDebited && priceInEuros > 0) {
-        console.warn(`[GRANT_FEATURE] Compensazione wallet: rimborso €${priceInEuros} a ${userId}`);
+        const safeUserId = String(userId).replace(/[\n\r\0]/g, '');
+        console.warn(
+          `[GRANT_FEATURE] Compensazione wallet: rimborso €${priceInEuros} a ${safeUserId}`
+        );
         const refundResult = await manageWallet(
           userId,
           priceInEuros,
@@ -396,7 +399,7 @@ export async function grantFeature(
         );
         if (!refundResult.success) {
           console.error(
-            `[GRANT_FEATURE] CRITICAL: Rimborso fallito per ${userId}, €${priceInEuros} — accodamento compensation_queue`
+            `[GRANT_FEATURE] CRITICAL: Rimborso fallito per ${safeUserId}, €${priceInEuros} — accodamento compensation_queue`
           );
           // Accoda alla compensation_queue per retry automatico
           try {
@@ -419,8 +422,8 @@ export async function grantFeature(
             } as any);
           } catch (queueError: any) {
             console.error(
-              `[GRANT_FEATURE] CRITICAL: Anche accodamento compensation_queue fallito per ${userId}, €${priceInEuros}:`,
-              queueError?.message
+              `[GRANT_FEATURE] CRITICAL: Anche accodamento compensation_queue fallito per ${safeUserId}, €${priceInEuros}:`,
+              String(queueError?.message || '').replace(/[\n\r\0]/g, '')
             );
           }
         }

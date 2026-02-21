@@ -206,7 +206,10 @@ export async function resellerAssignPriceListAction(
       assignmentId: data as string,
     };
   } catch (error: any) {
-    console.error('Errore resellerAssignPriceListAction:', error);
+    console.error(
+      'Errore resellerAssignPriceListAction:',
+      String(error?.message || '').replace(/[\n\r\0]/g, '')
+    );
     return {
       success: false,
       error: "Errore durante l'assegnazione del listino",

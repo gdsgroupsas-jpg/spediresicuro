@@ -20,9 +20,9 @@ async function runTests() {
       },
       superadminContext
     );
-    console.log('Result:', result);
+    console.log('Result:', String(result).replace(/[\n\r\0]/g, ' '));
   } catch (e: any) {
-    console.log('Error (expected):', e.message);
+    console.log('Error (expected):', String(e.message).replace(/[\n\r\0]/g, ' '));
   }
 
   // 2. Test Reseller Context (Default - Denied)
@@ -46,7 +46,10 @@ async function runTests() {
   if (resultDenied.includes('PERMISSION_DENIED')) {
     console.log('✅ PASS: Reseller was correctly denied.');
   } else {
-    console.error('❌ FAIL: Reseller was NOT denied:', resultDenied);
+    console.error(
+      '❌ FAIL: Reseller was NOT denied:',
+      String(resultDenied).replace(/[\n\r\0]/g, ' ')
+    );
   }
 
   // 3. Test Reseller Context (Enabled)

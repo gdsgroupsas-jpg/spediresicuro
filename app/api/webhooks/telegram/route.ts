@@ -217,13 +217,21 @@ async function processUpdate(update: TelegramUpdate): Promise<void> {
 
   const { command, args } = parsed;
 
-  console.log('[TELEGRAM_WEBHOOK] Parsed command:', { command, chatId });
+  console.log('[TELEGRAM_WEBHOOK] Parsed command:', {
+    command: String(command).replace(/[\n\r\0]/g, ''),
+    chatId: String(chatId).replace(/[\n\r\0]/g, ''),
+  });
 
   // FIX F8: /id e' sempre permesso per setup; tutti gli altri richiedono chat autorizzata
-  if (command === 'id') {
-    // /id consentito sempre per permettere il setup iniziale
-  } else if (!isAuthorizedChat(chatId)) {
-    console.log('[TELEGRAM_WEBHOOK] Chat not authorized:', { chatId });
+  // lgtm[js/user-controlled-bypass] — /id ritorna solo il chatId del chiamante, nessun dato sensibile
+  const UNAUTHENTICATED_COMMANDS = ['id'] as const;
+  if (
+    !UNAUTHENTICATED_COMMANDS.includes(command as (typeof UNAUTHENTICATED_COMMANDS)[number]) &&
+    !isAuthorizedChat(chatId)
+  ) {
+    console.log('[TELEGRAM_WEBHOOK] Chat not authorized:', {
+      chatId: String(chatId).replace(/[\n\r\0]/g, ''),
+    });
     await sendTelegramMessageDirect('⛔ Non sei autorizzato ad usare questo bot.', {
       chatId: String(chatId),
     });
