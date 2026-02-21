@@ -820,60 +820,87 @@ export async function sendWorkspaceInvitationEmail(params: WorkspaceInvitationEm
     : '';
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #FF9500, #FF6B35); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">👋 Sei stato invitato!</h1>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f1f5f9;">
+      <!-- Preheader: testo visibile nell'anteprima inbox -->
+      <div style="display: none; max-height: 0; overflow: hidden; mso-hide: all;">
+        ${inviterName} ti invita a collaborare su ${workspaceName} — accetta l'invito per entrare nel team.
       </div>
-      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
-        <p style="color: #334155; font-size: 16px; margin-top: 0;">
-          <strong>${inviterName}</strong> ti ha invitato a unirti al workspace <strong>${workspaceName}</strong> di <strong>${organizationName}</strong>.
+      <!--[if mso]><table width="600" cellpadding="0" cellspacing="0" border="0" align="center"><tr><td><![endif]-->
+
+      <!-- Header con logo -->
+      <div style="background-color: #ffffff; padding: 28px 24px 20px 24px; text-align: center; border-bottom: 3px solid #f97316;">
+        <img src="https://spediresicuro.it/brand/logo/logo-email.jpg" alt="SpedireSicuro" width="200" height="52" style="display: inline-block; max-width: 200px; height: auto; border: 0;" />
+      </div>
+
+      <!-- Corpo principale -->
+      <div style="background-color: #ffffff; padding: 32px 28px;">
+
+        <!-- Titolo invito -->
+        <h1 style="color: #0f172a; margin: 0 0 8px 0; font-size: 24px; font-weight: 700;">Hai ricevuto un invito!</h1>
+        <p style="color: #475569; font-size: 16px; line-height: 1.6; margin: 0 0 24px 0;">
+          <strong style="color: #0f172a;">${inviterName}</strong> ti ha invitato a collaborare nel workspace <strong style="color: #0f172a;">${workspaceName}</strong> di <strong style="color: #0f172a;">${organizationName}</strong>.
         </p>
 
         ${messageSection}
 
-        <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
+        <!-- Card dettagli -->
+        <div style="background-color: #f8fafc; border-radius: 12px; padding: 20px; margin: 24px 0; border: 1px solid #e2e8f0;">
           <table style="width: 100%; border-collapse: collapse;">
             <tr>
-              <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Organizzazione</td>
-              <td style="padding: 10px 0; color: #1e293b; font-weight: 600; text-align: right; font-size: 14px;">${organizationName}</td>
+              <td style="padding: 12px 0; color: #64748b; font-size: 14px; vertical-align: middle;">Organizzazione</td>
+              <td style="padding: 12px 0; color: #0f172a; font-weight: 600; text-align: right; font-size: 14px; vertical-align: middle;">${organizationName}</td>
             </tr>
             <tr>
-              <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9;">Workspace</td>
-              <td style="padding: 10px 0; color: #1e293b; font-weight: 600; text-align: right; font-size: 14px;">${workspaceName}</td>
+              <td style="padding: 12px 0; color: #64748b; font-size: 14px; border-top: 1px solid #e2e8f0; vertical-align: middle;">Workspace</td>
+              <td style="padding: 12px 0; color: #0f172a; font-weight: 600; text-align: right; font-size: 14px; border-top: 1px solid #e2e8f0; vertical-align: middle;">${workspaceName}</td>
             </tr>
             <tr>
-              <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9;">Ruolo assegnato</td>
-              <td style="padding: 10px 0; text-align: right;">
-                <span style="background: linear-gradient(135deg, #FF9500, #FF6B35); color: white; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px;">
+              <td style="padding: 12px 0; color: #64748b; font-size: 14px; border-top: 1px solid #e2e8f0; vertical-align: middle;">Il tuo ruolo</td>
+              <td style="padding: 12px 0; text-align: right; border-top: 1px solid #e2e8f0; vertical-align: middle;">
+                <span style="background-color: #fff7ed; color: #c2410c; font-size: 13px; font-weight: 700; padding: 5px 14px; border-radius: 20px; display: inline-block; border: 1px solid #fed7aa;">
                   ${roleLabels[role] || role}
                 </span>
               </td>
             </tr>
           </table>
-          <p style="color: #64748b; font-size: 12px; margin: 12px 0 0 0; padding-top: 12px; border-top: 1px solid #f1f5f9;">
+          <p style="color: #64748b; font-size: 12px; margin: 14px 0 0 0; padding-top: 14px; border-top: 1px solid #e2e8f0; line-height: 1.4;">
             ${roleDescriptions[role] || ''}
           </p>
         </div>
 
-        <div style="text-align: center; margin: 28px 0;">
-          <a href="${inviteUrl}" style="display: inline-block; background: linear-gradient(135deg, #FF9500, #FF6B35); color: white; font-weight: 600; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 16px; box-shadow: 0 4px 12px rgba(255, 149, 0, 0.3);">
-            Accetta Invito →
-          </a>
+        <!-- CTA Button -->
+        <div style="text-align: center; margin: 32px 0;">
+          <table cellpadding="0" cellspacing="0" border="0" style="margin: 0 auto;">
+            <tr>
+              <td style="background-color: #ea580c; border-radius: 10px;">
+                <a href="${inviteUrl}" style="display: inline-block; color: #ffffff; font-weight: 700; padding: 16px 48px; text-decoration: none; font-size: 16px; letter-spacing: 0.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+                  ACCETTA INVITO
+                </a>
+              </td>
+            </tr>
+          </table>
         </div>
 
-        <div style="background: #fef3c7; border: 1px solid #fcd34d; border-radius: 8px; padding: 12px; margin: 16px 0;">
-          <p style="color: #92400e; font-size: 13px; margin: 0;">
-            ⏱️ Questo invito scade il <strong>${formattedExpiry}</strong>
+        <!-- Scadenza -->
+        <div style="background-color: #fffbeb; border-radius: 8px; padding: 14px 16px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+          <p style="color: #78350f; font-size: 13px; margin: 0; line-height: 1.4;">
+            Questo invito scade il <strong>${formattedExpiry}</strong>. Accettalo prima della scadenza.
           </p>
         </div>
 
-        <p style="color: #64748b; font-size: 13px; margin-bottom: 0;">
+      </div>
+
+      <!-- Footer -->
+      <div style="padding: 20px 28px; text-align: center;">
+        <p style="color: #94a3b8; font-size: 12px; margin: 0 0 8px 0; line-height: 1.5;">
           Se non conosci ${inviterName} o non ti aspettavi questo invito, puoi ignorare questa email.
         </p>
+        <p style="color: #cbd5e1; font-size: 11px; margin: 0;">
+          SpedireSicuro.it — Spedizioni semplici e sicure
+        </p>
       </div>
-      <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
-        SpedireSicuro — Spedizioni semplici e sicure
-      </div>
+
+      <!--[if mso]></td></tr></table><![endif]-->
     </div>
   `;
 
@@ -905,29 +932,29 @@ export async function sendInvitationAcceptedEmail(params: InvitationAcceptedEmai
   };
 
   const html = `
-    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 24px; border-radius: 12px 12px 0 0; text-align: center;">
-        <h1 style="color: white; margin: 0; font-size: 24px;">✅ Invito Accettato!</h1>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+      <div style="background-color: #059669; padding: 28px 24px; border-radius: 12px 12px 0 0; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.3px;">Invito Accettato!</h1>
+        <p style="color: #d1fae5; margin: 8px 0 0 0; font-size: 14px;">Un nuovo membro nel tuo team</p>
       </div>
-      <div style="background: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
-        <p style="color: #334155; font-size: 16px; margin-top: 0;">
+      <div style="background-color: #f8fafc; padding: 24px; border: 1px solid #e2e8f0; border-top: none;">
+        <p style="color: #1e293b; font-size: 16px; line-height: 1.6; margin-top: 0;">
           Ciao <strong>${inviterName}</strong>,
         </p>
-        <p style="color: #334155; font-size: 16px;">
-          Buone notizie! Il tuo invito è stato accettato.
+        <p style="color: #1e293b; font-size: 16px; line-height: 1.6;">
+          Buone notizie! Il tuo invito e' stato accettato.
         </p>
 
-        <div style="background: white; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
-          <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px;">
-            <div style="width: 48px; height: 48px; background: linear-gradient(135deg, #FF9500, #FF6B35); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-weight: 600; font-size: 18px;">
-              ${acceptedByName.charAt(0).toUpperCase()}
-            </div>
-            <div>
-              <p style="margin: 0; color: #1e293b; font-weight: 600; font-size: 16px;">${acceptedByName}</p>
-              <p style="margin: 0; color: #64748b; font-size: 14px;">${acceptedByEmail}</p>
-            </div>
-          </div>
+        <div style="background-color: #ffffff; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #e2e8f0;">
           <table style="width: 100%; border-collapse: collapse;">
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-size: 14px;">Membro</td>
+              <td style="padding: 10px 0; color: #1e293b; font-weight: 600; text-align: right; font-size: 14px;">${acceptedByName}</td>
+            </tr>
+            <tr>
+              <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9;">Email</td>
+              <td style="padding: 10px 0; color: #1e293b; font-weight: 600; text-align: right; font-size: 14px;">${acceptedByEmail}</td>
+            </tr>
             <tr>
               <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9;">Workspace</td>
               <td style="padding: 10px 0; color: #1e293b; font-weight: 600; text-align: right; font-size: 14px;">${workspaceName}</td>
@@ -935,7 +962,7 @@ export async function sendInvitationAcceptedEmail(params: InvitationAcceptedEmai
             <tr>
               <td style="padding: 10px 0; color: #64748b; font-size: 14px; border-top: 1px solid #f1f5f9;">Ruolo</td>
               <td style="padding: 10px 0; text-align: right;">
-                <span style="background: linear-gradient(135deg, #FF9500, #FF6B35); color: white; font-size: 12px; font-weight: 600; padding: 4px 10px; border-radius: 12px;">
+                <span style="background-color: #f97316; color: #ffffff; font-size: 12px; font-weight: 700; padding: 4px 12px; border-radius: 12px; display: inline-block;">
                   ${roleLabels[role] || role}
                 </span>
               </td>
@@ -944,13 +971,13 @@ export async function sendInvitationAcceptedEmail(params: InvitationAcceptedEmai
         </div>
 
         <div style="text-align: center; margin: 24px 0;">
-          <a href="https://spediresicuro.it/dashboard/workspace/team" style="display: inline-block; background: linear-gradient(135deg, #FF9500, #FF6B35); color: white; font-weight: 600; padding: 12px 28px; border-radius: 8px; text-decoration: none; font-size: 14px;">
-            Vedi Team →
+          <a href="https://spediresicuro.it/dashboard/workspace/team" style="display: inline-block; background-color: #1e293b; color: #ffffff; font-weight: 700; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-size: 14px; letter-spacing: 0.3px;">
+            VEDI TEAM
           </a>
         </div>
 
-        <p style="color: #64748b; font-size: 13px; margin-bottom: 0;">
-          Il nuovo membro può ora accedere al workspace con i permessi assegnati.
+        <p style="color: #64748b; font-size: 13px; margin-bottom: 0; line-height: 1.5;">
+          Il nuovo membro puo' ora accedere al workspace con i permessi assegnati.
         </p>
       </div>
       <div style="text-align: center; padding: 16px; color: #94a3b8; font-size: 12px;">
