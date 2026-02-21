@@ -235,7 +235,8 @@ describe('Supervisor Router — propagazione workspaceId', () => {
       'utf-8'
     );
     // Il supportWorker deve ricevere workspaceId nel suo input
-    expect(code).toMatch(/supportWorker\(\s*\{[\s\S]*?workspaceId:\s*wsId/);
+    // effectiveWsId = wsId (senza delega) o delegation.delegatedWorkspaceId (con delega)
+    expect(code).toMatch(/supportWorker\(\s*\{[\s\S]*?workspaceId:\s*effectiveWsId/);
   });
 
   it('passa workspaceId al crmWorker', () => {
@@ -243,7 +244,7 @@ describe('Supervisor Router — propagazione workspaceId', () => {
       path.join(process.cwd(), 'lib/agent/orchestrator/supervisor-router.ts'),
       'utf-8'
     );
-    expect(code).toMatch(/crmWorker\(\s*\{[\s\S]*?workspaceId:\s*wsId/);
+    expect(code).toMatch(/crmWorker\(\s*\{[\s\S]*?workspaceId:\s*effectiveWsId/);
   });
 
   it('passa workspaceId al outreachWorker', () => {
@@ -251,7 +252,7 @@ describe('Supervisor Router — propagazione workspaceId', () => {
       path.join(process.cwd(), 'lib/agent/orchestrator/supervisor-router.ts'),
       'utf-8'
     );
-    expect(code).toMatch(/outreachWorker\(\s*\{[\s\S]*?workspaceId:\s*wsId/);
+    expect(code).toMatch(/outreachWorker\(\s*\{[\s\S]*?workspaceId:\s*effectiveWsId/);
   });
 
   it('NON mappa reseller a admin per i worker', () => {
