@@ -51,6 +51,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': resolve(__dirname, './'),
+      '@ss/domain-ai': resolve(__dirname, './packages/domain-ai/src/index.ts'),
     },
   },
   // Evita warning CJS deprecated

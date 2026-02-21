@@ -51,6 +51,44 @@ npm run build        # Zero errori compilazione
 6. `git push origin master`
 7. Verifica deploy Vercel
 
+## REGOLA #5: Anne V2 — Domain-AI Package
+
+Usare types e funzioni da `@ss/domain-ai`, NON direttamente dai file interni:
+
+```typescript
+// ✅ CORRETTO
+import { evaluateToolSafety, type ToolSpec } from '@ss/domain-ai';
+
+// ❌ VIETATO — import diretto da path interni del package
+import { evaluateToolSafety } from '@/packages/domain-ai/src/policies/tool-safety';
+```
+
+`packages/domain-ai/` e' standalone: NON deve MAI importare da `@/`.
+Il test `anne-v2-security.test.ts` monitora questa invariante.
+
+## REGOLA #6: Anne V2 — SessionState Whitelist
+
+MAI fare spread cieco di `sessionState` in `AgentState`:
+
+```typescript
+// ✅ CORRETTO — whitelist esplicita
+const safe = pickSafeSessionState(input.sessionState);
+// Chiavi ammesse: shipmentDraft, shipment_creation_phase, missingFields, pricing_options, shipment_details
+
+// ❌ VIETATO — il client puo' iniettare userId/userEmail
+{ ...baseState, ...(input.sessionState || {}) }
+```
+
+## REGOLA #7: Anne V2 — Multi-Provider LLM
+
+Gerarchia env vars per provider:
+
+```bash
+ANNE_PROVIDER_{DOMAIN}_{ROLE} > ANNE_PROVIDER_{ROLE} > ANNE_PROVIDER > "ollama"
+```
+
+Guida completa: `docs/2-ARCHITECTURE/ANNE_V2_IMPLEMENTATION.md`
+
 ## Convenzioni
 
 - File: kebab-case | Components: PascalCase | Variables: camelCase
