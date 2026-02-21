@@ -197,7 +197,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         resource_id: invitation.id,
         user_id: context.target.id,
         workspace_id: workspaceId,
-        audit_metadata: {
+        metadata: {
           email_hash: emailHash, // Hash invece di email per GDPR
           role: memberRole,
           expires_at: expiresAt.toISOString(),
@@ -433,7 +433,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         resource_id: invitationId,
         user_id: context.target.id,
         workspace_id: workspaceId,
-        audit_metadata: {
+        metadata: {
           revoked_by: context.actor.id,
           is_impersonating: context.isImpersonating,
         },
@@ -580,7 +580,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         resource_id: invitationId,
         user_id: context.target.id,
         workspace_id: workspaceId,
-        audit_metadata: {
+        metadata: {
           resent_by: context.actor.id,
           is_impersonating: context.isImpersonating,
         },

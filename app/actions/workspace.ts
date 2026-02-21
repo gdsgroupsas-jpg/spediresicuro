@@ -90,7 +90,7 @@ export async function createOrganization(
           actor_id: context.actor.id,
           target_id: context.actor.id,
           workspace_id: actorWorkspaceId,
-          audit_metadata: {
+          metadata: {
             name: input.name,
             slug,
             billing_email: input.billing_email,
@@ -189,7 +189,7 @@ export async function createWorkspace(
         actor_id: context.actor.id,
         target_id: context.actor.id,
         workspace_id: data,
-        audit_metadata: {
+        metadata: {
           name: input.name,
           slug,
           organization_id: input.organization_id,
@@ -318,7 +318,7 @@ export async function configureWorkspaceFee(
         actor_id: context.actor.id,
         target_id: context.actor.id,
         workspace_id: input.workspace_id,
-        audit_metadata: {
+        metadata: {
           workspace_name: oldWorkspace?.name,
           old_platform_fee: oldWorkspace?.platform_fee_override,
           new_platform_fee: input.platform_fee_override,
@@ -478,7 +478,7 @@ export async function acceptWorkspaceInvitation(
           actor_id: context.actor.id,
           target_id: context.target.id,
           workspace_id: invitationWorkspaceId,
-          audit_metadata: {
+          metadata: {
             token_hash: token.substring(0, 8) + '...',
           },
         });

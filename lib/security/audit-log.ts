@@ -115,7 +115,7 @@ export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
       workspace_id: workspaceId,
 
       // Metadata
-      audit_metadata: auditMetadata,
+      metadata: auditMetadata,
 
       // Timestamp
       created_at: new Date().toISOString(),
@@ -280,7 +280,7 @@ export async function logAuditEvent(
       user_email: 'system',
 
       // Metadata
-      audit_metadata: {
+      metadata: {
         ...metadata,
         legacy_caller: true,
         migration_needed: true,

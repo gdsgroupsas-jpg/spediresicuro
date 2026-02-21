@@ -276,7 +276,7 @@ export async function POST(request: NextRequest) {
       target_id: context.target.id,
       workspace_id: workspaceId,
       impersonation_active: context.isImpersonating,
-      audit_metadata: {
+      metadata: {
         workspace_name: workspaceInfo.workspace_name,
         organization_name: workspaceInfo.organization_name,
       },

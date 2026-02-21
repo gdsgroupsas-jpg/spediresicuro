@@ -175,8 +175,10 @@ export async function logAuditEvent(
         user_id: event.target_id || event.actor_id, // Legacy compatibility
         user_email: event.actor_email,
         impersonation_active: event.impersonation_active || false,
-        audit_metadata: auditMetadata,
-        metadata: event.metadata || {},
+        metadata: {
+          ...(event.metadata || {}),
+          ...auditMetadata,
+        },
       })
       .select('id')
       .single();

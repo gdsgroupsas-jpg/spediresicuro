@@ -90,10 +90,10 @@ export async function logSecurityEvent(event: SecurityEvent): Promise<void> {
       user_id: event.target_id || event.user_id || null,
       user_email: event.user_email || null,
 
-      // Metadata
-      metadata: event.metadata || {},
-      audit_metadata: {
-        ...event.audit_metadata,
+      // Metadata (unifica metadata + audit_metadata nella colonna DB 'metadata')
+      metadata: {
+        ...(event.metadata || {}),
+        ...(event.audit_metadata || {}),
         logged_at: new Date().toISOString(),
       },
 

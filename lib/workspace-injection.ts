@@ -296,7 +296,7 @@ export async function createAuditPayload(
     resource_type: resourceType,
     resource_id: resourceId,
     workspace_id: workspaceId,
-    audit_metadata: additionalMetadata,
+    metadata: additionalMetadata,
     created_at: new Date().toISOString(),
   };
 }

@@ -279,7 +279,7 @@ export async function POST(request: NextRequest, { params }: RouteParams) {
         resource_id: invitation.id,
         user_id: context.target.id,
         workspace_id: invitation.workspace_id,
-        audit_metadata: {
+        metadata: {
           role_assigned: invitation.role,
           permissions_assigned: invitation.permissions,
           accepted_by_user_id: context.target.id,

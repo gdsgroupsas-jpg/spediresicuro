@@ -790,7 +790,7 @@ export async function logWorkspaceAudit(
       target_id: context.target.id,
       workspace_id: context.workspace.id,
       impersonation_active: context.isImpersonating,
-      audit_metadata: {
+      metadata: {
         ...auditMetadata,
         // PRIVACY: No email in audit logs - only IDs for GDPR compliance
         workspace_name: context.workspace.name,

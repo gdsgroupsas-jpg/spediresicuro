@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
           target_id: null,
           workspace_id: q.workspace_id || null,
           impersonation_active: false,
-          audit_metadata: {
+          metadata: {
             prospect_company: q.prospect_company,
             reason: 'auto_expiry_cron',
           },

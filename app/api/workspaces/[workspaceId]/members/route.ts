@@ -226,7 +226,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
         resource_id: targetMember.id,
         user_id: context.target.id,
         workspace_id: workspaceId,
-        audit_metadata: {
+        metadata: {
           target_user_id: targetUserId, // Solo ID, no email
           previous_role: targetMember.role,
           removed_by: context.actor.id,
@@ -360,7 +360,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
         resource_id: targetMember.id,
         user_id: context.target.id,
         workspace_id: workspaceId,
-        audit_metadata: {
+        metadata: {
           target_user_id: userId,
           old_role: targetMember.role,
           new_role: role || targetMember.role,
