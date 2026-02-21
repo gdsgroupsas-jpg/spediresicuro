@@ -837,7 +837,8 @@ export async function executeTool(
           const result = await createBatchShipments(
             shipmentsData,
             userId,
-            toolCall.arguments.defaultSender
+            toolCall.arguments.defaultSender,
+            workspaceId
           );
 
           return {

@@ -10,6 +10,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { assertValidUserId } from '@/lib/validators';
 
 interface ShipmentRow {
@@ -314,8 +315,14 @@ export async function calculateQuotesComparison(
 export async function createBatchShipments(
   shipments: ShipmentRow[],
   userId: string,
-  defaultSender?: any
+  defaultSender?: any,
+  workspaceId?: string
 ): Promise<BatchShipmentResult> {
+  // ⚠️ SICUREZZA: Fail-closed — workspaceId obbligatorio
+  if (!workspaceId) {
+    throw new Error('workspaceId is required for batch shipment creation');
+  }
+
   // ⚠️ SICUREZZA: Valida userId prima di inserire
   assertValidUserId(userId);
 
@@ -357,8 +364,8 @@ export async function createBatchShipments(
         email: shipment.sender_email || defaultSender?.email,
       };
 
-      // Crea spedizione
-      const { data: newShipment, error } = await supabaseAdmin
+      // Crea spedizione (workspaceQuery aggiunge workspace_id automaticamente)
+      const { data: newShipment, error } = await workspaceQuery(workspaceId)
         .from('shipments')
         .insert({
           user_id: userId,
