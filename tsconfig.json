@@ -19,12 +19,15 @@
       }
     ],
     "paths": {
-      "@/*": ["./*"]
+      "@/*": ["./*"],
+      "@ss/domain-ai": ["./packages/domain-ai/src/index.ts"],
+      "@ss/domain-ai/*": ["./packages/domain-ai/src/*"]
     }
   },
   "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": [
     "node_modules",
+    "packages/**/*", // Esclude domain packages (hanno tsconfig separati)
     "automation-service/**/*", // Esclude servizio automation (ha dipendenze separate)
     "scripts/**/*", // ⚡ BUILD OPTIMIZATION: Scripts usano tsconfig.scripts.json separato
     "tests/**/*", // ⚡ BUILD OPTIMIZATION: Test usano vitest.config.mts

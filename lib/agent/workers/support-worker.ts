@@ -127,12 +127,16 @@ export async function clearPendingActions(userId: string): Promise<void> {
 /**
  * Controlla se il messaggio utente e una conferma a un'azione pending.
  */
-const CONFIRM_PATTERNS = /\b(si|sì|ok|conferma|confermo|procedi|vai|fallo|certo|assolutamente)\b/i;
+// Conferma: il messaggio deve INIZIARE con parola di conferma (coerente con approval.ts)
+const CONFIRM_PATTERNS =
+  /^\s*(si|sì|ok|conferma|confermo|procedi|vai|fallo|certo|assolutamente)[\s,.!]*(.*)$/i;
+// Cancellazione: piu' permissiva (non richiede inizio riga) perche' e' l'azione sicura
 const CANCEL_PATTERNS = /\b(no|annulla|cancella|stop|ferma|non voglio|lascia stare|niente)\b/i;
 
 export function detectConfirmation(message: string): 'confirm' | 'cancel' | null {
-  if (CONFIRM_PATTERNS.test(message)) return 'confirm';
+  // Cancel ha priorita': "no, ok lascia stare" non deve confermare
   if (CANCEL_PATTERNS.test(message)) return 'cancel';
+  if (CONFIRM_PATTERNS.test(message)) return 'confirm';
   return null;
 }
 
