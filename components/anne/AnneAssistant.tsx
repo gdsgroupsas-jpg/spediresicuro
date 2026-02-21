@@ -732,7 +732,15 @@ export function AnneAssistant({
                   >
                     {/* Card interattive (se dati strutturati disponibili) */}
                     {msg.cardData?.type === 'pricing' && msg.cardData.pricing && (
-                      <PricingComparisonCard options={msg.cardData.pricing} />
+                      <PricingComparisonCard
+                        options={msg.cardData.pricing}
+                        onSelect={(option) => {
+                          setInput(
+                            `Prenota spedizione con ${option.courier} ${option.serviceType} a ${option.finalPrice.toFixed(2)}€`
+                          );
+                          setTimeout(() => sendMessage(), 100);
+                        }}
+                      />
                     )}
                     {msg.cardData?.type === 'booking' && msg.cardData.booking && (
                       <BookingConfirmCard result={msg.cardData.booking} />
