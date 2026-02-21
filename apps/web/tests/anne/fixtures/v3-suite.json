@@ -1,0 +1,130 @@
+[
+  {
+    "id": "quote_complete_roma",
+    "prompt": "Mi fai un preventivo spedizione per 2.4 kg verso 00100 Roma, servizio standard?",
+    "expectedDomain": "quote",
+    "expectedChannel": "quote",
+    "expectApproval": false,
+    "expectClarification": false
+  },
+  {
+    "id": "quote_missing_data",
+    "prompt": "Quanto mi costa spedire un pacco?",
+    "expectedDomain": "quote",
+    "expectedChannel": "quote",
+    "expectApproval": false,
+    "expectClarification": true
+  },
+  {
+    "id": "shipment_create_full_payload",
+    "prompt": "Voglio creare una spedizione. Mittente Mario Rossi, telefono 3331234567. Destinatario Laura Bianchi, via Roma 15, 00100 Roma RM, telefono 0661234567. Pacco 2.5 kg.",
+    "expectedDomain": "shipment",
+    "expectedChannel": "create_shipment",
+    "expectApproval": true,
+    "expectClarification": false
+  },
+  {
+    "id": "support_tracking_status",
+    "prompt": "Ho un pacco in ritardo, puoi controllare lo stato della spedizione con tracking IT123456789?",
+    "expectedDomain": "support",
+    "expectedChannel": "support",
+    "expectApproval": false,
+    "expectClarification": false
+  },
+  {
+    "id": "support_refund_request",
+    "prompt": "Vorrei chiedere un rimborso per una spedizione mai consegnata.",
+    "expectedDomain": "support",
+    "expectedChannel": "support",
+    "expectApproval": false,
+    "expectClarification": true
+  },
+  {
+    "id": "crm_pipeline_overview",
+    "prompt": "Dammi una panoramica della pipeline CRM e delle priorita di oggi.",
+    "expectedDomain": "crm",
+    "expectedChannel": "crm",
+    "expectApproval": false,
+    "expectClarification": false
+  },
+  {
+    "id": "crm_write_status",
+    "prompt": "Aggiorna lo stato del prospect Farmacia Rossi a negoziazione.",
+    "expectedDomain": "crm",
+    "expectedChannel": "crm",
+    "expectApproval": true,
+    "expectClarification": false
+  },
+  {
+    "id": "outreach_metrics",
+    "prompt": "Mostrami le metriche outreach degli ultimi invii su email e whatsapp.",
+    "expectedDomain": "outreach",
+    "expectedChannel": "outreach",
+    "expectApproval": false,
+    "expectClarification": false
+  },
+  {
+    "id": "outreach_enroll",
+    "prompt": "Iscrivi il prospect Farmacia Centrale alla sequenza follow-up commerciale.",
+    "expectedDomain": "outreach",
+    "expectedChannel": "outreach",
+    "expectApproval": true,
+    "expectClarification": false
+  },
+  {
+    "id": "listini_active",
+    "prompt": "Mostrami il listino attivo e il margine configurato su GLS.",
+    "expectedDomain": "listini",
+    "expectedChannel": "listini",
+    "expectApproval": false,
+    "expectClarification": false
+  },
+  {
+    "id": "listini_compare_margin",
+    "prompt": "Confronta costo fornitore e prezzo vendita per 3 kg su Milano 20100.",
+    "expectedDomain": "listini",
+    "expectedChannel": "listini",
+    "expectApproval": false,
+    "expectClarification": false
+  },
+  {
+    "id": "mentor_architecture",
+    "prompt": "Spiegami in modo tecnico come e organizzata ANNE V3 e i suoi stage.",
+    "expectedDomain": "mentor",
+    "expectedChannel": "mentor",
+    "expectApproval": false,
+    "expectClarification": false
+  },
+  {
+    "id": "debug_route_500",
+    "prompt": "Quando invio una richiesta all'API ricevo errore 500, aiutami a fare troubleshooting.",
+    "expectedDomain": "debug",
+    "expectedChannel": "debug",
+    "expectApproval": false,
+    "expectClarification": false
+  },
+  {
+    "id": "explain_margin_logic",
+    "prompt": "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.",
+    "expectedDomain": "explain",
+    "expectedChannel": "explain",
+    "expectApproval": false,
+    "expectClarification": false
+  },
+  {
+    "id": "mixed_business_request",
+    "prompt": "Prima dammi un preventivo per 1.2 kg a Napoli 80100, poi suggeriscimi il prossimo passo operativo.",
+    "expectedDomain": "quote",
+    "expectedChannel": "quote",
+    "expectApproval": false,
+    "expectClarification": false
+  },
+  {
+    "id": "minimal_greeting",
+    "prompt": "Ciao Anne",
+    "expectedDomain": "support",
+    "expectedChannel": "support",
+    "expectApproval": false,
+    "expectClarification": false
+  }
+]

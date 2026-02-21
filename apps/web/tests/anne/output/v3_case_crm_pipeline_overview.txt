@@ -1,0 +1,1541 @@
+--- v3_case_crm_pipeline_overview ---
+run: 2026-02-21T18:26:08.854977+00:00
+base_url: http://localhost:3000
+
+[case]
+{
+  "id": "crm_pipeline_overview",
+  "prompt": "Dammi una panoramica della pipeline CRM e delle priorita di oggi.",
+  "expectedDomain": "crm",
+  "expectedChannel": "crm",
+  "expectApproval": false,
+  "expectClarification": false
+}
+
+[response]
+status: 200
+success: True
+passed: True
+reason: OK (crm_pipeline_overview)
+message: La pipeline CRM attualmente non contiene lead o opportunità. Di conseguenza, non ci sono priorità o azioni da completare per oggi.
+
+[metadata]
+{
+  "trace_id": "ann-mlwng5fs-73b941f017ce",
+  "userRole": "admin",
+  "timestamp": "2026-02-21T18:26:08.850Z",
+  "executionTime": 27338,
+  "rateLimitRemaining": 18,
+  "flowId": "orch.crm.crm.get.pipeline",
+  "pricingOptionsCount": 0,
+  "orchestratorMode": "v2",
+  "intentId": "crm.get.pipeline",
+  "channel": "crm",
+  "domain": "crm",
+  "riskLevel": "low",
+  "approvalRequired": false,
+  "toolPlanId": "toolplan_1771698342018_c02f3561",
+  "pipelineId": "pipeline_1771698342018_c02f3561",
+  "stageTrace": {
+    "lastStage": "finalizer",
+    "totalDurationMs": 26778,
+    "tokenUsage": {
+      "inputTokens": 6818,
+      "outputTokens": 4097,
+      "totalTokens": 10915,
+      "tokenAlertCount": 0,
+      "tokenAlertThreshold": 16000
+    },
+    "entries": [
+      {
+        "stage": "request_manager",
+        "attempt": 1,
+        "durationMs": 2428,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 1550,
+        "outputTokens": 296,
+        "totalTokens": 1846,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei REQUEST_MANAGER.\nClassifica la richiesta in dominio, channel, intentId, reason, confidence.\nJSON schema: {\"domain\":\"...\",\"channel\":\"...\",\"intentId\":\"...\",\"reason\":\"...\",\"confidence\":0-100}\n\nRouting policy (use this order of evidence):\n1) quote -> preventivo, prezzo, costo, tariffa, quanto costa, comparazione corrieri, stima spedizione, dati peso/cap/citta/servizio.\n2) shipment -> crea spedizione, conferma prenotazione, genera etichetta, procedi spedizione, acquisto spedizione.\n3) support -> problemi su spedizione esistente: tracking fermo, giacenza, ritardo, errore, reclamo, rimborso, assistenza post-vendita.\n4) crm -> lead/prospect, note commerciali, pipeline, follow-up commerciale.\n5) outreach -> campagne/sequence outreach, enrollment, canali e metriche outreach.\n6) listini -> listini, margini, costo fornitore, configurazioni prezzo.\n7) mentor -> coaching operativo/strategico interno.\n8) debug -> analisi errore tecnico/stack/log.\n9) explain -> spiegazioni generali su processo/business.\n\nTie-break mandatory rules:\n- If there is explicit pricing intent, choose domain=quote even if the message asks for help.\n- Use support only when the user refers to an existing shipment issue, not a new estimate.\n- Never use support as a default bucket when quote evidence is present.\n\nChannel mapping is strict:\n- quote -> quote\n- shipment -> create_shipment\n- support -> support\n- crm -> crm\n- outreach -> outreach\n- listini -> listini\n- mentor -> mentor\n- debug -> debug\n- explain -> explain\n\nIntent naming convention:\n- Use lowercase dotted ids: <domain>.<action>.<object> (example: quote.create.estimate).\n\nDisambiguation rules (mandatory):\n- outreach vs crm: if user asks to enroll/subscribe/add to sequence/campaign/invio programmato -> domain MUST be outreach (not crm).\n- listini vs quote: if user asks supplier cost, selling price, margin, listino comparison -> domain MUST be listini (not quote).\n- mentor vs explain: if user asks internal architecture/stages/how ANNE works technically -> domain MUST be mentor (not explain).\n- explain vs listini: if user asks conceptual explanation (\"spiegami come\", \"come viene calcolato\", \"perche\") without asking to fetch/compare a specific listino record, domain MUST be explain.\n- greeting-only message (\"ciao\", \"salve\", \"hey anne\") -> domain MUST be support with a greeting/support intent.\n- explain should be used for general process/business explanations, not internal technical mentoring.\n- listini requires an operational intent (show/list/compare configured prices, margins, supplier costs).\n- explain is mandatory when the user asks \"how it works\" or \"why\" about business logic and does not ask to fetch/update records.\n\nDecision table (final check before output):\n- If request asks conceptual explanation only -> domain=explain.\n- If request asks show/compare/list configured pricing data -> domain=listini.\n- If request asks an estimate for a new shipment -> domain=quote.\n- If request asks to execute/create booking -> domain=shipment.\n- If request asks troubleshooting on technical failures -> domain=debug.\n\nNegative examples:\n- \"Spiegami come calcolate il margine\" => explain (NOT listini).\n- \"Mostrami il margine su GLS 3kg Milano\" => listini (NOT explain).\n- \"Iscrivi il prospect alla sequenza\" => outreach (NOT crm).\n- \"Ciao Anne\" => support (NOT explain).\n\nExample 1 input: \"Mi fai un preventivo per 2.4 kg verso 00100 Roma?\"\nExample 1 output: {\"domain\":\"quote\",\"channel\":\"quote\",\"intentId\":\"quote.create.estimate\",\"reason\":\"Richiesta esplicita di preventivo con peso e CAP.\",\"confidence\":95}\nExample 2 input: \"Il tracking della spedizione 123 e fermo da ieri, puoi aiutarmi?\"\nExample 2 output: {\"domain\":\"support\",\"channel\":\"support\",\"intentId\":\"support.resolve.tracking_issue\",\"reason\":\"Problema su spedizione esistente.\",\"confidence\":93}\nExample 3 input: \"Voglio confermare e creare subito la spedizione che abbiamo preparato.\"\nExample 3 output: {\"domain\":\"shipment\",\"channel\":\"create_shipment\",\"intentId\":\"shipment.create.confirmed_booking\",\"reason\":\"Richiesta operativa di creazione spedizione.\",\"confidence\":94}\nExample 4 input: \"Iscrivi il prospect Farmacia Centrale alla sequenza follow-up commerciale.\"\nExample 4 output: {\"domain\":\"outreach\",\"channel\":\"outreach\",\"intentId\":\"outreach.enroll.sequence\",\"reason\":\"Richiesta di enrollment in sequenza outreach.\",\"confidence\":94}\nExample 5 input: \"Confronta costo fornitore e prezzo vendita per 3 kg su Milano 20100.\"\nExample 5 output: {\"domain\":\"listini\",\"channel\":\"listini\",\"intentId\":\"listini.compare.margin\",\"reason\":\"Confronto costo fornitore/prezzo vendita tipico listini.\",\"confidence\":93}\nExample 6 input: \"Spiegami in modo tecnico come e organizzata ANNE V3 e i suoi stage.\"\nExample 6 output: {\"domain\":\"mentor\",\"channel\":\"mentor\",\"intentId\":\"mentor.explain.architecture\",\"reason\":\"Richiesta di mentoring tecnico interno sull architettura.\",\"confidence\":90}\nExample 7 input: \"Ciao Anne\"\nExample 7 output: {\"domain\":\"support\",\"channel\":\"support\",\"intentId\":\"support.greeting.request\",\"reason\":\"Saluto iniziale senza richiesta specifica.\",\"confidence\":92}\nExample 8 input: \"Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.\"\nExample 8 output: {\"domain\":\"explain\",\"channel\":\"explain\",\"intentId\":\"explain.margin.calculation\",\"reason\":\"Richiesta di spiegazione concettuale, non di lettura/confronto listino.\",\"confidence\":91}\n\n#2 user\n{\n  \"instruction\": \"Classifica la richiesta in uno dei domini ammessi. Priorita: evita support quando c e una richiesta di preventivo/prezzo.\",\n  \"attempt\": 1,\n  \"allowedDomains\": [\n    \"quote\",\n    \"shipment\",\n    \"support\",\n    \"crm\",\n    \"outreach\",\n    \"listini\",\n    \"mentor\",\n    \"debug\",\n    \"explain\"\n  ],\n  \"strictChannelMap\": {\n    \"quote\": \"quote\",\n    \"shipment\": \"create_shipment\",\n    \"support\": \"support\",\n    \"crm\": \"crm\",\n    \"outreach\": \"outreach\",\n    \"listini\": \"listini\",\n    \"mentor\": \"mentor\",\n    \"debug\": \"debug\",\n    \"explain\": \"explain\"\n  },\n  \"message\": \"Dammi una panoramica della pipeline CRM e delle priorita di oggi.\"\n}",
+        "outputText": "{\"domain\":\"crm\",\"channel\":\"crm\",\"intentId\":\"crm.get.pipeline\",\"reason\":\"Richiesta di panoramica della pipeline CRM e delle priorità.\",\"confidence\":95}"
+      },
+      {
+        "stage": "domain_decomposer",
+        "attempt": 1,
+        "durationMs": 3997,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 262,
+        "outputTokens": 598,
+        "totalTokens": 860,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei DOMAIN_DECOMPOSER.\nScomponi la richiesta in subtasks granulari con dipendenze minime.\nJSON schema: {\"subtasks\":[{\"id\":\"task_1\",\"domain\":\"...\",\"intentId\":\"...\",\"goal\":\"...\",\"dependsOn\":[],\"acceptance\":\"...\"}]}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"input\": {\n    \"message\": \"Dammi una panoramica della pipeline CRM e delle priorita di oggi.\",\n    \"intentId\": \"crm.get.pipeline\",\n    \"domain\": \"crm\"\n  }\n}",
+        "outputText": "{\"subtasks\":[{\"id\":\"task_1\",\"domain\":\"crm\",\"intentId\":\"crm.get.pipeline.stages\",\"goal\":\"Retrieve the list of pipeline stages and the count of leads in each stage\",\"dependsOn\":[],\"acceptance\":\"Return a JSON array where each element contains stage name and lead count\"},{\"id\":\"task_2\",\"domain\":\"crm\",\"intentId\":\"crm.get.pipeline.leads\",\"goal\":\"Retrieve detailed information (lead ID, name, status, priority, next step) for all leads currently in the pipeline\",\"dependsOn\":[],\"acceptance\":\"Return a JSON array of lead objects with at least ID, name, stage, priority, and next action\"},{\"id\":\"task_3\",\"domain\":\"crm\",\"intentId\":\"crm.get.todays.priorities\",\"goal\":\"Identify the actions or leads that are the highest priority for the current day\",\"dependsOn\":[],\"acceptance\":\"Return a JSON array of priority items with lead ID, action description, and due time (within today)\"}]}"
+      },
+      {
+        "stage": "task_planner",
+        "attempt": 1,
+        "durationMs": 4043,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 557,
+        "outputTokens": 712,
+        "totalTokens": 1269,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei TASK_PLANNER.\nOrdina e normalizza i task per l'esecuzione.\nJSON schema: {\"tasks\":[{\"id\":\"...\",\"domain\":\"...\",\"intentId\":\"...\",\"goal\":\"...\",\"dependsOn\":[],\"acceptance\":\"...\"}]}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"message\": \"Dammi una panoramica della pipeline CRM e delle priorita di oggi.\",\n  \"classification\": {\n    \"domain\": \"crm\",\n    \"channel\": \"crm\",\n    \"intentId\": \"crm.get.pipeline\",\n    \"reason\": \"Richiesta di panoramica della pipeline CRM e delle priorità.\",\n    \"confidence\": 95\n  },\n  \"decomposedTasks\": [\n    {\n      \"id\": \"task_1\",\n      \"domain\": \"crm\",\n      \"intentId\": \"crm.get.pipeline.stages\",\n      \"goal\": \"Retrieve the list of pipeline stages and the count of leads in each stage\",\n      \"dependsOn\": [],\n      \"acceptance\": \"Return a JSON array where each element contains stage name and lead count\"\n    },\n    {\n      \"id\": \"task_2\",\n      \"domain\": \"crm\",\n      \"intentId\": \"crm.get.pipeline.leads\",\n      \"goal\": \"Retrieve detailed information (lead ID, name, status, priority, next step) for all leads currently in the pipeline\",\n      \"dependsOn\": [],\n      \"acceptance\": \"Return a JSON array of lead objects with at least ID, name, stage, priority, and next action\"\n    },\n    {\n      \"id\": \"task_3\",\n      \"domain\": \"crm\",\n      \"intentId\": \"crm.get.todays.priorities\",\n      \"goal\": \"Identify the actions or leads that are the highest priority for the current day\",\n      \"dependsOn\": [],\n      \"acceptance\": \"Return a JSON array of priority items with lead ID, action description, and due time (within today)\"\n    }\n  ]\n}",
+        "outputText": "{\"tasks\":[{\"id\":\"task_1\",\"domain\":\"crm\",\"intentId\":\"crm.get.pipeline.stages\",\"goal\":\"Retrieve the list of pipeline stages and the count of leads in each stage\",\"dependsOn\":[],\"acceptance\":\"Return a JSON array where each element contains stage name and lead count\"},{\"id\":\"task_2\",\"domain\":\"crm\",\"intentId\":\"crm.get.pipeline.leads\",\"goal\":\"Retrieve detailed information (lead ID, name, status, priority, next step) for all leads currently in the pipeline\",\"dependsOn\":[],\"acceptance\":\"Return a JSON array of lead objects with at least ID, name, stage, priority, and next action\"},{\"id\":\"task_3\",\"domain\":\"crm\",\"intentId\":\"crm.get.todays.priorities\",\"goal\":\"Identify the actions or leads that are the highest priority for the current day\",\"dependsOn\":[],\"acceptance\":\"Return a JSON array of priority items with lead ID, action description, and due time (within today)\"}]}"
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 1701,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 828,
+        "outputTokens": 215,
+        "totalTokens": 1043,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_1\",\n    \"goal\": \"Retrieve the list of pipeline stages and the count of leads in each stage\",\n    \"domain\": \"crm\",\n    \"intentId\": \"crm.get.pipeline.stages\",\n    \"dependsOn\": [],\n    \"acceptance\": \"Return a JSON array where each element contains stage name and lead count\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"get_pipeline_summary\",\n      \"description\": \"Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_entity_details\",\n      \"description\": \"Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_crm_health_alerts\",\n      \"description\": \"Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_today_actions\",\n      \"description\": \"Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"search_crm_entities\",\n      \"description\": \"Cerca lead/prospect per nome, email, settore o stato. Utile per \\\"trova tutti i prospect ecommerce\\\" o \\\"lead in negoziazione\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"update_crm_status\",\n      \"description\": \"Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.\",\n      \"required\": [\n        \"new_status\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"add_crm_note\",\n      \"description\": \"Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.\",\n      \"required\": [\n        \"note\"\n      ],\n      \"riskLevel\": \"medium\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"record_crm_contact\",\n      \"description\": \"Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Retrieve the list of pipeline stages and the count of leads in each stage\",\"toolCandidates\":[\"get_pipeline_summary\"],\"expectedOutcome\":\"Return a JSON array where each element contains stage name and lead count\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 119,
+        "success": true
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 4971,
+        "success": false,
+        "errorCode": "invalid_json_contract",
+        "inputTokens": 845,
+        "outputTokens": 900,
+        "totalTokens": 1745,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_2\",\n    \"goal\": \"Retrieve detailed information (lead ID, name, status, priority, next step) for all leads currently in the pipeline\",\n    \"domain\": \"crm\",\n    \"intentId\": \"crm.get.pipeline.leads\",\n    \"dependsOn\": [],\n    \"acceptance\": \"Return a JSON array of lead objects with at least ID, name, stage, priority, and next action\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"get_pipeline_summary\",\n      \"description\": \"Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_entity_details\",\n      \"description\": \"Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_crm_health_alerts\",\n      \"description\": \"Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_today_actions\",\n      \"description\": \"Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"search_crm_entities\",\n      \"description\": \"Cerca lead/prospect per nome, email, settore o stato. Utile per \\\"trova tutti i prospect ecommerce\\\" o \\\"lead in negoziazione\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"update_crm_status\",\n      \"description\": \"Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.\",\n      \"required\": [\n        \"new_status\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"add_crm_note\",\n      \"description\": \"Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.\",\n      \"required\": [\n        \"note\"\n      ],\n      \"riskLevel\": \"medium\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"record_crm_contact\",\n      \"description\": \"Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "Empty JSON payload"
+      },
+      {
+        "stage": "planner",
+        "attempt": 2,
+        "durationMs": 3334,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 855,
+        "outputTokens": 509,
+        "totalTokens": 1364,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 2,\n  \"previousError\": \"Empty JSON payload\",\n  \"task\": {\n    \"id\": \"task_2\",\n    \"goal\": \"Retrieve detailed information (lead ID, name, status, priority, next step) for all leads currently in the pipeline\",\n    \"domain\": \"crm\",\n    \"intentId\": \"crm.get.pipeline.leads\",\n    \"dependsOn\": [],\n    \"acceptance\": \"Return a JSON array of lead objects with at least ID, name, stage, priority, and next action\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"get_pipeline_summary\",\n      \"description\": \"Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_entity_details\",\n      \"description\": \"Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_crm_health_alerts\",\n      \"description\": \"Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_today_actions\",\n      \"description\": \"Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"search_crm_entities\",\n      \"description\": \"Cerca lead/prospect per nome, email, settore o stato. Utile per \\\"trova tutti i prospect ecommerce\\\" o \\\"lead in negoziazione\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"update_crm_status\",\n      \"description\": \"Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.\",\n      \"required\": [\n        \"new_status\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"add_crm_note\",\n      \"description\": \"Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.\",\n      \"required\": [\n        \"note\"\n      ],\n      \"riskLevel\": \"medium\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"record_crm_contact\",\n      \"description\": \"Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Retrieve a list of lead IDs currently in the pipeline\",\"toolCandidates\":[\"search_crm_entities\"],\"expectedOutcome\":\"A JSON array of lead identifiers for all leads in the active pipeline stage\"},{\"id\":\"step_2\",\"goal\":\"For each lead ID obtained, fetch detailed information including ID, name, stage, priority, and next action\",\"toolCandidates\":[\"get_entity_details\"],\"expectedOutcome\":\"A JSON array of lead objects containing at least ID, name, stage, priority, and next action\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 1,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 94,
+        "success": true
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 1,
+        "success": false,
+        "errorCode": "stage_failed"
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 2432,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 838,
+        "outputTokens": 372,
+        "totalTokens": 1210,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_3\",\n    \"goal\": \"Identify the actions or leads that are the highest priority for the current day\",\n    \"domain\": \"crm\",\n    \"intentId\": \"crm.get.todays.priorities\",\n    \"dependsOn\": [],\n    \"acceptance\": \"Return a JSON array of priority items with lead ID, action description, and due time (within today)\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"get_pipeline_summary\",\n      \"description\": \"Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_entity_details\",\n      \"description\": \"Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_crm_health_alerts\",\n      \"description\": \"Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_today_actions\",\n      \"description\": \"Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"search_crm_entities\",\n      \"description\": \"Cerca lead/prospect per nome, email, settore o stato. Utile per \\\"trova tutti i prospect ecommerce\\\" o \\\"lead in negoziazione\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"update_crm_status\",\n      \"description\": \"Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.\",\n      \"required\": [\n        \"new_status\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"add_crm_note\",\n      \"description\": \"Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.\",\n      \"required\": [\n        \"note\"\n      ],\n      \"riskLevel\": \"medium\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"record_crm_contact\",\n      \"description\": \"Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step1\",\"goal\":\"Retrieve today's prioritized lead actions from CRM\",\"toolCandidates\":[\"get_today_actions\"],\"expectedOutcome\":\"A JSON array of priority items with lead ID, action description, and due time (within today)\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 53,
+        "success": true
+      },
+      {
+        "stage": "aggregator",
+        "attempt": 1,
+        "durationMs": 1922,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 710,
+        "outputTokens": 296,
+        "totalTokens": 1006,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei AGGREGATOR.\nAggrega risultati multi-step e risolvi conflitti in forma deterministica via JSON.\nJSON schema: {\"summary\":\"...\",\"message\":\"...\",\"clarificationRequired\":false,\"clarificationQuestion\":\"...\",\"agentState\":{},\"sessionState\":{}}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"message\": \"Dammi una panoramica della pipeline CRM e delle priorita di oggi.\",\n  \"classification\": {\n    \"domain\": \"crm\",\n    \"channel\": \"crm\",\n    \"intentId\": \"crm.get.pipeline\",\n    \"reason\": \"Richiesta di panoramica della pipeline CRM e delle priorità.\",\n    \"confidence\": 95\n  },\n  \"payload\": {\n    \"toolPlanId\": \"toolplan_1771698342018_c02f3561\",\n    \"steps\": [\n      {\n        \"success\": true,\n        \"tool\": \"get_pipeline_summary\",\n        \"taskId\": \"task_1\",\n        \"stepId\": \"step_1\",\n        \"message\": \"Operazione completata.\",\n        \"result\": {\n          \"summary\": {\n            \"total\": 0,\n            \"byStatus\": {},\n            \"avgScore\": 0,\n            \"pipelineValue\": 0\n          },\n          \"metrics\": {\n            \"rate\": 0,\n            \"avgDaysToConversion\": 0,\n            \"wonThisMonth\": 0,\n            \"lostThisMonth\": 0,\n            \"trend\": \"stable\",\n            \"totalActive\": 0,\n            \"totalPipelineValue\": 0\n          }\n        },\n        \"riskLevel\": \"low\"\n      },\n      {\n        \"success\": true,\n        \"tool\": \"search_crm_entities\",\n        \"taskId\": \"task_2\",\n        \"stepId\": \"step_1\",\n        \"message\": \"Operazione completata.\",\n        \"result\": {\n          \"results\": [],\n          \"count\": 0\n        },\n        \"riskLevel\": \"low\"\n      },\n      {\n        \"success\": false,\n        \"tool\": \"get_entity_details\",\n        \"taskId\": \"task_2\",\n        \"stepId\": \"step_2\",\n        \"error\": \"Entita non trovata\",\n        \"riskLevel\": \"low\"\n      },\n      {\n        \"success\": true,\n        \"tool\": \"get_today_actions\",\n        \"taskId\": \"task_3\",\n        \"stepId\": \"step1\",\n        \"message\": \"Operazione completata.\",\n        \"result\": {\n          \"actions\": [],\n          \"count\": 0\n        },\n        \"riskLevel\": \"low\"\n      }\n    ],\n    \"approvalRequired\": false\n  }\n}",
+        "outputText": "{\"summary\":\"La pipeline CRM è vuota al momento: nessun lead in attesa, nessun valore di pipeline. Non ci sono azioni programmate per oggi.\", \"message\":\"La pipeline CRM attualmente non contiene lead o opportunità. Di conseguenza, non ci sono priorità o azioni da completare per oggi.\", \"clarificationRequired\":false,\"clarificationQuestion\":\"\",\"agentState\":{},\"sessionState\":{}}"
+      },
+      {
+        "stage": "finalizer",
+        "attempt": 1,
+        "durationMs": 1682,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 373,
+        "outputTokens": 199,
+        "totalTokens": 572,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei FINALIZER.\nGenera la risposta finale utente in italiano, chiara e operativa.\nJSON schema: {\"message\":\"...\",\"clarificationRequest\":\"...\",\"nextAction\":\"...\"}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"message\": \"Dammi una panoramica della pipeline CRM e delle priorita di oggi.\",\n  \"classification\": {\n    \"domain\": \"crm\",\n    \"channel\": \"crm\",\n    \"intentId\": \"crm.get.pipeline\",\n    \"reason\": \"Richiesta di panoramica della pipeline CRM e delle priorità.\",\n    \"confidence\": 95\n  },\n  \"aggregated\": {\n    \"summary\": \"La pipeline CRM è vuota al momento: nessun lead in attesa, nessun valore di pipeline. Non ci sono azioni programmate per oggi.\",\n    \"message\": \"La pipeline CRM attualmente non contiene lead o opportunità. Di conseguenza, non ci sono priorità o azioni da completare per oggi.\",\n    \"clarificationRequired\": false,\n    \"agentState\": {},\n    \"sessionState\": {}\n  }\n}",
+        "outputText": "{\"message\":\"La pipeline CRM attualmente non contiene lead o opportunità. Di conseguenza, non ci sono priorità o azioni da completare per oggi.\",\"clarificationRequest\":\"\",\"nextAction\":\"\"}"
+      }
+    ]
+  },
+  "agentState": {}
+}
+
+[stage_trace_summary]
+lastStage: finalizer
+totalDurationMs: 26778
+tokenInputTotal: 6818
+tokenOutputTotal: 4097
+tokenTotal: 10915
+tokenAlertCount: 0
+tokenAlertThreshold: 16000
+
+[stage_trace_entries]
+
+--- stage_1 ---
+stage: request_manager
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 2428
+inputTokens: 1550
+outputTokens: 296
+totalTokens: 1846
+tokenAlert: False
+[input]
+#1 system
+Sei REQUEST_MANAGER.
+Classifica la richiesta in dominio, channel, intentId, reason, confidence.
+JSON schema: {"domain":"...","channel":"...","intentId":"...","reason":"...","confidence":0-100}
+
+Routing policy (use this order of evidence):
+1) quote -> preventivo, prezzo, costo, tariffa, quanto costa, comparazione corrieri, stima spedizione, dati peso/cap/citta/servizio.
+2) shipment -> crea spedizione, conferma prenotazione, genera etichetta, procedi spedizione, acquisto spedizione.
+3) support -> problemi su spedizione esistente: tracking fermo, giacenza, ritardo, errore, reclamo, rimborso, assistenza post-vendita.
+4) crm -> lead/prospect, note commerciali, pipeline, follow-up commerciale.
+5) outreach -> campagne/sequence outreach, enrollment, canali e metriche outreach.
+6) listini -> listini, margini, costo fornitore, configurazioni prezzo.
+7) mentor -> coaching operativo/strategico interno.
+8) debug -> analisi errore tecnico/stack/log.
+9) explain -> spiegazioni generali su processo/business.
+
+Tie-break mandatory rules:
+- If there is explicit pricing intent, choose domain=quote even if the message asks for help.
+- Use support only when the user refers to an existing shipment issue, not a new estimate.
+- Never use support as a default bucket when quote evidence is present.
+
+Channel mapping is strict:
+- quote -> quote
+- shipment -> create_shipment
+- support -> support
+- crm -> crm
+- outreach -> outreach
+- listini -> listini
+- mentor -> mentor
+- debug -> debug
+- explain -> explain
+
+Intent naming convention:
+- Use lowercase dotted ids: <domain>.<action>.<object> (example: quote.create.estimate).
+
+Disambiguation rules (mandatory):
+- outreach vs crm: if user asks to enroll/subscribe/add to sequence/campaign/invio programmato -> domain MUST be outreach (not crm).
+- listini vs quote: if user asks supplier cost, selling price, margin, listino comparison -> domain MUST be listini (not quote).
+- mentor vs explain: if user asks internal architecture/stages/how ANNE works technically -> domain MUST be mentor (not explain).
+- explain vs listini: if user asks conceptual explanation ("spiegami come", "come viene calcolato", "perche") without asking to fetch/compare a specific listino record, domain MUST be explain.
+- greeting-only message ("ciao", "salve", "hey anne") -> domain MUST be support with a greeting/support intent.
+- explain should be used for general process/business explanations, not internal technical mentoring.
+- listini requires an operational intent (show/list/compare configured prices, margins, supplier costs).
+- explain is mandatory when the user asks "how it works" or "why" about business logic and does not ask to fetch/update records.
+
+Decision table (final check before output):
+- If request asks conceptual explanation only -> domain=explain.
+- If request asks show/compare/list configured pricing data -> domain=listini.
+- If request asks an estimate for a new shipment -> domain=quote.
+- If request asks to execute/create booking -> domain=shipment.
+- If request asks troubleshooting on technical failures -> domain=debug.
+
+Negative examples:
+- "Spiegami come calcolate il margine" => explain (NOT listini).
+- "Mostrami il margine su GLS 3kg Milano" => listini (NOT explain).
+- "Iscrivi il prospect alla sequenza" => outreach (NOT crm).
+- "Ciao Anne" => support (NOT explain).
+
+Example 1 input: "Mi fai un preventivo per 2.4 kg verso 00100 Roma?"
+Example 1 output: {"domain":"quote","channel":"quote","intentId":"quote.create.estimate","reason":"Richiesta esplicita di preventivo con peso e CAP.","confidence":95}
+Example 2 input: "Il tracking della spedizione 123 e fermo da ieri, puoi aiutarmi?"
+Example 2 output: {"domain":"support","channel":"support","intentId":"support.resolve.tracking_issue","reason":"Problema su spedizione esistente.","confidence":93}
+Example 3 input: "Voglio confermare e creare subito la spedizione che abbiamo preparato."
+Example 3 output: {"domain":"shipment","channel":"create_shipment","intentId":"shipment.create.confirmed_booking","reason":"Richiesta operativa di creazione spedizione.","confidence":94}
+Example 4 input: "Iscrivi il prospect Farmacia Centrale alla sequenza follow-up commerciale."
+Example 4 output: {"domain":"outreach","channel":"outreach","intentId":"outreach.enroll.sequence","reason":"Richiesta di enrollment in sequenza outreach.","confidence":94}
+Example 5 input: "Confronta costo fornitore e prezzo vendita per 3 kg su Milano 20100."
+Example 5 output: {"domain":"listini","channel":"listini","intentId":"listini.compare.margin","reason":"Confronto costo fornitore/prezzo vendita tipico listini.","confidence":93}
+Example 6 input: "Spiegami in modo tecnico come e organizzata ANNE V3 e i suoi stage."
+Example 6 output: {"domain":"mentor","channel":"mentor","intentId":"mentor.explain.architecture","reason":"Richiesta di mentoring tecnico interno sull architettura.","confidence":90}
+Example 7 input: "Ciao Anne"
+Example 7 output: {"domain":"support","channel":"support","intentId":"support.greeting.request","reason":"Saluto iniziale senza richiesta specifica.","confidence":92}
+Example 8 input: "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente."
+Example 8 output: {"domain":"explain","channel":"explain","intentId":"explain.margin.calculation","reason":"Richiesta di spiegazione concettuale, non di lettura/confronto listino.","confidence":91}
+
+#2 user
+{
+  "instruction": "Classifica la richiesta in uno dei domini ammessi. Priorita: evita support quando c e una richiesta di preventivo/prezzo.",
+  "attempt": 1,
+  "allowedDomains": [
+    "quote",
+    "shipment",
+    "support",
+    "crm",
+    "outreach",
+    "listini",
+    "mentor",
+    "debug",
+    "explain"
+  ],
+  "strictChannelMap": {
+    "quote": "quote",
+    "shipment": "create_shipment",
+    "support": "support",
+    "crm": "crm",
+    "outreach": "outreach",
+    "listini": "listini",
+    "mentor": "mentor",
+    "debug": "debug",
+    "explain": "explain"
+  },
+  "message": "Dammi una panoramica della pipeline CRM e delle priorita di oggi."
+}
+[output]
+{"domain":"crm","channel":"crm","intentId":"crm.get.pipeline","reason":"Richiesta di panoramica della pipeline CRM e delle priorità.","confidence":95}
+
+--- stage_2 ---
+stage: domain_decomposer
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 3997
+inputTokens: 262
+outputTokens: 598
+totalTokens: 860
+tokenAlert: False
+[input]
+#1 system
+Sei DOMAIN_DECOMPOSER.
+Scomponi la richiesta in subtasks granulari con dipendenze minime.
+JSON schema: {"subtasks":[{"id":"task_1","domain":"...","intentId":"...","goal":"...","dependsOn":[],"acceptance":"..."}]}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "input": {
+    "message": "Dammi una panoramica della pipeline CRM e delle priorita di oggi.",
+    "intentId": "crm.get.pipeline",
+    "domain": "crm"
+  }
+}
+[output]
+{"subtasks":[{"id":"task_1","domain":"crm","intentId":"crm.get.pipeline.stages","goal":"Retrieve the list of pipeline stages and the count of leads in each stage","dependsOn":[],"acceptance":"Return a JSON array where each element contains stage name and lead count"},{"id":"task_2","domain":"crm","intentId":"crm.get.pipeline.leads","goal":"Retrieve detailed information (lead ID, name, status, priority, next step) for all leads currently in the pipeline","dependsOn":[],"acceptance":"Return a JSON array of lead objects with at least ID, name, stage, priority, and next action"},{"id":"task_3","domain":"crm","intentId":"crm.get.todays.priorities","goal":"Identify the actions or leads that are the highest priority for the current day","dependsOn":[],"acceptance":"Return a JSON array of priority items with lead ID, action description, and due time (within today)"}]}
+
+--- stage_3 ---
+stage: task_planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 4043
+inputTokens: 557
+outputTokens: 712
+totalTokens: 1269
+tokenAlert: False
+[input]
+#1 system
+Sei TASK_PLANNER.
+Ordina e normalizza i task per l'esecuzione.
+JSON schema: {"tasks":[{"id":"...","domain":"...","intentId":"...","goal":"...","dependsOn":[],"acceptance":"..."}]}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "message": "Dammi una panoramica della pipeline CRM e delle priorita di oggi.",
+  "classification": {
+    "domain": "crm",
+    "channel": "crm",
+    "intentId": "crm.get.pipeline",
+    "reason": "Richiesta di panoramica della pipeline CRM e delle priorità.",
+    "confidence": 95
+  },
+  "decomposedTasks": [
+    {
+      "id": "task_1",
+      "domain": "crm",
+      "intentId": "crm.get.pipeline.stages",
+      "goal": "Retrieve the list of pipeline stages and the count of leads in each stage",
+      "dependsOn": [],
+      "acceptance": "Return a JSON array where each element contains stage name and lead count"
+    },
+    {
+      "id": "task_2",
+      "domain": "crm",
+      "intentId": "crm.get.pipeline.leads",
+      "goal": "Retrieve detailed information (lead ID, name, status, priority, next step) for all leads currently in the pipeline",
+      "dependsOn": [],
+      "acceptance": "Return a JSON array of lead objects with at least ID, name, stage, priority, and next action"
+    },
+    {
+      "id": "task_3",
+      "domain": "crm",
+      "intentId": "crm.get.todays.priorities",
+      "goal": "Identify the actions or leads that are the highest priority for the current day",
+      "dependsOn": [],
+      "acceptance": "Return a JSON array of priority items with lead ID, action description, and due time (within today)"
+    }
+  ]
+}
+[output]
+{"tasks":[{"id":"task_1","domain":"crm","intentId":"crm.get.pipeline.stages","goal":"Retrieve the list of pipeline stages and the count of leads in each stage","dependsOn":[],"acceptance":"Return a JSON array where each element contains stage name and lead count"},{"id":"task_2","domain":"crm","intentId":"crm.get.pipeline.leads","goal":"Retrieve detailed information (lead ID, name, status, priority, next step) for all leads currently in the pipeline","dependsOn":[],"acceptance":"Return a JSON array of lead objects with at least ID, name, stage, priority, and next action"},{"id":"task_3","domain":"crm","intentId":"crm.get.todays.priorities","goal":"Identify the actions or leads that are the highest priority for the current day","dependsOn":[],"acceptance":"Return a JSON array of priority items with lead ID, action description, and due time (within today)"}]}
+
+--- stage_4 ---
+stage: planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 1701
+inputTokens: 828
+outputTokens: 215
+totalTokens: 1043
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_1",
+    "goal": "Retrieve the list of pipeline stages and the count of leads in each stage",
+    "domain": "crm",
+    "intentId": "crm.get.pipeline.stages",
+    "dependsOn": [],
+    "acceptance": "Return a JSON array where each element contains stage name and lead count"
+  },
+  "tools": [
+    {
+      "name": "get_pipeline_summary",
+      "description": "Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_entity_details",
+      "description": "Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_crm_health_alerts",
+      "description": "Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_today_actions",
+      "description": "Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "search_crm_entities",
+      "description": "Cerca lead/prospect per nome, email, settore o stato. Utile per \"trova tutti i prospect ecommerce\" o \"lead in negoziazione\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "update_crm_status",
+      "description": "Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.",
+      "required": [
+        "new_status"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "add_crm_note",
+      "description": "Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.",
+      "required": [
+        "note"
+      ],
+      "riskLevel": "medium",
+      "category": "write"
+    },
+    {
+      "name": "record_crm_contact",
+      "description": "Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Retrieve the list of pipeline stages and the count of leads in each stage","toolCandidates":["get_pipeline_summary"],"expectedOutcome":"Return a JSON array where each element contains stage name and lead count"}]}
+
+--- stage_5 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_6 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_7 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_8 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_9 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_10 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_11 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: True
+durationMs: 119
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_12 ---
+stage: planner
+attempt: 1
+model: None
+success: False
+durationMs: 4971
+inputTokens: 845
+outputTokens: 900
+totalTokens: 1745
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_2",
+    "goal": "Retrieve detailed information (lead ID, name, status, priority, next step) for all leads currently in the pipeline",
+    "domain": "crm",
+    "intentId": "crm.get.pipeline.leads",
+    "dependsOn": [],
+    "acceptance": "Return a JSON array of lead objects with at least ID, name, stage, priority, and next action"
+  },
+  "tools": [
+    {
+      "name": "get_pipeline_summary",
+      "description": "Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_entity_details",
+      "description": "Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_crm_health_alerts",
+      "description": "Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_today_actions",
+      "description": "Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "search_crm_entities",
+      "description": "Cerca lead/prospect per nome, email, settore o stato. Utile per \"trova tutti i prospect ecommerce\" o \"lead in negoziazione\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "update_crm_status",
+      "description": "Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.",
+      "required": [
+        "new_status"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "add_crm_note",
+      "description": "Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.",
+      "required": [
+        "note"
+      ],
+      "riskLevel": "medium",
+      "category": "write"
+    },
+    {
+      "name": "record_crm_contact",
+      "description": "Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+Empty JSON payload
+
+--- stage_13 ---
+stage: planner
+attempt: 2
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 3334
+inputTokens: 855
+outputTokens: 509
+totalTokens: 1364
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 2,
+  "previousError": "Empty JSON payload",
+  "task": {
+    "id": "task_2",
+    "goal": "Retrieve detailed information (lead ID, name, status, priority, next step) for all leads currently in the pipeline",
+    "domain": "crm",
+    "intentId": "crm.get.pipeline.leads",
+    "dependsOn": [],
+    "acceptance": "Return a JSON array of lead objects with at least ID, name, stage, priority, and next action"
+  },
+  "tools": [
+    {
+      "name": "get_pipeline_summary",
+      "description": "Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_entity_details",
+      "description": "Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_crm_health_alerts",
+      "description": "Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_today_actions",
+      "description": "Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "search_crm_entities",
+      "description": "Cerca lead/prospect per nome, email, settore o stato. Utile per \"trova tutti i prospect ecommerce\" o \"lead in negoziazione\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "update_crm_status",
+      "description": "Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.",
+      "required": [
+        "new_status"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "add_crm_note",
+      "description": "Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.",
+      "required": [
+        "note"
+      ],
+      "riskLevel": "medium",
+      "category": "write"
+    },
+    {
+      "name": "record_crm_contact",
+      "description": "Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Retrieve a list of lead IDs currently in the pipeline","toolCandidates":["search_crm_entities"],"expectedOutcome":"A JSON array of lead identifiers for all leads in the active pipeline stage"},{"id":"step_2","goal":"For each lead ID obtained, fetch detailed information including ID, name, stage, priority, and next action","toolCandidates":["get_entity_details"],"expectedOutcome":"A JSON array of lead objects containing at least ID, name, stage, priority, and next action"}]}
+
+--- stage_14 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_15 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_16 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_17 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_18 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 1
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_19 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_20 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: True
+durationMs: 94
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_21 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_22 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_23 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_24 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_25 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_26 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_27 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: False
+durationMs: 1
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_28 ---
+stage: planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 2432
+inputTokens: 838
+outputTokens: 372
+totalTokens: 1210
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_3",
+    "goal": "Identify the actions or leads that are the highest priority for the current day",
+    "domain": "crm",
+    "intentId": "crm.get.todays.priorities",
+    "dependsOn": [],
+    "acceptance": "Return a JSON array of priority items with lead ID, action description, and due time (within today)"
+  },
+  "tools": [
+    {
+      "name": "get_pipeline_summary",
+      "description": "Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_entity_details",
+      "description": "Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_crm_health_alerts",
+      "description": "Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_today_actions",
+      "description": "Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "search_crm_entities",
+      "description": "Cerca lead/prospect per nome, email, settore o stato. Utile per \"trova tutti i prospect ecommerce\" o \"lead in negoziazione\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "update_crm_status",
+      "description": "Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.",
+      "required": [
+        "new_status"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "add_crm_note",
+      "description": "Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.",
+      "required": [
+        "note"
+      ],
+      "riskLevel": "medium",
+      "category": "write"
+    },
+    {
+      "name": "record_crm_contact",
+      "description": "Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step1","goal":"Retrieve today's prioritized lead actions from CRM","toolCandidates":["get_today_actions"],"expectedOutcome":"A JSON array of priority items with lead ID, action description, and due time (within today)"}]}
+
+--- stage_29 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_30 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_31 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_32 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_33 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_34 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_35 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: True
+durationMs: 53
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_36 ---
+stage: aggregator
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 1922
+inputTokens: 710
+outputTokens: 296
+totalTokens: 1006
+tokenAlert: False
+[input]
+#1 system
+Sei AGGREGATOR.
+Aggrega risultati multi-step e risolvi conflitti in forma deterministica via JSON.
+JSON schema: {"summary":"...","message":"...","clarificationRequired":false,"clarificationQuestion":"...","agentState":{},"sessionState":{}}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "message": "Dammi una panoramica della pipeline CRM e delle priorita di oggi.",
+  "classification": {
+    "domain": "crm",
+    "channel": "crm",
+    "intentId": "crm.get.pipeline",
+    "reason": "Richiesta di panoramica della pipeline CRM e delle priorità.",
+    "confidence": 95
+  },
+  "payload": {
+    "toolPlanId": "toolplan_1771698342018_c02f3561",
+    "steps": [
+      {
+        "success": true,
+        "tool": "get_pipeline_summary",
+        "taskId": "task_1",
+        "stepId": "step_1",
+        "message": "Operazione completata.",
+        "result": {
+          "summary": {
+            "total": 0,
+            "byStatus": {},
+            "avgScore": 0,
+            "pipelineValue": 0
+          },
+          "metrics": {
+            "rate": 0,
+            "avgDaysToConversion": 0,
+            "wonThisMonth": 0,
+            "lostThisMonth": 0,
+            "trend": "stable",
+            "totalActive": 0,
+            "totalPipelineValue": 0
+          }
+        },
+        "riskLevel": "low"
+      },
+      {
+        "success": true,
+        "tool": "search_crm_entities",
+        "taskId": "task_2",
+        "stepId": "step_1",
+        "message": "Operazione completata.",
+        "result": {
+          "results": [],
+          "count": 0
+        },
+        "riskLevel": "low"
+      },
+      {
+        "success": false,
+        "tool": "get_entity_details",
+        "taskId": "task_2",
+        "stepId": "step_2",
+        "error": "Entita non trovata",
+        "riskLevel": "low"
+      },
+      {
+        "success": true,
+        "tool": "get_today_actions",
+        "taskId": "task_3",
+        "stepId": "step1",
+        "message": "Operazione completata.",
+        "result": {
+          "actions": [],
+          "count": 0
+        },
+        "riskLevel": "low"
+      }
+    ],
+    "approvalRequired": false
+  }
+}
+[output]
+{"summary":"La pipeline CRM è vuota al momento: nessun lead in attesa, nessun valore di pipeline. Non ci sono azioni programmate per oggi.", "message":"La pipeline CRM attualmente non contiene lead o opportunità. Di conseguenza, non ci sono priorità o azioni da completare per oggi.", "clarificationRequired":false,"clarificationQuestion":"","agentState":{},"sessionState":{}}
+
+--- stage_37 ---
+stage: finalizer
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 1682
+inputTokens: 373
+outputTokens: 199
+totalTokens: 572
+tokenAlert: False
+[input]
+#1 system
+Sei FINALIZER.
+Genera la risposta finale utente in italiano, chiara e operativa.
+JSON schema: {"message":"...","clarificationRequest":"...","nextAction":"..."}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "message": "Dammi una panoramica della pipeline CRM e delle priorita di oggi.",
+  "classification": {
+    "domain": "crm",
+    "channel": "crm",
+    "intentId": "crm.get.pipeline",
+    "reason": "Richiesta di panoramica della pipeline CRM e delle priorità.",
+    "confidence": 95
+  },
+  "aggregated": {
+    "summary": "La pipeline CRM è vuota al momento: nessun lead in attesa, nessun valore di pipeline. Non ci sono azioni programmate per oggi.",
+    "message": "La pipeline CRM attualmente non contiene lead o opportunità. Di conseguenza, non ci sono priorità o azioni da completare per oggi.",
+    "clarificationRequired": false,
+    "agentState": {},
+    "sessionState": {}
+  }
+}
+[output]
+{"message":"La pipeline CRM attualmente non contiene lead o opportunità. Di conseguenza, non ci sono priorità o azioni da completare per oggi.","clarificationRequest":"","nextAction":""}

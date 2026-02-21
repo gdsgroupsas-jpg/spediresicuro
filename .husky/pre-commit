@@ -2,4 +2,4 @@
 . "$(dirname -- "$0")/_/husky.sh"
 
 # Run lint-staged (Prettier + ESLint on staged files)
-npx lint-staged
+npm run -w @ss/web lint-staged

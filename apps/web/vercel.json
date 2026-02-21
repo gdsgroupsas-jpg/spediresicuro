@@ -1,0 +1,52 @@
+{
+  "functions": {
+    "app/api/automation/**/*.ts": {
+      "maxDuration": 300
+    },
+    "app/api/cron/**/*.ts": {
+      "maxDuration": 300
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron/financial-alerts",
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/auto-reconciliation",
+      "schedule": "0 2 * * *"
+    },
+    {
+      "path": "/api/cron/telegram-queue",
+      "schedule": "* * * * *"
+    },
+    {
+      "path": "/api/cron/support-alerts",
+      "schedule": "*/30 * * * *"
+    },
+    {
+      "path": "/api/cron/expire-invitations",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/expire-quotes",
+      "schedule": "0 */4 * * *"
+    },
+    {
+      "path": "/api/cron/crm-health",
+      "schedule": "0 */6 * * *"
+    },
+    {
+      "path": "/api/cron/lead-scoring",
+      "schedule": "0 */12 * * *"
+    },
+    {
+      "path": "/api/cron/outreach-executor",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/automation-dispatcher",
+      "schedule": "*/5 * * * *"
+    }
+  ]
+}

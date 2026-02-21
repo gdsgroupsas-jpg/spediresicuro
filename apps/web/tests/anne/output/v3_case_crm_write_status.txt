@@ -1,0 +1,572 @@
+--- v3_case_crm_write_status ---
+run: 2026-02-21T18:26:28.225738+00:00
+base_url: http://localhost:3000
+
+[case]
+{
+  "id": "crm_write_status",
+  "prompt": "Aggiorna lo stato del prospect Farmacia Rossi a negoziazione.",
+  "expectedDomain": "crm",
+  "expectedChannel": "crm",
+  "expectApproval": true,
+  "expectClarification": false
+}
+
+[response]
+status: 200
+success: True
+passed: False
+reason: approvalRequired atteso ma assente
+message: Non ho ricevuto un output valido dal motore AI. Puoi riformulare con piu dettagli operativi?
+
+[metadata]
+{
+  "trace_id": "ann-mlwngqnv-3e6fc6e45465",
+  "userRole": "admin",
+  "timestamp": "2026-02-21T18:26:28.223Z",
+  "executionTime": 19204,
+  "rateLimitRemaining": 19,
+  "flowId": "orch.crm.crm.update.prospect.status",
+  "pricingOptionsCount": 0,
+  "orchestratorMode": "v2",
+  "intentId": "crm.update.prospect.status",
+  "channel": "crm",
+  "domain": "crm",
+  "riskLevel": "low",
+  "approvalRequired": false,
+  "toolPlanId": "toolplan_1771698369622_c02f3561",
+  "pipelineId": "pipeline_1771698369622_c02f3561",
+  "stageTrace": {
+    "lastStage": "tool_executor",
+    "totalDurationMs": 7318,
+    "tokenUsage": {
+      "inputTokens": 3100,
+      "outputTokens": 1137,
+      "totalTokens": 4237,
+      "tokenAlertCount": 0,
+      "tokenAlertThreshold": 16000
+    },
+    "entries": [
+      {
+        "stage": "request_manager",
+        "attempt": 1,
+        "durationMs": 1243,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 1549,
+        "outputTokens": 150,
+        "totalTokens": 1699,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei REQUEST_MANAGER.\nClassifica la richiesta in dominio, channel, intentId, reason, confidence.\nJSON schema: {\"domain\":\"...\",\"channel\":\"...\",\"intentId\":\"...\",\"reason\":\"...\",\"confidence\":0-100}\n\nRouting policy (use this order of evidence):\n1) quote -> preventivo, prezzo, costo, tariffa, quanto costa, comparazione corrieri, stima spedizione, dati peso/cap/citta/servizio.\n2) shipment -> crea spedizione, conferma prenotazione, genera etichetta, procedi spedizione, acquisto spedizione.\n3) support -> problemi su spedizione esistente: tracking fermo, giacenza, ritardo, errore, reclamo, rimborso, assistenza post-vendita.\n4) crm -> lead/prospect, note commerciali, pipeline, follow-up commerciale.\n5) outreach -> campagne/sequence outreach, enrollment, canali e metriche outreach.\n6) listini -> listini, margini, costo fornitore, configurazioni prezzo.\n7) mentor -> coaching operativo/strategico interno.\n8) debug -> analisi errore tecnico/stack/log.\n9) explain -> spiegazioni generali su processo/business.\n\nTie-break mandatory rules:\n- If there is explicit pricing intent, choose domain=quote even if the message asks for help.\n- Use support only when the user refers to an existing shipment issue, not a new estimate.\n- Never use support as a default bucket when quote evidence is present.\n\nChannel mapping is strict:\n- quote -> quote\n- shipment -> create_shipment\n- support -> support\n- crm -> crm\n- outreach -> outreach\n- listini -> listini\n- mentor -> mentor\n- debug -> debug\n- explain -> explain\n\nIntent naming convention:\n- Use lowercase dotted ids: <domain>.<action>.<object> (example: quote.create.estimate).\n\nDisambiguation rules (mandatory):\n- outreach vs crm: if user asks to enroll/subscribe/add to sequence/campaign/invio programmato -> domain MUST be outreach (not crm).\n- listini vs quote: if user asks supplier cost, selling price, margin, listino comparison -> domain MUST be listini (not quote).\n- mentor vs explain: if user asks internal architecture/stages/how ANNE works technically -> domain MUST be mentor (not explain).\n- explain vs listini: if user asks conceptual explanation (\"spiegami come\", \"come viene calcolato\", \"perche\") without asking to fetch/compare a specific listino record, domain MUST be explain.\n- greeting-only message (\"ciao\", \"salve\", \"hey anne\") -> domain MUST be support with a greeting/support intent.\n- explain should be used for general process/business explanations, not internal technical mentoring.\n- listini requires an operational intent (show/list/compare configured prices, margins, supplier costs).\n- explain is mandatory when the user asks \"how it works\" or \"why\" about business logic and does not ask to fetch/update records.\n\nDecision table (final check before output):\n- If request asks conceptual explanation only -> domain=explain.\n- If request asks show/compare/list configured pricing data -> domain=listini.\n- If request asks an estimate for a new shipment -> domain=quote.\n- If request asks to execute/create booking -> domain=shipment.\n- If request asks troubleshooting on technical failures -> domain=debug.\n\nNegative examples:\n- \"Spiegami come calcolate il margine\" => explain (NOT listini).\n- \"Mostrami il margine su GLS 3kg Milano\" => listini (NOT explain).\n- \"Iscrivi il prospect alla sequenza\" => outreach (NOT crm).\n- \"Ciao Anne\" => support (NOT explain).\n\nExample 1 input: \"Mi fai un preventivo per 2.4 kg verso 00100 Roma?\"\nExample 1 output: {\"domain\":\"quote\",\"channel\":\"quote\",\"intentId\":\"quote.create.estimate\",\"reason\":\"Richiesta esplicita di preventivo con peso e CAP.\",\"confidence\":95}\nExample 2 input: \"Il tracking della spedizione 123 e fermo da ieri, puoi aiutarmi?\"\nExample 2 output: {\"domain\":\"support\",\"channel\":\"support\",\"intentId\":\"support.resolve.tracking_issue\",\"reason\":\"Problema su spedizione esistente.\",\"confidence\":93}\nExample 3 input: \"Voglio confermare e creare subito la spedizione che abbiamo preparato.\"\nExample 3 output: {\"domain\":\"shipment\",\"channel\":\"create_shipment\",\"intentId\":\"shipment.create.confirmed_booking\",\"reason\":\"Richiesta operativa di creazione spedizione.\",\"confidence\":94}\nExample 4 input: \"Iscrivi il prospect Farmacia Centrale alla sequenza follow-up commerciale.\"\nExample 4 output: {\"domain\":\"outreach\",\"channel\":\"outreach\",\"intentId\":\"outreach.enroll.sequence\",\"reason\":\"Richiesta di enrollment in sequenza outreach.\",\"confidence\":94}\nExample 5 input: \"Confronta costo fornitore e prezzo vendita per 3 kg su Milano 20100.\"\nExample 5 output: {\"domain\":\"listini\",\"channel\":\"listini\",\"intentId\":\"listini.compare.margin\",\"reason\":\"Confronto costo fornitore/prezzo vendita tipico listini.\",\"confidence\":93}\nExample 6 input: \"Spiegami in modo tecnico come e organizzata ANNE V3 e i suoi stage.\"\nExample 6 output: {\"domain\":\"mentor\",\"channel\":\"mentor\",\"intentId\":\"mentor.explain.architecture\",\"reason\":\"Richiesta di mentoring tecnico interno sull architettura.\",\"confidence\":90}\nExample 7 input: \"Ciao Anne\"\nExample 7 output: {\"domain\":\"support\",\"channel\":\"support\",\"intentId\":\"support.greeting.request\",\"reason\":\"Saluto iniziale senza richiesta specifica.\",\"confidence\":92}\nExample 8 input: \"Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.\"\nExample 8 output: {\"domain\":\"explain\",\"channel\":\"explain\",\"intentId\":\"explain.margin.calculation\",\"reason\":\"Richiesta di spiegazione concettuale, non di lettura/confronto listino.\",\"confidence\":91}\n\n#2 user\n{\n  \"instruction\": \"Classifica la richiesta in uno dei domini ammessi. Priorita: evita support quando c e una richiesta di preventivo/prezzo.\",\n  \"attempt\": 1,\n  \"allowedDomains\": [\n    \"quote\",\n    \"shipment\",\n    \"support\",\n    \"crm\",\n    \"outreach\",\n    \"listini\",\n    \"mentor\",\n    \"debug\",\n    \"explain\"\n  ],\n  \"strictChannelMap\": {\n    \"quote\": \"quote\",\n    \"shipment\": \"create_shipment\",\n    \"support\": \"support\",\n    \"crm\": \"crm\",\n    \"outreach\": \"outreach\",\n    \"listini\": \"listini\",\n    \"mentor\": \"mentor\",\n    \"debug\": \"debug\",\n    \"explain\": \"explain\"\n  },\n  \"message\": \"Aggiorna lo stato del prospect Farmacia Rossi a negoziazione.\"\n}",
+        "outputText": "{\"domain\":\"crm\",\"channel\":\"crm\",\"intentId\":\"crm.update.prospect.status\",\"reason\":\"Richiesta di aggiornamento dello stato del prospect.\",\"confidence\":95}"
+      },
+      {
+        "stage": "domain_decomposer",
+        "attempt": 1,
+        "durationMs": 2365,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 263,
+        "outputTokens": 411,
+        "totalTokens": 674,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei DOMAIN_DECOMPOSER.\nScomponi la richiesta in subtasks granulari con dipendenze minime.\nJSON schema: {\"subtasks\":[{\"id\":\"task_1\",\"domain\":\"...\",\"intentId\":\"...\",\"goal\":\"...\",\"dependsOn\":[],\"acceptance\":\"...\"}]}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"input\": {\n    \"message\": \"Aggiorna lo stato del prospect Farmacia Rossi a negoziazione.\",\n    \"intentId\": \"crm.update.prospect.status\",\n    \"domain\": \"crm\"\n  }\n}",
+        "outputText": "{\"subtasks\":[{\"id\":\"task_1\",\"domain\":\"crm\",\"intentId\":\"crm.find.prospect\",\"goal\":\"Trovare il prospect con nome 'Farmacia Rossi'\",\"dependsOn\":[],\"acceptance\":\"Il prospect 'Farmacia Rossi' è stato trovato e restituito con ID valido\"},{\"id\":\"task_2\",\"domain\":\"crm\",\"intentId\":\"crm.update.prospect.status\",\"goal\":\"Aggiornare lo stato del prospect trovato a 'negoziazione'\",\"dependsOn\":[\"task_1\"],\"acceptance\":\"Lo stato del prospect è stato aggiornato a 'negoziazione' con conferma di successo\"}]}"
+      },
+      {
+        "stage": "task_planner",
+        "attempt": 1,
+        "durationMs": 1947,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 461,
+        "outputTokens": 268,
+        "totalTokens": 729,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei TASK_PLANNER.\nOrdina e normalizza i task per l'esecuzione.\nJSON schema: {\"tasks\":[{\"id\":\"...\",\"domain\":\"...\",\"intentId\":\"...\",\"goal\":\"...\",\"dependsOn\":[],\"acceptance\":\"...\"}]}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"message\": \"Aggiorna lo stato del prospect Farmacia Rossi a negoziazione.\",\n  \"classification\": {\n    \"domain\": \"crm\",\n    \"channel\": \"crm\",\n    \"intentId\": \"crm.update.prospect.status\",\n    \"reason\": \"Richiesta di aggiornamento dello stato del prospect.\",\n    \"confidence\": 95\n  },\n  \"decomposedTasks\": [\n    {\n      \"id\": \"task_1\",\n      \"domain\": \"crm\",\n      \"intentId\": \"crm.find.prospect\",\n      \"goal\": \"Trovare il prospect con nome 'Farmacia Rossi'\",\n      \"dependsOn\": [],\n      \"acceptance\": \"Il prospect 'Farmacia Rossi' è stato trovato e restituito con ID valido\"\n    },\n    {\n      \"id\": \"task_2\",\n      \"domain\": \"crm\",\n      \"intentId\": \"crm.update.prospect.status\",\n      \"goal\": \"Aggiornare lo stato del prospect trovato a 'negoziazione'\",\n      \"dependsOn\": [\n        \"task_1\"\n      ],\n      \"acceptance\": \"Lo stato del prospect è stato aggiornato a 'negoziazione' con conferma di successo\"\n    }\n  ]\n}",
+        "outputText": "{\"tasks\":[{\"id\":\"task_1\",\"domain\":\"crm\",\"intentId\":\"crm.find.prospect\",\"goal\":\"Trovare il prospect con nome 'Farmacia Rossi'\",\"dependsOn\":[],\"acceptance\":\"Il prospect 'Farmacia Rossi' è stato trovato e restituito con ID valido\"},{\"id\":\"task_2\",\"domain\":\"crm\",\"intentId\":\"crm.update.prospect.status\",\"goal\":\"Aggiornare lo stato del prospect trovato a 'negoziazione'\",\"dependsOn\":[\"task_1\"],\"acceptance\":\"Lo stato del prospect è stato aggiornato a 'negoziazione' con conferma di successo\"}]}"
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 1661,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 827,
+        "outputTokens": 308,
+        "totalTokens": 1135,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: crm.\nContesto dominio: Pipeline commerciale, lead/prospect, note e stati.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_1\",\n    \"goal\": \"Trovare il prospect con nome 'Farmacia Rossi'\",\n    \"domain\": \"crm\",\n    \"intentId\": \"crm.find.prospect\",\n    \"dependsOn\": [],\n    \"acceptance\": \"Il prospect 'Farmacia Rossi' è stato trovato e restituito con ID valido\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"get_pipeline_summary\",\n      \"description\": \"Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_entity_details\",\n      \"description\": \"Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_crm_health_alerts\",\n      \"description\": \"Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_today_actions\",\n      \"description\": \"Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"search_crm_entities\",\n      \"description\": \"Cerca lead/prospect per nome, email, settore o stato. Utile per \\\"trova tutti i prospect ecommerce\\\" o \\\"lead in negoziazione\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"update_crm_status\",\n      \"description\": \"Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.\",\n      \"required\": [\n        \"new_status\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"add_crm_note\",\n      \"description\": \"Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.\",\n      \"required\": [\n        \"note\"\n      ],\n      \"riskLevel\": \"medium\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"record_crm_contact\",\n      \"description\": \"Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Find prospect named 'Farmacia Rossi' using CRM search\",\"toolCandidates\":[\"search_crm_entities\"],\"expectedOutcome\":\"Search result includes a prospect record with a valid ID\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 102,
+        "success": true
+      }
+    ]
+  }
+}
+
+[stage_trace_summary]
+lastStage: tool_executor
+totalDurationMs: 7318
+tokenInputTotal: 3100
+tokenOutputTotal: 1137
+tokenTotal: 4237
+tokenAlertCount: 0
+tokenAlertThreshold: 16000
+
+[stage_trace_entries]
+
+--- stage_1 ---
+stage: request_manager
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 1243
+inputTokens: 1549
+outputTokens: 150
+totalTokens: 1699
+tokenAlert: False
+[input]
+#1 system
+Sei REQUEST_MANAGER.
+Classifica la richiesta in dominio, channel, intentId, reason, confidence.
+JSON schema: {"domain":"...","channel":"...","intentId":"...","reason":"...","confidence":0-100}
+
+Routing policy (use this order of evidence):
+1) quote -> preventivo, prezzo, costo, tariffa, quanto costa, comparazione corrieri, stima spedizione, dati peso/cap/citta/servizio.
+2) shipment -> crea spedizione, conferma prenotazione, genera etichetta, procedi spedizione, acquisto spedizione.
+3) support -> problemi su spedizione esistente: tracking fermo, giacenza, ritardo, errore, reclamo, rimborso, assistenza post-vendita.
+4) crm -> lead/prospect, note commerciali, pipeline, follow-up commerciale.
+5) outreach -> campagne/sequence outreach, enrollment, canali e metriche outreach.
+6) listini -> listini, margini, costo fornitore, configurazioni prezzo.
+7) mentor -> coaching operativo/strategico interno.
+8) debug -> analisi errore tecnico/stack/log.
+9) explain -> spiegazioni generali su processo/business.
+
+Tie-break mandatory rules:
+- If there is explicit pricing intent, choose domain=quote even if the message asks for help.
+- Use support only when the user refers to an existing shipment issue, not a new estimate.
+- Never use support as a default bucket when quote evidence is present.
+
+Channel mapping is strict:
+- quote -> quote
+- shipment -> create_shipment
+- support -> support
+- crm -> crm
+- outreach -> outreach
+- listini -> listini
+- mentor -> mentor
+- debug -> debug
+- explain -> explain
+
+Intent naming convention:
+- Use lowercase dotted ids: <domain>.<action>.<object> (example: quote.create.estimate).
+
+Disambiguation rules (mandatory):
+- outreach vs crm: if user asks to enroll/subscribe/add to sequence/campaign/invio programmato -> domain MUST be outreach (not crm).
+- listini vs quote: if user asks supplier cost, selling price, margin, listino comparison -> domain MUST be listini (not quote).
+- mentor vs explain: if user asks internal architecture/stages/how ANNE works technically -> domain MUST be mentor (not explain).
+- explain vs listini: if user asks conceptual explanation ("spiegami come", "come viene calcolato", "perche") without asking to fetch/compare a specific listino record, domain MUST be explain.
+- greeting-only message ("ciao", "salve", "hey anne") -> domain MUST be support with a greeting/support intent.
+- explain should be used for general process/business explanations, not internal technical mentoring.
+- listini requires an operational intent (show/list/compare configured prices, margins, supplier costs).
+- explain is mandatory when the user asks "how it works" or "why" about business logic and does not ask to fetch/update records.
+
+Decision table (final check before output):
+- If request asks conceptual explanation only -> domain=explain.
+- If request asks show/compare/list configured pricing data -> domain=listini.
+- If request asks an estimate for a new shipment -> domain=quote.
+- If request asks to execute/create booking -> domain=shipment.
+- If request asks troubleshooting on technical failures -> domain=debug.
+
+Negative examples:
+- "Spiegami come calcolate il margine" => explain (NOT listini).
+- "Mostrami il margine su GLS 3kg Milano" => listini (NOT explain).
+- "Iscrivi il prospect alla sequenza" => outreach (NOT crm).
+- "Ciao Anne" => support (NOT explain).
+
+Example 1 input: "Mi fai un preventivo per 2.4 kg verso 00100 Roma?"
+Example 1 output: {"domain":"quote","channel":"quote","intentId":"quote.create.estimate","reason":"Richiesta esplicita di preventivo con peso e CAP.","confidence":95}
+Example 2 input: "Il tracking della spedizione 123 e fermo da ieri, puoi aiutarmi?"
+Example 2 output: {"domain":"support","channel":"support","intentId":"support.resolve.tracking_issue","reason":"Problema su spedizione esistente.","confidence":93}
+Example 3 input: "Voglio confermare e creare subito la spedizione che abbiamo preparato."
+Example 3 output: {"domain":"shipment","channel":"create_shipment","intentId":"shipment.create.confirmed_booking","reason":"Richiesta operativa di creazione spedizione.","confidence":94}
+Example 4 input: "Iscrivi il prospect Farmacia Centrale alla sequenza follow-up commerciale."
+Example 4 output: {"domain":"outreach","channel":"outreach","intentId":"outreach.enroll.sequence","reason":"Richiesta di enrollment in sequenza outreach.","confidence":94}
+Example 5 input: "Confronta costo fornitore e prezzo vendita per 3 kg su Milano 20100."
+Example 5 output: {"domain":"listini","channel":"listini","intentId":"listini.compare.margin","reason":"Confronto costo fornitore/prezzo vendita tipico listini.","confidence":93}
+Example 6 input: "Spiegami in modo tecnico come e organizzata ANNE V3 e i suoi stage."
+Example 6 output: {"domain":"mentor","channel":"mentor","intentId":"mentor.explain.architecture","reason":"Richiesta di mentoring tecnico interno sull architettura.","confidence":90}
+Example 7 input: "Ciao Anne"
+Example 7 output: {"domain":"support","channel":"support","intentId":"support.greeting.request","reason":"Saluto iniziale senza richiesta specifica.","confidence":92}
+Example 8 input: "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente."
+Example 8 output: {"domain":"explain","channel":"explain","intentId":"explain.margin.calculation","reason":"Richiesta di spiegazione concettuale, non di lettura/confronto listino.","confidence":91}
+
+#2 user
+{
+  "instruction": "Classifica la richiesta in uno dei domini ammessi. Priorita: evita support quando c e una richiesta di preventivo/prezzo.",
+  "attempt": 1,
+  "allowedDomains": [
+    "quote",
+    "shipment",
+    "support",
+    "crm",
+    "outreach",
+    "listini",
+    "mentor",
+    "debug",
+    "explain"
+  ],
+  "strictChannelMap": {
+    "quote": "quote",
+    "shipment": "create_shipment",
+    "support": "support",
+    "crm": "crm",
+    "outreach": "outreach",
+    "listini": "listini",
+    "mentor": "mentor",
+    "debug": "debug",
+    "explain": "explain"
+  },
+  "message": "Aggiorna lo stato del prospect Farmacia Rossi a negoziazione."
+}
+[output]
+{"domain":"crm","channel":"crm","intentId":"crm.update.prospect.status","reason":"Richiesta di aggiornamento dello stato del prospect.","confidence":95}
+
+--- stage_2 ---
+stage: domain_decomposer
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 2365
+inputTokens: 263
+outputTokens: 411
+totalTokens: 674
+tokenAlert: False
+[input]
+#1 system
+Sei DOMAIN_DECOMPOSER.
+Scomponi la richiesta in subtasks granulari con dipendenze minime.
+JSON schema: {"subtasks":[{"id":"task_1","domain":"...","intentId":"...","goal":"...","dependsOn":[],"acceptance":"..."}]}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "input": {
+    "message": "Aggiorna lo stato del prospect Farmacia Rossi a negoziazione.",
+    "intentId": "crm.update.prospect.status",
+    "domain": "crm"
+  }
+}
+[output]
+{"subtasks":[{"id":"task_1","domain":"crm","intentId":"crm.find.prospect","goal":"Trovare il prospect con nome 'Farmacia Rossi'","dependsOn":[],"acceptance":"Il prospect 'Farmacia Rossi' è stato trovato e restituito con ID valido"},{"id":"task_2","domain":"crm","intentId":"crm.update.prospect.status","goal":"Aggiornare lo stato del prospect trovato a 'negoziazione'","dependsOn":["task_1"],"acceptance":"Lo stato del prospect è stato aggiornato a 'negoziazione' con conferma di successo"}]}
+
+--- stage_3 ---
+stage: task_planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 1947
+inputTokens: 461
+outputTokens: 268
+totalTokens: 729
+tokenAlert: False
+[input]
+#1 system
+Sei TASK_PLANNER.
+Ordina e normalizza i task per l'esecuzione.
+JSON schema: {"tasks":[{"id":"...","domain":"...","intentId":"...","goal":"...","dependsOn":[],"acceptance":"..."}]}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "message": "Aggiorna lo stato del prospect Farmacia Rossi a negoziazione.",
+  "classification": {
+    "domain": "crm",
+    "channel": "crm",
+    "intentId": "crm.update.prospect.status",
+    "reason": "Richiesta di aggiornamento dello stato del prospect.",
+    "confidence": 95
+  },
+  "decomposedTasks": [
+    {
+      "id": "task_1",
+      "domain": "crm",
+      "intentId": "crm.find.prospect",
+      "goal": "Trovare il prospect con nome 'Farmacia Rossi'",
+      "dependsOn": [],
+      "acceptance": "Il prospect 'Farmacia Rossi' è stato trovato e restituito con ID valido"
+    },
+    {
+      "id": "task_2",
+      "domain": "crm",
+      "intentId": "crm.update.prospect.status",
+      "goal": "Aggiornare lo stato del prospect trovato a 'negoziazione'",
+      "dependsOn": [
+        "task_1"
+      ],
+      "acceptance": "Lo stato del prospect è stato aggiornato a 'negoziazione' con conferma di successo"
+    }
+  ]
+}
+[output]
+{"tasks":[{"id":"task_1","domain":"crm","intentId":"crm.find.prospect","goal":"Trovare il prospect con nome 'Farmacia Rossi'","dependsOn":[],"acceptance":"Il prospect 'Farmacia Rossi' è stato trovato e restituito con ID valido"},{"id":"task_2","domain":"crm","intentId":"crm.update.prospect.status","goal":"Aggiornare lo stato del prospect trovato a 'negoziazione'","dependsOn":["task_1"],"acceptance":"Lo stato del prospect è stato aggiornato a 'negoziazione' con conferma di successo"}]}
+
+--- stage_4 ---
+stage: planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 1661
+inputTokens: 827
+outputTokens: 308
+totalTokens: 1135
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: crm.
+Contesto dominio: Pipeline commerciale, lead/prospect, note e stati.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_1",
+    "goal": "Trovare il prospect con nome 'Farmacia Rossi'",
+    "domain": "crm",
+    "intentId": "crm.find.prospect",
+    "dependsOn": [],
+    "acceptance": "Il prospect 'Farmacia Rossi' è stato trovato e restituito con ID valido"
+  },
+  "tools": [
+    {
+      "name": "get_pipeline_summary",
+      "description": "Panoramica pipeline CRM: conteggi per stato, score medio, valore pipeline, tasso conversione. Admin vede lead, reseller vede prospect.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_entity_details",
+      "description": "Dettagli lead/prospect per ID o ricerca per nome. Include timeline eventi, score, preventivi collegati.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_crm_health_alerts",
+      "description": "Alert salute CRM: prospect stale, lead caldi non contattati, candidati win-back, quote in scadenza.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_today_actions",
+      "description": "Lista prioritizzata di azioni da fare oggi: chi contattare, follow-up, quote in scadenza, lead caldi.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "search_crm_entities",
+      "description": "Cerca lead/prospect per nome, email, settore o stato. Utile per \"trova tutti i prospect ecommerce\" o \"lead in negoziazione\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "update_crm_status",
+      "description": "Aggiorna lo stato di un lead/prospect nella pipeline CRM. Valida le transizioni ammesse.",
+      "required": [
+        "new_status"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "add_crm_note",
+      "description": "Aggiunge una nota testuale a un lead/prospect. La nota viene salvata con timestamp.",
+      "required": [
+        "note"
+      ],
+      "riskLevel": "medium",
+      "category": "write"
+    },
+    {
+      "name": "record_crm_contact",
+      "description": "Registra un contatto avvenuto con un lead/prospect. Aggiorna data ultimo contatto e auto-avanza lo stato se new.",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Find prospect named 'Farmacia Rossi' using CRM search","toolCandidates":["search_crm_entities"],"expectedOutcome":"Search result includes a prospect record with a valid ID"}]}
+
+--- stage_5 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_6 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_7 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_8 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_9 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_10 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_11 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: True
+durationMs: 102
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]

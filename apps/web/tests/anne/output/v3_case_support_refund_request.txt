@@ -1,0 +1,1661 @@
+--- v3_case_support_refund_request ---
+run: 2026-02-21T18:25:41.410083+00:00
+base_url: http://localhost:3000
+
+[case]
+{
+  "id": "support_refund_request",
+  "prompt": "Vorrei chiedere un rimborso per una spedizione mai consegnata.",
+  "expectedDomain": "support",
+  "expectedChannel": "support",
+  "expectApproval": false,
+  "expectClarification": true
+}
+
+[response]
+status: 200
+success: True
+passed: True
+reason: OK (support_refund_request)
+message: Il comando finale non e coerente con il tool get_shipment_status. Riproviamo con piu dettaglio.
+
+[metadata]
+{
+  "trace_id": "ann-mlwnfdph-763105cf91fc",
+  "userRole": "admin",
+  "timestamp": "2026-02-21T18:25:41.407Z",
+  "executionTime": 35834,
+  "rateLimitRemaining": 19,
+  "flowId": "orch.support.support.resolve.refund",
+  "pricingOptionsCount": 0,
+  "orchestratorMode": "v2",
+  "intentId": "support.resolve.refund",
+  "channel": "support",
+  "domain": "support",
+  "riskLevel": "low",
+  "approvalRequired": false,
+  "toolPlanId": "toolplan_1771698306234_c02f3561",
+  "pipelineId": "pipeline_1771698306234_c02f3561",
+  "stageTrace": {
+    "lastStage": "tool_caller",
+    "totalDurationMs": 35078,
+    "tokenUsage": {
+      "inputTokens": 11133,
+      "outputTokens": 5938,
+      "totalTokens": 17071,
+      "tokenAlertCount": 0,
+      "tokenAlertThreshold": 16000
+    },
+    "entries": [
+      {
+        "stage": "request_manager",
+        "attempt": 1,
+        "durationMs": 1715,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 1551,
+        "outputTokens": 226,
+        "totalTokens": 1777,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei REQUEST_MANAGER.\nClassifica la richiesta in dominio, channel, intentId, reason, confidence.\nJSON schema: {\"domain\":\"...\",\"channel\":\"...\",\"intentId\":\"...\",\"reason\":\"...\",\"confidence\":0-100}\n\nRouting policy (use this order of evidence):\n1) quote -> preventivo, prezzo, costo, tariffa, quanto costa, comparazione corrieri, stima spedizione, dati peso/cap/citta/servizio.\n2) shipment -> crea spedizione, conferma prenotazione, genera etichetta, procedi spedizione, acquisto spedizione.\n3) support -> problemi su spedizione esistente: tracking fermo, giacenza, ritardo, errore, reclamo, rimborso, assistenza post-vendita.\n4) crm -> lead/prospect, note commerciali, pipeline, follow-up commerciale.\n5) outreach -> campagne/sequence outreach, enrollment, canali e metriche outreach.\n6) listini -> listini, margini, costo fornitore, configurazioni prezzo.\n7) mentor -> coaching operativo/strategico interno.\n8) debug -> analisi errore tecnico/stack/log.\n9) explain -> spiegazioni generali su processo/business.\n\nTie-break mandatory rules:\n- If there is explicit pricing intent, choose domain=quote even if the message asks for help.\n- Use support only when the user refers to an existing shipment issue, not a new estimate.\n- Never use support as a default bucket when quote evidence is present.\n\nChannel mapping is strict:\n- quote -> quote\n- shipment -> create_shipment\n- support -> support\n- crm -> crm\n- outreach -> outreach\n- listini -> listini\n- mentor -> mentor\n- debug -> debug\n- explain -> explain\n\nIntent naming convention:\n- Use lowercase dotted ids: <domain>.<action>.<object> (example: quote.create.estimate).\n\nDisambiguation rules (mandatory):\n- outreach vs crm: if user asks to enroll/subscribe/add to sequence/campaign/invio programmato -> domain MUST be outreach (not crm).\n- listini vs quote: if user asks supplier cost, selling price, margin, listino comparison -> domain MUST be listini (not quote).\n- mentor vs explain: if user asks internal architecture/stages/how ANNE works technically -> domain MUST be mentor (not explain).\n- explain vs listini: if user asks conceptual explanation (\"spiegami come\", \"come viene calcolato\", \"perche\") without asking to fetch/compare a specific listino record, domain MUST be explain.\n- greeting-only message (\"ciao\", \"salve\", \"hey anne\") -> domain MUST be support with a greeting/support intent.\n- explain should be used for general process/business explanations, not internal technical mentoring.\n- listini requires an operational intent (show/list/compare configured prices, margins, supplier costs).\n- explain is mandatory when the user asks \"how it works\" or \"why\" about business logic and does not ask to fetch/update records.\n\nDecision table (final check before output):\n- If request asks conceptual explanation only -> domain=explain.\n- If request asks show/compare/list configured pricing data -> domain=listini.\n- If request asks an estimate for a new shipment -> domain=quote.\n- If request asks to execute/create booking -> domain=shipment.\n- If request asks troubleshooting on technical failures -> domain=debug.\n\nNegative examples:\n- \"Spiegami come calcolate il margine\" => explain (NOT listini).\n- \"Mostrami il margine su GLS 3kg Milano\" => listini (NOT explain).\n- \"Iscrivi il prospect alla sequenza\" => outreach (NOT crm).\n- \"Ciao Anne\" => support (NOT explain).\n\nExample 1 input: \"Mi fai un preventivo per 2.4 kg verso 00100 Roma?\"\nExample 1 output: {\"domain\":\"quote\",\"channel\":\"quote\",\"intentId\":\"quote.create.estimate\",\"reason\":\"Richiesta esplicita di preventivo con peso e CAP.\",\"confidence\":95}\nExample 2 input: \"Il tracking della spedizione 123 e fermo da ieri, puoi aiutarmi?\"\nExample 2 output: {\"domain\":\"support\",\"channel\":\"support\",\"intentId\":\"support.resolve.tracking_issue\",\"reason\":\"Problema su spedizione esistente.\",\"confidence\":93}\nExample 3 input: \"Voglio confermare e creare subito la spedizione che abbiamo preparato.\"\nExample 3 output: {\"domain\":\"shipment\",\"channel\":\"create_shipment\",\"intentId\":\"shipment.create.confirmed_booking\",\"reason\":\"Richiesta operativa di creazione spedizione.\",\"confidence\":94}\nExample 4 input: \"Iscrivi il prospect Farmacia Centrale alla sequenza follow-up commerciale.\"\nExample 4 output: {\"domain\":\"outreach\",\"channel\":\"outreach\",\"intentId\":\"outreach.enroll.sequence\",\"reason\":\"Richiesta di enrollment in sequenza outreach.\",\"confidence\":94}\nExample 5 input: \"Confronta costo fornitore e prezzo vendita per 3 kg su Milano 20100.\"\nExample 5 output: {\"domain\":\"listini\",\"channel\":\"listini\",\"intentId\":\"listini.compare.margin\",\"reason\":\"Confronto costo fornitore/prezzo vendita tipico listini.\",\"confidence\":93}\nExample 6 input: \"Spiegami in modo tecnico come e organizzata ANNE V3 e i suoi stage.\"\nExample 6 output: {\"domain\":\"mentor\",\"channel\":\"mentor\",\"intentId\":\"mentor.explain.architecture\",\"reason\":\"Richiesta di mentoring tecnico interno sull architettura.\",\"confidence\":90}\nExample 7 input: \"Ciao Anne\"\nExample 7 output: {\"domain\":\"support\",\"channel\":\"support\",\"intentId\":\"support.greeting.request\",\"reason\":\"Saluto iniziale senza richiesta specifica.\",\"confidence\":92}\nExample 8 input: \"Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.\"\nExample 8 output: {\"domain\":\"explain\",\"channel\":\"explain\",\"intentId\":\"explain.margin.calculation\",\"reason\":\"Richiesta di spiegazione concettuale, non di lettura/confronto listino.\",\"confidence\":91}\n\n#2 user\n{\n  \"instruction\": \"Classifica la richiesta in uno dei domini ammessi. Priorita: evita support quando c e una richiesta di preventivo/prezzo.\",\n  \"attempt\": 1,\n  \"allowedDomains\": [\n    \"quote\",\n    \"shipment\",\n    \"support\",\n    \"crm\",\n    \"outreach\",\n    \"listini\",\n    \"mentor\",\n    \"debug\",\n    \"explain\"\n  ],\n  \"strictChannelMap\": {\n    \"quote\": \"quote\",\n    \"shipment\": \"create_shipment\",\n    \"support\": \"support\",\n    \"crm\": \"crm\",\n    \"outreach\": \"outreach\",\n    \"listini\": \"listini\",\n    \"mentor\": \"mentor\",\n    \"debug\": \"debug\",\n    \"explain\": \"explain\"\n  },\n  \"message\": \"Vorrei chiedere un rimborso per una spedizione mai consegnata.\"\n}",
+        "outputText": "{\"domain\":\"support\",\"channel\":\"support\",\"intentId\":\"support.resolve.refund\",\"reason\":\"Richiesta di rimborso per una spedizione non consegnata.\",\"confidence\":95}"
+      },
+      {
+        "stage": "domain_decomposer",
+        "attempt": 1,
+        "durationMs": 4742,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 270,
+        "outputTokens": 851,
+        "totalTokens": 1121,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei DOMAIN_DECOMPOSER.\nScomponi la richiesta in subtasks granulari con dipendenze minime.\nJSON schema: {\"subtasks\":[{\"id\":\"task_1\",\"domain\":\"...\",\"intentId\":\"...\",\"goal\":\"...\",\"dependsOn\":[],\"acceptance\":\"...\"}]}.\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"input\": {\n    \"message\": \"Vorrei chiedere un rimborso per una spedizione mai consegnata.\",\n    \"intentId\": \"support.resolve.refund\",\n    \"domain\": \"support\"\n  }\n}",
+        "outputText": "{\"subtasks\":[{\"id\":\"task_1\",\"domain\":\"support\",\"intentId\":\"support.resolve.refund\",\"goal\":\"Acquire missing order/shipment ID and delivery verification from user\",\"dependsOn\":[],\"acceptance\":\"clarification_required\"},{\"id\":\"task_2\",\"domain\":\"support\",\"intentId\":\"support.resolve.refund.verify_delivery\",\"goal\":\"Verify shipment was not delivered\",\"dependsOn\":[\"task_1\"],\"acceptance\":\"verified_not_delivered\"},{\"id\":\"task_3\",\"domain\":\"support\",\"intentId\":\"support.resolve.refund.process\",\"goal\":\"Issue refund for the undelivered shipment\",\"dependsOn\":[\"task_2\"],\"acceptance\":\"refund_issued\"}]}"
+      },
+      {
+        "stage": "task_planner",
+        "attempt": 1,
+        "durationMs": 1883,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 508,
+        "outputTokens": 281,
+        "totalTokens": 789,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei TASK_PLANNER.\nOrdina e normalizza i task per l'esecuzione.\nJSON schema: {\"tasks\":[{\"id\":\"...\",\"domain\":\"...\",\"intentId\":\"...\",\"goal\":\"...\",\"dependsOn\":[],\"acceptance\":\"...\"}]}.\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"message\": \"Vorrei chiedere un rimborso per una spedizione mai consegnata.\",\n  \"classification\": {\n    \"domain\": \"support\",\n    \"channel\": \"support\",\n    \"intentId\": \"support.resolve.refund\",\n    \"reason\": \"Richiesta di rimborso per una spedizione non consegnata.\",\n    \"confidence\": 95\n  },\n  \"decomposedTasks\": [\n    {\n      \"id\": \"task_1\",\n      \"domain\": \"support\",\n      \"intentId\": \"support.resolve.refund\",\n      \"goal\": \"Acquire missing order/shipment ID and delivery verification from user\",\n      \"dependsOn\": [],\n      \"acceptance\": \"clarification_required\"\n    },\n    {\n      \"id\": \"task_2\",\n      \"domain\": \"support\",\n      \"intentId\": \"support.resolve.refund.verify_delivery\",\n      \"goal\": \"Verify shipment was not delivered\",\n      \"dependsOn\": [\n        \"task_1\"\n      ],\n      \"acceptance\": \"verified_not_delivered\"\n    },\n    {\n      \"id\": \"task_3\",\n      \"domain\": \"support\",\n      \"intentId\": \"support.resolve.refund.process\",\n      \"goal\": \"Issue refund for the undelivered shipment\",\n      \"dependsOn\": [\n        \"task_2\"\n      ],\n      \"acceptance\": \"refund_issued\"\n    }\n  ]\n}",
+        "outputText": "{\"tasks\":[{\"id\":\"task_1\",\"domain\":\"support\",\"intentId\":\"support.resolve.refund\",\"goal\":\"Acquire missing order/shipment ID and delivery verification from user\",\"dependsOn\":[],\"acceptance\":\"clarification_required\"},{\"id\":\"task_2\",\"domain\":\"support\",\"intentId\":\"support.resolve.refund.verify_delivery\",\"goal\":\"Verify shipment was not delivered\",\"dependsOn\":[\"task_1\"],\"acceptance\":\"verified_not_delivered\"},{\"id\":\"task_3\",\"domain\":\"support\",\"intentId\":\"support.resolve.refund.process\",\"goal\":\"Issue refund for the undelivered shipment\",\"dependsOn\":[\"task_2\"],\"acceptance\":\"refund_issued\"}]}"
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 1946,
+        "success": false,
+        "errorCode": "invalid_json_contract",
+        "inputTokens": 1072,
+        "outputTokens": 296,
+        "totalTokens": 1368,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_1\",\n    \"goal\": \"Acquire missing order/shipment ID and delivery verification from user\",\n    \"domain\": \"support\",\n    \"intentId\": \"support.resolve.refund\",\n    \"dependsOn\": [],\n    \"acceptance\": \"clarification_required\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"track_shipment\",\n      \"description\": \"Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.\",\n      \"required\": [\n        \"trackingNumber\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_shipment_status\",\n      \"description\": \"Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \\\"dov'e il mio pacco?\\\", \\\"stato spedizione\\\", \\\"tracking\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"manage_hold\",\n      \"description\": \"Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \\\"giacenza\\\", \\\"pacco fermo\\\", \\\"non consegnato\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"cancel_shipment\",\n      \"description\": \"Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \\\"cancella\\\", \\\"annulla\\\", \\\"storna\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"process_refund\",\n      \"description\": \"Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \\\"rimborso\\\", \\\"riaccredito\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"force_refresh_tracking\",\n      \"description\": \"Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \\\"tracking non si aggiorna\\\", \\\"stato fermo\\\", \\\"aggiorna tracking\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"check_wallet_status\",\n      \"description\": \"Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \\\"saldo\\\", \\\"wallet\\\", \\\"credito\\\", \\\"transazioni\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"diagnose_shipment_issue\",\n      \"description\": \"Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \\\"non riesco a creare\\\", \\\"errore spedizione\\\", \\\"non funziona\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"escalate_to_human\",\n      \"description\": \"Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.\",\n      \"required\": [\n        \"reason\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Ask user for missing order/shipment ID and delivery verification details\",\"toolCandidates\":[],\"expectedOutcome\":\"User provides the tracking or shipment ID and confirms delivery status\"}]}"
+      },
+      {
+        "stage": "planner",
+        "attempt": 2,
+        "durationMs": 3491,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 1088,
+        "outputTokens": 678,
+        "totalTokens": 1766,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 2,\n  \"previousError\": \"steps[0].toolCandidates cannot be empty\",\n  \"task\": {\n    \"id\": \"task_1\",\n    \"goal\": \"Acquire missing order/shipment ID and delivery verification from user\",\n    \"domain\": \"support\",\n    \"intentId\": \"support.resolve.refund\",\n    \"dependsOn\": [],\n    \"acceptance\": \"clarification_required\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"track_shipment\",\n      \"description\": \"Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.\",\n      \"required\": [\n        \"trackingNumber\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_shipment_status\",\n      \"description\": \"Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \\\"dov'e il mio pacco?\\\", \\\"stato spedizione\\\", \\\"tracking\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"manage_hold\",\n      \"description\": \"Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \\\"giacenza\\\", \\\"pacco fermo\\\", \\\"non consegnato\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"cancel_shipment\",\n      \"description\": \"Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \\\"cancella\\\", \\\"annulla\\\", \\\"storna\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"process_refund\",\n      \"description\": \"Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \\\"rimborso\\\", \\\"riaccredito\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"force_refresh_tracking\",\n      \"description\": \"Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \\\"tracking non si aggiorna\\\", \\\"stato fermo\\\", \\\"aggiorna tracking\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"check_wallet_status\",\n      \"description\": \"Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \\\"saldo\\\", \\\"wallet\\\", \\\"credito\\\", \\\"transazioni\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"diagnose_shipment_issue\",\n      \"description\": \"Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \\\"non riesco a creare\\\", \\\"errore spedizione\\\", \\\"non funziona\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"escalate_to_human\",\n      \"description\": \"Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.\",\n      \"required\": [\n        \"reason\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Obtain missing shipment ID and delivery details from the user\",\"toolCandidates\":[\"get_shipment_status\"],\"expectedOutcome\":\"User provides shipment ID and delivery verification information\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 1,
+        "success": false,
+        "errorCode": "stage_failed"
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 1891,
+        "success": false,
+        "errorCode": "invalid_json_contract",
+        "inputTokens": 1077,
+        "outputTokens": 244,
+        "totalTokens": 1321,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_2\",\n    \"goal\": \"Verify shipment was not delivered\",\n    \"domain\": \"support\",\n    \"intentId\": \"support.resolve.refund.verify_delivery\",\n    \"dependsOn\": [\n      \"task_1\"\n    ],\n    \"acceptance\": \"verified_not_delivered\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"track_shipment\",\n      \"description\": \"Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.\",\n      \"required\": [\n        \"trackingNumber\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_shipment_status\",\n      \"description\": \"Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \\\"dov'e il mio pacco?\\\", \\\"stato spedizione\\\", \\\"tracking\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"manage_hold\",\n      \"description\": \"Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \\\"giacenza\\\", \\\"pacco fermo\\\", \\\"non consegnato\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"cancel_shipment\",\n      \"description\": \"Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \\\"cancella\\\", \\\"annulla\\\", \\\"storna\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"process_refund\",\n      \"description\": \"Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \\\"rimborso\\\", \\\"riaccredito\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"force_refresh_tracking\",\n      \"description\": \"Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \\\"tracking non si aggiorna\\\", \\\"stato fermo\\\", \\\"aggiorna tracking\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"check_wallet_status\",\n      \"description\": \"Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \\\"saldo\\\", \\\"wallet\\\", \\\"credito\\\", \\\"transazioni\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"diagnose_shipment_issue\",\n      \"description\": \"Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \\\"non riesco a creare\\\", \\\"errore spedizione\\\", \\\"non funziona\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"escalate_to_human\",\n      \"description\": \"Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.\",\n      \"required\": [\n        \"reason\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Collect missing tracking number for shipment verification\",\"toolCandidates\":[],\"expectedOutcome\":\"clarification_required\"}]}"
+      },
+      {
+        "stage": "planner",
+        "attempt": 2,
+        "durationMs": 4853,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 1093,
+        "outputTokens": 771,
+        "totalTokens": 1864,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 2,\n  \"previousError\": \"steps[0].toolCandidates cannot be empty\",\n  \"task\": {\n    \"id\": \"task_2\",\n    \"goal\": \"Verify shipment was not delivered\",\n    \"domain\": \"support\",\n    \"intentId\": \"support.resolve.refund.verify_delivery\",\n    \"dependsOn\": [\n      \"task_1\"\n    ],\n    \"acceptance\": \"verified_not_delivered\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"track_shipment\",\n      \"description\": \"Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.\",\n      \"required\": [\n        \"trackingNumber\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_shipment_status\",\n      \"description\": \"Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \\\"dov'e il mio pacco?\\\", \\\"stato spedizione\\\", \\\"tracking\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"manage_hold\",\n      \"description\": \"Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \\\"giacenza\\\", \\\"pacco fermo\\\", \\\"non consegnato\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"cancel_shipment\",\n      \"description\": \"Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \\\"cancella\\\", \\\"annulla\\\", \\\"storna\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"process_refund\",\n      \"description\": \"Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \\\"rimborso\\\", \\\"riaccredito\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"force_refresh_tracking\",\n      \"description\": \"Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \\\"tracking non si aggiorna\\\", \\\"stato fermo\\\", \\\"aggiorna tracking\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"check_wallet_status\",\n      \"description\": \"Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \\\"saldo\\\", \\\"wallet\\\", \\\"credito\\\", \\\"transazioni\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"diagnose_shipment_issue\",\n      \"description\": \"Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \\\"non riesco a creare\\\", \\\"errore spedizione\\\", \\\"non funziona\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"escalate_to_human\",\n      \"description\": \"Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.\",\n      \"required\": [\n        \"reason\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Retrieve shipment status to verify it has not been delivered\",\"toolCandidates\":[\"get_shipment_status\"],\"expectedOutcome\":\"verified_not_delivered\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": false,
+        "errorCode": "stage_failed"
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 2430,
+        "success": false,
+        "errorCode": "invalid_json_contract",
+        "inputTokens": 1078,
+        "outputTokens": 497,
+        "totalTokens": 1575,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_3\",\n    \"goal\": \"Issue refund for the undelivered shipment\",\n    \"domain\": \"support\",\n    \"intentId\": \"support.resolve.refund.process\",\n    \"dependsOn\": [\n      \"task_2\"\n    ],\n    \"acceptance\": \"refund_issued\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"track_shipment\",\n      \"description\": \"Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.\",\n      \"required\": [\n        \"trackingNumber\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_shipment_status\",\n      \"description\": \"Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \\\"dov'e il mio pacco?\\\", \\\"stato spedizione\\\", \\\"tracking\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"manage_hold\",\n      \"description\": \"Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \\\"giacenza\\\", \\\"pacco fermo\\\", \\\"non consegnato\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"cancel_shipment\",\n      \"description\": \"Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \\\"cancella\\\", \\\"annulla\\\", \\\"storna\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"process_refund\",\n      \"description\": \"Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \\\"rimborso\\\", \\\"riaccredito\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"force_refresh_tracking\",\n      \"description\": \"Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \\\"tracking non si aggiorna\\\", \\\"stato fermo\\\", \\\"aggiorna tracking\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"check_wallet_status\",\n      \"description\": \"Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \\\"saldo\\\", \\\"wallet\\\", \\\"credito\\\", \\\"transazioni\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"diagnose_shipment_issue\",\n      \"description\": \"Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \\\"non riesco a creare\\\", \\\"errore spedizione\\\", \\\"non funziona\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"escalate_to_human\",\n      \"description\": \"Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.\",\n      \"required\": [\n        \"reason\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Obtain shipment_id for the undelivered shipment\",\"toolCandidates\":[],\"expectedOutcome\":\"clarification_required\"}]}"
+      },
+      {
+        "stage": "planner",
+        "attempt": 2,
+        "durationMs": 3325,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 1094,
+        "outputTokens": 492,
+        "totalTokens": 1586,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 2,\n  \"previousError\": \"steps[0].toolCandidates cannot be empty\",\n  \"task\": {\n    \"id\": \"task_3\",\n    \"goal\": \"Issue refund for the undelivered shipment\",\n    \"domain\": \"support\",\n    \"intentId\": \"support.resolve.refund.process\",\n    \"dependsOn\": [\n      \"task_2\"\n    ],\n    \"acceptance\": \"refund_issued\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"track_shipment\",\n      \"description\": \"Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.\",\n      \"required\": [\n        \"trackingNumber\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_shipment_status\",\n      \"description\": \"Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \\\"dov'e il mio pacco?\\\", \\\"stato spedizione\\\", \\\"tracking\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"manage_hold\",\n      \"description\": \"Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \\\"giacenza\\\", \\\"pacco fermo\\\", \\\"non consegnato\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"cancel_shipment\",\n      \"description\": \"Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \\\"cancella\\\", \\\"annulla\\\", \\\"storna\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"process_refund\",\n      \"description\": \"Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \\\"rimborso\\\", \\\"riaccredito\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"force_refresh_tracking\",\n      \"description\": \"Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \\\"tracking non si aggiorna\\\", \\\"stato fermo\\\", \\\"aggiorna tracking\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"check_wallet_status\",\n      \"description\": \"Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \\\"saldo\\\", \\\"wallet\\\", \\\"credito\\\", \\\"transazioni\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"diagnose_shipment_issue\",\n      \"description\": \"Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \\\"non riesco a creare\\\", \\\"errore spedizione\\\", \\\"non funziona\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"escalate_to_human\",\n      \"description\": \"Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.\",\n      \"required\": [\n        \"reason\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Verify shipment status and ensure eligibility for refund\",\"toolCandidates\":[\"get_shipment_status\",\"track_shipment\",\"force_refresh_tracking\"],\"expectedOutcome\":\"shipment_status_verified\"},{\"id\":\"step_2\",\"goal\":\"Process refund to customer wallet for undelivered shipment\",\"toolCandidates\":[\"process_refund\"],\"expectedOutcome\":\"refund_issued\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 3242,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 1534,
+        "outputTokens": 710,
+        "totalTokens": 2244,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei TOOL_ANALYSIS.\nAnalizza rischio, dati mancanti e tool raccomandato per lo step.\nJSON schema: {\"recommendedTool\":\"...\",\"riskLevel\":\"low|medium|high|critical\",\"missingData\":[],\"requiresClarification\":false,\"clarificationQuestion\":\"...\",\"rationale\":\"...\"}.\n\nTool selection policy:\n- You must choose only from step.toolCandidates.\n- recommendedTool must match exactly one candidate string.\n- Prefer domain orchestrated tools when present (for example: shipment_quote_orchestrated for quote domain).\n- If multiple tools can solve the same goal, prefer the lowest-risk tool.\n- Do not invent tool names and do not move argument generation to this stage.\n\nClarification policy:\n- If required data is missing for the selected tool, set requiresClarification=true.\n- When requiresClarification=true, provide missingData and a concrete clarificationQuestion.\n- If no data is missing, requiresClarification=false and missingData=[]\n\nExample A input: step.toolCandidates=[\"shipment_quote_orchestrated\",\"calculate_price\"], user asks a new quote.\nExample A output: {\"recommendedTool\":\"shipment_quote_orchestrated\",\"riskLevel\":\"low\",\"missingData\":[],\"requiresClarification\":false,\"clarificationQuestion\":\"\",\"rationale\":\"Tool orchestrato quote preferito nel dominio quote.\"}\nExample B input: step.toolCandidates=[\"track_shipment\",\"diagnose_shipment_issue\"], user asks tracking status without valid tracking code.\nExample B output: {\"recommendedTool\":\"track_shipment\",\"riskLevel\":\"low\",\"missingData\":[\"tracking_id\"],\"requiresClarification\":true,\"clarificationQuestion\":\"Indicami il codice tracking completo.\",\"rationale\":\"Per tracciare la spedizione manca il tracking.\"}\nExample C input: step.toolCandidates=[\"update_crm_status\",\"add_crm_note\"], user asks to change CRM status with entity and target status.\nExample C output: {\"recommendedTool\":\"update_crm_status\",\"riskLevel\":\"high\",\"missingData\":[],\"requiresClarification\":false,\"clarificationQuestion\":\"\",\"rationale\":\"Obiettivo e aggiornamento stato CRM.\"}\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"instruction\": \"Seleziona il tool migliore tra step.toolCandidates. recommendedTool deve essere esattamente uno dei candidati. Se mancano dati obbligatori per il tool scelto, imposta requiresClarification=true e compila missingData + clarificationQuestion.\",\n  \"attempt\": 1,\n  \"step\": {\n    \"id\": \"step_1\",\n    \"taskId\": \"task_3\",\n    \"goal\": \"Verify shipment status and ensure eligibility for refund\",\n    \"toolCandidates\": [\n      \"get_shipment_status\",\n      \"track_shipment\",\n      \"force_refresh_tracking\"\n    ],\n    \"expectedOutcome\": \"shipment_status_verified\"\n  },\n  \"message\": \"Vorrei chiedere un rimborso per una spedizione mai consegnata.\",\n  \"tools\": [\n    {\n      \"name\": \"track_shipment\",\n      \"description\": \"Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.\",\n      \"required\": [\n        \"trackingNumber\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"get_shipment_status\",\n      \"description\": \"Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \\\"dov'e il mio pacco?\\\", \\\"stato spedizione\\\", \\\"tracking\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"manage_hold\",\n      \"description\": \"Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \\\"giacenza\\\", \\\"pacco fermo\\\", \\\"non consegnato\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"cancel_shipment\",\n      \"description\": \"Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \\\"cancella\\\", \\\"annulla\\\", \\\"storna\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"process_refund\",\n      \"description\": \"Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \\\"rimborso\\\", \\\"riaccredito\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    },\n    {\n      \"name\": \"force_refresh_tracking\",\n      \"description\": \"Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \\\"tracking non si aggiorna\\\", \\\"stato fermo\\\", \\\"aggiorna tracking\\\".\",\n      \"required\": [\n        \"shipment_id\"\n      ],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"check_wallet_status\",\n      \"description\": \"Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \\\"saldo\\\", \\\"wallet\\\", \\\"credito\\\", \\\"transazioni\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"diagnose_shipment_issue\",\n      \"description\": \"Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \\\"non riesco a creare\\\", \\\"errore spedizione\\\", \\\"non funziona\\\".\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"escalate_to_human\",\n      \"description\": \"Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.\",\n      \"required\": [\n        \"reason\"\n      ],\n      \"riskLevel\": \"high\",\n      \"category\": \"write\"\n    }\n  ]\n}",
+        "outputText": "{\"recommendedTool\":\"get_shipment_status\",\"riskLevel\":\"low\",\"missingData\":[],\"requiresClarification\":false,\"clarificationQuestion\":\"\",\"rationale\":\"get_shipment_status permette di ottenere lo stato completo della spedizione, inclusi eventi e ultima data di aggiornamento, quindi è l'ipotesi più adatta per verificare lo stato e la potenziale elegibilità al rimborso, senza richiedere ulteriori parametri dall'utente.\"}"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 3245,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 490,
+        "outputTokens": 464,
+        "totalTokens": 954,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei TOOL_ARGUMENT.\nProduci args coerenti col tool scelto e con il contesto.\nJSON schema: {\"tool\":\"...\",\"args\":{},\"rationale\":\"...\"}.\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"message\": \"Vorrei chiedere un rimborso per una spedizione mai consegnata.\",\n  \"step\": {\n    \"id\": \"step_1\",\n    \"taskId\": \"task_3\",\n    \"goal\": \"Verify shipment status and ensure eligibility for refund\",\n    \"toolCandidates\": [\n      \"get_shipment_status\",\n      \"track_shipment\",\n      \"force_refresh_tracking\"\n    ],\n    \"expectedOutcome\": \"shipment_status_verified\"\n  },\n  \"analysis\": {\n    \"recommendedTool\": \"get_shipment_status\",\n    \"riskLevel\": \"low\",\n    \"missingData\": [],\n    \"requiresClarification\": false,\n    \"rationale\": \"get_shipment_status permette di ottenere lo stato completo della spedizione, inclusi eventi e ultima data di aggiornamento, quindi è l'ipotesi più adatta per verificare lo stato e la potenziale elegibilità al rimborso, senza richiedere ulteriori parametri dall'utente.\"\n  },\n  \"tool\": {\n    \"name\": \"get_shipment_status\",\n    \"required\": [],\n    \"properties\": {\n      \"shipment_id\": {\n        \"type\": \"string\",\n        \"description\": \"ID della spedizione (UUID)\"\n      },\n      \"tracking_number\": {\n        \"type\": \"string\",\n        \"description\": \"Numero di tracking (alternativo a shipment_id)\"\n      }\n    }\n  }\n}",
+        "outputText": "{\"tool\":\"get_shipment_status\",\"args\":{},\"rationale\":\"Missing shipment_id or tracking_number; clarification required from user.\"}"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 2314,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 278,
+        "outputTokens": 428,
+        "totalTokens": 706,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei TOOL_CALLER.\nConferma tool finale + args finali sicuri.\nJSON schema: {\"tool\":\"...\",\"args\":{},\"reason\":\"...\"}.\n\nDominio corrente: support.\nContesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"message\": \"Vorrei chiedere un rimborso per una spedizione mai consegnata.\",\n  \"tool\": {\n    \"name\": \"get_shipment_status\",\n    \"required\": []\n  },\n  \"argument\": {\n    \"tool\": \"get_shipment_status\",\n    \"args\": {},\n    \"rationale\": \"Missing shipment_id or tracking_number; clarification required from user.\"\n  }\n}",
+        "outputText": "{\"tool\":\"clarification_required\",\"args\":{},\"reason\":\"Missing shipment ID or tracking number to process refund request.\"}"
+      }
+    ]
+  }
+}
+
+[stage_trace_summary]
+lastStage: tool_caller
+totalDurationMs: 35078
+tokenInputTotal: 11133
+tokenOutputTotal: 5938
+tokenTotal: 17071
+tokenAlertCount: 0
+tokenAlertThreshold: 16000
+
+[stage_trace_entries]
+
+--- stage_1 ---
+stage: request_manager
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 1715
+inputTokens: 1551
+outputTokens: 226
+totalTokens: 1777
+tokenAlert: False
+[input]
+#1 system
+Sei REQUEST_MANAGER.
+Classifica la richiesta in dominio, channel, intentId, reason, confidence.
+JSON schema: {"domain":"...","channel":"...","intentId":"...","reason":"...","confidence":0-100}
+
+Routing policy (use this order of evidence):
+1) quote -> preventivo, prezzo, costo, tariffa, quanto costa, comparazione corrieri, stima spedizione, dati peso/cap/citta/servizio.
+2) shipment -> crea spedizione, conferma prenotazione, genera etichetta, procedi spedizione, acquisto spedizione.
+3) support -> problemi su spedizione esistente: tracking fermo, giacenza, ritardo, errore, reclamo, rimborso, assistenza post-vendita.
+4) crm -> lead/prospect, note commerciali, pipeline, follow-up commerciale.
+5) outreach -> campagne/sequence outreach, enrollment, canali e metriche outreach.
+6) listini -> listini, margini, costo fornitore, configurazioni prezzo.
+7) mentor -> coaching operativo/strategico interno.
+8) debug -> analisi errore tecnico/stack/log.
+9) explain -> spiegazioni generali su processo/business.
+
+Tie-break mandatory rules:
+- If there is explicit pricing intent, choose domain=quote even if the message asks for help.
+- Use support only when the user refers to an existing shipment issue, not a new estimate.
+- Never use support as a default bucket when quote evidence is present.
+
+Channel mapping is strict:
+- quote -> quote
+- shipment -> create_shipment
+- support -> support
+- crm -> crm
+- outreach -> outreach
+- listini -> listini
+- mentor -> mentor
+- debug -> debug
+- explain -> explain
+
+Intent naming convention:
+- Use lowercase dotted ids: <domain>.<action>.<object> (example: quote.create.estimate).
+
+Disambiguation rules (mandatory):
+- outreach vs crm: if user asks to enroll/subscribe/add to sequence/campaign/invio programmato -> domain MUST be outreach (not crm).
+- listini vs quote: if user asks supplier cost, selling price, margin, listino comparison -> domain MUST be listini (not quote).
+- mentor vs explain: if user asks internal architecture/stages/how ANNE works technically -> domain MUST be mentor (not explain).
+- explain vs listini: if user asks conceptual explanation ("spiegami come", "come viene calcolato", "perche") without asking to fetch/compare a specific listino record, domain MUST be explain.
+- greeting-only message ("ciao", "salve", "hey anne") -> domain MUST be support with a greeting/support intent.
+- explain should be used for general process/business explanations, not internal technical mentoring.
+- listini requires an operational intent (show/list/compare configured prices, margins, supplier costs).
+- explain is mandatory when the user asks "how it works" or "why" about business logic and does not ask to fetch/update records.
+
+Decision table (final check before output):
+- If request asks conceptual explanation only -> domain=explain.
+- If request asks show/compare/list configured pricing data -> domain=listini.
+- If request asks an estimate for a new shipment -> domain=quote.
+- If request asks to execute/create booking -> domain=shipment.
+- If request asks troubleshooting on technical failures -> domain=debug.
+
+Negative examples:
+- "Spiegami come calcolate il margine" => explain (NOT listini).
+- "Mostrami il margine su GLS 3kg Milano" => listini (NOT explain).
+- "Iscrivi il prospect alla sequenza" => outreach (NOT crm).
+- "Ciao Anne" => support (NOT explain).
+
+Example 1 input: "Mi fai un preventivo per 2.4 kg verso 00100 Roma?"
+Example 1 output: {"domain":"quote","channel":"quote","intentId":"quote.create.estimate","reason":"Richiesta esplicita di preventivo con peso e CAP.","confidence":95}
+Example 2 input: "Il tracking della spedizione 123 e fermo da ieri, puoi aiutarmi?"
+Example 2 output: {"domain":"support","channel":"support","intentId":"support.resolve.tracking_issue","reason":"Problema su spedizione esistente.","confidence":93}
+Example 3 input: "Voglio confermare e creare subito la spedizione che abbiamo preparato."
+Example 3 output: {"domain":"shipment","channel":"create_shipment","intentId":"shipment.create.confirmed_booking","reason":"Richiesta operativa di creazione spedizione.","confidence":94}
+Example 4 input: "Iscrivi il prospect Farmacia Centrale alla sequenza follow-up commerciale."
+Example 4 output: {"domain":"outreach","channel":"outreach","intentId":"outreach.enroll.sequence","reason":"Richiesta di enrollment in sequenza outreach.","confidence":94}
+Example 5 input: "Confronta costo fornitore e prezzo vendita per 3 kg su Milano 20100."
+Example 5 output: {"domain":"listini","channel":"listini","intentId":"listini.compare.margin","reason":"Confronto costo fornitore/prezzo vendita tipico listini.","confidence":93}
+Example 6 input: "Spiegami in modo tecnico come e organizzata ANNE V3 e i suoi stage."
+Example 6 output: {"domain":"mentor","channel":"mentor","intentId":"mentor.explain.architecture","reason":"Richiesta di mentoring tecnico interno sull architettura.","confidence":90}
+Example 7 input: "Ciao Anne"
+Example 7 output: {"domain":"support","channel":"support","intentId":"support.greeting.request","reason":"Saluto iniziale senza richiesta specifica.","confidence":92}
+Example 8 input: "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente."
+Example 8 output: {"domain":"explain","channel":"explain","intentId":"explain.margin.calculation","reason":"Richiesta di spiegazione concettuale, non di lettura/confronto listino.","confidence":91}
+
+#2 user
+{
+  "instruction": "Classifica la richiesta in uno dei domini ammessi. Priorita: evita support quando c e una richiesta di preventivo/prezzo.",
+  "attempt": 1,
+  "allowedDomains": [
+    "quote",
+    "shipment",
+    "support",
+    "crm",
+    "outreach",
+    "listini",
+    "mentor",
+    "debug",
+    "explain"
+  ],
+  "strictChannelMap": {
+    "quote": "quote",
+    "shipment": "create_shipment",
+    "support": "support",
+    "crm": "crm",
+    "outreach": "outreach",
+    "listini": "listini",
+    "mentor": "mentor",
+    "debug": "debug",
+    "explain": "explain"
+  },
+  "message": "Vorrei chiedere un rimborso per una spedizione mai consegnata."
+}
+[output]
+{"domain":"support","channel":"support","intentId":"support.resolve.refund","reason":"Richiesta di rimborso per una spedizione non consegnata.","confidence":95}
+
+--- stage_2 ---
+stage: domain_decomposer
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 4742
+inputTokens: 270
+outputTokens: 851
+totalTokens: 1121
+tokenAlert: False
+[input]
+#1 system
+Sei DOMAIN_DECOMPOSER.
+Scomponi la richiesta in subtasks granulari con dipendenze minime.
+JSON schema: {"subtasks":[{"id":"task_1","domain":"...","intentId":"...","goal":"...","dependsOn":[],"acceptance":"..."}]}.
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "input": {
+    "message": "Vorrei chiedere un rimborso per una spedizione mai consegnata.",
+    "intentId": "support.resolve.refund",
+    "domain": "support"
+  }
+}
+[output]
+{"subtasks":[{"id":"task_1","domain":"support","intentId":"support.resolve.refund","goal":"Acquire missing order/shipment ID and delivery verification from user","dependsOn":[],"acceptance":"clarification_required"},{"id":"task_2","domain":"support","intentId":"support.resolve.refund.verify_delivery","goal":"Verify shipment was not delivered","dependsOn":["task_1"],"acceptance":"verified_not_delivered"},{"id":"task_3","domain":"support","intentId":"support.resolve.refund.process","goal":"Issue refund for the undelivered shipment","dependsOn":["task_2"],"acceptance":"refund_issued"}]}
+
+--- stage_3 ---
+stage: task_planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 1883
+inputTokens: 508
+outputTokens: 281
+totalTokens: 789
+tokenAlert: False
+[input]
+#1 system
+Sei TASK_PLANNER.
+Ordina e normalizza i task per l'esecuzione.
+JSON schema: {"tasks":[{"id":"...","domain":"...","intentId":"...","goal":"...","dependsOn":[],"acceptance":"..."}]}.
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "message": "Vorrei chiedere un rimborso per una spedizione mai consegnata.",
+  "classification": {
+    "domain": "support",
+    "channel": "support",
+    "intentId": "support.resolve.refund",
+    "reason": "Richiesta di rimborso per una spedizione non consegnata.",
+    "confidence": 95
+  },
+  "decomposedTasks": [
+    {
+      "id": "task_1",
+      "domain": "support",
+      "intentId": "support.resolve.refund",
+      "goal": "Acquire missing order/shipment ID and delivery verification from user",
+      "dependsOn": [],
+      "acceptance": "clarification_required"
+    },
+    {
+      "id": "task_2",
+      "domain": "support",
+      "intentId": "support.resolve.refund.verify_delivery",
+      "goal": "Verify shipment was not delivered",
+      "dependsOn": [
+        "task_1"
+      ],
+      "acceptance": "verified_not_delivered"
+    },
+    {
+      "id": "task_3",
+      "domain": "support",
+      "intentId": "support.resolve.refund.process",
+      "goal": "Issue refund for the undelivered shipment",
+      "dependsOn": [
+        "task_2"
+      ],
+      "acceptance": "refund_issued"
+    }
+  ]
+}
+[output]
+{"tasks":[{"id":"task_1","domain":"support","intentId":"support.resolve.refund","goal":"Acquire missing order/shipment ID and delivery verification from user","dependsOn":[],"acceptance":"clarification_required"},{"id":"task_2","domain":"support","intentId":"support.resolve.refund.verify_delivery","goal":"Verify shipment was not delivered","dependsOn":["task_1"],"acceptance":"verified_not_delivered"},{"id":"task_3","domain":"support","intentId":"support.resolve.refund.process","goal":"Issue refund for the undelivered shipment","dependsOn":["task_2"],"acceptance":"refund_issued"}]}
+
+--- stage_4 ---
+stage: planner
+attempt: 1
+model: None
+success: False
+durationMs: 1946
+inputTokens: 1072
+outputTokens: 296
+totalTokens: 1368
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_1",
+    "goal": "Acquire missing order/shipment ID and delivery verification from user",
+    "domain": "support",
+    "intentId": "support.resolve.refund",
+    "dependsOn": [],
+    "acceptance": "clarification_required"
+  },
+  "tools": [
+    {
+      "name": "track_shipment",
+      "description": "Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.",
+      "required": [
+        "trackingNumber"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_shipment_status",
+      "description": "Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \"dov'e il mio pacco?\", \"stato spedizione\", \"tracking\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "manage_hold",
+      "description": "Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \"giacenza\", \"pacco fermo\", \"non consegnato\".",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "cancel_shipment",
+      "description": "Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \"cancella\", \"annulla\", \"storna\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "process_refund",
+      "description": "Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \"rimborso\", \"riaccredito\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "force_refresh_tracking",
+      "description": "Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \"tracking non si aggiorna\", \"stato fermo\", \"aggiorna tracking\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "check_wallet_status",
+      "description": "Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \"saldo\", \"wallet\", \"credito\", \"transazioni\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "diagnose_shipment_issue",
+      "description": "Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \"non riesco a creare\", \"errore spedizione\", \"non funziona\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "escalate_to_human",
+      "description": "Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.",
+      "required": [
+        "reason"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Ask user for missing order/shipment ID and delivery verification details","toolCandidates":[],"expectedOutcome":"User provides the tracking or shipment ID and confirms delivery status"}]}
+
+--- stage_5 ---
+stage: planner
+attempt: 2
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 3491
+inputTokens: 1088
+outputTokens: 678
+totalTokens: 1766
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 2,
+  "previousError": "steps[0].toolCandidates cannot be empty",
+  "task": {
+    "id": "task_1",
+    "goal": "Acquire missing order/shipment ID and delivery verification from user",
+    "domain": "support",
+    "intentId": "support.resolve.refund",
+    "dependsOn": [],
+    "acceptance": "clarification_required"
+  },
+  "tools": [
+    {
+      "name": "track_shipment",
+      "description": "Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.",
+      "required": [
+        "trackingNumber"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_shipment_status",
+      "description": "Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \"dov'e il mio pacco?\", \"stato spedizione\", \"tracking\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "manage_hold",
+      "description": "Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \"giacenza\", \"pacco fermo\", \"non consegnato\".",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "cancel_shipment",
+      "description": "Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \"cancella\", \"annulla\", \"storna\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "process_refund",
+      "description": "Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \"rimborso\", \"riaccredito\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "force_refresh_tracking",
+      "description": "Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \"tracking non si aggiorna\", \"stato fermo\", \"aggiorna tracking\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "check_wallet_status",
+      "description": "Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \"saldo\", \"wallet\", \"credito\", \"transazioni\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "diagnose_shipment_issue",
+      "description": "Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \"non riesco a creare\", \"errore spedizione\", \"non funziona\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "escalate_to_human",
+      "description": "Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.",
+      "required": [
+        "reason"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Obtain missing shipment ID and delivery details from the user","toolCandidates":["get_shipment_status"],"expectedOutcome":"User provides shipment ID and delivery verification information"}]}
+
+--- stage_6 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_7 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_8 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_9 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_10 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_11 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_12 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: False
+durationMs: 1
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_13 ---
+stage: planner
+attempt: 1
+model: None
+success: False
+durationMs: 1891
+inputTokens: 1077
+outputTokens: 244
+totalTokens: 1321
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_2",
+    "goal": "Verify shipment was not delivered",
+    "domain": "support",
+    "intentId": "support.resolve.refund.verify_delivery",
+    "dependsOn": [
+      "task_1"
+    ],
+    "acceptance": "verified_not_delivered"
+  },
+  "tools": [
+    {
+      "name": "track_shipment",
+      "description": "Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.",
+      "required": [
+        "trackingNumber"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_shipment_status",
+      "description": "Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \"dov'e il mio pacco?\", \"stato spedizione\", \"tracking\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "manage_hold",
+      "description": "Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \"giacenza\", \"pacco fermo\", \"non consegnato\".",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "cancel_shipment",
+      "description": "Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \"cancella\", \"annulla\", \"storna\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "process_refund",
+      "description": "Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \"rimborso\", \"riaccredito\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "force_refresh_tracking",
+      "description": "Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \"tracking non si aggiorna\", \"stato fermo\", \"aggiorna tracking\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "check_wallet_status",
+      "description": "Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \"saldo\", \"wallet\", \"credito\", \"transazioni\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "diagnose_shipment_issue",
+      "description": "Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \"non riesco a creare\", \"errore spedizione\", \"non funziona\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "escalate_to_human",
+      "description": "Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.",
+      "required": [
+        "reason"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Collect missing tracking number for shipment verification","toolCandidates":[],"expectedOutcome":"clarification_required"}]}
+
+--- stage_14 ---
+stage: planner
+attempt: 2
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 4853
+inputTokens: 1093
+outputTokens: 771
+totalTokens: 1864
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 2,
+  "previousError": "steps[0].toolCandidates cannot be empty",
+  "task": {
+    "id": "task_2",
+    "goal": "Verify shipment was not delivered",
+    "domain": "support",
+    "intentId": "support.resolve.refund.verify_delivery",
+    "dependsOn": [
+      "task_1"
+    ],
+    "acceptance": "verified_not_delivered"
+  },
+  "tools": [
+    {
+      "name": "track_shipment",
+      "description": "Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.",
+      "required": [
+        "trackingNumber"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_shipment_status",
+      "description": "Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \"dov'e il mio pacco?\", \"stato spedizione\", \"tracking\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "manage_hold",
+      "description": "Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \"giacenza\", \"pacco fermo\", \"non consegnato\".",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "cancel_shipment",
+      "description": "Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \"cancella\", \"annulla\", \"storna\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "process_refund",
+      "description": "Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \"rimborso\", \"riaccredito\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "force_refresh_tracking",
+      "description": "Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \"tracking non si aggiorna\", \"stato fermo\", \"aggiorna tracking\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "check_wallet_status",
+      "description": "Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \"saldo\", \"wallet\", \"credito\", \"transazioni\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "diagnose_shipment_issue",
+      "description": "Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \"non riesco a creare\", \"errore spedizione\", \"non funziona\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "escalate_to_human",
+      "description": "Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.",
+      "required": [
+        "reason"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Retrieve shipment status to verify it has not been delivered","toolCandidates":["get_shipment_status"],"expectedOutcome":"verified_not_delivered"}]}
+
+--- stage_15 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_16 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_17 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_18 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_19 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_20 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_21 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: False
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_22 ---
+stage: planner
+attempt: 1
+model: None
+success: False
+durationMs: 2430
+inputTokens: 1078
+outputTokens: 497
+totalTokens: 1575
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_3",
+    "goal": "Issue refund for the undelivered shipment",
+    "domain": "support",
+    "intentId": "support.resolve.refund.process",
+    "dependsOn": [
+      "task_2"
+    ],
+    "acceptance": "refund_issued"
+  },
+  "tools": [
+    {
+      "name": "track_shipment",
+      "description": "Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.",
+      "required": [
+        "trackingNumber"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_shipment_status",
+      "description": "Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \"dov'e il mio pacco?\", \"stato spedizione\", \"tracking\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "manage_hold",
+      "description": "Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \"giacenza\", \"pacco fermo\", \"non consegnato\".",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "cancel_shipment",
+      "description": "Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \"cancella\", \"annulla\", \"storna\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "process_refund",
+      "description": "Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \"rimborso\", \"riaccredito\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "force_refresh_tracking",
+      "description": "Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \"tracking non si aggiorna\", \"stato fermo\", \"aggiorna tracking\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "check_wallet_status",
+      "description": "Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \"saldo\", \"wallet\", \"credito\", \"transazioni\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "diagnose_shipment_issue",
+      "description": "Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \"non riesco a creare\", \"errore spedizione\", \"non funziona\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "escalate_to_human",
+      "description": "Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.",
+      "required": [
+        "reason"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Obtain shipment_id for the undelivered shipment","toolCandidates":[],"expectedOutcome":"clarification_required"}]}
+
+--- stage_23 ---
+stage: planner
+attempt: 2
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 3325
+inputTokens: 1094
+outputTokens: 492
+totalTokens: 1586
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 2,
+  "previousError": "steps[0].toolCandidates cannot be empty",
+  "task": {
+    "id": "task_3",
+    "goal": "Issue refund for the undelivered shipment",
+    "domain": "support",
+    "intentId": "support.resolve.refund.process",
+    "dependsOn": [
+      "task_2"
+    ],
+    "acceptance": "refund_issued"
+  },
+  "tools": [
+    {
+      "name": "track_shipment",
+      "description": "Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.",
+      "required": [
+        "trackingNumber"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_shipment_status",
+      "description": "Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \"dov'e il mio pacco?\", \"stato spedizione\", \"tracking\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "manage_hold",
+      "description": "Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \"giacenza\", \"pacco fermo\", \"non consegnato\".",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "cancel_shipment",
+      "description": "Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \"cancella\", \"annulla\", \"storna\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "process_refund",
+      "description": "Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \"rimborso\", \"riaccredito\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "force_refresh_tracking",
+      "description": "Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \"tracking non si aggiorna\", \"stato fermo\", \"aggiorna tracking\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "check_wallet_status",
+      "description": "Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \"saldo\", \"wallet\", \"credito\", \"transazioni\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "diagnose_shipment_issue",
+      "description": "Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \"non riesco a creare\", \"errore spedizione\", \"non funziona\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "escalate_to_human",
+      "description": "Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.",
+      "required": [
+        "reason"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Verify shipment status and ensure eligibility for refund","toolCandidates":["get_shipment_status","track_shipment","force_refresh_tracking"],"expectedOutcome":"shipment_status_verified"},{"id":"step_2","goal":"Process refund to customer wallet for undelivered shipment","toolCandidates":["process_refund"],"expectedOutcome":"refund_issued"}]}
+
+--- stage_24 ---
+stage: tool_analysis
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 3242
+inputTokens: 1534
+outputTokens: 710
+totalTokens: 2244
+tokenAlert: False
+[input]
+#1 system
+Sei TOOL_ANALYSIS.
+Analizza rischio, dati mancanti e tool raccomandato per lo step.
+JSON schema: {"recommendedTool":"...","riskLevel":"low|medium|high|critical","missingData":[],"requiresClarification":false,"clarificationQuestion":"...","rationale":"..."}.
+
+Tool selection policy:
+- You must choose only from step.toolCandidates.
+- recommendedTool must match exactly one candidate string.
+- Prefer domain orchestrated tools when present (for example: shipment_quote_orchestrated for quote domain).
+- If multiple tools can solve the same goal, prefer the lowest-risk tool.
+- Do not invent tool names and do not move argument generation to this stage.
+
+Clarification policy:
+- If required data is missing for the selected tool, set requiresClarification=true.
+- When requiresClarification=true, provide missingData and a concrete clarificationQuestion.
+- If no data is missing, requiresClarification=false and missingData=[]
+
+Example A input: step.toolCandidates=["shipment_quote_orchestrated","calculate_price"], user asks a new quote.
+Example A output: {"recommendedTool":"shipment_quote_orchestrated","riskLevel":"low","missingData":[],"requiresClarification":false,"clarificationQuestion":"","rationale":"Tool orchestrato quote preferito nel dominio quote."}
+Example B input: step.toolCandidates=["track_shipment","diagnose_shipment_issue"], user asks tracking status without valid tracking code.
+Example B output: {"recommendedTool":"track_shipment","riskLevel":"low","missingData":["tracking_id"],"requiresClarification":true,"clarificationQuestion":"Indicami il codice tracking completo.","rationale":"Per tracciare la spedizione manca il tracking."}
+Example C input: step.toolCandidates=["update_crm_status","add_crm_note"], user asks to change CRM status with entity and target status.
+Example C output: {"recommendedTool":"update_crm_status","riskLevel":"high","missingData":[],"requiresClarification":false,"clarificationQuestion":"","rationale":"Obiettivo e aggiornamento stato CRM."}
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "instruction": "Seleziona il tool migliore tra step.toolCandidates. recommendedTool deve essere esattamente uno dei candidati. Se mancano dati obbligatori per il tool scelto, imposta requiresClarification=true e compila missingData + clarificationQuestion.",
+  "attempt": 1,
+  "step": {
+    "id": "step_1",
+    "taskId": "task_3",
+    "goal": "Verify shipment status and ensure eligibility for refund",
+    "toolCandidates": [
+      "get_shipment_status",
+      "track_shipment",
+      "force_refresh_tracking"
+    ],
+    "expectedOutcome": "shipment_status_verified"
+  },
+  "message": "Vorrei chiedere un rimborso per una spedizione mai consegnata.",
+  "tools": [
+    {
+      "name": "track_shipment",
+      "description": "Traccia una spedizione tramite tracking number. Restituisce lo stato attuale e la cronologia eventi.",
+      "required": [
+        "trackingNumber"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "get_shipment_status",
+      "description": "Ottieni stato completo di una spedizione: tracking, eventi, giacenze attive, ultimo aggiornamento. Usa quando l'utente chiede \"dov'e il mio pacco?\", \"stato spedizione\", \"tracking\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "manage_hold",
+      "description": "Gestisci una giacenza (spedizione ferma in deposito). Senza action_type mostra le opzioni disponibili con costi. Con action_type esegue l'azione (richiede conferma utente). Usa quando l'utente dice \"giacenza\", \"pacco fermo\", \"non consegnato\".",
+      "required": [],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "cancel_shipment",
+      "description": "Cancella una spedizione e rimborsa il wallet. Possibile SOLO se la spedizione non e ancora partita (status: created, pending_pickup). Usa quando l'utente dice \"cancella\", \"annulla\", \"storna\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "process_refund",
+      "description": "Verifica eligibilita e processa un rimborso wallet. Controlla le regole (spedizione cancellata, smarrita, ritardo grave). Usa quando l'utente chiede \"rimborso\", \"riaccredito\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    },
+    {
+      "name": "force_refresh_tracking",
+      "description": "Forza aggiornamento tracking dal corriere. Usa quando l'utente dice \"tracking non si aggiorna\", \"stato fermo\", \"aggiorna tracking\".",
+      "required": [
+        "shipment_id"
+      ],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "check_wallet_status",
+      "description": "Mostra saldo wallet e ultime transazioni. Usa quando l'utente chiede \"saldo\", \"wallet\", \"credito\", \"transazioni\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "diagnose_shipment_issue",
+      "description": "Diagnostica perche una spedizione non riesce ad essere creata. Controlla: saldo wallet, listini attivi, configurazione corriere, validazione dati. Usa quando l'utente dice \"non riesco a creare\", \"errore spedizione\", \"non funziona\".",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "escalate_to_human",
+      "description": "Escala il caso a un operatore umano. USA SOLO quando hai provato tutto e non riesci a risolvere. Crea una escalation con il tuo riassunto del problema.",
+      "required": [
+        "reason"
+      ],
+      "riskLevel": "high",
+      "category": "write"
+    }
+  ]
+}
+[output]
+{"recommendedTool":"get_shipment_status","riskLevel":"low","missingData":[],"requiresClarification":false,"clarificationQuestion":"","rationale":"get_shipment_status permette di ottenere lo stato completo della spedizione, inclusi eventi e ultima data di aggiornamento, quindi è l'ipotesi più adatta per verificare lo stato e la potenziale elegibilità al rimborso, senza richiedere ulteriori parametri dall'utente."}
+
+--- stage_25 ---
+stage: tool_argument
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 3245
+inputTokens: 490
+outputTokens: 464
+totalTokens: 954
+tokenAlert: False
+[input]
+#1 system
+Sei TOOL_ARGUMENT.
+Produci args coerenti col tool scelto e con il contesto.
+JSON schema: {"tool":"...","args":{},"rationale":"..."}.
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "message": "Vorrei chiedere un rimborso per una spedizione mai consegnata.",
+  "step": {
+    "id": "step_1",
+    "taskId": "task_3",
+    "goal": "Verify shipment status and ensure eligibility for refund",
+    "toolCandidates": [
+      "get_shipment_status",
+      "track_shipment",
+      "force_refresh_tracking"
+    ],
+    "expectedOutcome": "shipment_status_verified"
+  },
+  "analysis": {
+    "recommendedTool": "get_shipment_status",
+    "riskLevel": "low",
+    "missingData": [],
+    "requiresClarification": false,
+    "rationale": "get_shipment_status permette di ottenere lo stato completo della spedizione, inclusi eventi e ultima data di aggiornamento, quindi è l'ipotesi più adatta per verificare lo stato e la potenziale elegibilità al rimborso, senza richiedere ulteriori parametri dall'utente."
+  },
+  "tool": {
+    "name": "get_shipment_status",
+    "required": [],
+    "properties": {
+      "shipment_id": {
+        "type": "string",
+        "description": "ID della spedizione (UUID)"
+      },
+      "tracking_number": {
+        "type": "string",
+        "description": "Numero di tracking (alternativo a shipment_id)"
+      }
+    }
+  }
+}
+[output]
+{"tool":"get_shipment_status","args":{},"rationale":"Missing shipment_id or tracking_number; clarification required from user."}
+
+--- stage_26 ---
+stage: tool_caller
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 2314
+inputTokens: 278
+outputTokens: 428
+totalTokens: 706
+tokenAlert: False
+[input]
+#1 system
+Sei TOOL_CALLER.
+Conferma tool finale + args finali sicuri.
+JSON schema: {"tool":"...","args":{},"reason":"..."}.
+
+Dominio corrente: support.
+Contesto dominio: Assistenza clienti su tracking, giacenze, rimborsi e anomalie.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "message": "Vorrei chiedere un rimborso per una spedizione mai consegnata.",
+  "tool": {
+    "name": "get_shipment_status",
+    "required": []
+  },
+  "argument": {
+    "tool": "get_shipment_status",
+    "args": {},
+    "rationale": "Missing shipment_id or tracking_number; clarification required from user."
+  }
+}
+[output]
+{"tool":"clarification_required","args":{},"reason":"Missing shipment ID or tracking number to process refund request."}

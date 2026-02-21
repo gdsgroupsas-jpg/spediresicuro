@@ -46,7 +46,7 @@ jobs:
 
       - name: Validate JavaScript syntax
         run: |
-          for file in $(find scripts -name "*.js" 2>/dev/null); do
+          for file in $(find apps/web/scripts -name "*.js" 2>/dev/null); do
             echo "Checking $file..."
             node --check "$file"
           done

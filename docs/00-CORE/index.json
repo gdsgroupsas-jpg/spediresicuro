@@ -1,0 +1,76 @@
+{
+  "version": "1.0",
+  "updated": "2026-02-21",
+  "entries": [
+    {
+      "id": "core_architecture",
+      "path": "docs/00-CORE/ARCHITECTURE.md",
+      "source_of_truth": true
+    },
+    {
+      "id": "core_domain_map",
+      "path": "docs/00-CORE/DOMAIN_MAP.md",
+      "source_of_truth": true
+    },
+    {
+      "id": "core_runbook",
+      "path": "docs/00-CORE/RUNBOOK.md",
+      "source_of_truth": true
+    },
+    {
+      "id": "core_test_strategy",
+      "path": "docs/00-CORE/TEST_STRATEGY.md",
+      "source_of_truth": true
+    },
+    {
+      "id": "core_ai_rules",
+      "path": "docs/00-CORE/AI_RULES.md",
+      "source_of_truth": true
+    },
+    {
+      "id": "anne_v2_architecture",
+      "path": "docs/00-CORE/ANNE_V2_ARCHITECTURE.md",
+      "source_of_truth": false
+    },
+    {
+      "id": "anne_v2_tool_policy",
+      "path": "docs/00-CORE/ANNE_V2_TOOL_POLICY.md",
+      "source_of_truth": false
+    },
+    {
+      "id": "anne_v2_runbook",
+      "path": "docs/00-CORE/ANNE_V2_RUNBOOK.md",
+      "source_of_truth": false
+    },
+    {
+      "id": "anne_v3_architecture",
+      "path": "docs/00-CORE/ANNE_V3_ARCHITECTURE.md",
+      "source_of_truth": true
+    },
+    {
+      "id": "anne_v3_tool_policy",
+      "path": "docs/00-CORE/ANNE_V3_TOOL_POLICY.md",
+      "source_of_truth": true
+    },
+    {
+      "id": "anne_v3_runbook",
+      "path": "docs/00-CORE/ANNE_V3_RUNBOOK.md",
+      "source_of_truth": true
+    },
+    {
+      "id": "core_baseline_metrics",
+      "path": "docs/00-CORE/BASELINE_METRICS_2026-02-20.md",
+      "source_of_truth": true
+    },
+    {
+      "id": "archive_2026_q1_root",
+      "path": "docs/archive/2026-Q1/root",
+      "source_of_truth": false
+    },
+    {
+      "id": "archive_2026_q1_anne_legacy",
+      "path": "docs/archive/2026-Q1/ANNE_LEGACY_NOTES.md",
+      "source_of_truth": false
+    }
+  ]
+}

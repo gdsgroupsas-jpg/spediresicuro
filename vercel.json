@@ -1,9 +1,9 @@
 {
   "functions": {
-    "app/api/automation/**/*.ts": {
+    "apps/web/app/api/automation/**/*.ts": {
       "maxDuration": 300
     },
-    "app/api/cron/**/*.ts": {
+    "apps/web/app/api/cron/**/*.ts": {
       "maxDuration": 300
     }
   },

@@ -53,6 +53,8 @@ env.local
 # automation-service env
 automation-service/.env
 automation-service/.env.local
+services/automation/.env
+services/automation/.env.local
 
 # database locale (può contenere dati sensibili)
 data/database.json
@@ -112,9 +114,13 @@ $RECYCLE.BIN/
 *.tsbuildinfo
 .next/
 node_modules/
+apps/web/.next/
+apps/web/node_modules/
+services/automation/node_modules/
 
 # Supabase temporary files
 supabase/.temp/
+apps/web/supabase/.temp/
 
 # Script PowerShell locali (utilità personali)
 fix-git-output.ps1

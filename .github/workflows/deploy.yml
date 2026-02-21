@@ -4,7 +4,7 @@ on:
   push:
     branches: [ master ]
     paths:
-      - 'automation-service/**'
+      - 'services/automation/**'
   workflow_dispatch:
 
 jobs:
@@ -13,5 +13,5 @@ jobs:
     steps:
       - name: Notify Deployment
         run: |
-          echo "🚀 Deploy automation-service su Railway"
-          echo "Railway fa auto-deploy da GitHub, questo workflow è solo per notifiche"
+          echo "Deploy services/automation su Railway"
+          echo "Railway fa auto-deploy da GitHub, questo workflow e solo per notifiche"

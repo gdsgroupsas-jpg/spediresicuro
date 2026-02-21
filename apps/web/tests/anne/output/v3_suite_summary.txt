@@ -1,0 +1,24 @@
+=== ANNE V3 E2E SUITE SUMMARY ===
+run: 2026-02-21T18:30:39.287244+00:00
+base_url: http://localhost:3000
+auth_cookie: present
+total_cases: 16
+passed: 14
+failed: 2
+
+[PASS] quote_complete_roma -> HTTP 200 | OK (quote_complete_roma)
+[PASS] quote_missing_data -> HTTP 200 | OK (quote_missing_data)
+[PASS] shipment_create_full_payload -> HTTP 200 | OK (shipment_create_full_payload)
+[PASS] support_tracking_status -> HTTP 200 | OK (support_tracking_status)
+[PASS] support_refund_request -> HTTP 200 | OK (support_refund_request)
+[PASS] crm_pipeline_overview -> HTTP 200 | OK (crm_pipeline_overview)
+[FAIL] crm_write_status -> HTTP 200 | approvalRequired atteso ma assente
+[PASS] outreach_metrics -> HTTP 200 | OK (outreach_metrics)
+[FAIL] outreach_enroll -> HTTP 200 | approvalRequired atteso ma assente
+[PASS] listini_active -> HTTP 200 | OK (listini_active)
+[PASS] listini_compare_margin -> HTTP 200 | OK (listini_compare_margin)
+[PASS] mentor_architecture -> HTTP 200 | OK (mentor_architecture)
+[PASS] debug_route_500 -> HTTP 200 | OK (debug_route_500)
+[PASS] explain_margin_logic -> HTTP 200 | OK (explain_margin_logic)
+[PASS] mixed_business_request -> HTTP 200 | OK (mixed_business_request)
+[PASS] minimal_greeting -> HTTP 200 | OK (minimal_greeting)

@@ -1,9 +1,0 @@
---- pricing_Pricing_intent_con_quanto_costa.txt ---
-run: 2026-02-20T10:08:52.316756Z BASE_URL=http://localhost:3000 AUTH=no
-
-prompt: Quanto costa spedire 1.5 kg a 20100 Milano?
-status: 0
-flowId: n/a
-success: False
-message: HTTPConnectionPool(host='localhost', port=3000): Max retries exceeded with url: /api/ai/agent-chat (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x00000209235370E0>: Failed to establish a new connection: [WinError 10061] Impossibile stabilire la connessione. Rifiuto persistente del computer di destinazione'))
-expectedFlowId: richiesta_preventivo

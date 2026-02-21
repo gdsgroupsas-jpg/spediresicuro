@@ -1,0 +1,1450 @@
+--- v3_case_explain_margin_logic ---
+run: 2026-02-21T18:29:52.825276+00:00
+base_url: http://localhost:3000
+
+[case]
+{
+  "id": "explain_margin_logic",
+  "prompt": "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.",
+  "expectedDomain": "explain",
+  "expectedChannel": "explain",
+  "expectApproval": false,
+  "expectClarification": false
+}
+
+[response]
+status: 200
+success: True
+passed: True
+reason: OK (explain_margin_logic)
+message: Qual è il modello o lo standard che la tua azienda utilizza per calcolare margini, IVA e prezzo finale per i clienti?
+
+[metadata]
+{
+  "trace_id": "ann-mlwnkw04-eb7f4b564ecf",
+  "userRole": "admin",
+  "timestamp": "2026-02-21T18:29:52.821Z",
+  "executionTime": 30257,
+  "rateLimitRemaining": 19,
+  "flowId": "orch.explain.explain.margin.calculation",
+  "pricingOptionsCount": 0,
+  "orchestratorMode": "v2",
+  "intentId": "explain.margin.calculation",
+  "channel": "explain",
+  "domain": "explain",
+  "riskLevel": "low",
+  "approvalRequired": false,
+  "toolPlanId": "toolplan_1771698563167_c02f3561",
+  "pipelineId": "pipeline_1771698563167_c02f3561",
+  "stageTrace": {
+    "lastStage": "finalizer",
+    "totalDurationMs": 29551,
+    "tokenUsage": {
+      "inputTokens": 6548,
+      "outputTokens": 4347,
+      "totalTokens": 10895,
+      "tokenAlertCount": 0,
+      "tokenAlertThreshold": 16000
+    },
+    "entries": [
+      {
+        "stage": "request_manager",
+        "attempt": 1,
+        "durationMs": 1987,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 1553,
+        "outputTokens": 255,
+        "totalTokens": 1808,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei REQUEST_MANAGER.\nClassifica la richiesta in dominio, channel, intentId, reason, confidence.\nJSON schema: {\"domain\":\"...\",\"channel\":\"...\",\"intentId\":\"...\",\"reason\":\"...\",\"confidence\":0-100}\n\nRouting policy (use this order of evidence):\n1) quote -> preventivo, prezzo, costo, tariffa, quanto costa, comparazione corrieri, stima spedizione, dati peso/cap/citta/servizio.\n2) shipment -> crea spedizione, conferma prenotazione, genera etichetta, procedi spedizione, acquisto spedizione.\n3) support -> problemi su spedizione esistente: tracking fermo, giacenza, ritardo, errore, reclamo, rimborso, assistenza post-vendita.\n4) crm -> lead/prospect, note commerciali, pipeline, follow-up commerciale.\n5) outreach -> campagne/sequence outreach, enrollment, canali e metriche outreach.\n6) listini -> listini, margini, costo fornitore, configurazioni prezzo.\n7) mentor -> coaching operativo/strategico interno.\n8) debug -> analisi errore tecnico/stack/log.\n9) explain -> spiegazioni generali su processo/business.\n\nTie-break mandatory rules:\n- If there is explicit pricing intent, choose domain=quote even if the message asks for help.\n- Use support only when the user refers to an existing shipment issue, not a new estimate.\n- Never use support as a default bucket when quote evidence is present.\n\nChannel mapping is strict:\n- quote -> quote\n- shipment -> create_shipment\n- support -> support\n- crm -> crm\n- outreach -> outreach\n- listini -> listini\n- mentor -> mentor\n- debug -> debug\n- explain -> explain\n\nIntent naming convention:\n- Use lowercase dotted ids: <domain>.<action>.<object> (example: quote.create.estimate).\n\nDisambiguation rules (mandatory):\n- outreach vs crm: if user asks to enroll/subscribe/add to sequence/campaign/invio programmato -> domain MUST be outreach (not crm).\n- listini vs quote: if user asks supplier cost, selling price, margin, listino comparison -> domain MUST be listini (not quote).\n- mentor vs explain: if user asks internal architecture/stages/how ANNE works technically -> domain MUST be mentor (not explain).\n- explain vs listini: if user asks conceptual explanation (\"spiegami come\", \"come viene calcolato\", \"perche\") without asking to fetch/compare a specific listino record, domain MUST be explain.\n- greeting-only message (\"ciao\", \"salve\", \"hey anne\") -> domain MUST be support with a greeting/support intent.\n- explain should be used for general process/business explanations, not internal technical mentoring.\n- listini requires an operational intent (show/list/compare configured prices, margins, supplier costs).\n- explain is mandatory when the user asks \"how it works\" or \"why\" about business logic and does not ask to fetch/update records.\n\nDecision table (final check before output):\n- If request asks conceptual explanation only -> domain=explain.\n- If request asks show/compare/list configured pricing data -> domain=listini.\n- If request asks an estimate for a new shipment -> domain=quote.\n- If request asks to execute/create booking -> domain=shipment.\n- If request asks troubleshooting on technical failures -> domain=debug.\n\nNegative examples:\n- \"Spiegami come calcolate il margine\" => explain (NOT listini).\n- \"Mostrami il margine su GLS 3kg Milano\" => listini (NOT explain).\n- \"Iscrivi il prospect alla sequenza\" => outreach (NOT crm).\n- \"Ciao Anne\" => support (NOT explain).\n\nExample 1 input: \"Mi fai un preventivo per 2.4 kg verso 00100 Roma?\"\nExample 1 output: {\"domain\":\"quote\",\"channel\":\"quote\",\"intentId\":\"quote.create.estimate\",\"reason\":\"Richiesta esplicita di preventivo con peso e CAP.\",\"confidence\":95}\nExample 2 input: \"Il tracking della spedizione 123 e fermo da ieri, puoi aiutarmi?\"\nExample 2 output: {\"domain\":\"support\",\"channel\":\"support\",\"intentId\":\"support.resolve.tracking_issue\",\"reason\":\"Problema su spedizione esistente.\",\"confidence\":93}\nExample 3 input: \"Voglio confermare e creare subito la spedizione che abbiamo preparato.\"\nExample 3 output: {\"domain\":\"shipment\",\"channel\":\"create_shipment\",\"intentId\":\"shipment.create.confirmed_booking\",\"reason\":\"Richiesta operativa di creazione spedizione.\",\"confidence\":94}\nExample 4 input: \"Iscrivi il prospect Farmacia Centrale alla sequenza follow-up commerciale.\"\nExample 4 output: {\"domain\":\"outreach\",\"channel\":\"outreach\",\"intentId\":\"outreach.enroll.sequence\",\"reason\":\"Richiesta di enrollment in sequenza outreach.\",\"confidence\":94}\nExample 5 input: \"Confronta costo fornitore e prezzo vendita per 3 kg su Milano 20100.\"\nExample 5 output: {\"domain\":\"listini\",\"channel\":\"listini\",\"intentId\":\"listini.compare.margin\",\"reason\":\"Confronto costo fornitore/prezzo vendita tipico listini.\",\"confidence\":93}\nExample 6 input: \"Spiegami in modo tecnico come e organizzata ANNE V3 e i suoi stage.\"\nExample 6 output: {\"domain\":\"mentor\",\"channel\":\"mentor\",\"intentId\":\"mentor.explain.architecture\",\"reason\":\"Richiesta di mentoring tecnico interno sull architettura.\",\"confidence\":90}\nExample 7 input: \"Ciao Anne\"\nExample 7 output: {\"domain\":\"support\",\"channel\":\"support\",\"intentId\":\"support.greeting.request\",\"reason\":\"Saluto iniziale senza richiesta specifica.\",\"confidence\":92}\nExample 8 input: \"Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.\"\nExample 8 output: {\"domain\":\"explain\",\"channel\":\"explain\",\"intentId\":\"explain.margin.calculation\",\"reason\":\"Richiesta di spiegazione concettuale, non di lettura/confronto listino.\",\"confidence\":91}\n\n#2 user\n{\n  \"instruction\": \"Classifica la richiesta in uno dei domini ammessi. Priorita: evita support quando c e una richiesta di preventivo/prezzo.\",\n  \"attempt\": 1,\n  \"allowedDomains\": [\n    \"quote\",\n    \"shipment\",\n    \"support\",\n    \"crm\",\n    \"outreach\",\n    \"listini\",\n    \"mentor\",\n    \"debug\",\n    \"explain\"\n  ],\n  \"strictChannelMap\": {\n    \"quote\": \"quote\",\n    \"shipment\": \"create_shipment\",\n    \"support\": \"support\",\n    \"crm\": \"crm\",\n    \"outreach\": \"outreach\",\n    \"listini\": \"listini\",\n    \"mentor\": \"mentor\",\n    \"debug\": \"debug\",\n    \"explain\": \"explain\"\n  },\n  \"message\": \"Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.\"\n}",
+        "outputText": "{\"domain\":\"explain\",\"channel\":\"explain\",\"intentId\":\"explain.margin.calculation\",\"reason\":\"Richiesta di spiegazione concettuale, non di lettura/confronto listino.\",\"confidence\":91}"
+      },
+      {
+        "stage": "domain_decomposer",
+        "attempt": 1,
+        "durationMs": 3114,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 267,
+        "outputTokens": 625,
+        "totalTokens": 892,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei DOMAIN_DECOMPOSER.\nScomponi la richiesta in subtasks granulari con dipendenze minime.\nJSON schema: {\"subtasks\":[{\"id\":\"task_1\",\"domain\":\"...\",\"intentId\":\"...\",\"goal\":\"...\",\"dependsOn\":[],\"acceptance\":\"...\"}]}.\n\nDominio corrente: explain.\nContesto dominio: Spiegazione business/processi e policy operative.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"input\": {\n    \"message\": \"Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.\",\n    \"intentId\": \"explain.margin.calculation\",\n    \"domain\": \"explain\"\n  }\n}",
+        "outputText": "{\"subtasks\":[{\"id\":\"task_1\",\"domain\":\"explain\",\"intentId\":\"explain.margin.calculation\",\"goal\":\"Provide a concise explanation of how product margins are calculated in a typical business context, including cost basis and markup methodology.\",\"dependsOn\":[],\"acceptance\":\"Must include definitions of cost basis, markup percentage, and example calculation of a margin\"},{\"id\":\"task_2\",\"domain\":\"explain\",\"intentId\":\"explain.VAT.calculation\",\"goal\":\"Explain how the Value Added Tax (VAT) is calculated based on the net price and applicable tax rate in a standard jurisdiction.\",\"dependsOn\":[],\"acceptance\":\"Should detail the VAT formula, mention the difference between inclusive and exclusive pricing, and reference any common VAT rates used for illustration\"},{\"id\":\"task_3\",\"domain\":\"explain\",\"intentId\":\"explain.final.price.calculation\",\"goal\":\"Describe how the final selling price for a customer is derived by combining the calculated margin and the VAT on the resulting price, including any rounding rules.\",\"dependsOn\":[],\"acceptance\":\"Must outline the sequence: cost + margin = pre‑VAT price, pre‑VAT price + VAT = final price; include rounding details if applicable\"},{\"id\":\"task_4\",\"domain\":\"explain\",\"intentId\":\"explain.combined.example\",\"goal\":\"Provide a worked numerical example that demonstrates the calculation of margin, VAT, and final price step by step using realistic values.\",\"dependsOn\":[\"task_1\",\"task_2\",\"task_3\"],\"acceptance\":\"Example must use concrete numbers for cost, markup %, VAT %, show intermediate and final results, and explain each step\"}]}"
+      },
+      {
+        "stage": "task_planner",
+        "attempt": 1,
+        "durationMs": 3638,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 725,
+        "outputTokens": 720,
+        "totalTokens": 1445,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei TASK_PLANNER.\nOrdina e normalizza i task per l'esecuzione.\nJSON schema: {\"tasks\":[{\"id\":\"...\",\"domain\":\"...\",\"intentId\":\"...\",\"goal\":\"...\",\"dependsOn\":[],\"acceptance\":\"...\"}]}.\n\nDominio corrente: explain.\nContesto dominio: Spiegazione business/processi e policy operative.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"message\": \"Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.\",\n  \"classification\": {\n    \"domain\": \"explain\",\n    \"channel\": \"explain\",\n    \"intentId\": \"explain.margin.calculation\",\n    \"reason\": \"Richiesta di spiegazione concettuale, non di lettura/confronto listino.\",\n    \"confidence\": 91\n  },\n  \"decomposedTasks\": [\n    {\n      \"id\": \"task_1\",\n      \"domain\": \"explain\",\n      \"intentId\": \"explain.margin.calculation\",\n      \"goal\": \"Provide a concise explanation of how product margins are calculated in a typical business context, including cost basis and markup methodology.\",\n      \"dependsOn\": [],\n      \"acceptance\": \"Must include definitions of cost basis, markup percentage, and example calculation of a margin\"\n    },\n    {\n      \"id\": \"task_2\",\n      \"domain\": \"explain\",\n      \"intentId\": \"explain.VAT.calculation\",\n      \"goal\": \"Explain how the Value Added Tax (VAT) is calculated based on the net price and applicable tax rate in a standard jurisdiction.\",\n      \"dependsOn\": [],\n      \"acceptance\": \"Should detail the VAT formula, mention the difference between inclusive and exclusive pricing, and reference any common VAT rates used for illustration\"\n    },\n    {\n      \"id\": \"task_3\",\n      \"domain\": \"explain\",\n      \"intentId\": \"explain.final.price.calculation\",\n      \"goal\": \"Describe how the final selling price for a customer is derived by combining the calculated margin and the VAT on the resulting price, including any rounding rules.\",\n      \"dependsOn\": [],\n      \"acceptance\": \"Must outline the sequence: cost + margin = pre‑VAT price, pre‑VAT price + VAT = final price; include rounding details if applicable\"\n    },\n    {\n      \"id\": \"task_4\",\n      \"domain\": \"explain\",\n      \"intentId\": \"explain.combined.example\",\n      \"goal\": \"Provide a worked numerical example that demonstrates the calculation of margin, VAT, and final price step by step using realistic values.\",\n      \"dependsOn\": [\n        \"task_1\",\n        \"task_2\",\n        \"task_3\"\n      ],\n      \"acceptance\": \"Example must use concrete numbers for cost, markup %, VAT %, show intermediate and final results, and explain each step\"\n    }\n  ]\n}",
+        "outputText": "{\"tasks\":[{\"id\":\"task_1\",\"domain\":\"explain\",\"intentId\":\"explain.margin.calculation\",\"goal\":\"Provide a concise explanation of how product margins are calculated in a typical business context, including cost basis and markup methodology.\",\"dependsOn\":[],\"acceptance\":\"Must include definitions of cost basis, markup percentage, and example calculation of a margin\"},{\"id\":\"task_2\",\"domain\":\"explain\",\"intentId\":\"explain.VAT.calculation\",\"goal\":\"Explain how the Value Added Tax (VAT) is calculated based on the net price and applicable tax rate in a standard jurisdiction.\",\"dependsOn\":[],\"acceptance\":\"Should detail the VAT formula, mention the difference between inclusive and exclusive pricing, and reference any common VAT rates used for illustration\"},{\"id\":\"task_3\",\"domain\":\"explain\",\"intentId\":\"explain.final.price.calculation\",\"goal\":\"Describe how the final selling price for a customer is derived by combining the calculated margin and the VAT on the resulting price, including any rounding rules.\",\"dependsOn\":[],\"acceptance\":\"Must outline the sequence: cost + margin = pre‑VAT price, pre‑VAT price + VAT = final price; include rounding details if applicable\"},{\"id\":\"task_4\",\"domain\":\"explain\",\"intentId\":\"explain.combined.example\",\"goal\":\"Provide a worked numerical example that demonstrates the calculation of margin, VAT, and final price step by step using realistic values.\",\"dependsOn\":[\"task_1\",\"task_2\",\"task_3\"],\"acceptance\":\"Example must use concrete numbers for cost, markup %, VAT %, show intermediate and final results, and explain each step\"}]}"
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 2190,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 413,
+        "outputTokens": 266,
+        "totalTokens": 679,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: explain.\nContesto dominio: Spiegazione business/processi e policy operative.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_1\",\n    \"goal\": \"Provide a concise explanation of how product margins are calculated in a typical business context, including cost basis and markup methodology.\",\n    \"domain\": \"explain\",\n    \"intentId\": \"explain.margin.calculation\",\n    \"dependsOn\": [],\n    \"acceptance\": \"Must include definitions of cost basis, markup percentage, and example calculation of a margin\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"analyze_business_health\",\n      \"description\": \"Analizza la salute del business: margini, trend, performance corrieri, confronto periodi. Disponibile solo per admin.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"explain_orchestrated\",\n      \"description\": \"Spiegazione business/processo.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step1\",\"goal\":\"Provide a concise explanation of how product margins are calculated in a typical business context, including cost basis and markup methodology.\",\"toolCandidates\":[\"explain_orchestrated\"],\"expectedOutcome\":\"An explanation that includes definitions of cost basis, markup percentage, and a detailed example calculation of a margin.\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 202,
+        "success": true
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 2128,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 424,
+        "outputTokens": 369,
+        "totalTokens": 793,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: explain.\nContesto dominio: Spiegazione business/processi e policy operative.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_2\",\n    \"goal\": \"Explain how the Value Added Tax (VAT) is calculated based on the net price and applicable tax rate in a standard jurisdiction.\",\n    \"domain\": \"explain\",\n    \"intentId\": \"explain.VAT.calculation\",\n    \"dependsOn\": [],\n    \"acceptance\": \"Should detail the VAT formula, mention the difference between inclusive and exclusive pricing, and reference any common VAT rates used for illustration\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"analyze_business_health\",\n      \"description\": \"Analizza la salute del business: margini, trend, performance corrieri, confronto periodi. Disponibile solo per admin.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"explain_orchestrated\",\n      \"description\": \"Spiegazione business/processo.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Explain how the Value Added Tax (VAT) is calculated based on the net price and applicable tax rate, including the difference between inclusive and exclusive pricing and reference to common VAT rates for illustration\",\"toolCandidates\":[\"explain_orchestrated\"],\"expectedOutcome\":\"A comprehensive explanation covering the VAT formula, the distinction between inclusive and exclusive pricing, and examples of typical VAT rates\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 2655,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 433,
+        "outputTokens": 323,
+        "totalTokens": 756,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: explain.\nContesto dominio: Spiegazione business/processi e policy operative.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_3\",\n    \"goal\": \"Describe how the final selling price for a customer is derived by combining the calculated margin and the VAT on the resulting price, including any rounding rules.\",\n    \"domain\": \"explain\",\n    \"intentId\": \"explain.final.price.calculation\",\n    \"dependsOn\": [],\n    \"acceptance\": \"Must outline the sequence: cost + margin = pre‑VAT price, pre‑VAT price + VAT = final price; include rounding details if applicable\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"analyze_business_health\",\n      \"description\": \"Analizza la salute del business: margini, trend, performance corrieri, confronto periodi. Disponibile solo per admin.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"explain_orchestrated\",\n      \"description\": \"Spiegazione business/processo.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Generate an explanation of the final selling price calculation, including cost, margin, VAT, and rounding rules.\",\"toolCandidates\":[\"explain_orchestrated\"],\"expectedOutcome\":\"A clear step‑by‑step description: cost + margin = pre‑VAT price; pre‑VAT price + VAT = final price; and a note on any rounding applied at each stage.\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "planner",
+        "attempt": 1,
+        "durationMs": 2465,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 440,
+        "outputTokens": 282,
+        "totalTokens": 722,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei PLANNER.\nPer un task costruisci step con candidati tool.\nJSON schema: {\"steps\":[{\"id\":\"...\",\"goal\":\"...\",\"toolCandidates\":[\"tool_a\",\"tool_b\"],\"expectedOutcome\":\"...\"}]}.\n\nDominio corrente: explain.\nContesto dominio: Spiegazione business/processi e policy operative.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"task\": {\n    \"id\": \"task_4\",\n    \"goal\": \"Provide a worked numerical example that demonstrates the calculation of margin, VAT, and final price step by step using realistic values.\",\n    \"domain\": \"explain\",\n    \"intentId\": \"explain.combined.example\",\n    \"dependsOn\": [\n      \"task_1\",\n      \"task_2\",\n      \"task_3\"\n    ],\n    \"acceptance\": \"Example must use concrete numbers for cost, markup %, VAT %, show intermediate and final results, and explain each step\"\n  },\n  \"tools\": [\n    {\n      \"name\": \"analyze_business_health\",\n      \"description\": \"Analizza la salute del business: margini, trend, performance corrieri, confronto periodi. Disponibile solo per admin.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    },\n    {\n      \"name\": \"explain_orchestrated\",\n      \"description\": \"Spiegazione business/processo.\",\n      \"required\": [],\n      \"riskLevel\": \"low\",\n      \"category\": \"read\"\n    }\n  ]\n}",
+        "outputText": "{\"steps\":[{\"id\":\"step_1\",\"goal\":\"Provide a worked numerical example that demonstrates the calculation of margin, VAT, and final price step by step using realistic values.\",\"toolCandidates\":[\"explain_orchestrated\"],\"expectedOutcome\":\"An explanation that includes concrete numbers for cost, markup percentage, VAT percentage, intermediate calculations for margin, VAT amount, and final selling price, with a clear step‑by‑step justification.\"}]}"
+      },
+      {
+        "stage": "tool_analysis",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_argument",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "tool_caller",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "command_builder",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true,
+        "model": "orchestrator_direct"
+      },
+      {
+        "stage": "policy_tool_safety",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "policy_approval",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "tool_executor",
+        "attempt": 1,
+        "durationMs": 0,
+        "success": true
+      },
+      {
+        "stage": "aggregator",
+        "attempt": 1,
+        "durationMs": 5758,
+        "success": false,
+        "errorCode": "invalid_json_contract",
+        "inputTokens": 921,
+        "outputTokens": 900,
+        "totalTokens": 1821,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei AGGREGATOR.\nAggrega risultati multi-step e risolvi conflitti in forma deterministica via JSON.\nJSON schema: {\"summary\":\"...\",\"message\":\"...\",\"clarificationRequired\":false,\"clarificationQuestion\":\"...\",\"agentState\":{},\"sessionState\":{}}.\n\nDominio corrente: explain.\nContesto dominio: Spiegazione business/processi e policy operative.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"message\": \"Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.\",\n  \"classification\": {\n    \"domain\": \"explain\",\n    \"channel\": \"explain\",\n    \"intentId\": \"explain.margin.calculation\",\n    \"reason\": \"Richiesta di spiegazione concettuale, non di lettura/confronto listino.\",\n    \"confidence\": 91\n  },\n  \"payload\": {\n    \"toolPlanId\": \"toolplan_1771698563167_c02f3561\",\n    \"steps\": [\n      {\n        \"success\": true,\n        \"tool\": \"explain_orchestrated\",\n        \"taskId\": \"task_1\",\n        \"stepId\": \"step1\",\n        \"message\": \"Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\\n- \\\"Spiega come funziona il wallet\\\"\\n- \\\"Come funziona il processo di spedizione\\\"\\n- \\\"Spiega il calcolo dei margini\\\"\",\n        \"riskLevel\": \"low\"\n      },\n      {\n        \"success\": true,\n        \"tool\": \"explain_orchestrated\",\n        \"taskId\": \"task_2\",\n        \"stepId\": \"step_1\",\n        \"message\": \"Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\\n- \\\"Spiega come funziona il wallet\\\"\\n- \\\"Come funziona il processo di spedizione\\\"\\n- \\\"Spiega il calcolo dei margini\\\"\",\n        \"riskLevel\": \"low\"\n      },\n      {\n        \"success\": true,\n        \"tool\": \"explain_orchestrated\",\n        \"taskId\": \"task_3\",\n        \"stepId\": \"step_1\",\n        \"message\": \"Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\\n- \\\"Spiega come funziona il wallet\\\"\\n- \\\"Come funziona il processo di spedizione\\\"\\n- \\\"Spiega il calcolo dei margini\\\"\",\n        \"riskLevel\": \"low\"\n      },\n      {\n        \"success\": true,\n        \"tool\": \"explain_orchestrated\",\n        \"taskId\": \"task_4\",\n        \"stepId\": \"step_1\",\n        \"message\": \"Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\\n- \\\"Spiega come funziona il wallet\\\"\\n- \\\"Come funziona il processo di spedizione\\\"\\n- \\\"Spiega il calcolo dei margini\\\"\",\n        \"riskLevel\": \"low\"\n      }\n    ],\n    \"approvalRequired\": false,\n    \"agentState\": {\n      \"explain_response\": {\n        \"explanation\": \"Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\\n- \\\"Spiega come funziona il wallet\\\"\\n- \\\"Come funziona il processo di spedizione\\\"\\n- \\\"Spiega il calcolo dei margini\\\"\",\n        \"diagram\": \"\"\n      },\n      \"next_step\": \"END\"\n    }\n  }\n}",
+        "outputText": "{\"summary\":\"Spiegazione formula di margini, IVA e prezzo finale per cliente\",\"message\":\"In un modello di pricing tradizionale si procede così:\\n\\n1) **Costo unitario** (C): valore a cui arriva l’azienda dal fornitore.\\n2) **Margine di profitto** (% M): percentuale che l’azienda vuole guadagnare sul costo.  \\n   \\n   - Margine percentuale sul prezzo di vendita (P): M % = [(P − C)/P] × 100\\n   - Margine percentuale sul costo (M c): M c % = [(P − C)/C] × 100\\n   \\n   Se l’azienda decide un margine percentuale sul costo, il prezzo di vendita prima IVA è calcolato come: P = C × (1 + M c/100).\\n\\n3) **IVA (Imposta sul Valore Aggiunto)**: a partire dal prezzo di vendita al netto dell’IVA, si aggiunge l’aliquota IVA applicabile alla categoria di prodotto.  \\n   \\n   - Aliquota IVA = VAT % (es. 22 %).\\n   - Prezzo finale al cliente (P_finale) = P × (1 + VAT/100).\\n\\n4) **Esempio pratico** (supponiamo 20 % margine sul costo e 22 % IVA):\\n   - C = €100\\n   - P = €100 × (1 + 0.20) = €120\\n   - P_finale = €120 × (1 + 0.22) = €147.60 \\n   \\n5) **Utilizzo in sistemi informativi**: la maggior parte dei ERP conterrà i seguenti parametri configurabili:\\n   - costo unitario (in magazzino o materiale di input)\\n   - percentuale margine sul costo o sul prezzo\\n   - aliquota IVA applicabile\\n   - eventuali sconti prefissati da applicare prima del calcolo dell’IVA.\\n\\n**Nota**: Se l’azienda opta per un margine percentuale sul prezzo di vendita, la formula inversa si risolve tramite \\nP = C ÷ (1 −"
+      },
+      {
+        "stage": "aggregator",
+        "attempt": 2,
+        "durationMs": 2948,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 931,
+        "outputTokens": 271,
+        "totalTokens": 1202,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei AGGREGATOR.\nAggrega risultati multi-step e risolvi conflitti in forma deterministica via JSON.\nJSON schema: {\"summary\":\"...\",\"message\":\"...\",\"clarificationRequired\":false,\"clarificationQuestion\":\"...\",\"agentState\":{},\"sessionState\":{}}.\n\nDominio corrente: explain.\nContesto dominio: Spiegazione business/processi e policy operative.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 2,\n  \"previousError\": \"Invalid JSON payload\",\n  \"message\": \"Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.\",\n  \"classification\": {\n    \"domain\": \"explain\",\n    \"channel\": \"explain\",\n    \"intentId\": \"explain.margin.calculation\",\n    \"reason\": \"Richiesta di spiegazione concettuale, non di lettura/confronto listino.\",\n    \"confidence\": 91\n  },\n  \"payload\": {\n    \"toolPlanId\": \"toolplan_1771698563167_c02f3561\",\n    \"steps\": [\n      {\n        \"success\": true,\n        \"tool\": \"explain_orchestrated\",\n        \"taskId\": \"task_1\",\n        \"stepId\": \"step1\",\n        \"message\": \"Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\\n- \\\"Spiega come funziona il wallet\\\"\\n- \\\"Come funziona il processo di spedizione\\\"\\n- \\\"Spiega il calcolo dei margini\\\"\",\n        \"riskLevel\": \"low\"\n      },\n      {\n        \"success\": true,\n        \"tool\": \"explain_orchestrated\",\n        \"taskId\": \"task_2\",\n        \"stepId\": \"step_1\",\n        \"message\": \"Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\\n- \\\"Spiega come funziona il wallet\\\"\\n- \\\"Come funziona il processo di spedizione\\\"\\n- \\\"Spiega il calcolo dei margini\\\"\",\n        \"riskLevel\": \"low\"\n      },\n      {\n        \"success\": true,\n        \"tool\": \"explain_orchestrated\",\n        \"taskId\": \"task_3\",\n        \"stepId\": \"step_1\",\n        \"message\": \"Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\\n- \\\"Spiega come funziona il wallet\\\"\\n- \\\"Come funziona il processo di spedizione\\\"\\n- \\\"Spiega il calcolo dei margini\\\"\",\n        \"riskLevel\": \"low\"\n      },\n      {\n        \"success\": true,\n        \"tool\": \"explain_orchestrated\",\n        \"taskId\": \"task_4\",\n        \"stepId\": \"step_1\",\n        \"message\": \"Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\\n- \\\"Spiega come funziona il wallet\\\"\\n- \\\"Come funziona il processo di spedizione\\\"\\n- \\\"Spiega il calcolo dei margini\\\"\",\n        \"riskLevel\": \"low\"\n      }\n    ],\n    \"approvalRequired\": false,\n    \"agentState\": {\n      \"explain_response\": {\n        \"explanation\": \"Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\\n- \\\"Spiega come funziona il wallet\\\"\\n- \\\"Come funziona il processo di spedizione\\\"\\n- \\\"Spiega il calcolo dei margini\\\"\",\n        \"diagram\": \"\"\n      },\n      \"next_step\": \"END\"\n    }\n  }\n}",
+        "outputText": "{\"summary\":\"Non è possibile fornire una spiegazione dettagliata senza una conoscenza specifica del modello di calcolo adottato dalla tua azienda.\",\"message\":\"Al momento non dispongo delle informazioni necessarie per spiegare esattamente come vengono calcolati margini, IVA e prezzo finale per il cliente. Potrebbe indicarmi se esiste un documento, una formula predefinita o un sistema di gestione che descriva questi calcoli?\",\"clarificationRequired\":true,\"clarificationQuestion\":\"Quale modello/standard utilizza la tua azienda per calcolare margini, IVA e prezzo finale per i clienti?\",\"agentState\":{},\"sessionState\":{}}"
+      },
+      {
+        "stage": "finalizer",
+        "attempt": 1,
+        "durationMs": 2466,
+        "success": true,
+        "model": "gpt-oss:20b-cloud",
+        "inputTokens": 441,
+        "outputTokens": 336,
+        "totalTokens": 777,
+        "tokenAlert": false,
+        "inputText": "#1 system\nSei FINALIZER.\nGenera la risposta finale utente in italiano, chiara e operativa.\nJSON schema: {\"message\":\"...\",\"clarificationRequest\":\"...\",\"nextAction\":\"...\"}.\n\nDominio corrente: explain.\nContesto dominio: Spiegazione business/processi e policy operative.\nRispondi esclusivamente in JSON valido, senza markdown e senza testo extra.\nNon inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.\nUsa solo tool business disponibili nel catalogo ricevuto.\n\n#2 user\n{\n  \"attempt\": 1,\n  \"message\": \"Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.\",\n  \"classification\": {\n    \"domain\": \"explain\",\n    \"channel\": \"explain\",\n    \"intentId\": \"explain.margin.calculation\",\n    \"reason\": \"Richiesta di spiegazione concettuale, non di lettura/confronto listino.\",\n    \"confidence\": 91\n  },\n  \"aggregated\": {\n    \"summary\": \"Non è possibile fornire una spiegazione dettagliata senza una conoscenza specifica del modello di calcolo adottato dalla tua azienda.\",\n    \"message\": \"Al momento non dispongo delle informazioni necessarie per spiegare esattamente come vengono calcolati margini, IVA e prezzo finale per il cliente. Potrebbe indicarmi se esiste un documento, una formula predefinita o un sistema di gestione che descriva questi calcoli?\",\n    \"clarificationRequired\": true,\n    \"clarificationQuestion\": \"Quale modello/standard utilizza la tua azienda per calcolare margini, IVA e prezzo finale per i clienti?\",\n    \"agentState\": {},\n    \"sessionState\": {}\n  }\n}",
+        "outputText": "{\"message\":\"Per calcolare margini, IVA e prezzo finale per il cliente è necessario conoscere la formula e la politica di prezzo adottate dalla vostra azienda.\",\"clarificationRequest\":\"Qual è il modello o lo standard che la tua azienda utilizza per calcolare margini, IVA e prezzo finale per i clienti?\",\"nextAction\":\"requestClarification\"}"
+      }
+    ]
+  },
+  "agentState": {}
+}
+
+[stage_trace_summary]
+lastStage: finalizer
+totalDurationMs: 29551
+tokenInputTotal: 6548
+tokenOutputTotal: 4347
+tokenTotal: 10895
+tokenAlertCount: 0
+tokenAlertThreshold: 16000
+
+[stage_trace_entries]
+
+--- stage_1 ---
+stage: request_manager
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 1987
+inputTokens: 1553
+outputTokens: 255
+totalTokens: 1808
+tokenAlert: False
+[input]
+#1 system
+Sei REQUEST_MANAGER.
+Classifica la richiesta in dominio, channel, intentId, reason, confidence.
+JSON schema: {"domain":"...","channel":"...","intentId":"...","reason":"...","confidence":0-100}
+
+Routing policy (use this order of evidence):
+1) quote -> preventivo, prezzo, costo, tariffa, quanto costa, comparazione corrieri, stima spedizione, dati peso/cap/citta/servizio.
+2) shipment -> crea spedizione, conferma prenotazione, genera etichetta, procedi spedizione, acquisto spedizione.
+3) support -> problemi su spedizione esistente: tracking fermo, giacenza, ritardo, errore, reclamo, rimborso, assistenza post-vendita.
+4) crm -> lead/prospect, note commerciali, pipeline, follow-up commerciale.
+5) outreach -> campagne/sequence outreach, enrollment, canali e metriche outreach.
+6) listini -> listini, margini, costo fornitore, configurazioni prezzo.
+7) mentor -> coaching operativo/strategico interno.
+8) debug -> analisi errore tecnico/stack/log.
+9) explain -> spiegazioni generali su processo/business.
+
+Tie-break mandatory rules:
+- If there is explicit pricing intent, choose domain=quote even if the message asks for help.
+- Use support only when the user refers to an existing shipment issue, not a new estimate.
+- Never use support as a default bucket when quote evidence is present.
+
+Channel mapping is strict:
+- quote -> quote
+- shipment -> create_shipment
+- support -> support
+- crm -> crm
+- outreach -> outreach
+- listini -> listini
+- mentor -> mentor
+- debug -> debug
+- explain -> explain
+
+Intent naming convention:
+- Use lowercase dotted ids: <domain>.<action>.<object> (example: quote.create.estimate).
+
+Disambiguation rules (mandatory):
+- outreach vs crm: if user asks to enroll/subscribe/add to sequence/campaign/invio programmato -> domain MUST be outreach (not crm).
+- listini vs quote: if user asks supplier cost, selling price, margin, listino comparison -> domain MUST be listini (not quote).
+- mentor vs explain: if user asks internal architecture/stages/how ANNE works technically -> domain MUST be mentor (not explain).
+- explain vs listini: if user asks conceptual explanation ("spiegami come", "come viene calcolato", "perche") without asking to fetch/compare a specific listino record, domain MUST be explain.
+- greeting-only message ("ciao", "salve", "hey anne") -> domain MUST be support with a greeting/support intent.
+- explain should be used for general process/business explanations, not internal technical mentoring.
+- listini requires an operational intent (show/list/compare configured prices, margins, supplier costs).
+- explain is mandatory when the user asks "how it works" or "why" about business logic and does not ask to fetch/update records.
+
+Decision table (final check before output):
+- If request asks conceptual explanation only -> domain=explain.
+- If request asks show/compare/list configured pricing data -> domain=listini.
+- If request asks an estimate for a new shipment -> domain=quote.
+- If request asks to execute/create booking -> domain=shipment.
+- If request asks troubleshooting on technical failures -> domain=debug.
+
+Negative examples:
+- "Spiegami come calcolate il margine" => explain (NOT listini).
+- "Mostrami il margine su GLS 3kg Milano" => listini (NOT explain).
+- "Iscrivi il prospect alla sequenza" => outreach (NOT crm).
+- "Ciao Anne" => support (NOT explain).
+
+Example 1 input: "Mi fai un preventivo per 2.4 kg verso 00100 Roma?"
+Example 1 output: {"domain":"quote","channel":"quote","intentId":"quote.create.estimate","reason":"Richiesta esplicita di preventivo con peso e CAP.","confidence":95}
+Example 2 input: "Il tracking della spedizione 123 e fermo da ieri, puoi aiutarmi?"
+Example 2 output: {"domain":"support","channel":"support","intentId":"support.resolve.tracking_issue","reason":"Problema su spedizione esistente.","confidence":93}
+Example 3 input: "Voglio confermare e creare subito la spedizione che abbiamo preparato."
+Example 3 output: {"domain":"shipment","channel":"create_shipment","intentId":"shipment.create.confirmed_booking","reason":"Richiesta operativa di creazione spedizione.","confidence":94}
+Example 4 input: "Iscrivi il prospect Farmacia Centrale alla sequenza follow-up commerciale."
+Example 4 output: {"domain":"outreach","channel":"outreach","intentId":"outreach.enroll.sequence","reason":"Richiesta di enrollment in sequenza outreach.","confidence":94}
+Example 5 input: "Confronta costo fornitore e prezzo vendita per 3 kg su Milano 20100."
+Example 5 output: {"domain":"listini","channel":"listini","intentId":"listini.compare.margin","reason":"Confronto costo fornitore/prezzo vendita tipico listini.","confidence":93}
+Example 6 input: "Spiegami in modo tecnico come e organizzata ANNE V3 e i suoi stage."
+Example 6 output: {"domain":"mentor","channel":"mentor","intentId":"mentor.explain.architecture","reason":"Richiesta di mentoring tecnico interno sull architettura.","confidence":90}
+Example 7 input: "Ciao Anne"
+Example 7 output: {"domain":"support","channel":"support","intentId":"support.greeting.request","reason":"Saluto iniziale senza richiesta specifica.","confidence":92}
+Example 8 input: "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente."
+Example 8 output: {"domain":"explain","channel":"explain","intentId":"explain.margin.calculation","reason":"Richiesta di spiegazione concettuale, non di lettura/confronto listino.","confidence":91}
+
+#2 user
+{
+  "instruction": "Classifica la richiesta in uno dei domini ammessi. Priorita: evita support quando c e una richiesta di preventivo/prezzo.",
+  "attempt": 1,
+  "allowedDomains": [
+    "quote",
+    "shipment",
+    "support",
+    "crm",
+    "outreach",
+    "listini",
+    "mentor",
+    "debug",
+    "explain"
+  ],
+  "strictChannelMap": {
+    "quote": "quote",
+    "shipment": "create_shipment",
+    "support": "support",
+    "crm": "crm",
+    "outreach": "outreach",
+    "listini": "listini",
+    "mentor": "mentor",
+    "debug": "debug",
+    "explain": "explain"
+  },
+  "message": "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente."
+}
+[output]
+{"domain":"explain","channel":"explain","intentId":"explain.margin.calculation","reason":"Richiesta di spiegazione concettuale, non di lettura/confronto listino.","confidence":91}
+
+--- stage_2 ---
+stage: domain_decomposer
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 3114
+inputTokens: 267
+outputTokens: 625
+totalTokens: 892
+tokenAlert: False
+[input]
+#1 system
+Sei DOMAIN_DECOMPOSER.
+Scomponi la richiesta in subtasks granulari con dipendenze minime.
+JSON schema: {"subtasks":[{"id":"task_1","domain":"...","intentId":"...","goal":"...","dependsOn":[],"acceptance":"..."}]}.
+
+Dominio corrente: explain.
+Contesto dominio: Spiegazione business/processi e policy operative.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "input": {
+    "message": "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.",
+    "intentId": "explain.margin.calculation",
+    "domain": "explain"
+  }
+}
+[output]
+{"subtasks":[{"id":"task_1","domain":"explain","intentId":"explain.margin.calculation","goal":"Provide a concise explanation of how product margins are calculated in a typical business context, including cost basis and markup methodology.","dependsOn":[],"acceptance":"Must include definitions of cost basis, markup percentage, and example calculation of a margin"},{"id":"task_2","domain":"explain","intentId":"explain.VAT.calculation","goal":"Explain how the Value Added Tax (VAT) is calculated based on the net price and applicable tax rate in a standard jurisdiction.","dependsOn":[],"acceptance":"Should detail the VAT formula, mention the difference between inclusive and exclusive pricing, and reference any common VAT rates used for illustration"},{"id":"task_3","domain":"explain","intentId":"explain.final.price.calculation","goal":"Describe how the final selling price for a customer is derived by combining the calculated margin and the VAT on the resulting price, including any rounding rules.","dependsOn":[],"acceptance":"Must outline the sequence: cost + margin = pre‑VAT price, pre‑VAT price + VAT = final price; include rounding details if applicable"},{"id":"task_4","domain":"explain","intentId":"explain.combined.example","goal":"Provide a worked numerical example that demonstrates the calculation of margin, VAT, and final price step by step using realistic values.","dependsOn":["task_1","task_2","task_3"],"acceptance":"Example must use concrete numbers for cost, markup %, VAT %, show intermediate and final results, and explain each step"}]}
+
+--- stage_3 ---
+stage: task_planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 3638
+inputTokens: 725
+outputTokens: 720
+totalTokens: 1445
+tokenAlert: False
+[input]
+#1 system
+Sei TASK_PLANNER.
+Ordina e normalizza i task per l'esecuzione.
+JSON schema: {"tasks":[{"id":"...","domain":"...","intentId":"...","goal":"...","dependsOn":[],"acceptance":"..."}]}.
+
+Dominio corrente: explain.
+Contesto dominio: Spiegazione business/processi e policy operative.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "message": "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.",
+  "classification": {
+    "domain": "explain",
+    "channel": "explain",
+    "intentId": "explain.margin.calculation",
+    "reason": "Richiesta di spiegazione concettuale, non di lettura/confronto listino.",
+    "confidence": 91
+  },
+  "decomposedTasks": [
+    {
+      "id": "task_1",
+      "domain": "explain",
+      "intentId": "explain.margin.calculation",
+      "goal": "Provide a concise explanation of how product margins are calculated in a typical business context, including cost basis and markup methodology.",
+      "dependsOn": [],
+      "acceptance": "Must include definitions of cost basis, markup percentage, and example calculation of a margin"
+    },
+    {
+      "id": "task_2",
+      "domain": "explain",
+      "intentId": "explain.VAT.calculation",
+      "goal": "Explain how the Value Added Tax (VAT) is calculated based on the net price and applicable tax rate in a standard jurisdiction.",
+      "dependsOn": [],
+      "acceptance": "Should detail the VAT formula, mention the difference between inclusive and exclusive pricing, and reference any common VAT rates used for illustration"
+    },
+    {
+      "id": "task_3",
+      "domain": "explain",
+      "intentId": "explain.final.price.calculation",
+      "goal": "Describe how the final selling price for a customer is derived by combining the calculated margin and the VAT on the resulting price, including any rounding rules.",
+      "dependsOn": [],
+      "acceptance": "Must outline the sequence: cost + margin = pre‑VAT price, pre‑VAT price + VAT = final price; include rounding details if applicable"
+    },
+    {
+      "id": "task_4",
+      "domain": "explain",
+      "intentId": "explain.combined.example",
+      "goal": "Provide a worked numerical example that demonstrates the calculation of margin, VAT, and final price step by step using realistic values.",
+      "dependsOn": [
+        "task_1",
+        "task_2",
+        "task_3"
+      ],
+      "acceptance": "Example must use concrete numbers for cost, markup %, VAT %, show intermediate and final results, and explain each step"
+    }
+  ]
+}
+[output]
+{"tasks":[{"id":"task_1","domain":"explain","intentId":"explain.margin.calculation","goal":"Provide a concise explanation of how product margins are calculated in a typical business context, including cost basis and markup methodology.","dependsOn":[],"acceptance":"Must include definitions of cost basis, markup percentage, and example calculation of a margin"},{"id":"task_2","domain":"explain","intentId":"explain.VAT.calculation","goal":"Explain how the Value Added Tax (VAT) is calculated based on the net price and applicable tax rate in a standard jurisdiction.","dependsOn":[],"acceptance":"Should detail the VAT formula, mention the difference between inclusive and exclusive pricing, and reference any common VAT rates used for illustration"},{"id":"task_3","domain":"explain","intentId":"explain.final.price.calculation","goal":"Describe how the final selling price for a customer is derived by combining the calculated margin and the VAT on the resulting price, including any rounding rules.","dependsOn":[],"acceptance":"Must outline the sequence: cost + margin = pre‑VAT price, pre‑VAT price + VAT = final price; include rounding details if applicable"},{"id":"task_4","domain":"explain","intentId":"explain.combined.example","goal":"Provide a worked numerical example that demonstrates the calculation of margin, VAT, and final price step by step using realistic values.","dependsOn":["task_1","task_2","task_3"],"acceptance":"Example must use concrete numbers for cost, markup %, VAT %, show intermediate and final results, and explain each step"}]}
+
+--- stage_4 ---
+stage: planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 2190
+inputTokens: 413
+outputTokens: 266
+totalTokens: 679
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: explain.
+Contesto dominio: Spiegazione business/processi e policy operative.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_1",
+    "goal": "Provide a concise explanation of how product margins are calculated in a typical business context, including cost basis and markup methodology.",
+    "domain": "explain",
+    "intentId": "explain.margin.calculation",
+    "dependsOn": [],
+    "acceptance": "Must include definitions of cost basis, markup percentage, and example calculation of a margin"
+  },
+  "tools": [
+    {
+      "name": "analyze_business_health",
+      "description": "Analizza la salute del business: margini, trend, performance corrieri, confronto periodi. Disponibile solo per admin.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "explain_orchestrated",
+      "description": "Spiegazione business/processo.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step1","goal":"Provide a concise explanation of how product margins are calculated in a typical business context, including cost basis and markup methodology.","toolCandidates":["explain_orchestrated"],"expectedOutcome":"An explanation that includes definitions of cost basis, markup percentage, and a detailed example calculation of a margin."}]}
+
+--- stage_5 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_6 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_7 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_8 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_9 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_10 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_11 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: True
+durationMs: 202
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_12 ---
+stage: planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 2128
+inputTokens: 424
+outputTokens: 369
+totalTokens: 793
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: explain.
+Contesto dominio: Spiegazione business/processi e policy operative.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_2",
+    "goal": "Explain how the Value Added Tax (VAT) is calculated based on the net price and applicable tax rate in a standard jurisdiction.",
+    "domain": "explain",
+    "intentId": "explain.VAT.calculation",
+    "dependsOn": [],
+    "acceptance": "Should detail the VAT formula, mention the difference between inclusive and exclusive pricing, and reference any common VAT rates used for illustration"
+  },
+  "tools": [
+    {
+      "name": "analyze_business_health",
+      "description": "Analizza la salute del business: margini, trend, performance corrieri, confronto periodi. Disponibile solo per admin.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "explain_orchestrated",
+      "description": "Spiegazione business/processo.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Explain how the Value Added Tax (VAT) is calculated based on the net price and applicable tax rate, including the difference between inclusive and exclusive pricing and reference to common VAT rates for illustration","toolCandidates":["explain_orchestrated"],"expectedOutcome":"A comprehensive explanation covering the VAT formula, the distinction between inclusive and exclusive pricing, and examples of typical VAT rates"}]}
+
+--- stage_13 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_14 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_15 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_16 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_17 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_18 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_19 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_20 ---
+stage: planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 2655
+inputTokens: 433
+outputTokens: 323
+totalTokens: 756
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: explain.
+Contesto dominio: Spiegazione business/processi e policy operative.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_3",
+    "goal": "Describe how the final selling price for a customer is derived by combining the calculated margin and the VAT on the resulting price, including any rounding rules.",
+    "domain": "explain",
+    "intentId": "explain.final.price.calculation",
+    "dependsOn": [],
+    "acceptance": "Must outline the sequence: cost + margin = pre‑VAT price, pre‑VAT price + VAT = final price; include rounding details if applicable"
+  },
+  "tools": [
+    {
+      "name": "analyze_business_health",
+      "description": "Analizza la salute del business: margini, trend, performance corrieri, confronto periodi. Disponibile solo per admin.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "explain_orchestrated",
+      "description": "Spiegazione business/processo.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Generate an explanation of the final selling price calculation, including cost, margin, VAT, and rounding rules.","toolCandidates":["explain_orchestrated"],"expectedOutcome":"A clear step‑by‑step description: cost + margin = pre‑VAT price; pre‑VAT price + VAT = final price; and a note on any rounding applied at each stage."}]}
+
+--- stage_21 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_22 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_23 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_24 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_25 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_26 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_27 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_28 ---
+stage: planner
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 2465
+inputTokens: 440
+outputTokens: 282
+totalTokens: 722
+tokenAlert: False
+[input]
+#1 system
+Sei PLANNER.
+Per un task costruisci step con candidati tool.
+JSON schema: {"steps":[{"id":"...","goal":"...","toolCandidates":["tool_a","tool_b"],"expectedOutcome":"..."}]}.
+
+Dominio corrente: explain.
+Contesto dominio: Spiegazione business/processi e policy operative.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "task": {
+    "id": "task_4",
+    "goal": "Provide a worked numerical example that demonstrates the calculation of margin, VAT, and final price step by step using realistic values.",
+    "domain": "explain",
+    "intentId": "explain.combined.example",
+    "dependsOn": [
+      "task_1",
+      "task_2",
+      "task_3"
+    ],
+    "acceptance": "Example must use concrete numbers for cost, markup %, VAT %, show intermediate and final results, and explain each step"
+  },
+  "tools": [
+    {
+      "name": "analyze_business_health",
+      "description": "Analizza la salute del business: margini, trend, performance corrieri, confronto periodi. Disponibile solo per admin.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    },
+    {
+      "name": "explain_orchestrated",
+      "description": "Spiegazione business/processo.",
+      "required": [],
+      "riskLevel": "low",
+      "category": "read"
+    }
+  ]
+}
+[output]
+{"steps":[{"id":"step_1","goal":"Provide a worked numerical example that demonstrates the calculation of margin, VAT, and final price step by step using realistic values.","toolCandidates":["explain_orchestrated"],"expectedOutcome":"An explanation that includes concrete numbers for cost, markup percentage, VAT percentage, intermediate calculations for margin, VAT amount, and final selling price, with a clear step‑by‑step justification."}]}
+
+--- stage_29 ---
+stage: tool_analysis
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_30 ---
+stage: tool_argument
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_31 ---
+stage: tool_caller
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_32 ---
+stage: command_builder
+attempt: 1
+model: orchestrator_direct
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_33 ---
+stage: policy_tool_safety
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_34 ---
+stage: policy_approval
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_35 ---
+stage: tool_executor
+attempt: 1
+model: None
+success: True
+durationMs: 0
+inputTokens: None
+outputTokens: None
+totalTokens: None
+tokenAlert: None
+[input]
+
+[output]
+
+
+--- stage_36 ---
+stage: aggregator
+attempt: 1
+model: None
+success: False
+durationMs: 5758
+inputTokens: 921
+outputTokens: 900
+totalTokens: 1821
+tokenAlert: False
+[input]
+#1 system
+Sei AGGREGATOR.
+Aggrega risultati multi-step e risolvi conflitti in forma deterministica via JSON.
+JSON schema: {"summary":"...","message":"...","clarificationRequired":false,"clarificationQuestion":"...","agentState":{},"sessionState":{}}.
+
+Dominio corrente: explain.
+Contesto dominio: Spiegazione business/processi e policy operative.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "message": "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.",
+  "classification": {
+    "domain": "explain",
+    "channel": "explain",
+    "intentId": "explain.margin.calculation",
+    "reason": "Richiesta di spiegazione concettuale, non di lettura/confronto listino.",
+    "confidence": 91
+  },
+  "payload": {
+    "toolPlanId": "toolplan_1771698563167_c02f3561",
+    "steps": [
+      {
+        "success": true,
+        "tool": "explain_orchestrated",
+        "taskId": "task_1",
+        "stepId": "step1",
+        "message": "Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\n- \"Spiega come funziona il wallet\"\n- \"Come funziona il processo di spedizione\"\n- \"Spiega il calcolo dei margini\"",
+        "riskLevel": "low"
+      },
+      {
+        "success": true,
+        "tool": "explain_orchestrated",
+        "taskId": "task_2",
+        "stepId": "step_1",
+        "message": "Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\n- \"Spiega come funziona il wallet\"\n- \"Come funziona il processo di spedizione\"\n- \"Spiega il calcolo dei margini\"",
+        "riskLevel": "low"
+      },
+      {
+        "success": true,
+        "tool": "explain_orchestrated",
+        "taskId": "task_3",
+        "stepId": "step_1",
+        "message": "Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\n- \"Spiega come funziona il wallet\"\n- \"Come funziona il processo di spedizione\"\n- \"Spiega il calcolo dei margini\"",
+        "riskLevel": "low"
+      },
+      {
+        "success": true,
+        "tool": "explain_orchestrated",
+        "taskId": "task_4",
+        "stepId": "step_1",
+        "message": "Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\n- \"Spiega come funziona il wallet\"\n- \"Come funziona il processo di spedizione\"\n- \"Spiega il calcolo dei margini\"",
+        "riskLevel": "low"
+      }
+    ],
+    "approvalRequired": false,
+    "agentState": {
+      "explain_response": {
+        "explanation": "Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\n- \"Spiega come funziona il wallet\"\n- \"Come funziona il processo di spedizione\"\n- \"Spiega il calcolo dei margini\"",
+        "diagram": ""
+      },
+      "next_step": "END"
+    }
+  }
+}
+[output]
+{"summary":"Spiegazione formula di margini, IVA e prezzo finale per cliente","message":"In un modello di pricing tradizionale si procede così:\n\n1) **Costo unitario** (C): valore a cui arriva l’azienda dal fornitore.\n2) **Margine di profitto** (% M): percentuale che l’azienda vuole guadagnare sul costo.  \n   \n   - Margine percentuale sul prezzo di vendita (P): M % = [(P − C)/P] × 100\n   - Margine percentuale sul costo (M c): M c % = [(P − C)/C] × 100\n   \n   Se l’azienda decide un margine percentuale sul costo, il prezzo di vendita prima IVA è calcolato come: P = C × (1 + M c/100).\n\n3) **IVA (Imposta sul Valore Aggiunto)**: a partire dal prezzo di vendita al netto dell’IVA, si aggiunge l’aliquota IVA applicabile alla categoria di prodotto.  \n   \n   - Aliquota IVA = VAT % (es. 22 %).\n   - Prezzo finale al cliente (P_finale) = P × (1 + VAT/100).\n\n4) **Esempio pratico** (supponiamo 20 % margine sul costo e 22 % IVA):\n   - C = €100\n   - P = €100 × (1 + 0.20) = €120\n   - P_finale = €120 × (1 + 0.22) = €147.60 \n   \n5) **Utilizzo in sistemi informativi**: la maggior parte dei ERP conterrà i seguenti parametri configurabili:\n   - costo unitario (in magazzino o materiale di input)\n   - percentuale margine sul costo o sul prezzo\n   - aliquota IVA applicabile\n   - eventuali sconti prefissati da applicare prima del calcolo dell’IVA.\n\n**Nota**: Se l’azienda opta per un margine percentuale sul prezzo di vendita, la formula inversa si risolve tramite \nP = C ÷ (1 −
+
+--- stage_37 ---
+stage: aggregator
+attempt: 2
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 2948
+inputTokens: 931
+outputTokens: 271
+totalTokens: 1202
+tokenAlert: False
+[input]
+#1 system
+Sei AGGREGATOR.
+Aggrega risultati multi-step e risolvi conflitti in forma deterministica via JSON.
+JSON schema: {"summary":"...","message":"...","clarificationRequired":false,"clarificationQuestion":"...","agentState":{},"sessionState":{}}.
+
+Dominio corrente: explain.
+Contesto dominio: Spiegazione business/processi e policy operative.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 2,
+  "previousError": "Invalid JSON payload",
+  "message": "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.",
+  "classification": {
+    "domain": "explain",
+    "channel": "explain",
+    "intentId": "explain.margin.calculation",
+    "reason": "Richiesta di spiegazione concettuale, non di lettura/confronto listino.",
+    "confidence": 91
+  },
+  "payload": {
+    "toolPlanId": "toolplan_1771698563167_c02f3561",
+    "steps": [
+      {
+        "success": true,
+        "tool": "explain_orchestrated",
+        "taskId": "task_1",
+        "stepId": "step1",
+        "message": "Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\n- \"Spiega come funziona il wallet\"\n- \"Come funziona il processo di spedizione\"\n- \"Spiega il calcolo dei margini\"",
+        "riskLevel": "low"
+      },
+      {
+        "success": true,
+        "tool": "explain_orchestrated",
+        "taskId": "task_2",
+        "stepId": "step_1",
+        "message": "Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\n- \"Spiega come funziona il wallet\"\n- \"Come funziona il processo di spedizione\"\n- \"Spiega il calcolo dei margini\"",
+        "riskLevel": "low"
+      },
+      {
+        "success": true,
+        "tool": "explain_orchestrated",
+        "taskId": "task_3",
+        "stepId": "step_1",
+        "message": "Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\n- \"Spiega come funziona il wallet\"\n- \"Come funziona il processo di spedizione\"\n- \"Spiega il calcolo dei margini\"",
+        "riskLevel": "low"
+      },
+      {
+        "success": true,
+        "tool": "explain_orchestrated",
+        "taskId": "task_4",
+        "stepId": "step_1",
+        "message": "Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\n- \"Spiega come funziona il wallet\"\n- \"Come funziona il processo di spedizione\"\n- \"Spiega il calcolo dei margini\"",
+        "riskLevel": "low"
+      }
+    ],
+    "approvalRequired": false,
+    "agentState": {
+      "explain_response": {
+        "explanation": "Mi dispiace, non ho trovato informazioni rilevanti nella documentazione per questa domanda. Puoi essere più specifico? Ad esempio:\n- \"Spiega come funziona il wallet\"\n- \"Come funziona il processo di spedizione\"\n- \"Spiega il calcolo dei margini\"",
+        "diagram": ""
+      },
+      "next_step": "END"
+    }
+  }
+}
+[output]
+{"summary":"Non è possibile fornire una spiegazione dettagliata senza una conoscenza specifica del modello di calcolo adottato dalla tua azienda.","message":"Al momento non dispongo delle informazioni necessarie per spiegare esattamente come vengono calcolati margini, IVA e prezzo finale per il cliente. Potrebbe indicarmi se esiste un documento, una formula predefinita o un sistema di gestione che descriva questi calcoli?","clarificationRequired":true,"clarificationQuestion":"Quale modello/standard utilizza la tua azienda per calcolare margini, IVA e prezzo finale per i clienti?","agentState":{},"sessionState":{}}
+
+--- stage_38 ---
+stage: finalizer
+attempt: 1
+model: gpt-oss:20b-cloud
+success: True
+durationMs: 2466
+inputTokens: 441
+outputTokens: 336
+totalTokens: 777
+tokenAlert: False
+[input]
+#1 system
+Sei FINALIZER.
+Genera la risposta finale utente in italiano, chiara e operativa.
+JSON schema: {"message":"...","clarificationRequest":"...","nextAction":"..."}.
+
+Dominio corrente: explain.
+Contesto dominio: Spiegazione business/processi e policy operative.
+Rispondi esclusivamente in JSON valido, senza markdown e senza testo extra.
+Non inventare dati mancanti: se mancano informazioni segnala clarification_required nel contratto previsto.
+Usa solo tool business disponibili nel catalogo ricevuto.
+
+#2 user
+{
+  "attempt": 1,
+  "message": "Spiegami come vengono calcolati margini, IVA e prezzo finale per il cliente.",
+  "classification": {
+    "domain": "explain",
+    "channel": "explain",
+    "intentId": "explain.margin.calculation",
+    "reason": "Richiesta di spiegazione concettuale, non di lettura/confronto listino.",
+    "confidence": 91
+  },
+  "aggregated": {
+    "summary": "Non è possibile fornire una spiegazione dettagliata senza una conoscenza specifica del modello di calcolo adottato dalla tua azienda.",
+    "message": "Al momento non dispongo delle informazioni necessarie per spiegare esattamente come vengono calcolati margini, IVA e prezzo finale per il cliente. Potrebbe indicarmi se esiste un documento, una formula predefinita o un sistema di gestione che descriva questi calcoli?",
+    "clarificationRequired": true,
+    "clarificationQuestion": "Quale modello/standard utilizza la tua azienda per calcolare margini, IVA e prezzo finale per i clienti?",
+    "agentState": {},
+    "sessionState": {}
+  }
+}
+[output]
+{"message":"Per calcolare margini, IVA e prezzo finale per il cliente è necessario conoscere la formula e la politica di prezzo adottate dalla vostra azienda.","clarificationRequest":"Qual è il modello o lo standard che la tua azienda utilizza per calcolare margini, IVA e prezzo finale per i clienti?","nextAction":"requestClarification"}
