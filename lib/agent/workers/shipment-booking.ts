@@ -251,6 +251,29 @@ export async function shipmentBookingWorker(
       const shipment = result.json.shipment;
       logger.log(`🚀 [Shipment Booking Worker] Spedizione creata: ${shipment.tracking_number}`);
 
+      // Memory write: aggiorna preferredCouriers (fire-and-forget, non bloccare booking)
+      // In delega: memoria del SUB-CLIENT (delegationContext.subClientUserId)
+      // Altrimenti: memoria dell'utente corrente (actingContext.target.id)
+      try {
+        const { getUserMemory, upsertUserMemory } = await import('@/lib/ai/user-memory');
+        const memoryUserId = state.delegation_context?.subClientUserId || actingContext.target.id;
+
+        const existing = await getUserMemory(memoryUserId);
+        const current = existing?.preferredCouriers || [];
+        const courier = selectedOption.courier;
+
+        if (!current.includes(courier)) {
+          await upsertUserMemory(memoryUserId, {
+            preferredCouriers: [courier, ...current].slice(0, 5),
+          });
+          logger.log(
+            `🧠 [Shipment Booking Worker] Memory aggiornata per ${memoryUserId}: +${courier}`
+          );
+        }
+      } catch {
+        // Non bloccare il booking per errore memory
+      }
+
       return {
         booking_result: {
           status: 'success',
