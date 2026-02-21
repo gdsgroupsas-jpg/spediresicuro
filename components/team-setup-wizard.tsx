@@ -57,6 +57,7 @@ interface InviteResult {
   success: boolean;
   message: string;
   url?: string;
+  emailSent?: boolean;
 }
 
 // ============================================
@@ -102,10 +103,12 @@ export function TeamSetupWizard({
           message: data.error || "Errore durante l'invito",
         });
       } else {
+        const emailSent = data.email_sent !== false;
         setResult({
           success: true,
           message: data.message || 'Invito inviato con successo!',
           url: data.invitation?.invite_url,
+          emailSent,
         });
       }
 
@@ -482,20 +485,41 @@ function StepResult({
           <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle2 className="w-10 h-10 text-emerald-600" />
           </div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-3">Invito Inviato!</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-3">
+            {result.emailSent === false ? 'Invito Creato!' : 'Invito Inviato!'}
+          </h2>
           <p className="text-gray-600 mb-6">{result.message}</p>
+
+          {/* Avviso email non inviata */}
+          {result.emailSent === false && result.url && (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-left">
+              <div className="flex items-start gap-2">
+                <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-amber-800">Email non inviata</p>
+                  <p className="text-xs text-amber-700 mt-1">
+                    L&apos;invito è stato creato ma l&apos;email non è partita. Condividi il link
+                    qui sotto direttamente al collaboratore.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Link invito */}
           {result.url && (
             <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6 text-left">
               <p className="text-xs text-gray-500 mb-2">
-                Link invito (puoi anche condividerlo direttamente):
+                {result.emailSent === false
+                  ? 'Condividi questo link direttamente:'
+                  : 'Link invito (puoi anche condividerlo direttamente):'}
               </p>
               <div className="flex items-center gap-2">
                 <input
                   type="text"
                   value={result.url}
                   readOnly
+                  aria-label="Link invito"
                   className="flex-1 text-xs p-2 bg-white border border-gray-200 rounded-lg"
                 />
                 <Button size="sm" variant="outline" onClick={() => onCopyLink(result.url!)}>

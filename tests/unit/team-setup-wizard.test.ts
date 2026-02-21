@@ -289,16 +289,19 @@ describe('TeamSetupWizard - Gestione risultato', () => {
     success: boolean;
     message: string;
     url?: string;
+    emailSent?: boolean;
   }
 
-  it('successo mostra messaggio e link', () => {
+  it('successo con email inviata mostra messaggio e link', () => {
     const result: InviteResult = {
       success: true,
       message: 'Invito inviato con successo!',
       url: 'https://spediresicuro.it/invite/abc123',
+      emailSent: true,
     };
 
     expect(result.success).toBe(true);
+    expect(result.emailSent).toBe(true);
     expect(result.message).toBeTruthy();
     expect(result.url).toBeTruthy();
   });
@@ -332,6 +335,91 @@ describe('TeamSetupWizard - Gestione risultato', () => {
 
     expect(result.success).toBe(false);
     expect(result.message).toContain('Errore');
+  });
+
+  it('successo con emailSent=false mostra titolo diverso', () => {
+    const result: InviteResult = {
+      success: true,
+      message: "Invito creato! L'email non è stata inviata - condividi il link manualmente.",
+      url: 'https://spediresicuro.it/invite/abc123',
+      emailSent: false,
+    };
+
+    expect(result.success).toBe(true);
+    expect(result.emailSent).toBe(false);
+    // Il titolo dovrebbe essere "Invito Creato!" (non "Invito Inviato!")
+    const title = result.emailSent === false ? 'Invito Creato!' : 'Invito Inviato!';
+    expect(title).toBe('Invito Creato!');
+  });
+
+  it('successo con emailSent=true mostra titolo standard', () => {
+    const result: InviteResult = {
+      success: true,
+      message: 'Invito inviato a test@example.com!',
+      url: 'https://spediresicuro.it/invite/abc123',
+      emailSent: true,
+    };
+
+    const title = result.emailSent === false ? 'Invito Creato!' : 'Invito Inviato!';
+    expect(title).toBe('Invito Inviato!');
+  });
+
+  it('emailSent undefined (backward compat) mostra titolo standard', () => {
+    const result: InviteResult = {
+      success: true,
+      message: 'Invito inviato con successo!',
+      url: 'https://spediresicuro.it/invite/abc123',
+    };
+
+    // emailSent non presente nel response = backward compat = trattato come inviato
+    const title = result.emailSent === false ? 'Invito Creato!' : 'Invito Inviato!';
+    expect(title).toBe('Invito Inviato!');
+  });
+
+  it('emailSent=false mostra avviso condivisione link manuale', () => {
+    const result: InviteResult = {
+      success: true,
+      message: "Invito creato! L'email non è stata inviata.",
+      url: 'https://spediresicuro.it/invite/abc123',
+      emailSent: false,
+    };
+
+    // Quando email non inviata: label diversa nel box link
+    const linkLabel =
+      result.emailSent === false
+        ? 'Condividi questo link direttamente:'
+        : 'Link invito (puoi anche condividerlo direttamente):';
+    expect(linkLabel).toBe('Condividi questo link direttamente:');
+  });
+});
+
+// ============================================
+// LOGICA WIZARD: parsing risposta API email_sent
+// ============================================
+
+describe('TeamSetupWizard - Parsing risposta API email_sent', () => {
+  /**
+   * Replica la logica nel handleInvite del componente:
+   * const emailSent = data.email_sent !== false;
+   */
+  function parseEmailSent(data: { email_sent?: boolean }): boolean {
+    return data.email_sent !== false;
+  }
+
+  it('email_sent=true -> emailSent=true', () => {
+    expect(parseEmailSent({ email_sent: true })).toBe(true);
+  });
+
+  it('email_sent=false -> emailSent=false', () => {
+    expect(parseEmailSent({ email_sent: false })).toBe(false);
+  });
+
+  it('email_sent assente -> emailSent=true (backward compat)', () => {
+    expect(parseEmailSent({})).toBe(true);
+  });
+
+  it('email_sent=undefined -> emailSent=true (backward compat)', () => {
+    expect(parseEmailSent({ email_sent: undefined })).toBe(true);
   });
 });
 
