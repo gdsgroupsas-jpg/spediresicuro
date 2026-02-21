@@ -36,6 +36,7 @@ import {
 import { resolveSubClient, DELEGATION_CONFIDENCE_THRESHOLD } from '@/lib/ai/subclient-resolver';
 import { buildDelegatedActingContext, type DelegationContext } from '@/lib/ai/delegation-context';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { detectSupportIntent, supportWorker } from '@/lib/agent/workers/support-worker';
 import { crmWorker } from '@/lib/agent/workers/crm-worker';
@@ -311,6 +312,37 @@ export async function supervisorRouter(
               `Opero per conto di ${delegationContext.subClientName} (${bestMatch.workspaceName})`
             )
             .catch(() => {});
+
+          // Audit log idempotente: dedup su trace_id + target workspace
+          try {
+            const existingLog = await workspaceQuery(delegationContext.resellerWorkspaceId)
+              .from('audit_logs')
+              .select('id')
+              .eq('metadata->>trace_id', traceId)
+              .eq('resource_id', delegationContext.delegatedWorkspaceId)
+              .eq('action', 'DELEGATION_ACTIVATED')
+              .maybeSingle();
+
+            if (!existingLog?.data) {
+              await workspaceQuery(delegationContext.resellerWorkspaceId)
+                .from('audit_logs')
+                .insert({
+                  action: 'DELEGATION_ACTIVATED',
+                  resource_type: 'workspace',
+                  resource_id: delegationContext.delegatedWorkspaceId,
+                  user_id: userId,
+                  workspace_id: delegationContext.resellerWorkspaceId,
+                  metadata: {
+                    sub_client_name: delegationContext.subClientName,
+                    trace_id: traceId,
+                    action_requested: message.substring(0, 200),
+                  },
+                });
+            }
+          } catch (auditError) {
+            // Audit non deve bloccare la delegazione
+            logger.warn('⚠️ [Supervisor Router] Errore audit delegazione (non bloccante)');
+          }
         } else {
           // Match ambigui: chiedi chiarimento con lista deterministica
           const list = matches
