@@ -127,9 +127,9 @@ export function sanitizeString(str: string): string {
  */
 export function sanitizeForLog(value: unknown): string {
   if (value === null || value === undefined) return '';
-  const str = String(value);
-   
-  return str.replace(/[\n\r\0]/g, ' ').slice(0, 500);
+  return String(value)
+    .replace(/[\n\r\0]/g, ' ')
+    .slice(0, 500);
 }
 
 /**
