@@ -360,7 +360,15 @@ export async function supervisorRouter(
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);
         logger.error('❌ [Supervisor Router] Errore delegazione:', errorMessage);
-        // Non bloccare: continua senza delegazione
+        // FAIL-CLOSED: delegazione richiesta ma fallita, NON continuare
+        // senza delegazione (rischierebbe di operare sul workspace sbagliato)
+        return emitFinalTelemetryAndReturn({
+          decision: 'END',
+          clarificationRequest:
+            'Si è verificato un errore durante la ricerca del cliente. Riprova tra poco.',
+          executionTimeMs: Date.now() - startTime,
+          source: 'supervisor_only',
+        });
       }
     }
   }

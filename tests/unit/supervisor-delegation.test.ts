@@ -315,4 +315,53 @@ describe('supervisorRouter — delegazione "per conto di"', () => {
     const { resolveSubClient } = await import('@/lib/ai/subclient-resolver');
     expect(resolveSubClient).not.toHaveBeenCalled();
   });
+
+  // ============================================
+  // F-SEC-1: Fail-closed su errore delegazione
+  // ============================================
+  it('F-SEC-1: errore delegazione → fail-closed (END con errore, NON continua sul workspace sbagliato)', async () => {
+    // Simula errore nella risoluzione sub-client (es. DB down)
+    const { resolveSubClient } = await import('@/lib/ai/subclient-resolver');
+    (resolveSubClient as any).mockRejectedValueOnce(new Error('DB connection failed'));
+
+    const result = await supervisorRouter(
+      makeResellerInput('per conto di Awa Kanoute crea spedizione')
+    );
+
+    // FAIL-CLOSED: il router NON deve continuare senza delegazione
+    // Deve restituire END con messaggio di errore
+    expect(result.decision).toBe('END');
+    expect(result.clarificationRequest).toContain('errore');
+    expect(result.clarificationRequest).toContain('Riprova');
+    // NON deve essere 'legacy' (altrimenti la spedizione verrebbe creata sul workspace sbagliato)
+    expect(result.decision).not.toBe('legacy');
+  });
+
+  it('F-SEC-1: errore generico nel blocco delegazione → fail-closed (non legacy)', async () => {
+    // Simula un errore generico durante la delegazione
+    // (es. buildDelegatedActingContext lancia)
+    mockResolveResult = [
+      {
+        workspaceId: 'subclient-ws-err',
+        userId: 'subclient-user-err',
+        workspaceName: 'Errore Shop',
+        userName: 'Errore User',
+        confidence: 1.0,
+      },
+    ];
+
+    // buildDelegatedActingContext lanciare errore → catch block
+    const delegation = await import('@/lib/ai/delegation-context');
+    (delegation.buildDelegatedActingContext as any).mockImplementationOnce(() => {
+      throw new Error('Context build failed');
+    });
+
+    const result = await supervisorRouter(
+      makeResellerInput('per conto di Errore User crea spedizione')
+    );
+
+    // FAIL-CLOSED: NON deve proseguire come legacy (workspace sbagliato)
+    expect(result.decision).toBe('END');
+    expect(result.clarificationRequest).toContain('errore');
+  });
 });

@@ -161,12 +161,20 @@ export async function GET(request: Request) {
 
     if (resolvedEscalations?.length) {
       for (const escalation of resolvedEscalations) {
+        // FIX F-ATOM-1: Ri-leggi metadata fresca per evitare stale spread
+        // La SELECT iniziale potrebbe avere metadata vecchia se il ciclo è lungo
+        const { data: fresh } = await supabaseAdmin
+          .from('support_escalations')
+          .select('metadata')
+          .eq('id', escalation.id)
+          .single();
+
         // Claim-then-process: UPDATE atomico PRIMA del processamento
         // Evita doppio apprendimento con worker concorrenti
         const { data: claimed } = await supabaseAdmin
           .from('support_escalations')
           .update({
-            metadata: { ...(escalation.metadata || {}), pattern_learned: true },
+            metadata: { ...(fresh?.metadata || {}), pattern_learned: true },
           })
           .eq('id', escalation.id)
           .eq('status', 'resolved')
@@ -184,6 +192,29 @@ export async function GET(request: Request) {
               `[Support Alerts] Errore learning escalation ${claimed.id}:`,
               learnError.message
             );
+            // FIX F-ATOM-2: COMPENSAZIONE — reset flag per retry al prossimo ciclo
+            // Se learnFromEscalation fallisce dopo il claim, l'escalation sarebbe
+            // marcata ma mai processata (locked forever). Resettiamo pattern_learned.
+            try {
+              const { data: currentMeta } = await supabaseAdmin
+                .from('support_escalations')
+                .select('metadata')
+                .eq('id', claimed.id)
+                .single();
+
+              const resetMeta = { ...(currentMeta?.metadata || {}) };
+              delete resetMeta.pattern_learned;
+
+              await supabaseAdmin
+                .from('support_escalations')
+                .update({ metadata: resetMeta })
+                .eq('id', claimed.id);
+            } catch (resetError: any) {
+              console.error(
+                `[Support Alerts] CRITICAL: impossibile resettare flag per ${claimed.id}:`,
+                resetError.message
+              );
+            }
           }
         }
       }

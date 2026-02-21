@@ -7,6 +7,8 @@
  * - Claim atomico: solo il primo worker processa
  * - Escalation già processata (pattern_learned=true) → skip
  * - Errore learning non rompe il cron
+ * - F-ATOM-1: Metadata fresca letta prima del claim (no stale spread)
+ * - F-ATOM-2: Compensazione reset flag se learning fallisce dopo claim
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
@@ -37,15 +39,22 @@ vi.mock('@/lib/services/whatsapp', () => ({
 let mockEscalations: any[] = [];
 let claimResults: Map<string, any> = new Map();
 let claimCallCount = 0;
+// F-ATOM-1: Track se metadata fresca viene letta
+let freshMetadataReadIds: string[] = [];
+// F-ATOM-2: Track chiamate di compensazione (reset flag)
+let compensationResetIds: string[] = [];
+// Metadata fresca da restituire (per test F-ATOM-1)
+let freshMetadataOverride: Map<string, any> = new Map();
 
 vi.mock('@/lib/db/client', () => ({
   supabaseAdmin: {
     from: vi.fn((table: string) => {
       if (table === 'support_escalations') {
         return {
-          select: vi.fn(() => ({
+          select: vi.fn((fields: string) => ({
             eq: vi.fn((col: string, val: string) => {
               if (col === 'status' && val === 'resolved') {
+                // Query iniziale: lista escalation risolte
                 return {
                   not: vi.fn(() => ({
                     order: vi.fn(() => ({
@@ -60,8 +69,40 @@ vi.mock('@/lib/db/client', () => ({
                   ),
                 };
               }
+              if (col === 'id') {
+                // F-ATOM-1: Lettura metadata fresca per singola escalation
+                // F-ATOM-2: Lettura metadata per compensazione
+                freshMetadataReadIds.push(val);
+                const escalation = mockEscalations.find((e: any) => e.id === val);
+                const freshData = freshMetadataOverride.has(val)
+                  ? freshMetadataOverride.get(val)
+                  : escalation;
+                return {
+                  single: vi.fn(() =>
+                    Promise.resolve({
+                      data: freshData ? { metadata: freshData.metadata || {} } : null,
+                      error: null,
+                    })
+                  ),
+                  // Fallback per catene più lunghe
+                  eq: vi.fn(() => ({
+                    single: vi.fn(() =>
+                      Promise.resolve({
+                        data: freshData ? { metadata: freshData.metadata || {} } : null,
+                        error: null,
+                      })
+                    ),
+                  })),
+                };
+              }
               // Fallback per query generiche su support_escalations
               return {
+                single: vi.fn(() =>
+                  Promise.resolve({
+                    data: mockEscalations[0] || null,
+                    error: null,
+                  })
+                ),
                 eq: vi.fn(() => ({
                   single: vi.fn(() =>
                     Promise.resolve({
@@ -73,29 +114,40 @@ vi.mock('@/lib/db/client', () => ({
               };
             }),
           })),
-          update: vi.fn(() => ({
-            eq: vi.fn(() => ({
-              eq: vi.fn(() => ({
-                is: vi.fn(() => ({
-                  select: vi.fn(() => ({
-                    maybeSingle: vi.fn(() => {
-                      claimCallCount++;
-                      // Simula claim atomico: solo il primo claim ha successo
-                      const escalation = mockEscalations[claimCallCount - 1];
-                      const id = escalation?.id;
-                      if (id && claimResults.has(id)) {
-                        return Promise.resolve(claimResults.get(id));
-                      }
-                      // Default: claim ha successo (prima volta)
-                      return Promise.resolve({
-                        data: escalation ? { id: escalation.id } : null,
-                        error: null,
-                      });
-                    }),
+          update: vi.fn((updatePayload: any) => ({
+            eq: vi.fn((_col: string, val: string) => {
+              // Se è un update semplice senza catena .eq().is()... è compensazione
+              const isCompensation =
+                updatePayload?.metadata && !('pattern_learned' in (updatePayload.metadata || {}));
+
+              if (isCompensation) {
+                compensationResetIds.push(val);
+                return Promise.resolve({ error: null });
+              }
+
+              return {
+                eq: vi.fn(() => ({
+                  is: vi.fn(() => ({
+                    select: vi.fn(() => ({
+                      maybeSingle: vi.fn(() => {
+                        claimCallCount++;
+                        // Simula claim atomico: solo il primo claim ha successo
+                        const escalation = mockEscalations[claimCallCount - 1];
+                        const id = escalation?.id;
+                        if (id && claimResults.has(id)) {
+                          return Promise.resolve(claimResults.get(id));
+                        }
+                        // Default: claim ha successo (prima volta)
+                        return Promise.resolve({
+                          data: escalation ? { id: escalation.id } : null,
+                          error: null,
+                        });
+                      }),
+                    })),
                   })),
                 })),
-              })),
-            })),
+              };
+            }),
           })),
         };
       }
@@ -149,6 +201,9 @@ describe('Learning loop nel cron support-alerts', () => {
     mockEscalations = [];
     claimResults = new Map();
     claimCallCount = 0;
+    freshMetadataReadIds = [];
+    compensationResetIds = [];
+    freshMetadataOverride = new Map();
     // Imposta CRON_SECRET per auth
     process.env.CRON_SECRET = 'test-secret';
   });
@@ -257,5 +312,87 @@ describe('Learning loop nel cron support-alerts', () => {
 
     expect(json.patternsLearned).toBe(2);
     expect(learnCalls).toEqual(['esc-a', 'esc-b']);
+  });
+
+  // ============================================
+  // F-ATOM-1: Metadata fresca letta prima del claim
+  // ============================================
+  it('F-ATOM-1: legge metadata fresca prima del claim (no stale spread)', async () => {
+    mockEscalations = [
+      {
+        id: 'esc-fresh-1',
+        status: 'resolved',
+        resolution: 'Fix',
+        metadata: { category: 'giacenza', old_field: true },
+      },
+    ];
+
+    // Simula metadata aggiornata nel frattempo da un altro processo
+    freshMetadataOverride.set('esc-fresh-1', {
+      metadata: { category: 'giacenza', old_field: true, concurrent_update: 'new_value' },
+    });
+
+    const res = await GET(makeRequest());
+    const json = await res.json();
+
+    expect(json.success).toBe(true);
+    expect(json.patternsLearned).toBe(1);
+    // Verifica che metadata fresca sia stata letta per l'escalation
+    expect(freshMetadataReadIds).toContain('esc-fresh-1');
+  });
+
+  // ============================================
+  // F-ATOM-2: Compensazione reset flag su errore learning
+  // ============================================
+  it('F-ATOM-2: resetta pattern_learned se learnFromEscalation fallisce', async () => {
+    mockEscalations = [
+      {
+        id: 'esc-comp-1',
+        status: 'resolved',
+        resolution: 'Fix',
+        metadata: { category: 'generico' },
+      },
+    ];
+
+    // Forza errore su learnFromEscalation → trigger compensazione
+    const { learnFromEscalation } = await import('@/lib/ai/case-learning');
+    (learnFromEscalation as any).mockRejectedValueOnce(new Error('Learning failed'));
+
+    const res = await GET(makeRequest());
+    const json = await res.json();
+
+    // Il cron non crasha
+    expect(json.success).toBe(true);
+    // Pattern non appreso
+    expect(json.patternsLearned).toBe(0);
+
+    // Compensazione eseguita: flag resettato per retry al prossimo ciclo
+    // La metadata fresca viene letta (per la compensazione) e poi l'update di reset viene chiamato
+    expect(compensationResetIds).toContain('esc-comp-1');
+  });
+
+  it('F-ATOM-2: errore compensazione non crasha il cron', async () => {
+    mockEscalations = [
+      {
+        id: 'esc-comp-err',
+        status: 'resolved',
+        resolution: 'Fix',
+        metadata: { category: 'generico' },
+      },
+    ];
+
+    // Forza errore su learnFromEscalation
+    const { learnFromEscalation } = await import('@/lib/ai/case-learning');
+    (learnFromEscalation as any).mockRejectedValueOnce(new Error('Learning failed'));
+
+    // Anche se la compensazione fallisce (metadata non trovata), il cron non crasha
+    freshMetadataOverride.set('esc-comp-err', null);
+
+    const res = await GET(makeRequest());
+    const json = await res.json();
+
+    // Cron continua senza crash
+    expect(json.success).toBe(true);
+    expect(json.patternsLearned).toBe(0);
   });
 });
