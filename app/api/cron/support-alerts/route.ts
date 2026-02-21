@@ -15,6 +15,7 @@ import { supabaseAdmin } from '@/lib/db/client';
 import { sendEmail } from '@/lib/email/resend';
 import { sendTelegramMessageDirect } from '@/lib/services/telegram-bot';
 import { sendWhatsAppText, isWhatsAppConfigured } from '@/lib/services/whatsapp';
+import { learnFromEscalation } from '@/lib/ai/case-learning';
 
 // Vercel Cron config
 export const runtime = 'nodejs';
@@ -146,12 +147,61 @@ export async function GET(request: Request) {
     results.errors.push(error.message);
   }
 
+  // 4. Learning loop: apprendi da escalation risolte (claim-then-process)
+  let patternsLearned = 0;
+  try {
+    // Cerca escalation risolte non ancora processate (max 10 per ciclo)
+    const { data: resolvedEscalations } = await supabaseAdmin
+      .from('support_escalations')
+      .select('id, metadata')
+      .eq('status', 'resolved')
+      .not('resolution', 'is', null)
+      .order('updated_at', { ascending: true })
+      .limit(10);
+
+    if (resolvedEscalations?.length) {
+      for (const escalation of resolvedEscalations) {
+        // Claim-then-process: UPDATE atomico PRIMA del processamento
+        // Evita doppio apprendimento con worker concorrenti
+        const { data: claimed } = await supabaseAdmin
+          .from('support_escalations')
+          .update({
+            metadata: { ...(escalation.metadata || {}), pattern_learned: true },
+          })
+          .eq('id', escalation.id)
+          .eq('status', 'resolved')
+          .is('metadata->pattern_learned', null) // solo non-processate
+          .select('id')
+          .maybeSingle();
+
+        if (claimed) {
+          // Solo se il claim ha avuto successo (nessun altro worker l'ha presa)
+          try {
+            await learnFromEscalation(claimed.id);
+            patternsLearned++;
+          } catch (learnError: any) {
+            console.error(
+              `[Support Alerts] Errore learning escalation ${claimed.id}:`,
+              learnError.message
+            );
+          }
+        }
+      }
+    }
+  } catch (error: any) {
+    results.errors.push(`learning: ${error.message}`);
+  }
+
   const total = results.giacenze + results.trackingStale + results.holdExpiring;
-  console.log(`[Support Alerts] Inviate ${total} notifiche:`, results);
+  console.log(
+    `[Support Alerts] Inviate ${total} notifiche, ${patternsLearned} pattern appresi:`,
+    results
+  );
 
   return NextResponse.json({
     success: true,
     notificationsSent: total,
+    patternsLearned,
     details: results,
   });
 }
