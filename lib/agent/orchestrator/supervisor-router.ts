@@ -30,7 +30,12 @@ import {
   detectCrmIntent,
   detectOutreachIntent,
   detectShipmentCreationIntent,
+  detectDelegationIntent,
+  extractDelegationTarget,
 } from '@/lib/agent/intent-detector';
+import { resolveSubClient, DELEGATION_CONFIDENCE_THRESHOLD } from '@/lib/ai/subclient-resolver';
+import { buildDelegatedActingContext, type DelegationContext } from '@/lib/ai/delegation-context';
+import { supabaseAdmin } from '@/lib/db/client';
 import { containsOcrPatterns } from '@/lib/agent/workers/ocr';
 import { detectSupportIntent, supportWorker } from '@/lib/agent/workers/support-worker';
 import { crmWorker } from '@/lib/agent/workers/crm-worker';
@@ -227,6 +232,107 @@ export async function supervisorRouter(
         ? 'reseller'
         : 'user';
 
+  // 1.4. Delegazione "per conto di" (PRIMA di tutti gli intent check)
+  // Se il reseller vuole operare per un sub-client, sovrascriviamo wsId e actingContext
+  let effectiveWsId = wsId;
+  let effectiveActingContext = actingContext;
+  let delegationContext: DelegationContext | undefined;
+
+  if (detectDelegationIntent(message) && workerRole === 'reseller' && wsId) {
+    const targetName = extractDelegationTarget(message);
+
+    if (targetName) {
+      logger.log(`🤝 [Supervisor Router] Delegazione rilevata: "${targetName}"`);
+      typing?.emit('working', `Cerco il cliente ${targetName}...`).catch(() => {});
+
+      try {
+        // Verifica membership attiva del reseller nel workspace padre
+        const { data: membership } = await supabaseAdmin
+          .from('workspace_members')
+          .select('id')
+          .eq('workspace_id', wsId)
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .in('role', ['admin', 'owner'])
+          .maybeSingle();
+
+        if (!membership) {
+          logger.warn('⚠️ [Supervisor Router] Reseller non membro attivo, delegazione rifiutata');
+          return emitFinalTelemetryAndReturn({
+            decision: 'END',
+            clarificationRequest:
+              'Non hai i permessi per operare per conto di altri clienti in questo workspace.',
+            executionTimeMs: Date.now() - startTime,
+            source: 'supervisor_only',
+          });
+        }
+
+        // Risolvi sub-client
+        const matches = await resolveSubClient(wsId, targetName);
+
+        if (matches.length === 0) {
+          // Nessun match
+          return emitFinalTelemetryAndReturn({
+            decision: 'END',
+            clarificationRequest: `Non ho trovato nessun sub-client con nome "${targetName}". Verifica il nome e riprova.`,
+            executionTimeMs: Date.now() - startTime,
+            source: 'supervisor_only',
+          });
+        }
+
+        const bestMatch = matches[0];
+
+        if (matches.length === 1 || bestMatch.confidence >= DELEGATION_CONFIDENCE_THRESHOLD) {
+          // Match sicuro: override wsId e actingContext
+          delegationContext = {
+            isDelegating: true,
+            delegatedWorkspaceId: bestMatch.workspaceId,
+            resellerWorkspaceId: wsId,
+            subClientName: bestMatch.userName || bestMatch.workspaceName,
+            subClientWorkspaceName: bestMatch.workspaceName,
+            subClientUserId: bestMatch.userId,
+          };
+
+          // Override workspace e contesto
+          effectiveWsId = bestMatch.workspaceId;
+          if ('workspace' in actingContext) {
+            effectiveActingContext = buildDelegatedActingContext(
+              actingContext as WorkspaceActingContext,
+              delegationContext
+            );
+          }
+
+          logger.log(
+            `✅ [Supervisor Router] Delegazione attivata: ${bestMatch.workspaceName} (${bestMatch.workspaceId})`
+          );
+          typing
+            ?.emit(
+              'working',
+              `Opero per conto di ${delegationContext.subClientName} (${bestMatch.workspaceName})`
+            )
+            .catch(() => {});
+        } else {
+          // Match ambigui: chiedi chiarimento con lista deterministica
+          const list = matches
+            .slice(0, 5)
+            .map((m) => `• **${m.workspaceName}** (${m.userName})`)
+            .join('\n');
+
+          return emitFinalTelemetryAndReturn({
+            decision: 'END',
+            clarificationRequest: `Ho trovato più clienti simili a "${targetName}". Quale intendi?\n\n${list}\n\nSpecifica il nome esatto.`,
+            executionTimeMs: Date.now() - startTime,
+            source: 'supervisor_only',
+          });
+        }
+      } catch (error: unknown) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logger.error('❌ [Supervisor Router] Errore delegazione:', errorMessage);
+        // Non bloccare: continua senza delegazione
+      }
+    }
+  }
+
   // 1.5. Support intent check (PRIMA del pricing, gestito direttamente)
   const isSupportIntent = detectSupportIntent(message);
   if (isSupportIntent) {
@@ -242,7 +348,7 @@ export async function supervisorRouter(
           message,
           userId,
           userRole: workerRole,
-          workspaceId: wsId,
+          workspaceId: effectiveWsId,
         },
         logger
       );
@@ -294,7 +400,7 @@ export async function supervisorRouter(
           message,
           userId,
           userRole: workerRole,
-          workspaceId: wsId,
+          workspaceId: effectiveWsId,
         },
         logger
       );
@@ -345,7 +451,7 @@ export async function supervisorRouter(
           message,
           userId,
           userRole: workerRole,
-          workspaceId: wsId,
+          workspaceId: effectiveWsId,
         },
         logger
       );
@@ -476,10 +582,12 @@ export async function supervisorRouter(
       agent_context: {
         session_id: sessionId,
         conversation_history: [new HumanMessage(message)],
-        user_role: (actingContext.target.role || 'user') as AccountType,
-        is_impersonating: actingContext.isImpersonating,
-        acting_context: actingContext,
+        user_role: (effectiveActingContext.target.role || 'user') as AccountType,
+        is_impersonating: effectiveActingContext.isImpersonating,
+        acting_context: effectiveActingContext,
       },
+      // Delegazione: contesto request-scoped
+      delegation_context: delegationContext,
     };
 
     // P3 Task 1: Se stato esistente, aggiungi nuovo messaggio + AGGIORNA SEMPRE agent_context
@@ -491,10 +599,11 @@ export async function supervisorRouter(
       initialState.agent_context = {
         session_id: sessionId,
         conversation_history: initialState.messages!,
-        user_role: (actingContext.target.role || 'user') as AccountType,
-        is_impersonating: actingContext.isImpersonating,
-        acting_context: actingContext,
+        user_role: (effectiveActingContext.target.role || 'user') as AccountType,
+        is_impersonating: effectiveActingContext.isImpersonating,
+        acting_context: effectiveActingContext,
       };
+      initialState.delegation_context = delegationContext;
     }
 
     // P3 Task 1: Crea checkpointer e graph con persistenza

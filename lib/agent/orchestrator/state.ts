@@ -5,6 +5,7 @@ import { AccountType } from '@/lib/safe-auth';
 import { ActingContext } from '@/lib/safe-auth';
 import { CourierServiceType, Shipment } from '@/types/shipments';
 import { BaseMessage } from '@langchain/core/messages';
+import type { DelegationContext } from '@/lib/ai/delegation-context';
 
 export interface AgentState {
   // Messaggi della conversazione (per debugging e chat history)
@@ -240,4 +241,13 @@ export interface AgentState {
    * Contiene mittente, destinatario, pacco, opzioni prezzo.
    */
   shipment_creation_summary?: string;
+
+  // ===== DELEGAZIONE "PER CONTO DI" =====
+
+  /**
+   * Contesto delegazione attiva per il messaggio corrente.
+   * Request-scoped: vale solo per questo messaggio (stateless).
+   * Popolato dal supervisor-router quando il reseller usa "per conto di".
+   */
+  delegation_context?: DelegationContext;
 }
