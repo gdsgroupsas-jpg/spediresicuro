@@ -17,18 +17,25 @@ import {
   getPendingQuotes,
 } from '@/lib/crm/crm-data-service';
 import type { CrmContext } from '@/types/crm-intelligence';
+import { getUserMemory, type UserMemory } from '@/lib/ai/user-memory';
 
 export interface UserContext {
   userId: string;
   userRole: 'admin' | 'user' | 'reseller';
   userName: string;
   recentShipments: any[];
-  walletBalance?: number; // ⚠️ NUOVO: Wallet balance
+  walletBalance?: number;
   monthlyStats?: {
     totalShipments: number;
     totalRevenue: number;
     totalMargin: number;
     avgMargin: number;
+  };
+  memory?: {
+    defaultSender?: UserMemory['defaultSender'];
+    preferredCouriers?: string[];
+    communicationStyle?: UserMemory['communicationStyle'];
+    notes?: string;
   };
 }
 
@@ -92,6 +99,22 @@ export async function buildContext(
         walletErr.message
       );
       // Continua anche se il wallet fallisce
+    }
+
+    // 0.5. Recupera memoria utente (user-scoped, non workspace-scoped)
+    // communicationStyle e' globale utente, preferredCouriers personali
+    try {
+      const memory = await getUserMemory(userId);
+      if (memory) {
+        context.user.memory = {
+          defaultSender: memory.defaultSender,
+          preferredCouriers: memory.preferredCouriers,
+          communicationStyle: memory.communicationStyle,
+          notes: memory.notes,
+        };
+      }
+    } catch {
+      // Non critico — non rompere buildContext per errore memory
     }
 
     // 1. Recupera spedizioni recenti dell'utente (ultime 10, workspace-scoped)
@@ -269,6 +292,30 @@ export function formatContextForPrompt(context: {
   // ⚠️ NUOVO: Mostra wallet balance se disponibile
   if (context.user.walletBalance !== undefined) {
     prompt += `- Saldo Wallet: €${context.user.walletBalance.toFixed(2)}\n`;
+  }
+
+  // Preferenze utente da memory
+  if (context.user.memory) {
+    const mem = context.user.memory;
+    const memParts: string[] = [];
+
+    if (mem.defaultSender?.name) {
+      const senderParts = [mem.defaultSender.name];
+      if (mem.defaultSender.city) senderParts.push(mem.defaultSender.city);
+      memParts.push(`- Mittente predefinito: ${senderParts.join(', ')}`);
+    }
+
+    if (mem.preferredCouriers && mem.preferredCouriers.length > 0) {
+      memParts.push(`- Corrieri preferiti: ${mem.preferredCouriers.join(', ')}`);
+    }
+
+    if (mem.notes) {
+      memParts.push(`- Note: ${mem.notes}`);
+    }
+
+    if (memParts.length > 0) {
+      prompt += `\n**PREFERENZE UTENTE:**\n${memParts.join('\n')}\n`;
+    }
   }
 
   if (context.user.recentShipments.length > 0) {
