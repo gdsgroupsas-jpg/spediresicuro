@@ -381,3 +381,54 @@ export function detectCancelCreationIntent(message: string): boolean {
   const lowerMessage = message.toLowerCase().trim();
   return CANCEL_CREATION_KEYWORDS.some((kw) => lowerMessage.includes(kw));
 }
+
+// ============================================
+// DELEGATION INTENT DETECTION ("per conto di")
+// ============================================
+
+/**
+ * Pattern per rilevare delegazione: il reseller vuole operare
+ * per conto di un sub-client. Scope: solo messaggio corrente (stateless).
+ */
+const DELEGATION_PATTERNS = [
+  /per\s+conto\s+di\s+(.+?)(?:\s*[,.:;!?]|\s+(?:crea|fai|spedisci|prenota|manda|invia|voglio|vorrei|devo|calcola|quanto))/i,
+  /per\s+conto\s+di\s+(.+)/i,
+  /per\s+il\s+cliente\s+(.+?)(?:\s*[,.:;!?]|\s+(?:crea|fai|spedisci|prenota|manda|invia|voglio|vorrei|devo|calcola|quanto))/i,
+  /per\s+il\s+cliente\s+(.+)/i,
+  /a\s+nome\s+di\s+(.+?)(?:\s*[,.:;!?]|\s+(?:crea|fai|spedisci|prenota|manda|invia|voglio|vorrei|devo|calcola|quanto))/i,
+  /a\s+nome\s+di\s+(.+)/i,
+  /workspace\s+di\s+(.+?)(?:\s*[,.:;!?]|\s+(?:crea|fai|spedisci|prenota|manda|invia|voglio|vorrei|devo|calcola|quanto))/i,
+  /workspace\s+di\s+(.+)/i,
+];
+
+/**
+ * Rileva se il messaggio contiene un intento di delegazione.
+ * Il reseller vuole operare per conto di un sub-client.
+ */
+export function detectDelegationIntent(message: string): boolean {
+  if (!message?.trim()) return false;
+  return DELEGATION_PATTERNS.some((pattern) => pattern.test(message));
+}
+
+/**
+ * Estrae il nome del target della delegazione dal messaggio.
+ * Ritorna il nome del sub-client o null se non trovato.
+ */
+export function extractDelegationTarget(message: string): string | null {
+  if (!message?.trim()) return null;
+
+  for (const pattern of DELEGATION_PATTERNS) {
+    const match = message.match(pattern);
+    if (match?.[1]) {
+      // Pulisci il nome: rimuovi spazi extra, punteggiatura trailing
+      return (
+        match[1]
+          .trim()
+          .replace(/[,.:;!?]+$/, '')
+          .trim() || null
+      );
+    }
+  }
+
+  return null;
+}
