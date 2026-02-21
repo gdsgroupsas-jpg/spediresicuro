@@ -207,12 +207,13 @@ export async function addWalletCredit(userId: string, amount: number) {
 
 ## Changelog
 
-| Date       | Version | Changes         | Author   |
-| ---------- | ------- | --------------- | -------- |
-| 2026-01-12 | 1.0.0   | Initial version | AI Agent |
+| Date       | Version | Changes                                                                                                                        | Author   |
+| ---------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ | -------- |
+| 2026-02-21 | 1.1.0   | Fix: audit_metadata → metadata (11 file). Tutti gli insert usavano colonna inesistente, zero log registrati. Fix RPC fallback. | AI Agent |
+| 2026-01-12 | 1.0.0   | Initial version                                                                                                                | AI Agent |
 
 ---
 
-_Last Updated: 2026-01-12_  
+_Last Updated: 2026-02-21_  
 _Status: 🟢 Active_  
 _Maintainer: Engineering Team_

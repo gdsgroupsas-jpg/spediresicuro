@@ -6,7 +6,7 @@ owner: engineering
 status: active
 source_of_truth: true
 created: 2026-02-05
-updated: 2026-02-09
+updated: 2026-02-10
 ---
 
 # Workspace Adaptive UI & Team Management
@@ -180,12 +180,13 @@ File: `app/dashboard/team/page.tsx`
 | File Test                                                  | Descrizione            | N. Test |
 | ---------------------------------------------------------- | ---------------------- | ------- |
 | `tests/unit/workspace-ui.test.ts`                          | Hook useWorkspaceUI    | 20      |
-| `tests/unit/delete-subadmin.test.ts`                       | Eliminazione sub-admin | 5       |
-| `tests/unit/workspace-superadmin-ordering.test.ts`         | Ordinamento workspace  | 5       |
-| `tests/integration/workspace-hierarchy-visibility.test.ts` | Visibilita gerarchica  | 13      |
+| `tests/unit/workspace-switcher-enterprise.test.ts`         | Switcher enterprise    | 33      |
 | `tests/unit/workspace-safety-banner.test.ts`               | Safety banner logica   | 12      |
+| `tests/unit/workspace-superadmin-ordering.test.ts`         | Ordinamento workspace  | 5       |
+| `tests/unit/delete-subadmin.test.ts`                       | Eliminazione sub-admin | 5       |
+| `tests/integration/workspace-hierarchy-visibility.test.ts` | Visibilita gerarchica  | 13      |
 
-**Totale:** 55 test dedicati
+**Totale:** 88 test dedicati
 
 ---
 
@@ -219,18 +220,35 @@ Componente dropdown ispirato a Slack/Linear per switchare tra workspace. Il rese
 
 **File:** `components/workspace-switcher.tsx`
 
-### Funzionalita
+### Funzionalita (Enterprise-Level Redesign v2.0)
 
-| Funzione            | Descrizione                                                     |
-| ------------------- | --------------------------------------------------------------- |
-| Switch workspace    | Dropdown con lista workspace accessibili                        |
-| Raggruppamento      | "Il mio workspace" vs "Workspace clienti"                       |
-| Badge tipo          | Platform (viola), Reseller (blu), Client (verde), Admin (rosso) |
-| Indicatore contesto | Bordo verde + "Operando come cliente" quando in child workspace |
-| Torna indietro      | Bottone rapido "Torna a [mio workspace]" quando in child        |
-| Saldo wallet        | Footer dropdown mostra saldo wallet del workspace corrente      |
-| Compact mode        | Prop `compact` per mostrare solo icona (sidebar collassata)     |
-| Keyboard            | Chiudi con Escape, click outside                                |
+| Funzione         | Descrizione                                           |
+| ---------------- | ----------------------------------------------------- |
+| Switch workspace | Dropdown enterprise con lista workspace accessibili   |
+| Raggruppamento   | "Il mio workspace" vs "Workspace clienti"             |
+| Avatar iniziali  | Violet (platform), blue (reseller), emerald (client)  |
+| Badge tipo       | Con ring-1, colore per tipo e admin override          |
+| Ricerca          | Search bar con 5+ workspace (SEARCH_THRESHOLD = 5)    |
+| Keyboard nav     | ArrowDown/Up wrap-around, Enter, Escape               |
+| Contesto         | "Workspace cliente" + bottone "Torna a mio workspace" |
+| Saldo wallet     | Footer dropdown + trigger mostrano saldo corrente     |
+| Loading skeleton | Skeleton animato durante caricamento                  |
+
+### Architettura UX: Posizione Unica per Switch
+
+**Principio:** Un solo punto di switch, nessuna duplicazione.
+
+| Componente                    | Ruolo                                          |
+| ----------------------------- | ---------------------------------------------- |
+| Dashboard Context Bar         | Posizione autorevole per switch + saldo wallet |
+| Sidebar (indicatore compatto) | Solo visualizzazione passiva (avatar + nome)   |
+
+La context bar nel dashboard (`app/dashboard/page.tsx`) contiene:
+
+- **Sinistra:** `<WorkspaceSwitcher />` interattivo
+- **Destra:** Saldo wallet del workspace corrente
+
+La sidebar (`components/dashboard-sidebar.tsx`) mostra solo un indicatore compatto statico (non cliccabile) con avatar colorato, nome workspace e organizzazione.
 
 ### Sicurezza
 
@@ -242,11 +260,10 @@ Componente dropdown ispirato a Slack/Linear per switchare tra workspace. Il rese
 
 Quando un reseller entra in un workspace client:
 
-1. Icona switcher diventa verde (da arancione)
-2. Subtitle cambia in "Operando come cliente"
-3. Appare bottone "Torna a [nome workspace reseller]"
-4. Bordo verde intorno allo switcher
-5. Tutta la dashboard mostra i dati del workspace client
+1. Testo subtitle cambia in "Workspace cliente"
+2. Appare bottone "Torna a [nome workspace reseller]"
+3. Safety indicators si attivano (vedi sezione dedicata)
+4. Tutta la dashboard mostra i dati del workspace client
 
 ### Safety Indicators (Workspace Altrui)
 
@@ -267,11 +284,71 @@ const isInForeignWorkspace = workspace?.role !== 'owner' && workspace?.workspace
 **File:** `components/dashboard-nav.tsx`, `components/dashboard-sidebar.tsx`
 **Test:** `tests/unit/workspace-safety-banner.test.ts` (12 test)
 
-### Integrazione Sidebar
+### Integrazione Dashboard
 
-**File:** `components/dashboard-sidebar.tsx`
+**Context Bar:** `app/dashboard/page.tsx` — Workspace switcher interattivo + saldo wallet
 
-Lo switcher e posizionato in cima alla sidebar, sopra la navigazione. La sidebar adatta i menu in base al workspace corrente tramite `useWorkspaceUI()`.
+**Sidebar:** `components/dashboard-sidebar.tsx` — Indicatore compatto statico (avatar + nome + org, non interattivo). La sidebar adatta i menu in base al workspace corrente tramite `useWorkspaceUI()`.
+
+---
+
+## Team Invite System
+
+### Overview
+
+Il sistema di invito membri permette a owner/admin di invitare nuovi utenti nel workspace via email. L'invito crea un token crittografico con scadenza 7 giorni.
+
+**Pagina:** `/dashboard/workspace/team`
+**API:** `app/api/workspaces/[workspaceId]/invite/route.ts`
+**Wizard:** `components/team-setup-wizard.tsx`
+
+### Flusso Invito
+
+1. Owner/admin apre pagina Team → wizard appare automaticamente se e' solo nel workspace
+2. Compila email + ruolo (operator/admin/viewer) → submit
+3. API crea record in `workspace_invitations` con token crypto-random
+4. Email inviata via Resend con link di accettazione
+5. Wizard mostra risultato: "Invito Inviato!" o "Invito Creato!" (se email fallisce)
+6. Destinatario clicca link → accettazione via `/api/invite/[token]`
+7. Invitante riceve email di conferma accettazione
+
+### Wizard Dual Mode
+
+| Modalita | Trigger                             | Step iniziale             | Back button |
+| -------- | ----------------------------------- | ------------------------- | ----------- |
+| Welcome  | Auto (owner solo, 0 inviti pending) | welcome → invite → result | Visibile    |
+| Invite   | Click bottone "Invita Membro"       | invite → result           | Nascosto    |
+
+### Email Template Invito
+
+**File:** `lib/email/resend.ts` → `sendWorkspaceInvitationEmail()`
+
+Design email-safe (no CSS gradient, no box-shadow):
+
+- Header bianco con logo `logo-email.jpg` (7KB, ottimizzato da 5.5MB)
+- Preheader text per anteprima inbox Gmail/Outlook
+- Card dettagli: organizzazione, workspace, ruolo (chip style)
+- CTA button table-based (bulletproof per Outlook): "ACCETTA INVITO"
+- Alert scadenza con border-left accent
+- MSO conditional comments per Outlook desktop
+
+**Logo email:** `public/brand/logo/logo-email.jpg` — 440x115px, 7KB
+
+### Feedback Email Fallita
+
+Se Resend non riesce a inviare l'email (es. rate limit), il wizard mostra:
+
+- Titolo "Invito Creato!" (invece di "Invito Inviato!")
+- Warning amber con istruzioni per condivisione link manuale
+- Link copiabile sempre presente
+
+**Logica parsing:** `const emailSent = data.email_sent !== false;`
+
+### Test
+
+| File                                   | Descrizione            | N. Test |
+| -------------------------------------- | ---------------------- | ------- |
+| `tests/unit/team-setup-wizard.test.ts` | Wizard logica completa | 42      |
 
 ---
 
@@ -288,8 +365,11 @@ Questa implementazione segue i pattern di:
 
 ## Changelog
 
-| Data       | Versione | Descrizione                                            |
-| ---------- | -------- | ------------------------------------------------------ |
-| 2026-02-10 | 1.2.0    | Safety indicators: banner, bordo sidebar, header amber |
-| 2026-02-09 | 1.1.0    | Workspace Switcher + reseller child workspace nav      |
-| 2026-02-05 | 1.0.0    | Adaptive UI + Delete sub-admin + Ordering              |
+| Data       | Versione | Descrizione                                                       |
+| ---------- | -------- | ----------------------------------------------------------------- |
+| 2026-02-21 | 3.0.0    | Team invite system: wizard, email template, audit fix             |
+| 2026-02-10 | 2.0.0    | Enterprise switcher: avatar, search, keyboard nav, context bar    |
+| 2026-02-10 | 2.0.1    | Cleanup: rimozione duplicazioni, Doctor AI fake, metriche inutili |
+| 2026-02-10 | 1.2.0    | Safety indicators: banner, bordo sidebar, header amber            |
+| 2026-02-09 | 1.1.0    | Workspace Switcher + reseller child workspace nav                 |
+| 2026-02-05 | 1.0.0    | Adaptive UI + Delete sub-admin + Ordering                         |
