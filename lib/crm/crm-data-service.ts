@@ -32,7 +32,7 @@ import type {
  * Panoramica pipeline: conteggi per stato, score medio, valore
  */
 export async function getPipelineSummary(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId?: string
 ): Promise<PipelineSummary> {
   const isAdmin = userRole === 'admin';
@@ -40,7 +40,7 @@ export async function getPipelineSummary(
   const selectFields = 'status, lead_score, estimated_monthly_volume';
 
   let query = supabaseAdmin.from(table).select(selectFields);
-  if (!isAdmin && workspaceId) {
+  if (workspaceId) {
     query = query.eq('workspace_id', workspaceId);
   }
 
@@ -107,7 +107,7 @@ export interface HotEntity {
  * Entita con score >= 70, ordinate per score desc
  */
 export async function getHotEntities(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId?: string,
   limit = 5
 ): Promise<HotEntity[]> {
@@ -122,7 +122,7 @@ export async function getHotEntities(
     .order('lead_score', { ascending: false })
     .limit(limit);
 
-  if (!isAdmin && workspaceId) {
+  if (workspaceId) {
     query = query.eq('workspace_id', workspaceId);
   }
 
@@ -161,7 +161,7 @@ export interface StaleEntity {
  * Entita senza contatto recente (basato su soglie health-rules)
  */
 export async function getStaleEntities(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId?: string
 ): Promise<StaleEntity[]> {
   const isAdmin = userRole === 'admin';
@@ -172,7 +172,7 @@ export async function getStaleEntities(
     .select('id, company_name, status, lead_score, last_contact_at, updated_at, created_at')
     .not('status', 'in', '("won","lost")');
 
-  if (!isAdmin && workspaceId) {
+  if (workspaceId) {
     query = query.eq('workspace_id', workspaceId);
   }
 
@@ -232,7 +232,7 @@ export async function getStaleEntities(
  * Alert salute CRM — delega a evaluateHealthRules()
  */
 export async function getHealthAlerts(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId?: string
 ): Promise<CrmAlert[]> {
   const isAdmin = userRole === 'admin';
@@ -244,7 +244,7 @@ export async function getHealthAlerts(
     .select('id, company_name, status, lead_score, created_at, last_contact_at, updated_at')
     .not('status', 'in', '("won")');
 
-  if (!isAdmin && workspaceId) {
+  if (workspaceId) {
     query = query.eq('workspace_id', workspaceId);
   }
 
@@ -268,7 +268,7 @@ export async function getHealthAlerts(
  * Ricerca lead/prospect per nome, email, settore, stato
  */
 export async function searchEntities(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   queryStr: string,
   filters?: CrmSearchFilters,
   workspaceId?: string
@@ -282,7 +282,7 @@ export async function searchEntities(
     .select('id, company_name, contact_name, email, status, lead_score, sector, last_contact_at')
     .limit(20);
 
-  if (!isAdmin && workspaceId) {
+  if (workspaceId) {
     query = query.eq('workspace_id', workspaceId);
   }
 
@@ -334,7 +334,7 @@ export async function searchEntities(
  * Dettaglio completo di un'entita con timeline eventi recenti
  */
 export async function getEntityDetail(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   entityId?: string,
   searchName?: string,
   workspaceId?: string
@@ -348,7 +348,7 @@ export async function getEntityDetail(
   // Trova entita
   let query = supabaseAdmin.from(table).select('*');
 
-  if (!isAdmin && workspaceId) {
+  if (workspaceId) {
     query = query.eq('workspace_id', workspaceId);
   }
 
@@ -381,13 +381,14 @@ export async function getEntityDetail(
 
   // Per reseller, carica preventivi collegati
   let pendingQuotes: PendingQuoteSummary[] | undefined;
-  if (!isAdmin && workspaceId) {
+  if (workspaceId) {
     const linkedIds = (r.linked_quote_ids as string[]) || [];
     if (linkedIds.length > 0) {
       const { data: quotes } = await supabaseAdmin
         .from('commercial_quotes')
         .select('id, prospect_company, status, expires_at, margin_percent, carrier_code')
         .in('id', linkedIds)
+        .eq('workspace_id', workspaceId) // Defense-in-depth: filtra per workspace
         .in('status', ['sent', 'negotiating', 'draft']);
 
       if (quotes) {
@@ -439,7 +440,7 @@ export async function getEntityDetail(
  * Combina: health alerts + hot entities non contattati + quote in scadenza.
  */
 export async function getTodayActions(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId?: string
 ): Promise<TodayAction[]> {
   const entityType = userRole === 'admin' ? 'lead' : 'prospect';
@@ -524,7 +525,7 @@ export async function getTodayActions(
  * Metriche di conversione (tasso, tempo medio, trend)
  */
 export async function getConversionMetrics(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId?: string
 ): Promise<ConversionMetrics> {
   const isAdmin = userRole === 'admin';
@@ -534,7 +535,7 @@ export async function getConversionMetrics(
     .from(table)
     .select('status, lead_score, estimated_monthly_volume, created_at, converted_at, updated_at');
 
-  if (!isAdmin && workspaceId) {
+  if (workspaceId) {
     query = query.eq('workspace_id', workspaceId);
   }
 

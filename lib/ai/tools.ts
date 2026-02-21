@@ -17,6 +17,7 @@
 
 import { calculateOptimalPrice, PricingRequest } from './pricing-engine';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { getPriceListById, calculatePriceWithRules } from '@/lib/db/price-lists';
 import { calculatePriceFromList } from '@/lib/pricing/calculator';
 import { SUPPORT_TOOL_DEFINITIONS, executeSupportTool } from './tools/support-tools';
@@ -511,7 +512,7 @@ export const ANNE_TOOLS: ToolDefinition[] = [
 export async function executeTool(
   toolCall: ToolCall,
   userId: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId?: string
 ): Promise<{ success: boolean; result: any; error?: string }> {
   try {
@@ -607,7 +608,9 @@ export async function executeTool(
       case 'track_shipment': {
         const trackingNumber = toolCall.arguments.trackingNumber;
 
-        const { data: shipment, error } = await supabaseAdmin
+        // Usa workspaceQuery per isolamento multi-tenant
+        const trackDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        const { data: shipment, error } = await trackDb
           .from('shipments')
           .select('*, shipment_events(*)')
           .eq('tracking_number', trackingNumber)
@@ -621,8 +624,8 @@ export async function executeTool(
           };
         }
 
-        // Verifica che l'utente abbia accesso (se non admin, solo proprie spedizioni)
-        if (userRole !== 'admin' && shipment.user_id !== userId) {
+        // Verifica che l'utente abbia accesso (se non admin/reseller, solo proprie spedizioni)
+        if (userRole === 'user' && shipment.user_id !== userId) {
           return {
             success: false,
             result: null,
@@ -645,6 +648,7 @@ export async function executeTool(
       }
 
       case 'analyze_business_health': {
+        // Solo admin (superadmin) — reseller e user non hanno accesso
         if (userRole !== 'admin') {
           return {
             success: false,
@@ -676,10 +680,12 @@ export async function executeTool(
             periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
         }
 
-        const { data: shipments, error } = await supabaseAdmin
+        // Scoped per workspace — admin vede solo il proprio workspace
+        const healthDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        const { data: shipments, error } = (await healthDb
           .from('shipments')
           .select('final_price, base_price, created_at, carrier')
-          .gte('created_at', periodStart.toISOString());
+          .gte('created_at', periodStart.toISOString())) as { data: any[] | null; error: any };
 
         if (error) {
           return {
@@ -714,11 +720,11 @@ export async function executeTool(
           const previousPeriodStart = new Date(
             periodStart.getTime() - (now.getTime() - periodStart.getTime())
           );
-          const { data: previousShipments } = await supabaseAdmin
+          const { data: previousShipments } = (await healthDb
             .from('shipments')
             .select('final_price, base_price')
             .gte('created_at', previousPeriodStart.toISOString())
-            .lt('created_at', periodStart.toISOString());
+            .lt('created_at', periodStart.toISOString())) as { data: any[] | null };
 
           if (previousShipments) {
             const prevRevenue = previousShipments.reduce(
@@ -763,7 +769,9 @@ export async function executeTool(
         const hours = toolCall.arguments.hours || 24;
         const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-        let query = supabaseAdmin
+        // Scoped per workspace — admin vede solo log del proprio workspace
+        const logsDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        let query = logsDb
           .from('audit_logs')
           .select('*')
           .gte('created_at', since.toISOString())
@@ -872,7 +880,8 @@ export async function executeTool(
           priceList = await getPriceListById(priceListId);
         } else {
           // Cerca listino attivo per utente (e opzionalmente corriere)
-          const { data: lists } = await supabaseAdmin
+          const plDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+          const { data: lists } = await plDb
             .from('price_lists')
             .select('*')
             .eq('status', 'active')
@@ -956,7 +965,8 @@ export async function executeTool(
           toolCall.arguments;
 
         // Trova listini fornitore (master/supplier)
-        let query = supabaseAdmin
+        const supplierDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        let query = supplierDb
           .from('price_lists')
           .select('*, entries:price_list_entries(*)')
           .eq('status', 'active')
@@ -1040,7 +1050,7 @@ export async function executeTool(
         const includeInactive = toolCall.arguments.includeInactive || false;
 
         // Verifica permessi: solo admin può vedere listini altri utenti
-        if (targetUserId !== userId && userRole !== 'admin') {
+        if (targetUserId !== userId && userRole === 'user') {
           return {
             success: false,
             result: null,
@@ -1048,8 +1058,9 @@ export async function executeTool(
           };
         }
 
-        // Query listini assegnati
-        let query = supabaseAdmin
+        // Query listini assegnati (workspace-scoped)
+        const listDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        let query = listDb
           .from('price_lists')
           .select('*, courier:couriers(id, name, code)')
           .or(`assigned_to_user_id.eq.${targetUserId},list_type.eq.global`);
@@ -1069,17 +1080,17 @@ export async function executeTool(
         }
 
         // Cerca anche assegnazioni tramite price_list_assignments
-        const { data: assignments } = await supabaseAdmin
+        const { data: assignments } = (await listDb
           .from('price_list_assignments')
           .select('price_list_id')
           .eq('user_id', targetUserId)
-          .is('revoked_at', null);
+          .is('revoked_at', null)) as { data: any[] | null };
 
         // Recupera listini da assignments
         let assignedLists: any[] = [];
         if (assignments && assignments.length > 0) {
           const assignedIds = assignments.map((a) => a.price_list_id);
-          const { data: additionalLists } = await supabaseAdmin
+          const { data: additionalLists } = await listDb
             .from('price_lists')
             .select('*, courier:couriers(id, name, code)')
             .in('id', assignedIds);
@@ -1135,8 +1146,9 @@ export async function executeTool(
 
         const results: any[] = [];
 
-        // 1. Trova listino/i personalizzato/i dell'utente
-        let customListsQuery = supabaseAdmin
+        // 1. Trova listino/i personalizzato/i dell'utente (workspace-scoped)
+        const compareDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        let customListsQuery = compareDb
           .from('price_lists')
           .select('*, courier:couriers(id, name, code)')
           .eq('status', 'active')
@@ -1144,7 +1156,7 @@ export async function executeTool(
           .or(`assigned_to_user_id.eq.${userId},list_type.eq.global`);
 
         if (priceListId) {
-          customListsQuery = supabaseAdmin
+          customListsQuery = compareDb
             .from('price_lists')
             .select('*, courier:couriers(id, name, code)')
             .eq('id', priceListId);
@@ -1250,7 +1262,7 @@ export async function executeTool(
       case 'check_wallet_status':
       case 'diagnose_shipment_issue':
       case 'escalate_to_human': {
-        return await executeSupportTool(toolCall, userId, userRole);
+        return await executeSupportTool(toolCall, userId, userRole, workspaceId);
       }
 
       // ═══════════════════════════════════════════════════════════

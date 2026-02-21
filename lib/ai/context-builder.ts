@@ -20,7 +20,7 @@ import type { CrmContext } from '@/types/crm-intelligence';
 
 export interface UserContext {
   userId: string;
-  userRole: 'admin' | 'user';
+  userRole: 'admin' | 'user' | 'reseller';
   userName: string;
   recentShipments: any[];
   walletBalance?: number; // ⚠️ NUOVO: Wallet balance
@@ -50,7 +50,7 @@ export interface BusinessContext {
  */
 export async function buildContext(
   userId: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   userName: string,
   workspaceId?: string
 ): Promise<{
@@ -70,16 +70,21 @@ export async function buildContext(
   };
 
   try {
-    // 0. Recupera wallet_balance dell'utente
+    // 0. Recupera wallet_balance v2 (da workspaces, source of truth)
     try {
-      const { data: userData, error: walletError } = await supabaseAdmin
-        .from('users')
-        .select('wallet_balance')
-        .eq('id', userId)
-        .single();
+      if (workspaceId) {
+        const { data: wsData, error: walletError } = await supabaseAdmin
+          .from('workspaces')
+          .select('wallet_balance')
+          .eq('id', workspaceId)
+          .single();
 
-      if (!walletError && userData) {
-        context.user.walletBalance = parseFloat(userData.wallet_balance || '0') || 0;
+        if (!walletError && wsData) {
+          context.user.walletBalance = parseFloat(wsData.wallet_balance || '0') || 0;
+        }
+      } else {
+        // Fallback: nessun workspace disponibile, saldo non mostrato
+        context.user.walletBalance = 0;
       }
     } catch (walletErr: any) {
       console.warn(
@@ -89,13 +94,14 @@ export async function buildContext(
       // Continua anche se il wallet fallisce
     }
 
-    // 1. Recupera spedizioni recenti dell'utente (ultime 10)
-    const { data: shipments, error: shipmentsError } = await supabaseAdmin
+    // 1. Recupera spedizioni recenti dell'utente (ultime 10, workspace-scoped)
+    const ctxDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+    const { data: shipments, error: shipmentsError } = (await ctxDb
       .from('shipments')
       .select('*')
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .limit(10);
+      .limit(10)) as { data: any[] | null; error: any };
 
     if (!shipmentsError && shipments) {
       context.user.recentShipments = shipments.map((s) => ({
@@ -110,16 +116,17 @@ export async function buildContext(
       }));
     }
 
-    // 2. Se admin, aggiungi statistiche business
-    if (userRole === 'admin') {
+    // 2. Se admin o reseller, aggiungi statistiche business (workspace-scoped)
+    if (userRole === 'admin' || userRole === 'reseller') {
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      // Statistiche mese corrente
-      const { data: monthlyData, error: monthlyError } = await supabaseAdmin
+      // Statistiche mese corrente (workspace-scoped)
+      const statsDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+      const { data: monthlyData, error: monthlyError } = (await statsDb
         .from('shipments')
         .select('final_price, base_price, created_at')
-        .gte('created_at', monthStart.toISOString());
+        .gte('created_at', monthStart.toISOString())) as { data: any[] | null; error: any };
 
       if (!monthlyError && monthlyData) {
         const totalRevenue = monthlyData.reduce(
@@ -137,11 +144,11 @@ export async function buildContext(
           avgMargin: Math.round(avgMargin * 100) / 100,
         };
 
-        // Top corrieri
-        const { data: courierStats } = await supabaseAdmin
+        // Top corrieri (workspace-scoped)
+        const { data: courierStats } = (await statsDb
           .from('shipments')
           .select('carrier, final_price')
-          .gte('created_at', monthStart.toISOString());
+          .gte('created_at', monthStart.toISOString())) as { data: any[] | null };
 
         if (courierStats) {
           const courierMap = new Map<string, { shipments: number; revenue: number }>();
@@ -189,15 +196,16 @@ export async function buildContext(
         // Non critico
       }
 
-      // Errori di sistema recenti (ultime 24h)
+      // Errori di sistema recenti (ultime 24h, workspace-scoped)
       const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const { data: errors, error: errorsError } = await supabaseAdmin
+      const logsDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+      const { data: errors, error: errorsError } = (await logsDb
         .from('audit_logs')
         .select('*')
         .in('severity', ['error', 'critical'])
         .gte('created_at', yesterday.toISOString())
         .order('created_at', { ascending: false })
-        .limit(10);
+        .limit(10)) as { data: any[] | null; error: any };
 
       if (!errorsError && errors) {
         const criticalCount = errors.filter((e: any) => e.severity === 'critical').length;

@@ -22,6 +22,7 @@ import {
   type CaseContext,
 } from '@/lib/ai/case-learning';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { defaultLogger, type ILogger } from '../logger';
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -142,7 +143,8 @@ export function detectConfirmation(message: string): 'confirm' | 'cancel' | null
 export interface SupportWorkerInput {
   message: string;
   userId: string;
-  userRole: 'admin' | 'user';
+  userRole: 'admin' | 'user' | 'reseller';
+  workspaceId?: string;
 }
 
 export interface SupportWorkerResult {
@@ -184,7 +186,7 @@ async function _supportWorkerInternal(
   input: SupportWorkerInput,
   logger: ILogger
 ): Promise<SupportWorkerResult> {
-  const { message, userId, userRole } = input;
+  const { message, userId, userRole, workspaceId } = input;
   const toolsUsed: string[] = [];
 
   logger.log('🎧 [Support Worker] Avvio gestione supporto');
@@ -200,7 +202,8 @@ async function _supportWorkerInternal(
         const result = await executeTool(
           { name: pendingAction.type, arguments: { ...pendingAction.params, confirmed: true } },
           userId,
-          userRole
+          userRole,
+          workspaceId
         );
         toolsUsed.push(pendingAction.type);
 
@@ -247,14 +250,23 @@ async function _supportWorkerInternal(
     }
   }
 
-  // Step 2: Trova spedizioni dell'utente (ultime 5 attive)
-  const { data: recentShipments } = await supabaseAdmin
+  // Step 2: Trova spedizioni dell'utente (ultime 5 attive, workspace-scoped)
+  interface RecentShipment {
+    id: string;
+    tracking_number: string | null;
+    status: string;
+    carrier: string | null;
+    created_at: string;
+    recipient_name: string | null;
+  }
+  const shipDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+  const { data: recentShipments } = (await shipDb
     .from('shipments')
     .select('id, tracking_number, status, carrier, created_at, recipient_name')
     .eq('user_id', userId)
     .neq('status', 'delivered')
     .order('created_at', { ascending: false })
-    .limit(5);
+    .limit(5)) as { data: RecentShipment[] | null };
 
   // Step 3: Estrai tracking number dal messaggio se presente
   // Valida prima che il tracking appartenga all'utente (pre-check per UX migliore)
@@ -262,8 +274,8 @@ async function _supportWorkerInternal(
   let targetShipment = null;
 
   if (trackingMatch) {
-    // Pre-verifica: il tracking appartiene all'utente?
-    const { data: ownedShipment } = await supabaseAdmin
+    // Pre-verifica: il tracking appartiene all'utente? (workspace-scoped)
+    const { data: ownedShipment } = await shipDb
       .from('shipments')
       .select('id')
       .eq('tracking_number', trackingMatch[1])
@@ -274,7 +286,8 @@ async function _supportWorkerInternal(
       const trackResult = await executeTool(
         { name: 'get_shipment_status', arguments: { shipment_id: ownedShipment.id } },
         userId,
-        userRole
+        userRole,
+        workspaceId
       );
       toolsUsed.push('get_shipment_status');
 
@@ -290,7 +303,8 @@ async function _supportWorkerInternal(
     const trackResult = await executeTool(
       { name: 'get_shipment_status', arguments: { shipment_id: recentShipments[0].id } },
       userId,
-      userRole
+      userRole,
+      workspaceId
     );
     toolsUsed.push('get_shipment_status');
 
@@ -318,7 +332,8 @@ async function _supportWorkerInternal(
     const diagResult = await executeTool(
       { name: 'diagnose_shipment_issue', arguments: { description: message } },
       userId,
-      userRole
+      userRole,
+      workspaceId
     );
     toolsUsed.push('diagnose_shipment_issue');
 
@@ -401,7 +416,8 @@ async function _supportWorkerInternal(
     const walletResult = await executeTool(
       { name: 'check_wallet_status', arguments: {} },
       userId,
-      userRole
+      userRole,
+      workspaceId
     );
     if (walletResult.success) {
       ctx.walletBalance = walletResult.result?.saldo;
@@ -459,7 +475,8 @@ async function _supportWorkerInternal(
               arguments: { shipment_id: targetShipment.shipment?.id },
             },
             userId,
-            userRole
+            userRole,
+            workspaceId
           );
           toolsUsed.push('force_refresh_tracking');
 
@@ -490,7 +507,8 @@ async function _supportWorkerInternal(
               },
             },
             userId,
-            userRole
+            userRole,
+            workspaceId
           );
           toolsUsed.push('escalate_to_human');
 

@@ -59,7 +59,7 @@ export interface LocalCopilotInput {
   history?: Array<{ role: 'user' | 'assistant'; content: string }>;
   contextSummary?: string;
   userId: string;
-  userRole: 'admin' | 'user';
+  userRole: 'admin' | 'user' | 'reseller';
   isAdmin: boolean;
   actingContext?: ActingContext;
 }

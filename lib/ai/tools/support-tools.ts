@@ -207,24 +207,25 @@ export const SUPPORT_TOOL_DEFINITIONS: ToolDefinition[] = [
 export async function executeSupportTool(
   toolCall: ToolCall,
   userId: string,
-  userRole: 'admin' | 'user'
+  userRole: 'admin' | 'user' | 'reseller',
+  workspaceId?: string
 ): Promise<{ success: boolean; result: any; error?: string }> {
   try {
     switch (toolCall.name) {
       case 'get_shipment_status':
-        return await handleGetShipmentStatus(toolCall.arguments, userId, userRole);
+        return await handleGetShipmentStatus(toolCall.arguments, userId, userRole, workspaceId);
       case 'manage_hold':
-        return await handleManageHold(toolCall.arguments, userId);
+        return await handleManageHold(toolCall.arguments, userId, workspaceId);
       case 'cancel_shipment':
-        return await handleCancelShipment(toolCall.arguments, userId);
+        return await handleCancelShipment(toolCall.arguments, userId, workspaceId);
       case 'process_refund':
-        return await handleProcessRefund(toolCall.arguments, userId);
+        return await handleProcessRefund(toolCall.arguments, userId, workspaceId);
       case 'force_refresh_tracking':
-        return await handleForceRefreshTracking(toolCall.arguments, userId, userRole);
+        return await handleForceRefreshTracking(toolCall.arguments, userId, userRole, workspaceId);
       case 'check_wallet_status':
-        return await handleCheckWalletStatus(toolCall.arguments, userId);
+        return await handleCheckWalletStatus(toolCall.arguments, userId, workspaceId);
       case 'diagnose_shipment_issue':
-        return await handleDiagnoseShipmentIssue(toolCall.arguments, userId);
+        return await handleDiagnoseShipmentIssue(toolCall.arguments, userId, workspaceId);
       case 'escalate_to_human':
         return await handleEscalateToHuman(toolCall.arguments, userId);
       default:
@@ -247,7 +248,8 @@ export async function executeSupportTool(
 async function handleGetShipmentStatus(
   args: Record<string, any>,
   userId: string,
-  userRole: string
+  userRole: string,
+  workspaceId?: string
 ) {
   const { shipment_id, tracking_number } = args;
 
@@ -255,8 +257,8 @@ async function handleGetShipmentStatus(
     return { success: false, result: null, error: 'Serve shipment_id o tracking_number' };
   }
 
-  // Trova spedizione (con filtro user_id a livello DB per isolamento)
-  const wsId = await getUserWorkspaceId(userId);
+  // Trova spedizione (workspace-scoped per isolamento multi-tenant)
+  const wsId = workspaceId || (await getUserWorkspaceId(userId));
   const shipDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
   let query = shipDb.from('shipments').select('*');
   if (shipment_id) {
@@ -264,8 +266,8 @@ async function handleGetShipmentStatus(
   } else {
     query = query.eq('tracking_number', tracking_number);
   }
-  // Isolamento: utenti non-admin vedono solo le proprie spedizioni
-  if (userRole !== 'admin') {
+  // Isolamento: utenti normali vedono solo le proprie spedizioni
+  if (userRole === 'user') {
     query = query.eq('user_id', userId);
   }
 
@@ -283,8 +285,9 @@ async function handleGetShipmentStatus(
     // Tracking non disponibile, non blocchiamo
   }
 
-  // Giacenze attive
-  const { data: holds } = await supabaseAdmin
+  // Giacenze attive (workspace-scoped)
+  const holdsDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+  const { data: holds } = await holdsDb
     .from('shipment_holds')
     .select('*')
     .eq('shipment_id', shipment.id)
@@ -329,13 +332,15 @@ async function handleGetShipmentStatus(
   };
 }
 
-async function handleManageHold(args: Record<string, any>, userId: string) {
+async function handleManageHold(args: Record<string, any>, userId: string, workspaceId?: string) {
   let { hold_id, shipment_id, action_type, new_address, confirmed } = args;
 
   // Se abbiamo shipment_id ma non hold_id, trova la giacenza attiva
-  // Verifica ownership: la spedizione deve appartenere all'utente
+  // Verifica ownership: workspace-scoped per isolamento multi-tenant
+  const wsId = workspaceId || (await getUserWorkspaceId(userId));
+  const holdDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
   if (!hold_id && shipment_id) {
-    const { data: shipment } = await supabaseAdmin
+    const { data: shipment } = await holdDb
       .from('shipments')
       .select('id')
       .eq('id', shipment_id)
@@ -346,7 +351,7 @@ async function handleManageHold(args: Record<string, any>, userId: string) {
       return { success: false, result: null, error: 'Spedizione non trovata' };
     }
 
-    const { data: hold } = await supabaseAdmin
+    const { data: hold } = await holdDb
       .from('shipment_holds')
       .select('id')
       .eq('shipment_id', shipment_id)
@@ -421,11 +426,17 @@ async function handleManageHold(args: Record<string, any>, userId: string) {
   };
 }
 
-async function handleCancelShipment(args: Record<string, any>, userId: string) {
+async function handleCancelShipment(
+  args: Record<string, any>,
+  userId: string,
+  workspaceId?: string
+) {
   const { shipment_id, confirmed } = args;
 
-  // Verifica spedizione
-  const { data: shipment, error } = await supabaseAdmin
+  // Verifica spedizione (workspace-scoped)
+  const wsId = workspaceId || (await getUserWorkspaceId(userId));
+  const cancelDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+  const { data: shipment, error } = await cancelDb
     .from('shipments')
     .select('*')
     .eq('id', shipment_id)
@@ -501,10 +512,17 @@ async function handleCancelShipment(args: Record<string, any>, userId: string) {
   }
 }
 
-async function handleProcessRefund(args: Record<string, any>, userId: string) {
+async function handleProcessRefund(
+  args: Record<string, any>,
+  userId: string,
+  workspaceId?: string
+) {
   const { shipment_id, reason, confirmed } = args;
 
-  const { data: shipment, error } = await supabaseAdmin
+  // Workspace-scoped per isolamento multi-tenant
+  const wsId = workspaceId || (await getUserWorkspaceId(userId));
+  const refundDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+  const { data: shipment, error } = await refundDb
     .from('shipments')
     .select('*')
     .eq('id', shipment_id)
@@ -570,7 +588,7 @@ async function handleProcessRefund(args: Record<string, any>, userId: string) {
   }
 
   // v2: refund su workspaces.wallet_balance (source of truth)
-  const refundWorkspaceId = await getUserWorkspaceId(userId);
+  const refundWorkspaceId = wsId || (await getUserWorkspaceId(userId));
   const { error: walletError } = await supabaseAdmin.rpc('refund_wallet_balance_v2', {
     p_workspace_id: refundWorkspaceId,
     p_user_id: userId,
@@ -592,12 +610,15 @@ async function handleProcessRefund(args: Record<string, any>, userId: string) {
 async function handleForceRefreshTracking(
   args: Record<string, any>,
   userId: string,
-  userRole: string
+  userRole: string,
+  workspaceId?: string
 ) {
   const { shipment_id } = args;
 
-  // Verifica accesso
-  const { data: shipment } = await supabaseAdmin
+  // Verifica accesso (workspace-scoped)
+  const wsId = workspaceId || (await getUserWorkspaceId(userId));
+  const trackDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+  const { data: shipment } = await trackDb
     .from('shipments')
     .select('id, user_id, tracking_number')
     .eq('id', shipment_id)
@@ -607,7 +628,7 @@ async function handleForceRefreshTracking(
     return { success: false, result: null, error: 'Spedizione non trovata' };
   }
 
-  if (userRole !== 'admin' && shipment.user_id !== userId) {
+  if (userRole === 'user' && shipment.user_id !== userId) {
     return { success: false, result: null, error: 'Non autorizzato' };
   }
 
@@ -634,28 +655,39 @@ async function handleForceRefreshTracking(
   };
 }
 
-async function handleCheckWalletStatus(args: Record<string, any>, userId: string) {
+async function handleCheckWalletStatus(
+  args: Record<string, any>,
+  userId: string,
+  workspaceId?: string
+) {
   const includeTransactions = args.include_transactions !== false;
 
-  // Saldo
-  const { data: user } = await supabaseAdmin
-    .from('users')
-    .select('wallet_balance')
-    .eq('id', userId)
-    .single();
-
-  if (!user) {
-    return { success: false, result: null, error: 'Utente non trovato' };
+  // Saldo v2: legge da workspaces.wallet_balance (source of truth)
+  const wsId = workspaceId || (await getUserWorkspaceId(userId));
+  if (!wsId) {
+    return { success: false, result: null, error: 'Workspace non trovato per questo utente' };
   }
 
+  const { data: workspace } = await supabaseAdmin
+    .from('workspaces')
+    .select('wallet_balance')
+    .eq('id', wsId)
+    .single();
+
+  if (!workspace) {
+    return { success: false, result: null, error: 'Workspace non trovato' };
+  }
+
+  const balance = parseFloat(workspace.wallet_balance || '0');
   const result: any = {
-    saldo: parseFloat(user.wallet_balance || '0'),
-    messaggio: `Saldo attuale: €${parseFloat(user.wallet_balance || '0').toFixed(2)}`,
+    saldo: balance,
+    messaggio: `Saldo attuale: €${balance.toFixed(2)}`,
   };
 
-  // Transazioni recenti
+  // Transazioni recenti (workspace-scoped)
   if (includeTransactions) {
-    const { data: transactions } = await supabaseAdmin
+    const txDb = workspaceQuery(wsId);
+    const { data: transactions } = await txDb
       .from('wallet_transactions')
       .select('id, amount, type, description, created_at')
       .eq('user_id', userId)
@@ -673,27 +705,36 @@ async function handleCheckWalletStatus(args: Record<string, any>, userId: string
   return { success: true, result };
 }
 
-async function handleDiagnoseShipmentIssue(args: Record<string, any>, userId: string) {
+async function handleDiagnoseShipmentIssue(
+  args: Record<string, any>,
+  userId: string,
+  workspaceId?: string
+) {
   const { error_message } = args;
   const diagnosi: string[] = [];
   const problemi: string[] = [];
 
-  // 1. Check wallet
-  const { data: user } = await supabaseAdmin
-    .from('users')
-    .select('wallet_balance, role')
-    .eq('id', userId)
-    .single();
+  // 1. Check wallet v2 (da workspaces.wallet_balance)
+  const wsId = workspaceId || (await getUserWorkspaceId(userId));
+  let balance = 0;
+  if (wsId) {
+    const { data: workspace } = await supabaseAdmin
+      .from('workspaces')
+      .select('wallet_balance')
+      .eq('id', wsId)
+      .single();
+    balance = parseFloat(workspace?.wallet_balance || '0');
+  }
 
-  const balance = parseFloat(user?.wallet_balance || '0');
   if (balance <= 0) {
     problemi.push(`Saldo wallet insufficiente: €${balance.toFixed(2)}`);
   } else {
     diagnosi.push(`Saldo wallet OK: €${balance.toFixed(2)}`);
   }
 
-  // 2. Check listini attivi
-  const { data: priceLists } = await supabaseAdmin
+  // 2. Check listini attivi (workspace-scoped)
+  const diagDb = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+  const { data: priceLists } = await diagDb
     .from('price_lists')
     .select('id, name, courier_id, status')
     .or(`assigned_to_user_id.eq.${userId},list_type.eq.global`)

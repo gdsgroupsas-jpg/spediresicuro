@@ -113,12 +113,16 @@ export async function POST(request: NextRequest) {
     // Estrai dati utente da ActingContext (usa target, non actor)
     const userId = actingContext.target.id;
     const userEmail = actingContext.target.email || '';
-    // Converti UserRole a 'admin' | 'user' per buildContext
+    // Estrai workspace ID per isolamento multi-tenant
+    const wsId = actingContext.workspace?.id || null;
+    // Converti UserRole a 'admin' | 'user' | 'reseller' — MAI mappare reseller ad admin
     const targetRole = actingContext.target.role || 'user';
-    const userRole: 'admin' | 'user' =
-      targetRole === 'admin' || targetRole === 'superadmin' || targetRole === 'reseller'
+    const userRole: 'admin' | 'user' | 'reseller' =
+      targetRole === 'admin' || targetRole === 'superadmin'
         ? 'admin'
-        : 'user';
+        : targetRole === 'reseller'
+          ? 'reseller'
+          : 'user';
     const userName = actingContext.target.name || userEmail || 'Utente';
     const isAdmin = userRole === 'admin';
 
@@ -249,7 +253,7 @@ export async function POST(request: NextRequest) {
 
       if (!context) {
         try {
-          context = await buildContext(userId, userRole, userName);
+          context = await buildContext(userId, userRole, userName, wsId || undefined);
           // Cache contesto per 5 minuti
           if (context) {
             setCachedContext(contextCacheKey, context, 300);
@@ -481,7 +485,8 @@ export async function POST(request: NextRequest) {
                   arguments: toolCall.arguments || {},
                 },
                 userId,
-                userRole
+                userRole,
+                wsId || undefined
               );
 
               // ⚠️ Verifica che result sia valido
@@ -639,7 +644,7 @@ export async function POST(request: NextRequest) {
     // NOTA: user_id nel DB è OK (necessario per audit), ma non va nei log strutturati
     if (isAdmin || !isMock) {
       try {
-        const wsId = actingContext.workspace?.id || null;
+        // wsId gia estratto in alto dalla route
         const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
         await db.from('audit_logs').insert({
           user_id: userId,

@@ -140,9 +140,16 @@ describe('Guardian: usi diretti supabaseAdmin su tabelle multi-tenant', () => {
       }
 
       // Cerca pattern: supabaseAdmin.from('TABLE_MULTI_TENANT')
+      // NOTA: nel codebase le query sono spesso multilinea:
+      //   await supabaseAdmin
+      //     .from('shipments')
+      // Il regex deve gestire whitespace tra supabaseAdmin e .from()
       const violations: string[] = [];
       for (const table of WORKSPACE_SCOPED_TABLES) {
-        const pattern = new RegExp(`supabaseAdmin\\.from\\(['\`]${table}['\`]\\)`, 'g');
+        const pattern = new RegExp(
+          `supabaseAdmin\\s*\\.from\\(\\s*['\`]${table}['\`]\\s*\\)`,
+          'gs'
+        );
         const matches = code.match(pattern);
         if (matches) {
           violations.push(`supabaseAdmin.from('${table}') x${matches.length}`);
@@ -185,14 +192,39 @@ describe('Guardian: usi diretti supabaseAdmin su tabelle multi-tenant', () => {
     // Se il numero AUMENTA, qualcuno ha aggiunto nuovo codice senza usare workspaceQuery().
     //
     // REGOLA: il numero NON deve MAI aumentare.
-    // Baseline 2026-02-17: 0 (tutte le violazioni migrate a workspaceQuery)
-    // Obiettivo finale: 0 ✅ RAGGIUNTO
-    expect(totalViolations).toBeLessThanOrEqual(0);
+    // Baseline 2026-02-17: 0 (regex single-line — NON catturava violazioni multilinea!)
+    // Baseline 2026-02-21: 137 (fix regex multilinea — violazioni REALI ora visibili)
+    // Baseline 2026-02-21b: 127 (migrazione Anne AI — 10 violazioni rimosse da lib/ai/ e lib/agent/)
+    //   Rimanenti: actions/, app/api/, lib/ (non-Anne). Da ridurre progressivamente.
+    // Obiettivo finale: 0
+    expect(totalViolations).toBeLessThanOrEqual(127);
 
     // Salva snapshot per monitoraggio
     console.log(
       `\n📊 BASELINE ATTUALE: ${totalViolations} violazioni in ${allViolations.length} file`
     );
+  });
+
+  it('il guardian cattura violazioni multilinea (self-test)', () => {
+    // Questo test verifica che il guardian NON abbia un blind spot.
+    // Il pattern multilinea è quello usato nel 100% del codebase reale.
+    const multilineCode = `
+import { supabaseAdmin } from '@/lib/db/client';
+
+async function test() {
+  const { data } = await supabaseAdmin
+    .from('shipments')
+    .select('*');
+}
+`;
+    const singleLineCode = `const { data } = await supabaseAdmin.from('shipments').select('*');`;
+
+    // Il regex con \s* tra supabaseAdmin e .from() cattura entrambi i pattern
+    const pattern = new RegExp(`supabaseAdmin\\s*\\.from\\(\\s*['\`]shipments['\`]\\s*\\)`, 'gs');
+
+    // Entrambi i pattern DEVONO essere catturati
+    expect(multilineCode.match(pattern)).not.toBeNull();
+    expect(singleLineCode.match(pattern)).not.toBeNull();
   });
 
   it('nessun file NUOVO dovrebbe usare supabaseAdmin.from() su tabelle multi-tenant', () => {

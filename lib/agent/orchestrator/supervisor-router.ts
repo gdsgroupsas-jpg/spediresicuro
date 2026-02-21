@@ -49,8 +49,8 @@ import {
   type SupervisorRouterTelemetry,
 } from '@/lib/telemetry/logger';
 import { defaultLogger, type ILogger } from '../logger';
-import { ActingContext } from '@/lib/safe-auth';
-import { AccountType } from '@/lib/safe-auth';
+import { ActingContext, AccountType } from '@/lib/safe-auth';
+import type { WorkspaceActingContext } from '@/types/workspace';
 import { createTypingChannel, type TypingChannel } from '@/lib/realtime/typing-indicators';
 
 // ==================== TIPI ====================
@@ -60,7 +60,7 @@ export interface SupervisorInput {
   userId: string;
   userEmail: string;
   traceId: string;
-  actingContext: ActingContext; // ⚠️ NUOVO: ActingContext iniettato dalla route
+  actingContext: WorkspaceActingContext | ActingContext; // WorkspaceActingContext ha .workspace.id, ActingContext no (WhatsApp)
   /** Nonce per canale typing (opzionale, generato dal client) */
   typingNonce?: string;
 }
@@ -216,6 +216,17 @@ export async function supervisorRouter(
     });
   }
 
+  // Estrai workspaceId e ruolo reale dall'actingContext (usato da tutti i worker)
+  const wsId =
+    ('workspace' in actingContext ? actingContext.workspace?.id : undefined) || undefined;
+  const effectiveRole = actingContext.target.role;
+  const workerRole: 'admin' | 'user' | 'reseller' =
+    effectiveRole === 'admin' || effectiveRole === 'superadmin'
+      ? 'admin'
+      : effectiveRole === 'reseller'
+        ? 'reseller'
+        : 'user';
+
   // 1.5. Support intent check (PRIMA del pricing, gestito direttamente)
   const isSupportIntent = detectSupportIntent(message);
   if (isSupportIntent) {
@@ -230,7 +241,8 @@ export async function supervisorRouter(
         {
           message,
           userId,
-          userRole: isAdminOrAbove(actingContext.target) ? 'admin' : 'user',
+          userRole: workerRole,
+          workspaceId: wsId,
         },
         logger
       );
@@ -281,8 +293,8 @@ export async function supervisorRouter(
         {
           message,
           userId,
-          userRole: isAdminOrAbove(actingContext.target) ? 'admin' : 'user',
-          // workspaceId derivato dal userId per reseller (il worker lo gestisce)
+          userRole: workerRole,
+          workspaceId: wsId,
         },
         logger
       );
@@ -332,8 +344,8 @@ export async function supervisorRouter(
         {
           message,
           userId,
-          userRole: isAdminOrAbove(actingContext.target) ? 'admin' : 'user',
-          // workspaceId derivato dal userId per reseller (il worker lo gestisce)
+          userRole: workerRole,
+          workspaceId: wsId,
         },
         logger
       );

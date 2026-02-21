@@ -45,7 +45,7 @@ import { defaultLogger, type ILogger } from '../logger';
 export interface OutreachWorkerInput {
   message: string;
   userId: string;
-  userRole: 'admin' | 'user';
+  userRole: 'admin' | 'user' | 'reseller' | 'reseller';
   workspaceId?: string;
 }
 
@@ -286,7 +286,7 @@ export async function outreachWorker(
 
 async function handleEnrollEntity(
   message: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -399,7 +399,7 @@ async function handleEnrollEntity(
 
 async function handleCancelEnrollment(
   message: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -445,7 +445,7 @@ async function handleCancelEnrollment(
 
 async function handlePauseResumeEnrollment(
   message: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[],
@@ -498,7 +498,7 @@ async function handlePauseResumeEnrollment(
 
 async function handleSendMessage(
   message: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -770,7 +770,7 @@ async function handleOutreachMetrics(
 
 async function handleCheckStatus(
   message: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]

@@ -31,7 +31,7 @@ import type { CrmWriteResult } from '@/types/crm-intelligence';
 // ============================================
 
 export interface UpdateStatusParams {
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'reseller';
   entityId: string;
   newStatus: string;
   actorId: string;
@@ -40,7 +40,7 @@ export interface UpdateStatusParams {
 }
 
 export interface AddNoteParams {
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'reseller';
   entityId: string;
   note: string;
   actorId: string;
@@ -48,7 +48,7 @@ export interface AddNoteParams {
 }
 
 export interface RecordContactParams {
-  role: 'admin' | 'user';
+  role: 'admin' | 'user' | 'reseller';
   entityId: string;
   contactNote?: string;
   actorId: string;
@@ -73,7 +73,7 @@ function sanitizeText(input: string): string {
  * Fail-fast: se role=user e workspaceId manca, blocca l'operazione.
  */
 function validateWorkspaceRequired(
-  role: 'admin' | 'user',
+  role: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined
 ): string | null {
   if (role === 'user' && !workspaceId) {

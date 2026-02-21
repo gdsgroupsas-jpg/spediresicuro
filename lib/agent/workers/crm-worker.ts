@@ -289,7 +289,7 @@ export async function crmWorker(
 // ============================================
 
 async function handlePipelineOverview(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -370,7 +370,7 @@ async function handlePipelineOverview(
 
 async function handleEntityDetail(
   message: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -450,7 +450,7 @@ async function handleEntityDetail(
 }
 
 async function handleTodayActions(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -515,7 +515,7 @@ async function handleTodayActions(
 }
 
 async function handleHealthCheck(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -570,7 +570,7 @@ async function handleHealthCheck(
 
 async function handleSearch(
   message: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -615,7 +615,7 @@ async function handleSearch(
 }
 
 async function handleConversionAnalysis(
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -723,7 +723,7 @@ function extractWriteEntityName(message: string): string | undefined {
 async function handleUpdateStatus(
   message: string,
   userId: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -783,7 +783,7 @@ async function handleUpdateStatus(
 async function handleAddNote(
   message: string,
   userId: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]
@@ -839,7 +839,7 @@ async function handleAddNote(
 async function handleRecordContact(
   message: string,
   userId: string,
-  userRole: 'admin' | 'user',
+  userRole: 'admin' | 'user' | 'reseller',
   workspaceId: string | undefined,
   entityLabel: string,
   toolsUsed: string[]

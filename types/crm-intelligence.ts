@@ -159,7 +159,7 @@ export interface ConversionMetrics {
 export interface CrmWorkerInput {
   message: string;
   userId: string;
-  userRole: 'admin' | 'user';
+  userRole: 'admin' | 'user' | 'reseller';
   workspaceId?: string;
 }
 
