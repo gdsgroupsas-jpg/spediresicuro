@@ -630,12 +630,16 @@ export async function supervisorRouter(
   // 1.8. Shipment Creation intent check (DOPO outreach, PRIMA di pricing)
   // Sessione in corso o nuovo intent → instrada al pricing graph
   // Il supervisor interno routerà al worker corretto
-  const existingCreationPhase = (await agentSessionService.getSession(userId, traceId))
-    ?.shipment_creation_phase;
+  // Riusa existingSessionState gia recuperato sopra (sezione 1.4a)
+  const existingCreationPhase = existingSessionState?.shipment_creation_phase;
   const isShipmentCreationIntent =
     existingCreationPhase === 'collecting' ||
     existingCreationPhase === 'ready' ||
     detectShipmentCreationIntent(message);
+
+  // R2: Flag one-shot booking (settati prima del graph invocation)
+  let oneShotEligible = false;
+  let oneShotCourier: string | undefined;
 
   if (isShipmentCreationIntent) {
     logger.log(
@@ -643,6 +647,28 @@ export async function supervisorRouter(
     );
     intentDetected = 'shipment_creation';
     isPricingIntent = true; // Forza passaggio al pricing graph
+
+    // R2: Check one-shot eligibility dalla user memory
+    // Solo per nuove creazioni (non fasi in corso), e solo se non è delegazione
+    if (!existingCreationPhase) {
+      try {
+        const { getUserMemory } = await import('@/lib/ai/user-memory');
+        const { isDefaultSenderComplete } = await import('@/lib/ai/context-builder');
+        const memory = await getUserMemory(userId);
+
+        if (
+          memory?.preferredCouriers?.length &&
+          memory.preferredCouriers.length > 0 &&
+          isDefaultSenderComplete(memory.defaultSender)
+        ) {
+          oneShotEligible = true;
+          oneShotCourier = memory.preferredCouriers[0];
+          logger.log(`⚡ [Supervisor Router] One-shot eligible: corriere ${oneShotCourier}`);
+        }
+      } catch {
+        // Non critico — one-shot è un'ottimizzazione opzionale
+      }
+    }
   }
 
   // 2. Decisione iniziale (prima di invocare graph)
@@ -726,6 +752,9 @@ export async function supervisorRouter(
       // Delegazione: contesto request-scoped + persistente
       delegation_context: delegationContext,
       active_delegation: delegationContext,
+      // R2: One-shot booking
+      one_shot_eligible: oneShotEligible || undefined,
+      one_shot_courier: oneShotCourier,
     };
 
     // P3 Task 1: Se stato esistente, aggiungi nuovo messaggio + AGGIORNA SEMPRE agent_context
@@ -745,6 +774,11 @@ export async function supervisorRouter(
       // R2: Preserva active_delegation nella sessione
       if (delegationContext) {
         initialState.active_delegation = delegationContext;
+      }
+      // R2: One-shot booking (aggiorna anche per sessioni esistenti)
+      if (oneShotEligible) {
+        initialState.one_shot_eligible = true;
+        initialState.one_shot_courier = oneShotCourier;
       }
     }
 

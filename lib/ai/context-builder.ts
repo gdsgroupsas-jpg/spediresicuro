@@ -405,3 +405,16 @@ export function formatContextForPrompt(context: {
 
   return prompt;
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// R2: ONE-SHOT BOOKING HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Verifica se il mittente predefinito ha tutti i campi obbligatori
+ * per procedere con one-shot booking (senza chiedere dati aggiuntivi).
+ */
+export function isDefaultSenderComplete(sender?: UserMemory['defaultSender']): boolean {
+  if (!sender) return false;
+  return !!(sender.name && sender.address && sender.city && sender.zip && sender.province);
+}

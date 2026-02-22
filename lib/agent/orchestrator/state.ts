@@ -260,4 +260,19 @@ export interface AgentState {
    * viene resettata con "torna al mio workspace" o "basta delegazione".
    */
   active_delegation?: DelegationContext;
+
+  // ===== R2: ONE-SHOT BOOKING =====
+
+  /**
+   * Flag: l'utente ha corriere preferito + mittente completo in memory.
+   * Se true, Anne propone booking diretto con corriere preferito.
+   * NON bypassa il pricing engine — pre-seleziona solo il corriere.
+   */
+  one_shot_eligible?: boolean;
+
+  /**
+   * Nome del corriere pre-selezionato per one-shot booking.
+   * Derivato da preferredCouriers[0] nella user memory.
+   */
+  one_shot_courier?: string;
 }
