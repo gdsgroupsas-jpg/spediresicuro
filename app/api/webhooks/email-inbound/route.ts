@@ -200,6 +200,8 @@ export async function POST(request: NextRequest) {
         ? { _truncated: true, message_id: message_id || email_id, subject }
         : payload;
 
+    // DESIGN INTENZIONALE: email senza workspace match va a superadmin inbox (workspace_id=null).
+    // Il ternario è necessario perché email inbound pre-routing non ha workspace garantito.
     const emailDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
     const { error } = await emailDb.from('emails').insert({
       message_id: message_id || email_id || null,

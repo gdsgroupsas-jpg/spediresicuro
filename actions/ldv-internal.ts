@@ -47,8 +47,11 @@ export async function generateInternalLDV(
     const actorId = context.actor.id;
     const actorRole = context.actor.role;
 
-    // 3. Recupera spedizione (con filtro workspace per isolamento multi-tenant)
-    const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+    // 3. Recupera spedizione (fail-closed: workspace obbligatorio)
+    if (!workspaceId) {
+      return { success: false, error: 'Workspace non determinato' };
+    }
+    const db = workspaceQuery(workspaceId);
     const { data: shipment, error: shipmentError } = await db
       .from('shipments')
       .select('*')

@@ -263,23 +263,29 @@ async function _supportWorkerInternal(
     created_at: string;
     recipient_name: string | null;
   }
-  const shipDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
-  const { data: recentShipments } = (await shipDb
-    .from('shipments')
-    .select('id, tracking_number, status, carrier, created_at, recipient_name')
-    .eq('user_id', userId)
-    .neq('status', 'delivered')
-    .order('created_at', { ascending: false })
-    .limit(5)) as { data: RecentShipment[] | null };
+  // Fail-closed: senza workspaceId non cerchiamo spedizioni (isolamento multi-tenant)
+  let recentShipments: RecentShipment[] | null = null;
+  if (workspaceId) {
+    const shipDb = workspaceQuery(workspaceId);
+    const { data } = (await shipDb
+      .from('shipments')
+      .select('id, tracking_number, status, carrier, created_at, recipient_name')
+      .eq('user_id', userId)
+      .neq('status', 'delivered')
+      .order('created_at', { ascending: false })
+      .limit(5)) as { data: RecentShipment[] | null };
+    recentShipments = data;
+  }
 
   // Step 3: Estrai tracking number dal messaggio se presente
   // Valida prima che il tracking appartenga all'utente (pre-check per UX migliore)
   const trackingMatch = message.match(/\b([A-Z0-9]{8,30})\b/);
   let targetShipment = null;
 
-  if (trackingMatch) {
-    // Pre-verifica: il tracking appartiene all'utente? (workspace-scoped)
-    const { data: ownedShipment } = await shipDb
+  if (trackingMatch && workspaceId) {
+    // Pre-verifica: il tracking appartiene all'utente? (workspace-scoped, fail-closed)
+    const trackingDb = workspaceQuery(workspaceId);
+    const { data: ownedShipment } = await trackingDb
       .from('shipments')
       .select('id')
       .eq('tracking_number', trackingMatch[1])
