@@ -230,6 +230,42 @@ describe('DELEGATION_CONFIDENCE_THRESHOLD', () => {
   });
 });
 
+// ============================================
+// F-SEC-3: Unicode NFC normalization
+// ============================================
+describe('resolveSubClient NFC normalization', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockQueryResult = { data: [], error: null };
+  });
+
+  it('matcha nome con encoding NFD diverso (accento composto)', async () => {
+    // Workspace name in NFC: "Kanouté"
+    // Search term in NFD: "Kanoute" + combining acute (U+0301)
+    mockQueryResult = {
+      data: [mockWorkspace('ws-kan', 'Kanout\u00e9', [{ userId: 'u-kan', userName: 'Staff' }])],
+      error: null,
+    };
+
+    const nfdSearchTerm = 'Kanout\u0065\u0301'; // "e" + combining acute
+    const result = await resolveSubClient(RESELLER_WS, nfdSearchTerm);
+    expect(result).toHaveLength(1);
+    expect(result[0].confidence).toBe(1.0);
+  });
+
+  it('ASCII puro non cambia con NFC (no regression)', async () => {
+    mockQueryResult = {
+      data: [mockWorkspace('ws-awa', 'Awa Kanoute', [{ userId: 'u-awa', userName: 'Awa' }])],
+      error: null,
+    };
+
+    const result = await resolveSubClient(RESELLER_WS, 'Awa Kanoute');
+    expect(result).toHaveLength(1);
+    expect(result[0].confidence).toBe(1.0);
+    expect(result[0].workspaceName).toBe('Awa Kanoute');
+  });
+});
+
 describe('Security: solo figli diretti', () => {
   it('query usa parent_workspace_id per filtrare solo figli diretti', async () => {
     const { supabaseAdmin } = await import('@/lib/db/client');

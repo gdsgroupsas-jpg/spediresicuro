@@ -420,12 +420,13 @@ export function extractDelegationTarget(message: string): string | null {
   for (const pattern of DELEGATION_PATTERNS) {
     const match = message.match(pattern);
     if (match?.[1]) {
-      // Pulisci il nome: rimuovi spazi extra, punteggiatura trailing
+      // Pulisci il nome: rimuovi spazi extra, punteggiatura trailing, normalizza Unicode
       return (
         match[1]
           .trim()
           .replace(/[,.:;!?]+$/, '')
-          .trim() || null
+          .trim()
+          .normalize('NFC') || null
       );
     }
   }

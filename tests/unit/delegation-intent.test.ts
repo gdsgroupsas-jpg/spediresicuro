@@ -75,6 +75,21 @@ describe('extractDelegationTarget', () => {
     expect(extractDelegationTarget('per conto di Awa Kanoute!')).toBe('Awa Kanoute');
     expect(extractDelegationTarget('per conto di Awa Kanoute:')).toBe('Awa Kanoute');
   });
+
+  // F-SEC-3: Unicode NFC normalization
+  it('normalizza Unicode NFC — accento composto NFD → NFC', () => {
+    // "Kanouté" con accento composto (e + combining acute U+0301) → NFC (é U+00E9)
+    const nfdInput = 'per conto di Kanoute\u0301 crea spedizione';
+    const result = extractDelegationTarget(nfdInput);
+    // Il risultato deve essere NFC-normalizzato
+    expect(result).toBe('Kanoute\u0301'.normalize('NFC'));
+    expect(result).toBe('Kanouté');
+  });
+
+  it('ASCII puro non cambia con NFC (no regression)', () => {
+    const result = extractDelegationTarget('per conto di Awa Kanoute crea spedizione');
+    expect(result).toBe('Awa Kanoute');
+  });
 });
 
 // ============================================

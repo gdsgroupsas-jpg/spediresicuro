@@ -44,7 +44,7 @@ export async function resolveSubClient(
     return [];
   }
 
-  const normalizedTerm = searchTerm.trim();
+  const normalizedTerm = searchTerm.trim().normalize('NFC');
 
   // Query: workspace figli diretti del reseller con i loro membri
   // workspaces e workspace_members sono tabelle globali → ok supabaseAdmin
@@ -84,8 +84,8 @@ export async function resolveSubClient(
       const user = member.users as any;
       if (!user) continue;
 
-      const wsName = (ws.name || '').trim();
-      const userName = (user.name || '').trim();
+      const wsName = (ws.name || '').trim().normalize('NFC');
+      const userName = (user.name || '').trim().normalize('NFC');
 
       // Calcola confidence
       let confidence = 0;
