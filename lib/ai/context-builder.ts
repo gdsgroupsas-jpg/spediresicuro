@@ -118,25 +118,28 @@ export async function buildContext(
     }
 
     // 1. Recupera spedizioni recenti dell'utente (ultime 10, workspace-scoped)
-    const ctxDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
-    const { data: shipments, error: shipmentsError } = (await ctxDb
-      .from('shipments')
-      .select('*')
-      .eq('user_id', userId)
-      .order('created_at', { ascending: false })
-      .limit(10)) as { data: any[] | null; error: any };
+    // shipments è WORKSPACE_SCOPED — skip se workspaceId assente (fail-closed)
+    if (workspaceId) {
+      const ctxDb = workspaceQuery(workspaceId);
+      const { data: shipments, error: shipmentsError } = (await ctxDb
+        .from('shipments')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(10)) as { data: any[] | null; error: any };
 
-    if (!shipmentsError && shipments) {
-      context.user.recentShipments = shipments.map((s) => ({
-        id: s.id,
-        tracking: s.tracking_number,
-        recipient: s.recipient_name,
-        city: s.recipient_city,
-        status: s.status,
-        price: s.final_price,
-        weight: s.weight,
-        createdAt: s.created_at,
-      }));
+      if (!shipmentsError && shipments) {
+        context.user.recentShipments = shipments.map((s) => ({
+          id: s.id,
+          tracking: s.tracking_number,
+          recipient: s.recipient_name,
+          city: s.recipient_city,
+          status: s.status,
+          price: s.final_price,
+          weight: s.weight,
+          createdAt: s.created_at,
+        }));
+      }
     }
 
     // 2. Se admin o reseller, aggiungi statistiche business (workspace-scoped)
@@ -144,103 +147,116 @@ export async function buildContext(
       const now = new Date();
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      // Statistiche mese corrente (workspace-scoped)
-      const statsDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
-      const { data: monthlyData, error: monthlyError } = (await statsDb
-        .from('shipments')
-        .select('final_price, base_price, created_at')
-        .gte('created_at', monthStart.toISOString())) as { data: any[] | null; error: any };
-
-      if (!monthlyError && monthlyData) {
-        const totalRevenue = monthlyData.reduce(
-          (sum, s) => sum + (parseFloat(s.final_price) || 0),
-          0
-        );
-        const totalCost = monthlyData.reduce((sum, s) => sum + (parseFloat(s.base_price) || 0), 0);
-        const totalMargin = totalRevenue - totalCost;
-        const avgMargin = monthlyData.length > 0 ? totalMargin / monthlyData.length : 0;
-
-        context.user.monthlyStats = {
-          totalShipments: monthlyData.length,
-          totalRevenue: Math.round(totalRevenue * 100) / 100,
-          totalMargin: Math.round(totalMargin * 100) / 100,
-          avgMargin: Math.round(avgMargin * 100) / 100,
-        };
-
-        // Top corrieri (workspace-scoped)
-        const { data: courierStats } = (await statsDb
+      // Statistiche mese corrente — shipments è WORKSPACE_SCOPED, fail-closed
+      if (workspaceId) {
+        const statsDb = workspaceQuery(workspaceId);
+        const { data: monthlyData, error: monthlyError } = (await statsDb
           .from('shipments')
-          .select('carrier, final_price')
-          .gte('created_at', monthStart.toISOString())) as { data: any[] | null };
+          .select('final_price, base_price, created_at')
+          .gte('created_at', monthStart.toISOString())) as { data: any[] | null; error: any };
 
-        if (courierStats) {
-          const courierMap = new Map<string, { shipments: number; revenue: number }>();
-          courierStats.forEach((s) => {
-            const carrier = s.carrier || 'Sconosciuto';
-            const existing = courierMap.get(carrier) || { shipments: 0, revenue: 0 };
-            courierMap.set(carrier, {
-              shipments: existing.shipments + 1,
-              revenue: existing.revenue + (parseFloat(s.final_price) || 0),
+        if (!monthlyError && monthlyData) {
+          const totalRevenue = monthlyData.reduce(
+            (sum, s) => sum + (parseFloat(s.final_price) || 0),
+            0
+          );
+          const totalCost = monthlyData.reduce(
+            (sum, s) => sum + (parseFloat(s.base_price) || 0),
+            0
+          );
+          const totalMargin = totalRevenue - totalCost;
+          const avgMargin = monthlyData.length > 0 ? totalMargin / monthlyData.length : 0;
+
+          context.user.monthlyStats = {
+            totalShipments: monthlyData.length,
+            totalRevenue: Math.round(totalRevenue * 100) / 100,
+            totalMargin: Math.round(totalMargin * 100) / 100,
+            avgMargin: Math.round(avgMargin * 100) / 100,
+          };
+
+          // Top corrieri (workspace-scoped)
+          const { data: courierStats } = (await statsDb
+            .from('shipments')
+            .select('carrier, final_price')
+            .gte('created_at', monthStart.toISOString())) as { data: any[] | null };
+
+          if (courierStats) {
+            const courierMap = new Map<string, { shipments: number; revenue: number }>();
+            courierStats.forEach((s) => {
+              const carrier = s.carrier || 'Sconosciuto';
+              const existing = courierMap.get(carrier) || { shipments: 0, revenue: 0 };
+              courierMap.set(carrier, {
+                shipments: existing.shipments + 1,
+                revenue: existing.revenue + (parseFloat(s.final_price) || 0),
+              });
             });
-          });
 
-          context.business = {
-            monthlyRevenue: totalRevenue,
-            monthlyMargin: totalMargin,
-            topCouriers: Array.from(courierMap.entries())
-              .map(([name, data]) => ({ name, ...data }))
-              .sort((a, b) => b.revenue - a.revenue)
-              .slice(0, 5),
-            recentTrends: [],
+            context.business = {
+              monthlyRevenue: totalRevenue,
+              monthlyMargin: totalMargin,
+              topCouriers: Array.from(courierMap.entries())
+                .map(([name, data]) => ({ name, ...data }))
+                .sort((a, b) => b.revenue - a.revenue)
+                .slice(0, 5),
+              recentTrends: [],
+            };
+          }
+        }
+      }
+      // else: nessuna statistica business senza workspace (fail-closed)
+
+      // Statistiche contrassegni (COD) — cod_items è WORKSPACE_SCOPED, fail-closed
+      if (workspaceId) {
+        try {
+          const codDb = workspaceQuery(workspaceId);
+          const { data: codStats } = await codDb.from('cod_items').select('status, pagato');
+
+          if (codStats && codStats.length > 0) {
+            const inAttesa = codStats.filter((c: any) => c.status === 'in_attesa');
+            const assegnati = codStats.filter((c: any) => c.status === 'assegnato');
+            const rimborsati = codStats.filter((c: any) => c.status === 'rimborsato');
+            const totalDaPagare = assegnati.reduce((s: number, c: any) => s + (c.pagato || 0), 0);
+
+            (context as any).codStats = {
+              totale: codStats.length,
+              inAttesa: inAttesa.length,
+              assegnati: assegnati.length,
+              rimborsati: rimborsati.length,
+              totaleDaPagare: Math.round(totalDaPagare * 100) / 100,
+            };
+          }
+        } catch {
+          // Non critico
+        }
+      }
+      // else: nessun dato COD senza workspace (fail-closed)
+
+      // Errori di sistema recenti (ultime 24h) — audit_logs è WORKSPACE_SCOPED, fail-closed
+      if (workspaceId) {
+        const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+        const logsDb = workspaceQuery(workspaceId);
+        const { data: errors, error: errorsError } = (await logsDb
+          .from('audit_logs')
+          .select('*')
+          .in('severity', ['error', 'critical'])
+          .gte('created_at', yesterday.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(10)) as { data: any[] | null; error: any };
+
+        if (!errorsError && errors) {
+          const criticalCount = errors.filter((e: any) => e.severity === 'critical').length;
+          context.system = {
+            recentErrors: errors.map((e: any) => ({
+              severity: e.severity,
+              message: e.message,
+              timestamp: e.created_at,
+            })),
+            systemHealth:
+              criticalCount > 0 ? 'critical' : errors.length > 5 ? 'degraded' : 'healthy',
           };
         }
       }
-
-      // Statistiche contrassegni (COD)
-      try {
-        const codDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
-        const { data: codStats } = await codDb.from('cod_items').select('status, pagato');
-
-        if (codStats && codStats.length > 0) {
-          const inAttesa = codStats.filter((c: any) => c.status === 'in_attesa');
-          const assegnati = codStats.filter((c: any) => c.status === 'assegnato');
-          const rimborsati = codStats.filter((c: any) => c.status === 'rimborsato');
-          const totalDaPagare = assegnati.reduce((s: number, c: any) => s + (c.pagato || 0), 0);
-
-          (context as any).codStats = {
-            totale: codStats.length,
-            inAttesa: inAttesa.length,
-            assegnati: assegnati.length,
-            rimborsati: rimborsati.length,
-            totaleDaPagare: Math.round(totalDaPagare * 100) / 100,
-          };
-        }
-      } catch {
-        // Non critico
-      }
-
-      // Errori di sistema recenti (ultime 24h, workspace-scoped)
-      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-      const logsDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
-      const { data: errors, error: errorsError } = (await logsDb
-        .from('audit_logs')
-        .select('*')
-        .in('severity', ['error', 'critical'])
-        .gte('created_at', yesterday.toISOString())
-        .order('created_at', { ascending: false })
-        .limit(10)) as { data: any[] | null; error: any };
-
-      if (!errorsError && errors) {
-        const criticalCount = errors.filter((e: any) => e.severity === 'critical').length;
-        context.system = {
-          recentErrors: errors.map((e: any) => ({
-            severity: e.severity,
-            message: e.message,
-            timestamp: e.created_at,
-          })),
-          systemHealth: criticalCount > 0 ? 'critical' : errors.length > 5 ? 'degraded' : 'healthy',
-        };
-      }
+      // else: nessun dato audit senza workspace (fail-closed)
     }
     // 3. CRM Context (per admin e reseller)
     try {
