@@ -654,10 +654,10 @@ export async function POST(request: NextRequest) {
 
     // Log audit (solo se admin o in caso di errori, workspace-isolated)
     // NOTA: user_id nel DB è OK (necessario per audit), ma non va nei log strutturati
-    if (isAdmin || !isMock) {
+    // audit_logs è WORKSPACE_SCOPED — fail-closed se wsId assente
+    if ((isAdmin || !isMock) && wsId) {
       try {
-        // wsId gia estratto in alto dalla route
-        const db = wsId ? workspaceQuery(wsId) : supabaseAdmin;
+        const db = workspaceQuery(wsId);
         await db.from('audit_logs').insert({
           user_id: userId,
           workspace_id: wsId,

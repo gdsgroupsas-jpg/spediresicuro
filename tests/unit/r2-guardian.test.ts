@@ -59,4 +59,15 @@ describe('R2 Guardian — structural integrity', () => {
     // Nessun ternario fallback deve esistere per tabelle multi-tenant
     expect(matches).toBeNull();
   });
+
+  it('agent-chat/route.ts NON usa ternario pericoloso su audit_logs', () => {
+    const content = fs.readFileSync(path.join(ROOT, 'app/api/ai/agent-chat/route.ts'), 'utf8');
+
+    // Verifica che NON esiste "wsId ? workspaceQuery(wsId) : supabaseAdmin"
+    // audit_logs è WORKSPACE_SCOPED — deve usare workspaceQuery con fail-closed
+    const ternaryPattern = /wsId\s*\?\s*workspaceQuery\(wsId\)\s*:\s*supabaseAdmin/g;
+    const matches = content.match(ternaryPattern);
+
+    expect(matches).toBeNull();
+  });
 });
