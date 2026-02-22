@@ -92,8 +92,8 @@ describe('R2-2: api-middleware usa account_type (non role deprecated)', () => {
 // R2-3: getSpedizioni — no workspace_id IS NULL leak
 // ============================================================
 describe('R2-3: getSpedizioni NON include workspace_id IS NULL', () => {
-  it('database.ts getSpedizioni NON ha workspace_id.is.null nel filtro gerarchico', () => {
-    const filePath = path.resolve('lib/database.ts');
+  it('database/shipments.ts getSpedizioni NON ha workspace_id.is.null nel filtro gerarchico', () => {
+    const filePath = path.resolve('lib/database/shipments.ts');
     const content = fs.readFileSync(filePath, 'utf-8');
 
     // Trova il blocco del filtro gerarchico (visibleIds)
@@ -106,8 +106,8 @@ describe('R2-3: getSpedizioni NON include workspace_id IS NULL', () => {
     expect(hierarchyBlock![0]).not.toContain('workspace_id.is.null');
   });
 
-  it('database.ts usa .in() per filtrare workspace visibili (non .or())', () => {
-    const filePath = path.resolve('lib/database.ts');
+  it('database/shipments.ts usa .in() per filtrare workspace visibili (non .or())', () => {
+    const filePath = path.resolve('lib/database/shipments.ts');
     const content = fs.readFileSync(filePath, 'utf-8');
 
     // Deve usare .in('workspace_id', visibleIds) — piu sicuro di .or()

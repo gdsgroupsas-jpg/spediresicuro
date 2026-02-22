@@ -18,14 +18,22 @@ import { describe, it, expect } from 'vitest';
 import * as fs from 'fs';
 import * as path from 'path';
 
-const ACTIONS_PATH = path.join(process.cwd(), 'actions/price-lists.ts');
+// Dopo split in moduli, le funzioni sono distribuite tra i file del package
+const CRUD_PATH = path.join(process.cwd(), 'actions/price-lists/crud.ts');
+const ASSIGNMENTS_PATH = path.join(process.cwd(), 'actions/price-lists/assignments.ts');
 
 describe('Isolamento multi-tenant listini', () => {
+  let crudCode: string;
+  let assignmentsCode: string;
+  // Concatena tutti i moduli per ricerche globali
   let code: string;
 
-  it('il file actions/price-lists.ts esiste', () => {
-    expect(fs.existsSync(ACTIONS_PATH)).toBe(true);
-    code = fs.readFileSync(ACTIONS_PATH, 'utf-8');
+  it('i file actions/price-lists/ esistono', () => {
+    expect(fs.existsSync(CRUD_PATH)).toBe(true);
+    expect(fs.existsSync(ASSIGNMENTS_PATH)).toBe(true);
+    crudCode = fs.readFileSync(CRUD_PATH, 'utf-8');
+    assignmentsCode = fs.readFileSync(ASSIGNMENTS_PATH, 'utf-8');
+    code = crudCode + '\n' + assignmentsCode;
   });
 
   describe('listMasterPriceListsAction', () => {

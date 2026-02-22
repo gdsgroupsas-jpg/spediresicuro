@@ -40,7 +40,7 @@ const AUTHORIZED_FILES = [
   'lib/crm/crm-write-service.ts', // role parametro routing (lead vs prospect)
   'actions/super-admin.ts', // role parametro input validazione + business rule
   // Data transformation (mapping account_type -> campi legacy, non auth gate)
-  'lib/database.ts', // role mapping, admin_level assignment
+  'lib/database/users.ts', // role mapping, admin_level assignment (split da lib/database.ts)
   // Login UI (mostra diversi form per tipo account — rendering, non auth)
   'app/login/page.tsx',
   // Platform fee (difensivo multi-path: account_type + role + is_reseller)

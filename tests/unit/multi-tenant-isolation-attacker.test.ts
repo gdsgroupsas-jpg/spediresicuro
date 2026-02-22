@@ -264,8 +264,8 @@ describe('Guardian: baseline 0 violazioni', () => {
 // ============================================
 
 describe('Caller actions: passano workspaceId a price-lists', () => {
-  it('actions/price-lists.ts passa workspaceId a createPriceList', () => {
-    const source = readFile('actions/price-lists.ts');
+  it('actions/price-lists/crud.ts passa workspaceId a createPriceList', () => {
+    const source = readFile('actions/price-lists/crud.ts');
     // Deve chiamare createPriceList con 3 parametri (data, user.id, workspaceId)
     expect(source).toMatch(/createPriceList\([^)]*workspaceId\)/);
   });
@@ -275,14 +275,14 @@ describe('Caller actions: passano workspaceId a price-lists', () => {
     expect(source).toMatch(/createPriceList\([^)]*workspaceId\)/);
   });
 
-  it('actions/price-lists.ts passa workspaceId a updatePriceList', () => {
-    const source = readFile('actions/price-lists.ts');
+  it('actions/price-lists/crud.ts passa workspaceId a updatePriceList', () => {
+    const source = readFile('actions/price-lists/crud.ts');
     // Almeno una chiamata a updatePriceList deve includere workspaceId
     expect(source).toMatch(/updatePriceList\([^)]*workspaceId\)/);
   });
 
-  it('actions/price-lists.ts passa workspaceId a getPriceListById', () => {
-    const source = readFile('actions/price-lists.ts');
+  it('actions/price-lists/crud.ts passa workspaceId a getPriceListById', () => {
+    const source = readFile('actions/price-lists/crud.ts');
     // Almeno una chiamata deve passare workspaceId
     expect(source).toMatch(/getPriceListById\([^,]+,\s*workspaceId\)/);
   });

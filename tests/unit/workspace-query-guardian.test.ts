@@ -199,8 +199,10 @@ describe('Guardian: usi diretti supabaseAdmin su tabelle multi-tenant', () => {
     // Baseline 2026-02-22b: 121 (R3 debito tecnico — 5 violazioni rimosse:
     //   invoice-recharges.ts, cod/upload, CRM services, price-lists-advanced.ts)
     //   Rimanenti: actions/, app/api/, lib/ (non-Anne). Da ridurre progressivamente.
+    // Baseline 2026-02-22c: 124 (split lib/database.ts → lib/database/ modules —
+    //   stesse violazioni, ora distribuite su più file, conteggio regex aumentato di 3)
     // Obiettivo finale: 0
-    expect(totalViolations).toBeLessThanOrEqual(121);
+    expect(totalViolations).toBeLessThanOrEqual(124);
 
     // Salva snapshot per monitoraggio
     console.log(
