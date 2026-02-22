@@ -217,8 +217,6 @@ export default function DashboardPage() {
   // Redirect se dati cliente non completati (usa UserContext, no fetch aggiuntivo)
   useEffect(() => {
     if (isUserLoading || !user) return;
-    // Utente test: mai redirect
-    if (user.email?.toLowerCase() === 'test@spediresicuro.it') return;
     // Fail-closed: se dati non completati → redirect obbligatorio
     if (!hasCompletedOnboarding) {
       router.push('/dashboard/dati-cliente');

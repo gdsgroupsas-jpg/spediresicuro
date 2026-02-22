@@ -17,22 +17,6 @@ export async function GET(request: NextRequest) {
     if (!authResult.authorized) return authResult.response;
     const { context } = authResult;
 
-    // 🧪 TEST MODE: Bypass per E2E tests
-    if (
-      context!.actor.id === '00000000-0000-0000-0000-000000000000' ||
-      context!.actor.id === 'test-user-id'
-    ) {
-      return NextResponse.json({
-        datiCliente: {
-          datiCompletati: true,
-          nome: 'Test',
-          cognome: 'User',
-          codiceFiscale: 'TEST12345678901',
-          email: context!.actor.email,
-        },
-      });
-    }
-
     const user = await findUserByEmail(context!.actor.email!);
 
     if (!user) {
@@ -91,63 +75,37 @@ export async function POST(request: NextRequest) {
       documentoIdentita,
     } = body;
 
-    // Email dell'utente corrente
-    const userEmail = context.actor.email?.toLowerCase() || '';
+    // Validazione campi obbligatori
+    if (
+      !nome ||
+      !cognome ||
+      !codiceFiscale ||
+      !telefono ||
+      !indirizzo ||
+      !citta ||
+      !provincia ||
+      !cap
+    ) {
+      return NextResponse.json({ error: 'Campi obbligatori mancanti' }, { status: 400 });
+    }
 
-    // Per l'utenza test@spediresicuro.it, i campi sono opzionali
-    const isTestUser = userEmail === 'test@spediresicuro.it';
+    // Validazione codice fiscale (16 caratteri)
+    if (codiceFiscale.length !== 16) {
+      return NextResponse.json(
+        { error: 'Il codice fiscale deve essere di 16 caratteri' },
+        { status: 400 }
+      );
+    }
 
-    // Validazione campi obbligatori (solo se NON è l'utente test)
-    if (!isTestUser) {
-      if (
-        !nome ||
-        !cognome ||
-        !codiceFiscale ||
-        !telefono ||
-        !indirizzo ||
-        !citta ||
-        !provincia ||
-        !cap
-      ) {
-        return NextResponse.json({ error: 'Campi obbligatori mancanti' }, { status: 400 });
-      }
-
-      // Validazione codice fiscale (solo se fornito e non è utente test)
-      if (codiceFiscale && codiceFiscale.length !== 16) {
+    // Validazione dati azienda se tipoCliente === 'azienda'
+    if (tipoCliente === 'azienda') {
+      if (!ragioneSociale || !partitaIva) {
         return NextResponse.json(
-          { error: 'Il codice fiscale deve essere di 16 caratteri' },
+          { error: 'Ragione sociale e partita IVA sono obbligatori per le aziende' },
           { status: 400 }
         );
       }
-
-      // Validazione dati azienda se tipoCliente === 'azienda'
-      if (tipoCliente === 'azienda') {
-        if (!ragioneSociale || !partitaIva) {
-          return NextResponse.json(
-            {
-              error: 'Ragione sociale e partita IVA sono obbligatori per le aziende',
-            },
-            { status: 400 }
-          );
-        }
-        if (partitaIva.length !== 11) {
-          return NextResponse.json(
-            { error: 'La partita IVA deve essere di 11 caratteri' },
-            { status: 400 }
-          );
-        }
-      }
-    } else {
-      // Per utente test: validazione codice fiscale solo se fornito
-      if (codiceFiscale && codiceFiscale.length !== 16) {
-        return NextResponse.json(
-          { error: 'Il codice fiscale deve essere di 16 caratteri' },
-          { status: 400 }
-        );
-      }
-
-      // Per utente test: validazione partita IVA solo se tipoCliente === 'azienda' e partitaIva è fornita
-      if (tipoCliente === 'azienda' && partitaIva && partitaIva.length !== 11) {
+      if (partitaIva.length !== 11) {
         return NextResponse.json(
           { error: 'La partita IVA deve essere di 11 caratteri' },
           { status: 400 }
@@ -156,21 +114,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Costruisci oggetto DatiCliente
-    // Per utente test, i campi possono essere vuoti
     const datiCliente: DatiCliente = {
-      nome: nome || (isTestUser ? 'Test' : ''),
-      cognome: cognome || (isTestUser ? 'User' : ''),
-      codiceFiscale: codiceFiscale
-        ? codiceFiscale.toUpperCase()
-        : isTestUser
-          ? 'TEST12345678901'
-          : '',
-      telefono: telefono || (isTestUser ? '0000000000' : ''),
+      nome,
+      cognome,
+      codiceFiscale: codiceFiscale.toUpperCase(),
+      telefono,
       email: context.actor.email,
-      indirizzo: indirizzo || (isTestUser ? 'Test Address' : ''),
-      citta: citta || (isTestUser ? 'Test City' : ''),
-      provincia: provincia ? provincia.toUpperCase() : isTestUser ? 'TE' : '',
-      cap: cap || (isTestUser ? '00000' : ''),
+      indirizzo,
+      citta,
+      provincia: provincia.toUpperCase(),
+      cap,
       nazione: nazione || 'Italia',
       tipoCliente: tipoCliente || 'persona',
       datiCompletati: true,

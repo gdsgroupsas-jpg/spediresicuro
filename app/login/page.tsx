@@ -277,24 +277,6 @@ function LoginPageContent() {
             return;
           }
 
-          // Email dell'utente corrente
-          const userEmail = session?.user?.email?.toLowerCase() || '';
-
-          // Per l'utenza test@spediresicuro.it, NON reindirizzare mai a dati-cliente
-          const isTestUser = userEmail === 'test@spediresicuro.it';
-
-          if (isTestUser) {
-            console.log(
-              '✅ [LOGIN] Utente test rilevato, salvo flag e reindirizzo direttamente a dashboard'
-            );
-            if (typeof window !== 'undefined' && session?.user?.email) {
-              localStorage.setItem(`datiCompletati_${session.user.email}`, 'true');
-            }
-            router.refresh();
-            router.push('/dashboard');
-            return;
-          }
-
           console.log('📋 [LOGIN] Chiamata API per verificare dati cliente...');
           const userDataResponse = await fetch('/api/user/dati-cliente');
 

@@ -25,15 +25,6 @@ export function useProfileCompletion(): ProfileCompletionState {
         return;
       }
 
-      const userEmail = session.user.email.toLowerCase();
-      if (userEmail === 'test@spediresicuro.it') {
-        if (!cancelled) {
-          setIsComplete(true);
-          setIsLoading(false);
-        }
-        return;
-      }
-
       try {
         const response = await fetch('/api/user/dati-cliente', {
           cache: 'no-store',

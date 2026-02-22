@@ -1,14 +1,14 @@
 # SpedireSicuro.it - Logistics Operating System
 
-> **Last Updated:** January 31, 2026
-> **Status:** In Development / Testing
+> **Last Updated:** February 22, 2026
+> **Status:** Production (Beta)
 > **Started:** November 26, 2025
 
 ---
 
 <div align="center">
 
-![Status](https://img.shields.io/badge/status-in%20development-yellow)
+![Status](https://img.shields.io/badge/status-production%20beta-brightgreen)
 ![Security](https://img.shields.io/badge/security-hardened-success)
 ![Stack](https://img.shields.io/badge/stack-Next.js%2015%20%2B%20Supabase-blue)
 
@@ -30,9 +30,9 @@
 
 **SpedireSicuro is a Logistics Operating System (Logistics OS):** A B2B infrastructure that orchestrates shipments, payments, and carriers.
 
-**STATUS: IN DEVELOPMENT / TESTING**
+**STATUS: PRODUCTION (BETA)**
 
-Questo progetto e' attualmente in fase di sviluppo e testing. **NON e' ancora pronto per uso in produzione.** L'obiettivo e' raggiungere production readiness nei prossimi mesi, a condizione che tutti i componenti (sviluppo, AI, testing) rispettino rigorosamente i principi architetturali.
+La piattaforma e' in produzione con clienti attivi. Architettura multi-tenant hardened (RLS + application-level isolation), wallet atomico con funzioni SQL SECURITY DEFINER, CI/CD automatizzata con security scanning. Il sistema e' sottoposto a audit di sicurezza continui e miglioramento progressivo.
 
 **This is financial and logistics infrastructure.** Every code change must respect the architectural principles defined in this document. No "feature creep" or architectural drift is allowed.
 
@@ -83,12 +83,16 @@ SpedireSicuro e' un **Logistics Operating System** che supporta **3 modelli oper
 
 **Gennaio 2026:** Espansione funzionalita' - sistema fatture, gestione giacenze, rubrica contatti, client email (Posta), OCR scanner, listini fornitori, integrazioni multi-provider (SpediamoPro), analytics finanziarie reseller, sistema contrassegni e resi.
 
-**Stato Attuale (Gennaio 2026):**
+**Febbraio 2026:** Security hardening — 2 audit esterni completi, RLS difensivo su 33 tabelle, RBAC consolidato, rate limiting, XSS sanitization, encryption at rest fail-closed, automation engine, Anne V2 multi-provider AI merge.
 
-- 1260+ commit, 31 database migrations
+**Stato Attuale (Febbraio 2026):**
+
+- 2100+ commit, 40+ database migrations
 - 27 dashboard pages
-- Core architetturale completato e in testing
-- Rollout & Economics in corso (validazione GTM)
+- Piattaforma in produzione con clienti attivi
+- 2 audit di sicurezza esterni superati (score 9.5/10)
+- Multi-tenant isolation hardened (application + RLS)
+- CI/CD con security scanning automatico (Trivy, TruffleHog, npm audit)
 
 ---
 
@@ -613,5 +617,5 @@ Leggi [CONTRIBUTING.md](CONTRIBUTING.md) per checklist code review, requisiti se
 
 ---
 
-_Last updated: January 31, 2026_
-_Status: In Development / Testing_
+_Last updated: February 22, 2026_
+_Status: Production (Beta)_

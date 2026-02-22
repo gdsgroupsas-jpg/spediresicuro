@@ -190,13 +190,7 @@ export default async function middleware(request: NextRequest) {
     }
 
     // Da qui: utente autenticato
-    const userEmail = session.user.email.toLowerCase();
     const onboardingComplete = (session.user as any).onboarding_complete === true;
-
-    // Skip onboarding check per test user
-    if (userEmail === 'test@spediresicuro.it') {
-      return injectWorkspaceHeader(request);
-    }
 
     // Redirect a onboarding se non completato
     if (
@@ -204,7 +198,7 @@ export default async function middleware(request: NextRequest) {
       pathname.startsWith('/dashboard') &&
       pathname !== '/dashboard/dati-cliente'
     ) {
-      console.log('🔒 [MIDDLEWARE] Redirect to onboarding:', userEmail);
+      console.log('🔒 [MIDDLEWARE] Redirect to onboarding:', session.user.email);
       return NextResponse.redirect(new URL('/dashboard/dati-cliente', request.url));
     }
 
