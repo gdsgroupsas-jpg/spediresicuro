@@ -196,9 +196,11 @@ describe('Guardian: usi diretti supabaseAdmin su tabelle multi-tenant', () => {
     // Baseline 2026-02-21: 137 (fix regex multilinea — violazioni REALI ora visibili)
     // Baseline 2026-02-21b: 127 (migrazione Anne AI — 10 violazioni rimosse da lib/ai/ e lib/agent/)
     // Baseline 2026-02-22: 126 (ratchet down — 1 violazione in meno rilevata)
+    // Baseline 2026-02-22b: 121 (R3 debito tecnico — 5 violazioni rimosse:
+    //   invoice-recharges.ts, cod/upload, CRM services, price-lists-advanced.ts)
     //   Rimanenti: actions/, app/api/, lib/ (non-Anne). Da ridurre progressivamente.
     // Obiettivo finale: 0
-    expect(totalViolations).toBeLessThanOrEqual(126);
+    expect(totalViolations).toBeLessThanOrEqual(121);
 
     // Salva snapshot per monitoraggio
     console.log(

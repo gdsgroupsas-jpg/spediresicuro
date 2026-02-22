@@ -96,6 +96,13 @@ export async function writeAuditLog(payload: AuditLogPayload): Promise<void> {
     // WorkspaceActingContext ha .workspace, ActingContext no
     const workspaceId = (context as any).workspace?.id || null;
 
+    // Visibilità: log warning quando workspaceId è null (possibile gap isolamento)
+    if (!workspaceId) {
+      console.warn(
+        `[AUDIT-LOG] workspaceId null per action=${action} actor=${actorId} — audit_logs è workspace-scoped`
+      );
+    }
+
     // 4. Prepara payload per insert
     const logEntry = {
       action,
