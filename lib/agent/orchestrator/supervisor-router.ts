@@ -274,7 +274,7 @@ export async function supervisorRouter(
 
     // Salva stato con active_delegation rimossa
     try {
-      await agentSessionService.saveSession(userId, sessionId, {
+      await agentSessionService.updateSession(userId, sessionId, {
         ...(existingSessionState || {}),
         active_delegation: undefined,
       } as AgentState);
@@ -379,7 +379,7 @@ export async function supervisorRouter(
                 confidenceScore: 0,
                 needsHumanReview: false,
               } as AgentState);
-            await agentSessionService.saveSession(userId, sessionId, {
+            await agentSessionService.updateSession(userId, sessionId, {
               ...currentSession,
               active_delegation: delegationContext,
             } as AgentState);
