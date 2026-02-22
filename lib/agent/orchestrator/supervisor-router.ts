@@ -32,6 +32,7 @@ import {
   detectShipmentCreationIntent,
   detectDelegationIntent,
   extractDelegationTarget,
+  detectEndDelegationIntent,
 } from '@/lib/agent/intent-detector';
 import { resolveSubClient, DELEGATION_CONFIDENCE_THRESHOLD } from '@/lib/ai/subclient-resolver';
 import { buildDelegatedActingContext, type DelegationContext } from '@/lib/ai/delegation-context';
@@ -239,6 +240,57 @@ export async function supervisorRouter(
   let effectiveActingContext = actingContext;
   let delegationContext: DelegationContext | undefined;
 
+  // Recupera stato sessione per delegazione persistente (R2)
+  const sessionId = traceId;
+  const existingSessionState = await agentSessionService.getSession(userId, sessionId);
+
+  // 1.4a. Reset delegazione (R2): "torna al mio workspace", "basta delegazione"
+  if (
+    detectEndDelegationIntent(message) &&
+    existingSessionState?.active_delegation &&
+    workerRole === 'reseller'
+  ) {
+    const prevDelegation = existingSessionState.active_delegation;
+    logger.log(`🔄 [Supervisor Router] Reset delegazione: ${prevDelegation.subClientName}`);
+
+    // Audit log DELEGATION_DEACTIVATED
+    try {
+      await workspaceQuery(prevDelegation.resellerWorkspaceId)
+        .from('audit_logs')
+        .insert({
+          action: 'DELEGATION_DEACTIVATED',
+          resource_type: 'workspace',
+          resource_id: prevDelegation.delegatedWorkspaceId,
+          user_id: userId,
+          workspace_id: prevDelegation.resellerWorkspaceId,
+          metadata: {
+            sub_client_name: prevDelegation.subClientName,
+            trace_id: traceId,
+          },
+        });
+    } catch {
+      // Audit non blocca il reset
+    }
+
+    // Salva stato con active_delegation rimossa
+    try {
+      await agentSessionService.saveSession(userId, sessionId, {
+        ...(existingSessionState || {}),
+        active_delegation: undefined,
+      } as AgentState);
+    } catch {
+      // Non critico
+    }
+
+    return emitFinalTelemetryAndReturn({
+      decision: 'END',
+      clarificationRequest: `Ho disattivato la delegazione per ${prevDelegation.subClientName}. Ora opero di nuovo sul tuo workspace.`,
+      executionTimeMs: Date.now() - startTime,
+      source: 'supervisor_only',
+    });
+  }
+
+  // 1.4b. Nuova delegazione esplicita (logica R1 + persistenza R2)
   if (detectDelegationIntent(message) && workerRole === 'reseller' && wsId) {
     const targetName = extractDelegationTarget(message);
 
@@ -313,6 +365,28 @@ export async function supervisorRouter(
             )
             .catch(() => {});
 
+          // R2: Salva delegazione persistente nella sessione
+          try {
+            const currentSession =
+              existingSessionState ||
+              ({
+                messages: [],
+                userId,
+                userEmail,
+                shipmentData: {},
+                processingStatus: 'idle',
+                validationErrors: [],
+                confidenceScore: 0,
+                needsHumanReview: false,
+              } as AgentState);
+            await agentSessionService.saveSession(userId, sessionId, {
+              ...currentSession,
+              active_delegation: delegationContext,
+            } as AgentState);
+          } catch {
+            // Non critico — delegazione funziona comunque per questo messaggio
+          }
+
           // KNOWN LIMITATION (F-ATOM-4): TOCTOU race condition nell'audit dedup.
           // SELECT check + INSERT non sono atomici. Worker concorrenti potrebbero
           // creare log duplicati. Fix definitivo: UNIQUE constraint su
@@ -375,6 +449,28 @@ export async function supervisorRouter(
         });
       }
     }
+  }
+
+  // 1.4c. Delegazione persistente (R2): riutilizza active_delegation se presente
+  if (
+    !delegationContext &&
+    existingSessionState?.active_delegation &&
+    workerRole === 'reseller' &&
+    wsId
+  ) {
+    delegationContext = existingSessionState.active_delegation;
+    effectiveWsId = delegationContext.delegatedWorkspaceId;
+
+    if ('workspace' in actingContext) {
+      effectiveActingContext = buildDelegatedActingContext(
+        actingContext as WorkspaceActingContext,
+        delegationContext
+      );
+    }
+
+    logger.log(
+      `🔄 [Supervisor Router] Delegazione persistente riattivata: ${delegationContext.subClientName}`
+    );
   }
 
   // 1.5. Support intent check (PRIMA del pricing, gestito direttamente)
@@ -606,12 +702,9 @@ export async function supervisorRouter(
     // Il routing è deciso ESCLUSIVAMENTE da supervisor.ts basandosi sullo stato.
     // supervisor-router rileva solo segnali (intent, OCR patterns) e li passa al graph.
     // ⚠️ ActingContext iniettato in agent_context per accesso worker
-    const sessionId = traceId; // Usa traceId come session_id
+    // sessionId e existingSessionState gia recuperati sopra (sezione 1.4a)
 
-    // P3 Task 1: Recupera stato esistente se presente (checkpoint)
-    let existingState = await agentSessionService.getSession(userId, sessionId);
-
-    const initialState: Partial<AgentState> = existingState || {
+    const initialState: Partial<AgentState> = existingSessionState || {
       messages: [new HumanMessage(message)],
       userId,
       userEmail,
@@ -630,16 +723,17 @@ export async function supervisorRouter(
         is_impersonating: effectiveActingContext.isImpersonating,
         acting_context: effectiveActingContext,
       },
-      // Delegazione: contesto request-scoped
+      // Delegazione: contesto request-scoped + persistente
       delegation_context: delegationContext,
+      active_delegation: delegationContext,
     };
 
     // P3 Task 1: Se stato esistente, aggiungi nuovo messaggio + AGGIORNA SEMPRE agent_context
     // ⚠️ CRIT-1 FIX: agent_context DEVE essere fresco ad ogni request.
     // Senza questo fix, sessioni riprese usano acting_context stale
     // (es. impersonation terminata, ruolo cambiato).
-    if (existingState) {
-      initialState.messages = [...(existingState.messages || []), new HumanMessage(message)];
+    if (existingSessionState) {
+      initialState.messages = [...(existingSessionState.messages || []), new HumanMessage(message)];
       initialState.agent_context = {
         session_id: sessionId,
         conversation_history: initialState.messages!,
@@ -648,6 +742,10 @@ export async function supervisorRouter(
         acting_context: effectiveActingContext,
       };
       initialState.delegation_context = delegationContext;
+      // R2: Preserva active_delegation nella sessione
+      if (delegationContext) {
+        initialState.active_delegation = delegationContext;
+      }
     }
 
     // P3 Task 1: Crea checkpointer e graph con persistenza

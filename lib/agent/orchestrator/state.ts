@@ -250,4 +250,14 @@ export interface AgentState {
    * Popolato dal supervisor-router quando il reseller usa "per conto di".
    */
   delegation_context?: DelegationContext;
+
+  // ===== R2: DELEGAZIONE PERSISTENTE MULTI-TURN =====
+
+  /**
+   * Delegazione attiva persistente tra messaggi (multi-turn).
+   * Salvata nel checkpointer quando il reseller attiva una delegazione.
+   * Riutilizzata automaticamente nei messaggi successivi finche non
+   * viene resettata con "torna al mio workspace" o "basta delegazione".
+   */
+  active_delegation?: DelegationContext;
 }

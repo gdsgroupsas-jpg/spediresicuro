@@ -433,3 +433,29 @@ export function extractDelegationTarget(message: string): string | null {
 
   return null;
 }
+
+// ============================================
+// R2: Reset delegazione (fine "per conto di")
+// ============================================
+
+const END_DELEGATION_PATTERNS = [
+  /\btorna\s+al\s+mio\s+workspace\b/i,
+  /\btorna\s+al\s+mio\s+account\b/i,
+  /\bbasta\s+delegazione\b/i,
+  /\bstop\s+delegazione\b/i,
+  /\bfine\s+delegazione\b/i,
+  /\besci\s+dalla?\s+delegazione\b/i,
+  /\bsmetti\s+di\s+operar[ei]\s+per\b/i,
+  /\bnon\s+operar[ei]\s+pi[uù]\s+per\b/i,
+  /\btorna\s+al?\s+mio\s+profilo\b/i,
+  /\btorna\s+a\s+me\b/i,
+];
+
+/**
+ * Rileva se il messaggio indica la volonta di terminare la delegazione.
+ * Pattern italiani: "torna al mio workspace", "basta delegazione", etc.
+ */
+export function detectEndDelegationIntent(message: string): boolean {
+  if (!message?.trim()) return false;
+  return END_DELEGATION_PATTERNS.some((pattern) => pattern.test(message));
+}
