@@ -130,6 +130,12 @@ export function AnneAssistant({
     AgentState['pendingAction'] | null
   >(null);
 
+  // R2: Delegazione attiva (badge visivo)
+  const [activeDelegation, setActiveDelegation] = useState<{
+    subClientName: string;
+    workspaceName: string;
+  } | null>(null);
+
   // Preferenze utente (localStorage)
   const [preferences, setPreferences] = useState({
     showSuggestions: true,
@@ -356,6 +362,13 @@ export function AnneAssistant({
         if (data.metadata.agentState.pendingAction) {
           setCurrentPendingAction(data.metadata.agentState.pendingAction);
         }
+
+        // R2: Aggiorna badge delegazione
+        if (data.metadata.agentState.delegation_info) {
+          setActiveDelegation(data.metadata.agentState.delegation_info);
+        } else {
+          setActiveDelegation(null);
+        }
       }
 
       // Persist assistant response with card metadata (multi-device sync + P2 cards)
@@ -570,6 +583,24 @@ export function AnneAssistant({
                     </h3>
                     <p className="text-xs text-purple-600">Assistente Virtuale</p>
                   </div>
+                  {/* R2: Badge delegazione attiva */}
+                  {activeDelegation && (
+                    <span className="ml-2 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800 border border-amber-200">
+                      Opero per: {activeDelegation.subClientName}
+                      <button
+                        type="button"
+                        onClick={() => {
+                          // Invia messaggio reset delegazione
+                          setInput('torna al mio workspace');
+                          setTimeout(() => sendMessage(), 100);
+                        }}
+                        className="ml-0.5 hover:text-amber-900 transition-colors"
+                        title="Disattiva delegazione"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </span>
+                  )}
                 </div>
                 <div className="flex items-center gap-1">
                   {/* P5: TTS toggle */}

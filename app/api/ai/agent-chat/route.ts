@@ -87,6 +87,18 @@ function sanitizeAgentStateForClient(state: any): Record<string, any> {
     support_response: state.support_response,
     clarification_request: state.clarification_request,
     processingStatus: state.processingStatus,
+    // R2: Delegation info (solo nome, MAI userId — privacy)
+    delegation_info: state.delegation_context
+      ? {
+          subClientName: state.delegation_context.subClientName,
+          workspaceName: state.delegation_context.subClientWorkspaceName,
+        }
+      : state.active_delegation
+        ? {
+            subClientName: state.active_delegation.subClientName,
+            workspaceName: state.active_delegation.subClientWorkspaceName,
+          }
+        : undefined,
     // NO: userId, userEmail, messages, agent_context, shipmentData, shipmentDraft, params
   };
 }
