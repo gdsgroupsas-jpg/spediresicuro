@@ -608,8 +608,15 @@ export async function executeTool(
       case 'track_shipment': {
         const trackingNumber = toolCall.arguments.trackingNumber;
 
-        // Usa workspaceQuery per isolamento multi-tenant
-        const trackDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        // Fail-closed: workspaceId obbligatorio per isolamento multi-tenant
+        if (!workspaceId) {
+          return {
+            success: false,
+            result: null,
+            error: 'workspaceId obbligatorio per isolamento multi-tenant',
+          };
+        }
+        const trackDb = workspaceQuery(workspaceId);
         const { data: shipment, error } = await trackDb
           .from('shipments')
           .select('*, shipment_events(*)')
@@ -680,8 +687,15 @@ export async function executeTool(
             periodStart = new Date(now.getFullYear(), now.getMonth(), 1);
         }
 
-        // Scoped per workspace — admin vede solo il proprio workspace
-        const healthDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        // Fail-closed: workspaceId obbligatorio per isolamento multi-tenant
+        if (!workspaceId) {
+          return {
+            success: false,
+            result: null,
+            error: 'workspaceId obbligatorio per isolamento multi-tenant',
+          };
+        }
+        const healthDb = workspaceQuery(workspaceId);
         const { data: shipments, error } = (await healthDb
           .from('shipments')
           .select('final_price, base_price, created_at, carrier')
@@ -769,8 +783,15 @@ export async function executeTool(
         const hours = toolCall.arguments.hours || 24;
         const since = new Date(Date.now() - hours * 60 * 60 * 1000);
 
-        // Scoped per workspace — admin vede solo log del proprio workspace
-        const logsDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        // Fail-closed: workspaceId obbligatorio per isolamento multi-tenant
+        if (!workspaceId) {
+          return {
+            success: false,
+            result: null,
+            error: 'workspaceId obbligatorio per isolamento multi-tenant',
+          };
+        }
+        const logsDb = workspaceQuery(workspaceId);
         let query = logsDb
           .from('audit_logs')
           .select('*')
@@ -876,12 +897,21 @@ export async function executeTool(
 
         let priceList = null;
 
+        // Fail-closed: workspaceId obbligatorio per isolamento multi-tenant
+        if (!workspaceId) {
+          return {
+            success: false,
+            result: null,
+            error: 'workspaceId obbligatorio per isolamento multi-tenant',
+          };
+        }
+
         if (priceListId) {
           // Cerca per ID specifico
-          priceList = await getPriceListById(priceListId, workspaceId!);
+          priceList = await getPriceListById(priceListId, workspaceId);
         } else {
-          // Cerca listino attivo per utente (e opzionalmente corriere)
-          const plDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+          // Cerca listino attivo per utente, workspace-scoped
+          const plDb = workspaceQuery(workspaceId);
           const { data: lists } = await plDb
             .from('price_lists')
             .select('*')
@@ -910,7 +940,7 @@ export async function executeTool(
         // Se è un listino custom, recupera anche il master (fornitore)
         let masterList = null;
         if (priceList.master_list_id) {
-          masterList = await getPriceListById(priceList.master_list_id, workspaceId!);
+          masterList = await getPriceListById(priceList.master_list_id, workspaceId);
         }
 
         // Recupera info corriere
@@ -965,8 +995,16 @@ export async function executeTool(
         const { weight, destinationZip, destinationProvince, courierId, serviceType } =
           toolCall.arguments;
 
+        // Fail-closed: workspaceId obbligatorio per isolamento multi-tenant
+        if (!workspaceId) {
+          return {
+            success: false,
+            result: null,
+            error: 'workspaceId obbligatorio per isolamento multi-tenant',
+          };
+        }
         // Trova listini fornitore (master/supplier)
-        const supplierDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        const supplierDb = workspaceQuery(workspaceId);
         let query = supplierDb
           .from('price_lists')
           .select('*, entries:price_list_entries(*)')
@@ -1059,8 +1097,16 @@ export async function executeTool(
           };
         }
 
+        // Fail-closed: workspaceId obbligatorio per isolamento multi-tenant
+        if (!workspaceId) {
+          return {
+            success: false,
+            result: null,
+            error: 'workspaceId obbligatorio per isolamento multi-tenant',
+          };
+        }
         // Query listini assegnati (workspace-scoped)
-        const listDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        const listDb = workspaceQuery(workspaceId);
         let query = listDb
           .from('price_lists')
           .select('*, courier:couriers(id, name, code)')
@@ -1147,8 +1193,16 @@ export async function executeTool(
 
         const results: any[] = [];
 
+        // Fail-closed: workspaceId obbligatorio per isolamento multi-tenant
+        if (!workspaceId) {
+          return {
+            success: false,
+            result: null,
+            error: 'workspaceId obbligatorio per isolamento multi-tenant',
+          };
+        }
         // 1. Trova listino/i personalizzato/i dell'utente (workspace-scoped)
-        const compareDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+        const compareDb = workspaceQuery(workspaceId);
         let customListsQuery = compareDb
           .from('price_lists')
           .select('*, courier:couriers(id, name, code)')
