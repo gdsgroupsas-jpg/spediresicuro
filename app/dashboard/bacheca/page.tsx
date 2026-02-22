@@ -32,17 +32,7 @@ import {
   Clock,
   X,
 } from 'lucide-react';
-
-// Fix #3: sanitizzazione client-side per difesa in profondità (defense-in-depth)
-// Il body_html è già sanitizzato server-side (4-pass) ma questo protegge da dati legacy/diretti
-function sanitizeHtmlClient(html: string): string {
-  const dangerousTags =
-    /<\s*\/?\s*(script|style|iframe|object|embed|form|input|textarea|button|link|meta|base|applet|svg|math)\b[^>]*>/gi;
-  let s = html.replace(dangerousTags, '');
-  s = s.replace(/\s+on\w+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]*)/gi, '');
-  s = s.replace(dangerousTags, ''); // secondo passaggio anti-recomposition
-  return s;
-}
+import { sanitizeHtmlClient } from '@/lib/security/sanitize-html-client';
 
 // ─── TYPES ───
 

@@ -12,10 +12,10 @@ import { withRateLimit } from '@/lib/security/rate-limit-middleware';
 export async function POST(request: NextRequest) {
   // ============================================
   // RATE LIMITING (30 req/min per utente)
-  // Operazione costosa: chiama API esterne + DB + wallet
   // ============================================
   const rl = await withRateLimit(request, 'shipments-create', { limit: 30, windowSeconds: 60 });
   if (rl) return rl;
+
   // ============================================
   // AUTH (con supporto impersonation)
   // ============================================

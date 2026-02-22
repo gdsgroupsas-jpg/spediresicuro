@@ -195,9 +195,10 @@ describe('Guardian: usi diretti supabaseAdmin su tabelle multi-tenant', () => {
     // Baseline 2026-02-17: 0 (regex single-line — NON catturava violazioni multilinea!)
     // Baseline 2026-02-21: 137 (fix regex multilinea — violazioni REALI ora visibili)
     // Baseline 2026-02-21b: 127 (migrazione Anne AI — 10 violazioni rimosse da lib/ai/ e lib/agent/)
+    // Baseline 2026-02-22: 126 (ratchet down — 1 violazione in meno rilevata)
     //   Rimanenti: actions/, app/api/, lib/ (non-Anne). Da ridurre progressivamente.
     // Obiettivo finale: 0
-    expect(totalViolations).toBeLessThanOrEqual(127);
+    expect(totalViolations).toBeLessThanOrEqual(126);
 
     // Salva snapshot per monitoraggio
     console.log(
@@ -225,6 +226,25 @@ async function test() {
     // Entrambi i pattern DEVONO essere catturati
     expect(multilineCode.match(pattern)).not.toBeNull();
     expect(singleLineCode.match(pattern)).not.toBeNull();
+  });
+
+  it('CANARY: il guardian DEVE trovare la violazione nel file canary', () => {
+    // CANARY TEST: un file reale con una violazione NOTA esiste nel codebase.
+    // Se il guardian non lo trova, il guardian stesso è rotto.
+    // Questo impedisce il ripetersi del bug del regex single-line (feb 2026).
+    const canaryPath = path.join(process.cwd(), 'tests/__fixtures__/guardian-canary.ts');
+    expect(fs.existsSync(canaryPath)).toBe(true);
+
+    const canaryCode = fs.readFileSync(canaryPath, 'utf-8');
+
+    // Il canary contiene sia pattern single-line che multilinea
+    const patterns = ['shipments', 'price_lists'].map(
+      (table) => new RegExp(`supabaseAdmin\\s*\\.from\\(\\s*['\`]${table}['\`]\\s*\\)`, 'gs')
+    );
+
+    const found = patterns.filter((p) => canaryCode.match(p));
+    // Il canary DEVE contenere almeno 2 violazioni catturate dal regex
+    expect(found.length).toBeGreaterThanOrEqual(2);
   });
 
   it('nessun file NUOVO dovrebbe usare supabaseAdmin.from() su tabelle multi-tenant', () => {
