@@ -80,7 +80,7 @@ export async function DELETE(
 
       if (!membership) {
         console.warn(
-          `[DELETE USER] Tentativo cross-tenant bloccato: admin=${context.actor.email}, target=${targetUser.email}, workspace=${workspaceId}`
+          `[DELETE USER] Tentativo cross-tenant bloccato: admin=${context.actor.id.substring(0, 8)}..., target=${userId.substring(0, 8)}..., workspace=${workspaceId}`
         );
         return NextResponse.json(
           { error: 'Utente non appartiene al workspace corrente' },
@@ -115,10 +115,10 @@ export async function DELETE(
       }
 
       console.log(
-        `⚠️ [DELETE USER] Utente già eliminato da auth.users, continuo con database pubblico: ${targetUser.email}`
+        `⚠️ [DELETE USER] Utente già eliminato da auth.users, continuo con database pubblico: ${userId.substring(0, 8)}...`
       );
     } else {
-      console.log(`✅ [DELETE USER] Utente cancellato da auth.users: ${targetUser.email}`);
+      console.log(`✅ [DELETE USER] Utente cancellato da auth.users: ${userId.substring(0, 8)}...`);
     }
 
     // 8b. Cancellazione atomica da database pubblico (ENTERPRISE-GRADE)

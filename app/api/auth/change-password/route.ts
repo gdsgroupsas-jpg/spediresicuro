@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     const authUser = authUsers?.find((u: any) => u.email?.toLowerCase() === emailLower);
 
     if (!authUser) {
-      console.log(`⚠️ [CHANGE PASSWORD] Utente auth non trovato: ${emailLower}`);
+      console.log(`⚠️ [CHANGE PASSWORD] Utente auth non trovato per richiesta cambio password`);
       return NextResponse.json({ error: 'Utente non trovato' }, { status: 404 });
     }
 
@@ -78,7 +78,9 @@ export async function POST(request: NextRequest) {
     });
 
     if (signInError) {
-      console.log(`⚠️ [CHANGE PASSWORD] Password attuale errata per: ${emailLower}`);
+      console.log(
+        `⚠️ [CHANGE PASSWORD] Password attuale errata per utente ${authUser.id.substring(0, 8)}...`
+      );
       return NextResponse.json({ error: 'La password attuale non è corretta' }, { status: 400 });
     }
 
@@ -109,7 +111,9 @@ export async function POST(request: NextRequest) {
       changedAt: new Date(),
     });
 
-    console.log(`✅ [CHANGE PASSWORD] Password cambiata per: ${emailLower}`);
+    console.log(
+      `✅ [CHANGE PASSWORD] Password cambiata per utente ${authUser.id.substring(0, 8)}...`
+    );
 
     return NextResponse.json({
       success: true,

@@ -27,7 +27,9 @@ export async function POST(request: NextRequest) {
 
     // Create context-like structure for consistency with getSafeAuth pattern
     const context = { actor: { email: user.email, id: user.id } };
-    console.log(`[QUOTES API] Auth success via ${user.authMethod} (User: ${user.email})`);
+    console.log(
+      `[QUOTES API] Auth success via ${user.authMethod} (User: ${user.id.substring(0, 8)}...)`
+    );
 
     const body = await request.json();
     const {

@@ -169,9 +169,8 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
     // Aggiorna utente
     console.log('💾 [API ADMIN DATI CLIENTE] Salvataggio dati cliente:', {
-      adminEmail: actorEmail,
-      targetUserId: userId,
-      targetEmail: targetUser.email,
+      adminId: context!.actor.id?.substring(0, 8) + '...',
+      targetUserId: userId.substring(0, 8) + '...',
       datiCompletati: datiCliente.datiCompletati,
     });
 
@@ -180,7 +179,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     });
 
     console.log('✅ [API ADMIN DATI CLIENTE] Utente aggiornato:', {
-      userId: updatedUser.id,
+      userId: updatedUser.id.substring(0, 8) + '...',
       hasDatiCliente: !!updatedUser.datiCliente,
       datiCompletati: updatedUser.datiCliente?.datiCompletati,
     });

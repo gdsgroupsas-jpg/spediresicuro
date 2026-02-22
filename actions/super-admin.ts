@@ -869,7 +869,10 @@ export async function createReseller(data: {
         userName: resellerName.trim(),
         credentials: { email: emailLower, password: data.password },
       });
-      console.log('✅ [CREATE RESELLER] Email premium di benvenuto inviata a:', emailLower);
+      console.log(
+        '✅ [CREATE RESELLER] Email premium di benvenuto inviata a utente:',
+        userId.substring(0, 8) + '...'
+      );
     } catch (emailError) {
       console.error('⚠️ [CREATE RESELLER] Errore invio email benvenuto:', emailError);
       // Non blocchiamo, il reseller è stato creato
@@ -961,7 +964,9 @@ export async function updateResellerRole(
       };
     }
 
-    console.log(`✅ [updateResellerRole] Ruolo aggiornato: ${targetUser.email} -> ${role}`);
+    console.log(
+      `✅ [updateResellerRole] Ruolo aggiornato: ${userId.substring(0, 8)}... -> ${role}`
+    );
 
     // 5. Audit log (workspace-scoped)
     try {

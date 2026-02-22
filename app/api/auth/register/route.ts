@@ -22,7 +22,7 @@ export async function POST(request: NextRequest) {
     const { email, password, name, accountType } = body;
 
     console.log('📝 [REGISTER] Tentativo registrazione:', {
-      email,
+      hasEmail: !!email,
       hasPassword: !!password,
       hasName: !!name,
     });
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
 
     // Validazione email
     if (!validateEmail(email)) {
-      console.log('❌ [REGISTER] Email non valida:', email);
+      console.log('❌ [REGISTER] Email non valida');
       return ApiErrors.VALIDATION_ERROR('Email non valida');
     }
 
@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     try {
       const existingUser = await findUserByEmail(email);
       if (existingUser) {
-        console.log('⚠️ [REGISTER] Utente già esistente nella tabella users:', email);
+        console.log('⚠️ [REGISTER] Utente già esistente nella tabella users');
         return ApiErrors.CONFLICT(
           'Questa email è già registrata. Usa il login invece della registrazione.'
         );
@@ -84,7 +84,6 @@ export async function POST(request: NextRequest) {
     console.log(
       '➕ [REGISTER] Creazione utente con auth.signUp() (flusso reale, email confirmation automatica)...',
       {
-        email,
         accountType: validAccountType,
       }
     );
@@ -154,8 +153,7 @@ export async function POST(request: NextRequest) {
 
     const supabaseUserId = signUpData.user.id;
     console.log('✅ [REGISTER] Utente creato con auth.signUp():', {
-      id: supabaseUserId,
-      email: signUpData.user.email,
+      id: supabaseUserId.substring(0, 8) + '...',
       email_confirmed_at: signUpData.user.email_confirmed_at, // DEVE essere null
       confirmation_sent_at: signUpData.user.confirmation_sent_at, // DEVE essere valorizzato
     });

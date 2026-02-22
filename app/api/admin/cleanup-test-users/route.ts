@@ -273,7 +273,11 @@ export async function POST(
     }
 
     // Log audit
-    console.log('[CLEANUP] Test users cleanup executed by:', context.actor.email, stats);
+    console.log(
+      '[CLEANUP] Test users cleanup executed by:',
+      context.actor.id.substring(0, 8) + '...',
+      stats
+    );
 
     return NextResponse.json({
       success: true,

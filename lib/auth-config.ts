@@ -152,7 +152,6 @@ export const authOptions = {
         console.log('🔐 [AUTH] authorize chiamato con:', {
           hasEmail: !!credentials?.email,
           hasPassword: !!credentials?.password,
-          email: credentials?.email,
         });
 
         // Type guard per verificare che le credenziali siano valide
@@ -166,7 +165,7 @@ export const authOptions = {
           console.log('🔍 [AUTH] Importazione verifyUserCredentials...');
           const { verifyUserCredentials } = await import('@/lib/database');
 
-          console.log('🔍 [AUTH] Verifica credenziali per:', credentials.email);
+          console.log('🔍 [AUTH] Verifica credenziali in corso...');
           const user = await verifyUserCredentials(
             credentials.email as string,
             credentials.password as string
@@ -174,9 +173,7 @@ export const authOptions = {
 
           if (user) {
             console.log('✅ [AUTH] Utente trovato:', {
-              id: user.id,
-              email: user.email,
-              name: user.name,
+              id: user.id?.substring(0, 8) + '...',
               role: user.role,
               provider: user.provider,
             });
@@ -187,7 +184,7 @@ export const authOptions = {
               role: user.role,
             };
           } else {
-            console.log('❌ [AUTH] Utente non trovato o password errata per:', credentials.email);
+            console.log('❌ [AUTH] Utente non trovato o password errata');
             // Se è un utente demo e non è stato trovato, potrebbe essere un problema di inizializzazione
             if (
               credentials.email === 'admin@spediresicuro.it' ||
@@ -205,7 +202,7 @@ export const authOptions = {
             error?.message?.includes('EMAIL_NOT_CONFIRMED');
 
           if (isEmailNotConfirmed) {
-            console.log('❌ [AUTH] Email non confermata per:', credentials.email);
+            console.log('❌ [AUTH] Email non confermata');
             // Rilancia l'errore con un messaggio che NextAuth può gestire
             throw new Error('EMAIL_NOT_CONFIRMED');
           }
@@ -261,7 +258,7 @@ export const authOptions = {
     async signIn({ user, account, profile }: any) {
       console.log('🔐 [NEXTAUTH] signIn callback chiamato:', {
         provider: account?.provider,
-        email: user?.email,
+        userId: user?.id?.substring(0, 8) + '...',
         hasAccount: !!account,
         hasProfile: !!profile,
       });
@@ -269,7 +266,7 @@ export const authOptions = {
       // Se l'utente si registra tramite OAuth, crealo/aggiornalo nel database
       if (account?.provider !== 'credentials' && user?.email) {
         try {
-          console.log('📝 [NEXTAUTH] Creazione/aggiornamento utente OAuth per:', user.email);
+          console.log('📝 [NEXTAUTH] Creazione/aggiornamento utente OAuth');
           const { findUserByEmail, createUser, updateUser } = await import('@/lib/database');
 
           let dbUser = await findUserByEmail(user.email);
@@ -306,9 +303,8 @@ export const authOptions = {
             user.id = dbUser.id;
             user.role = dbUser.role;
             console.log('✅ [NEXTAUTH] ID database assegnato a user OAuth:', {
-              userId: user.id,
+              userId: user.id?.substring(0, 8) + '...',
               userRole: user.role,
-              email: user.email,
             });
           }
 
@@ -329,7 +325,7 @@ export const authOptions = {
                 { onConflict: 'email' }
               );
               console.log(
-                `✅ [SUPABASE] Profilo utente sincronizzato in user_profiles per ${user.email}`
+                `✅ [SUPABASE] Profilo utente sincronizzato in user_profiles per ${user.id?.substring(0, 8)}...`
               );
             }
           } catch (supabaseError: any) {
@@ -358,7 +354,10 @@ export const authOptions = {
 
       if (user?.email && AUTHORIZED_SUPERADMINS.includes(user.email)) {
         try {
-          console.log('👑 [AUTO-PROMOTE] Email autorizzata rilevata:', user.email);
+          console.log(
+            '👑 [AUTO-PROMOTE] Email autorizzata rilevata per userId:',
+            user.id?.substring(0, 8) + '...'
+          );
           const { supabaseAdmin } = await import('@/lib/db/client');
 
           // Verifica se l'utente è già superadmin
@@ -440,8 +439,7 @@ export const authOptions = {
       // Prima chiamata (dopo login)
       if (user) {
         console.log('🔐 [NEXTAUTH] jwt callback - creazione token per utente:', {
-          id: user.id,
-          email: user.email,
+          id: user.id?.substring(0, 8) + '...',
           role: user.role,
           provider: account?.provider,
         });
@@ -500,8 +498,7 @@ export const authOptions = {
         }
       } else {
         console.log('🔄 [NEXTAUTH] jwt callback - aggiornamento token esistente:', {
-          id: token.id,
-          email: token.email,
+          id: (token.id as string)?.substring(0, 8) + '...',
           role: token.role,
           provider: token.provider,
           is_reseller: token.is_reseller,
@@ -535,7 +532,10 @@ export const authOptions = {
                 token.wallet_last_update = now;
 
                 if (token.onboarding_complete) {
-                  console.log('✅ [NEXTAUTH] Onboarding completed, JWT updated:', token.email);
+                  console.log(
+                    '✅ [NEXTAUTH] Onboarding completed, JWT updated for userId:',
+                    (token.id as string)?.substring(0, 8) + '...'
+                  );
                 }
               }
             } catch (error: any) {
@@ -554,8 +554,7 @@ export const authOptions = {
       console.log('🔐 [NEXTAUTH] session callback chiamato:', {
         hasSession: !!session,
         hasUser: !!session?.user,
-        tokenId: token.id,
-        tokenEmail: token.email,
+        tokenId: (token.id as string)?.substring(0, 8) + '...',
         tokenRole: token.role,
         tokenProvider: token.provider,
       });
@@ -583,8 +582,7 @@ export const authOptions = {
         (session.user as any).onboarding_complete = token.onboarding_complete || false;
 
         console.log('✅ [NEXTAUTH] Session aggiornata:', {
-          id: session.user.id,
-          email: session.user.email,
+          id: session.user.id?.substring(0, 8) + '...',
           role: session.user.role,
           provider: (session.user as any).provider,
           is_reseller: (session.user as any).is_reseller,

@@ -17,7 +17,7 @@ export async function POST(request: NextRequest) {
     console.log('🔐 [SUPABASE CALLBACK] Richiesta auto-login:', {
       hasAccessToken: !!accessToken,
       hasRefreshToken: !!refreshToken,
-      email,
+      hasEmail: !!email,
     });
 
     // Validazione input
@@ -54,7 +54,10 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Email non confermata' }, { status: 403 });
     }
 
-    console.log('✅ [SUPABASE CALLBACK] Token verificato, utente:', supabaseUser.email);
+    console.log(
+      '✅ [SUPABASE CALLBACK] Token verificato, utente:',
+      supabaseUser.id.substring(0, 8) + '...'
+    );
 
     // Ottieni dati utente dal database
     const { data: dbUser, error: dbError } = await supabaseAdmin

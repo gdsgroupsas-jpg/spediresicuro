@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     // Non rivelare se l'email esiste o meno (sicurezza)
     if (userError || !user) {
-      console.log(`⚠️ [FORGOT PASSWORD] Email non trovata: ${emailLower}`);
+      console.log(`⚠️ [FORGOT PASSWORD] Email non trovata per richiesta reset password`);
       // Rispondiamo comunque con successo per non rivelare info
       return NextResponse.json({
         success: true,
@@ -87,7 +87,9 @@ export async function POST(request: NextRequest) {
       console.error('❌ [FORGOT PASSWORD] Errore invio email:', emailResult.error);
       // Non riveliamo l'errore specifico
     } else {
-      console.log(`✅ [FORGOT PASSWORD] Email inviata a: ${emailLower}`);
+      console.log(
+        `✅ [FORGOT PASSWORD] Email di reset inviata per utente ${user.id.substring(0, 8)}...`
+      );
     }
 
     return NextResponse.json({

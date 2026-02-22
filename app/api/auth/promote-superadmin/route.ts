@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🔐 [AUTO-PROMOTE] Promozione superadmin per:', userEmail);
+    console.log('🔐 [AUTO-PROMOTE] Promozione superadmin richiesta');
 
     // 3. Aggiorna utente a superadmin
     const { data: updatedUser, error: updateError } = await supabaseAdmin
@@ -87,7 +87,10 @@ export async function POST(request: NextRequest) {
           throw new Error(`Errore creazione utente: ${createError.message}`);
         }
 
-        console.log('✅ [AUTO-PROMOTE] Utente creato come superadmin:', newUser.email);
+        console.log(
+          '✅ [AUTO-PROMOTE] Utente creato come superadmin:',
+          newUser.id.substring(0, 8) + '...'
+        );
 
         return NextResponse.json({
           success: true,
@@ -104,7 +107,7 @@ export async function POST(request: NextRequest) {
       throw updateError;
     }
 
-    console.log('✅ [AUTO-PROMOTE] Promozione completata:', updatedUser.email);
+    console.log('✅ [AUTO-PROMOTE] Promozione completata:', updatedUser.id.substring(0, 8) + '...');
 
     // 4. Log audit (workspace-isolated)
     try {

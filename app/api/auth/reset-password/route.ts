@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (userError || !user) {
-      console.log(`⚠️ [RESET PASSWORD] Utente non trovato: ${emailLower}`);
+      console.log(`⚠️ [RESET PASSWORD] Utente non trovato per richiesta reset password`);
       return NextResponse.json(
         { error: 'Link non valido o scaduto. Richiedi un nuovo reset.' },
         { status: 400 }
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Verifica che il token corrisponda
     if (user.reset_token_hash !== tokenHash) {
-      console.log(`⚠️ [RESET PASSWORD] Token non valido per: ${emailLower}`);
+      console.log(`⚠️ [RESET PASSWORD] Token non valido per utente ${user.id.substring(0, 8)}...`);
       return NextResponse.json(
         { error: 'Link non valido o scaduto. Richiedi un nuovo reset.' },
         { status: 400 }
@@ -68,7 +68,7 @@ export async function POST(request: NextRequest) {
 
     // Verifica che il token non sia scaduto
     if (!user.reset_token_expires || new Date(user.reset_token_expires) < new Date()) {
-      console.log(`⚠️ [RESET PASSWORD] Token scaduto per: ${emailLower}`);
+      console.log(`⚠️ [RESET PASSWORD] Token scaduto per utente ${user.id.substring(0, 8)}...`);
       return NextResponse.json(
         { error: 'Il link è scaduto. Richiedi un nuovo reset della password.' },
         { status: 400 }
@@ -124,7 +124,9 @@ export async function POST(request: NextRequest) {
       changedAt: new Date(),
     });
 
-    console.log(`✅ [RESET PASSWORD] Password reimpostata per: ${emailLower}`);
+    console.log(
+      `✅ [RESET PASSWORD] Password reimpostata per utente ${user.id.substring(0, 8)}...`
+    );
 
     return NextResponse.json({
       success: true,
