@@ -30,6 +30,7 @@ import type { PriceCalculationResult, PriceList, PriceRule } from '@/types/listi
 import type { CourierServiceType } from '@/types/shipments';
 import { buildWorkspaceFilter, validateUUID } from '@/lib/validators';
 import { supabaseAdmin } from './client';
+import { workspaceQuery } from './workspace-query';
 
 // ✨ PERFORMANCE: In-memory cache for master price lists to avoid repeated queries
 // within the same request lifecycle. Entries expire after 30 seconds.
@@ -1436,8 +1437,11 @@ export async function calculateBestPriceForReseller(
 
     let activePriceLists: any[] = [];
 
+    // Query builder workspace-scoped per reseller/utenti, cross-ws per superadmin
+    const wq = workspaceQuery(workspaceId);
+
     if (isSuperadmin) {
-      // Superadmin: vede tutti i listini attivi
+      // Superadmin: vede tutti i listini attivi (cross-workspace, INTENZIONALE)
       const { data } = await supabaseAdmin
         .from('price_lists')
         .select('*, entries:price_list_entries(*)') // ✨ Carica anche entries (matrice)
@@ -1446,8 +1450,8 @@ export async function calculateBestPriceForReseller(
         .order('created_at', { ascending: false });
       activePriceLists = data || [];
     } else if (isReseller) {
-      // RESELLER: vede TUTTI i suoi listini personalizzati attivi
-      const { data } = await supabaseAdmin
+      // RESELLER: vede TUTTI i suoi listini personalizzati attivi (workspace-scoped)
+      const { data } = await wq
         .from('price_lists')
         .select('*, entries:price_list_entries(*)') // ✨ Carica anche entries (matrice)
         .in('list_type', ['custom', 'supplier'])
@@ -1456,8 +1460,8 @@ export async function calculateBestPriceForReseller(
         .order('created_at', { ascending: false });
       activePriceLists = data || [];
     } else {
-      // UTENTI NORMALI: vedono SOLO i listini assegnati
-      const { data: assignments } = await supabaseAdmin
+      // UTENTI NORMALI: vedono SOLO i listini assegnati (workspace-scoped)
+      const { data: assignments } = await wq
         .from('price_list_assignments')
         .select('price_list_id, price_lists(*)')
         .eq('user_id', userId)
@@ -1465,7 +1469,7 @@ export async function calculateBestPriceForReseller(
 
       if (assignments && assignments.length > 0) {
         const assignedListIds = assignments.map((a: any) => a.price_list_id);
-        const { data } = await supabaseAdmin
+        const { data } = await wq
           .from('price_lists')
           .select('*, entries:price_list_entries(*)') // ✨ Carica anche entries (matrice)
           .in('id', assignedListIds)
@@ -1675,9 +1679,8 @@ export async function calculateBestPriceForReseller(
       );
     }
 
-    // ✨ PRIORITÀ 3: Listino personalizzato assegnato (API Master)
-    // Cerca listini assegnati tramite price_list_assignments
-    const { data: assignments } = await supabaseAdmin
+    // ✨ PRIORITÀ 3: Listino personalizzato assegnato (API Master) — workspace-scoped
+    const { data: assignments } = await wq
       .from('price_list_assignments')
       .select('price_list_id, price_lists(*)')
       .eq('user_id', userId)
