@@ -1,3 +1,4 @@
+import { NextRequest } from 'next/server';
 import { supabaseAdmin } from '@/lib/db/client';
 import { requireWorkspaceAuth } from '@/lib/workspace-auth';
 import { AUDIT_ACTIONS } from '@/lib/security/audit-actions';
@@ -6,8 +7,15 @@ import { createShipmentSchema } from '@/lib/validations/shipment';
 import { createShipmentCore } from '@/lib/shipments/create-shipment-core';
 import { getCourierClientReal } from '@/lib/shipments/get-courier-client';
 import { convertLegacyPayload } from '@/lib/shipments/convert-legacy-payload';
+import { withRateLimit } from '@/lib/security/rate-limit-middleware';
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // ============================================
+  // RATE LIMITING (30 req/min per utente)
+  // Operazione costosa: chiama API esterne + DB + wallet
+  // ============================================
+  const rl = await withRateLimit(request, 'shipments-create', { limit: 30, windowSeconds: 60 });
+  if (rl) return rl;
   // ============================================
   // AUTH (con supporto impersonation)
   // ============================================
