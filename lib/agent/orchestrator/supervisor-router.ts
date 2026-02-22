@@ -313,6 +313,10 @@ export async function supervisorRouter(
             )
             .catch(() => {});
 
+          // KNOWN LIMITATION (F-ATOM-4): TOCTOU race condition nell'audit dedup.
+          // SELECT check + INSERT non sono atomici. Worker concorrenti potrebbero
+          // creare log duplicati. Fix definitivo: UNIQUE constraint su
+          // (trace_id, resource_id, action) in audit_logs. Rimandato a R3.
           // Audit log idempotente: dedup su trace_id + target workspace
           try {
             const existingLog = await workspaceQuery(delegationContext.resellerWorkspaceId)

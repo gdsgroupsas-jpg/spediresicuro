@@ -57,6 +57,10 @@ export async function getUserMemory(userId: string): Promise<UserMemory | null> 
   };
 }
 
+// KNOWN LIMITATION (F-ATOM-3): read-then-write race condition.
+// Se due richieste concorrenti aggiornano la memory dello stesso utente,
+// una potrebbe sovrascrivere l'altra. Fix definitivo: RPC PostgreSQL
+// con SELECT ... FOR UPDATE o upsert atomico lato DB. Rimandato a R3.
 export async function upsertUserMemory(userId: string, patch: UserMemory): Promise<UserMemory> {
   const existing = (await getUserMemory(userId)) || {};
   const merged = mergeMemory(existing, patch);
