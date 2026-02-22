@@ -277,12 +277,14 @@ describe('CRM Data Service — filtro workspace SEMPRE applicato', () => {
     expect(code).not.toContain('!isAdmin && workspaceId');
   });
 
-  it('filtra per workspaceId quando disponibile (8 istanze)', () => {
+  it('usa getCrmQueryBuilder per isolamento workspace (admin=cross-ws, reseller=scoped)', () => {
     const code = fs.readFileSync(path.join(process.cwd(), 'lib/crm/crm-data-service.ts'), 'utf-8');
-    // Il pattern corretto e': if (workspaceId) { query = query.eq('workspace_id', workspaceId); }
-    const matches = code.match(/if\s*\(workspaceId\)\s*\{/g);
+    // Verifica che getCrmQueryBuilder è usato in tutte le funzioni principali
+    const matches = code.match(/getCrmQueryBuilder\(isAdmin,\s*workspaceId\)/g);
     expect(matches).not.toBeNull();
-    expect(matches!.length).toBeGreaterThanOrEqual(8);
+    // 6 funzioni principali: getPipelineSummary, getHotEntities, getStaleEntities,
+    // getHealthAlerts, searchEntities, getEntityDetail
+    expect(matches!.length).toBeGreaterThanOrEqual(6);
   });
 
   it('accetta userRole con 3 valori in tutte le funzioni', () => {
@@ -293,10 +295,10 @@ describe('CRM Data Service — filtro workspace SEMPRE applicato', () => {
     expect(newPattern).toBeGreaterThanOrEqual(8);
   });
 
-  it('getEntityDetail filtra commercial_quotes per workspace_id (defense-in-depth)', () => {
+  it('getEntityDetail usa workspaceQuery per commercial_quotes (workspace-scoped)', () => {
     const code = fs.readFileSync(path.join(process.cwd(), 'lib/crm/crm-data-service.ts'), 'utf-8');
-    // La query commercial_quotes deve avere .eq('workspace_id', workspaceId)
-    expect(code).toMatch(/commercial_quotes[\s\S]*?\.eq\(\s*['`]workspace_id['`]/);
+    // commercial_quotes è workspace-scoped — deve usare workspaceQuery (filtro automatico)
+    expect(code).toMatch(/workspaceQuery\(workspaceId\)[\s\S]*?commercial_quotes/);
   });
 });
 

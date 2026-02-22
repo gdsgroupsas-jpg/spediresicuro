@@ -11,6 +11,7 @@
  */
 
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { evaluateHealthRules, daysBetween, HEALTH_THRESHOLDS } from '@/lib/crm/health-rules';
 import type { CrmAlert, HealthCheckEntity } from '@/lib/crm/health-rules';
 import type {
@@ -23,6 +24,22 @@ import type {
   ConversionMetrics,
   PendingQuoteSummary,
 } from '@/types/crm-intelligence';
+
+/**
+ * Helper: ritorna il query builder corretto per CRM.
+ * - Admin: supabaseAdmin cross-workspace (INTENZIONALE — admin vede tutti i leads)
+ * - Reseller: workspaceQuery (fail-closed se wsId mancante)
+ */
+function getCrmQueryBuilder(isAdmin: boolean, workspaceId?: string) {
+  if (isAdmin) {
+    // DESIGN INTENZIONALE: admin vede leads cross-workspace
+    return { db: supabaseAdmin, error: null as string | null };
+  }
+  if (!workspaceId) {
+    return { db: null, error: 'workspaceId obbligatorio per reseller' };
+  }
+  return { db: workspaceQuery(workspaceId), error: null as string | null };
+}
 
 // ============================================
 // PIPELINE SUMMARY
@@ -39,12 +56,13 @@ export async function getPipelineSummary(
   const table = isAdmin ? 'leads' : 'reseller_prospects';
   const selectFields = 'status, lead_score, estimated_monthly_volume';
 
-  let query = supabaseAdmin.from(table).select(selectFields);
-  if (workspaceId) {
-    query = query.eq('workspace_id', workspaceId);
+  const { db, error: dbError } = getCrmQueryBuilder(isAdmin, workspaceId);
+  if (dbError || !db) {
+    console.error(`[crm-data-service] getPipelineSummary: ${dbError}`);
+    return { total: 0, byStatus: {}, avgScore: 0, pipelineValue: 0 };
   }
 
-  const { data: rows, error } = await query;
+  const { data: rows, error } = await db.from(table).select(selectFields);
   if (error || !rows) {
     console.error(`[crm-data-service] getPipelineSummary error:`, error);
     return { total: 0, byStatus: {}, avgScore: 0, pipelineValue: 0 };
@@ -114,7 +132,13 @@ export async function getHotEntities(
   const isAdmin = userRole === 'admin';
   const table = isAdmin ? 'leads' : 'reseller_prospects';
 
-  let query = supabaseAdmin
+  const { db, error: dbError } = getCrmQueryBuilder(isAdmin, workspaceId);
+  if (dbError || !db) {
+    console.error(`[crm-data-service] getHotEntities: ${dbError}`);
+    return [];
+  }
+
+  const { data: rows, error } = await db
     .from(table)
     .select('id, company_name, lead_score, status, sector, last_contact_at')
     .gte('lead_score', 70)
@@ -122,11 +146,6 @@ export async function getHotEntities(
     .order('lead_score', { ascending: false })
     .limit(limit);
 
-  if (workspaceId) {
-    query = query.eq('workspace_id', workspaceId);
-  }
-
-  const { data: rows, error } = await query;
   if (error || !rows) {
     console.error(`[crm-data-service] getHotEntities error:`, error);
     return [];
@@ -167,16 +186,17 @@ export async function getStaleEntities(
   const isAdmin = userRole === 'admin';
   const table = isAdmin ? 'leads' : 'reseller_prospects';
 
-  let query = supabaseAdmin
+  const { db, error: dbError } = getCrmQueryBuilder(isAdmin, workspaceId);
+  if (dbError || !db) {
+    console.error(`[crm-data-service] getStaleEntities: ${dbError}`);
+    return [];
+  }
+
+  const { data: rows, error } = await db
     .from(table)
     .select('id, company_name, status, lead_score, last_contact_at, updated_at, created_at')
     .not('status', 'in', '("won","lost")');
 
-  if (workspaceId) {
-    query = query.eq('workspace_id', workspaceId);
-  }
-
-  const { data: rows, error } = await query;
   if (error || !rows) {
     console.error(`[crm-data-service] getStaleEntities error:`, error);
     return [];
@@ -239,16 +259,17 @@ export async function getHealthAlerts(
   const table = isAdmin ? 'leads' : 'reseller_prospects';
   const entityType = isAdmin ? 'lead' : 'prospect';
 
-  let query = supabaseAdmin
+  const { db, error: dbError } = getCrmQueryBuilder(isAdmin, workspaceId);
+  if (dbError || !db) {
+    console.error(`[crm-data-service] getHealthAlerts: ${dbError}`);
+    return [];
+  }
+
+  const { data: rows, error } = await db
     .from(table)
     .select('id, company_name, status, lead_score, created_at, last_contact_at, updated_at')
     .not('status', 'in', '("won")');
 
-  if (workspaceId) {
-    query = query.eq('workspace_id', workspaceId);
-  }
-
-  const { data: rows, error } = await query;
   if (error || !rows) {
     console.error(`[crm-data-service] getHealthAlerts error:`, error);
     return [];
@@ -277,14 +298,16 @@ export async function searchEntities(
   const table = isAdmin ? 'leads' : 'reseller_prospects';
   const entityType = isAdmin ? 'lead' : 'prospect';
 
-  let query = supabaseAdmin
+  const { db, error: dbError } = getCrmQueryBuilder(isAdmin, workspaceId);
+  if (dbError || !db) {
+    console.error(`[crm-data-service] searchEntities: ${dbError}`);
+    return [];
+  }
+
+  let query = db
     .from(table)
     .select('id, company_name, contact_name, email, status, lead_score, sector, last_contact_at')
     .limit(20);
-
-  if (workspaceId) {
-    query = query.eq('workspace_id', workspaceId);
-  }
 
   // Ricerca testuale su company_name (ilike)
   if (queryStr && queryStr.trim().length > 0) {
@@ -345,12 +368,14 @@ export async function getEntityDetail(
   const entityType = isAdmin ? 'lead' : 'prospect';
   const fkField = isAdmin ? 'lead_id' : 'prospect_id';
 
-  // Trova entita
-  let query = supabaseAdmin.from(table).select('*');
-
-  if (workspaceId) {
-    query = query.eq('workspace_id', workspaceId);
+  const { db, error: dbError } = getCrmQueryBuilder(isAdmin, workspaceId);
+  if (dbError || !db) {
+    console.error(`[crm-data-service] getEntityDetail: ${dbError}`);
+    return null;
   }
+
+  // Trova entita
+  let query = db.from(table).select('*');
 
   if (entityId) {
     query = query.eq('id', entityId);
@@ -365,8 +390,8 @@ export async function getEntityDetail(
 
   const r = rows[0] as Record<string, unknown>;
 
-  // Carica eventi recenti (ultimi 10)
-  const { data: events } = await supabaseAdmin
+  // Carica eventi recenti (ultimi 10) — stessa isolamento del parent
+  const { data: events } = await db
     .from(eventsTable)
     .select('event_type, event_data, created_at')
     .eq(fkField, r.id as string)
@@ -384,11 +409,12 @@ export async function getEntityDetail(
   if (workspaceId) {
     const linkedIds = (r.linked_quote_ids as string[]) || [];
     if (linkedIds.length > 0) {
-      const { data: quotes } = await supabaseAdmin
+      // commercial_quotes è workspace-scoped — usa workspaceQuery (wsId già validato)
+      const quotesDb = workspaceQuery(workspaceId);
+      const { data: quotes } = await quotesDb
         .from('commercial_quotes')
         .select('id, prospect_company, status, expires_at, margin_percent, carrier_code')
         .in('id', linkedIds)
-        .eq('workspace_id', workspaceId) // Defense-in-depth: filtra per workspace
         .in('status', ['sent', 'negotiating', 'draft']);
 
       if (quotes) {
@@ -531,15 +557,24 @@ export async function getConversionMetrics(
   const isAdmin = userRole === 'admin';
   const table = isAdmin ? 'leads' : 'reseller_prospects';
 
-  let query = supabaseAdmin
+  const { db, error: dbError } = getCrmQueryBuilder(isAdmin, workspaceId);
+  if (dbError || !db) {
+    console.error(`[crm-data-service] getConversionMetrics: ${dbError}`);
+    return {
+      rate: 0,
+      avgDaysToConversion: 0,
+      wonThisMonth: 0,
+      lostThisMonth: 0,
+      trend: 'stable' as const,
+      totalActive: 0,
+      totalPipelineValue: 0,
+    };
+  }
+
+  const { data: rows, error } = await db
     .from(table)
     .select('status, lead_score, estimated_monthly_volume, created_at, converted_at, updated_at');
 
-  if (workspaceId) {
-    query = query.eq('workspace_id', workspaceId);
-  }
-
-  const { data: rows, error } = await query;
   if (error || !rows || rows.length === 0) {
     return {
       rate: 0,
@@ -616,10 +651,11 @@ export async function getConversionMetrics(
  * Preventivi attivi con scadenza
  */
 export async function getPendingQuotes(workspaceId: string): Promise<PendingQuoteSummary[]> {
-  const { data: quotes, error } = await supabaseAdmin
+  // commercial_quotes è workspace-scoped — usa workspaceQuery
+  const wq = workspaceQuery(workspaceId);
+  const { data: quotes, error } = await wq
     .from('commercial_quotes')
     .select('id, prospect_company, status, expires_at, margin_percent, carrier_code')
-    .eq('workspace_id', workspaceId)
     .in('status', ['sent', 'negotiating'])
     .order('expires_at', { ascending: true });
 

@@ -69,6 +69,13 @@ vi.mock('@/lib/db/client', () => ({
   },
 }));
 
+// Mock workspaceQuery — ritorna lo stesso builder mockato (il filtro workspace è automatico)
+vi.mock('@/lib/db/workspace-query', () => ({
+  workspaceQuery: vi.fn(() => ({
+    from: vi.fn(() => mockQueryBuilder),
+  })),
+}));
+
 // Mock lead scoring — funzione pura, restituisce score prevedibile
 vi.mock('@/lib/crm/lead-scoring', () => ({
   calculateLeadScore: vi.fn(() => 65),
