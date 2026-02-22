@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWorkspaceAuth } from '@/lib/workspace-auth';
 import { supabaseAdmin } from '@/lib/db/client';
+import { workspaceQuery } from '@/lib/db/workspace-query';
 import { rateLimit } from '@/lib/security/rate-limit';
 import { getParser } from '@/lib/cod/parsers';
 import { writeAuditLog } from '@/lib/security/audit-log';
@@ -36,6 +37,13 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Verifica workspace per isolamento multi-tenant
+    const wsId = auth.workspace?.id;
+    if (!wsId) {
+      return NextResponse.json({ error: 'Workspace non determinato' }, { status: 403 });
+    }
+    const wq = workspaceQuery(wsId);
+
     const formData = await request.formData();
     const file = formData.get('file') as File | null;
     const carrier = formData.get('carrier') as string | null;
@@ -66,8 +74,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Crea record cod_files
-    const { data: codFile, error: fileError } = await supabaseAdmin
+    // Crea record cod_files (workspace-scoped)
+    const { data: codFile, error: fileError } = await wq
       .from('cod_files')
       .insert({
         filename: file.name,
@@ -92,8 +100,8 @@ export async function POST(request: NextRequest) {
     const insertErrors: string[] = [...result.errors];
 
     for (const row of result.rows) {
-      // Cerca spedizione per ldv (tracking_number o ldv)
-      const { data: shipment } = await supabaseAdmin
+      // Cerca spedizione per ldv (workspace-scoped)
+      const { data: shipment } = await wq
         .from('shipments')
         .select('id, user_id, tracking_number, cash_on_delivery_amount')
         .or(`tracking_number.eq.${row.ldv},ldv.eq.${row.ldv}`)
@@ -110,7 +118,7 @@ export async function POST(request: NextRequest) {
         processedRows++;
       }
 
-      const { data: insertedItem, error: itemError } = await supabaseAdmin
+      const { data: insertedItem, error: itemError } = await wq
         .from('cod_items')
         .insert({
           cod_file_id: codFile.id,
@@ -159,8 +167,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Aggiorna totali nel cod_file
-    await supabaseAdmin
+    // Aggiorna totali nel cod_file (workspace-scoped)
+    await wq
       .from('cod_files')
       .update({
         processed_rows: processedRows,
