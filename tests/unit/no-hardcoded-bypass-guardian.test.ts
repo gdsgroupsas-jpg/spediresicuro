@@ -39,8 +39,7 @@ const EXCLUDE_PATTERNS = [
   '__fixtures__',
   // File di utilità per cleanup dati test (admin-only, non è un bypass)
   'lib/utils/test-data-detection.ts',
-  // Route di test (non produzione)
-  'app/api/test/',
+  // Route di test rimosse (commit CTO-cleanup-2026-02)
   // Admin cleanup (rilevamento, non bypass)
   'app/api/admin/cleanup-test-users/',
   'app/dashboard/admin/page.tsx',
