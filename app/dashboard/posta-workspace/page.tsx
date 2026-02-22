@@ -47,6 +47,7 @@ import {
   AlertCircle,
 } from 'lucide-react';
 import { useWorkspace } from '@/hooks/useWorkspace';
+import { sanitizeHtmlClient } from '@/lib/security/sanitize-html-client';
 
 // ─── Types ───
 
@@ -795,7 +796,7 @@ export default function PostaWorkspacePage() {
                   {selectedEmailFull.body_html ? (
                     <div
                       className="prose prose-sm max-w-none"
-                      dangerouslySetInnerHTML={{ __html: selectedEmailFull.body_html }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtmlClient(selectedEmailFull.body_html) }}
                     />
                   ) : (
                     <pre className="text-sm text-gray-700 whitespace-pre-wrap">

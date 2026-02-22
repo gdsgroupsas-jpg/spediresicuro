@@ -23,7 +23,14 @@ leads, reseller_prospects, audit_logs, outreach*\*, warehouse/WMS tables
 users, workspaces, workspace_members, couriers, courier_configs, system_settings
 
 Il test `workspace-query-guardian.test.ts` monitora il numero di violazioni.
-Il numero attuale è **0**. ZERO violazioni. NON deve MAI aumentare.
+
+**Baseline attuale: 127 violazioni** (codice legacy pre-`workspaceQuery`, da ridurre nel tempo).
+Il contatore NON deve MAI aumentare rispetto al baseline. Ogni nuovo codice DEVE usare `workspaceQuery`.
+
+> **Nota storica:** Il baseline era erroneamente riportato come 0 perché il regex del guardian
+> usava il flag single-line e non catturava le violazioni multilinea. Il fix del regex (2026-02-21)
+> ha reso visibili le 137 violazioni reali, poi ridotte a 127 con la migrazione Anne AI.
+> `outreach_consent` NON è una violazione: è una tabella globale GDPR senza `workspace_id`.
 
 ## REGOLA #2: Testing Obbligatorio
 

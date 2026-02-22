@@ -44,6 +44,7 @@ import {
   Menu,
   X,
 } from 'lucide-react';
+import { sanitizeHtmlClient } from '@/lib/security/sanitize-html-client';
 
 // ─── Types ───
 
@@ -792,10 +793,7 @@ export default function PostaPage() {
                   <div
                     className="prose prose-sm max-w-none text-gray-800"
                     dangerouslySetInnerHTML={{
-                      __html: selectedEmailFull.body_html
-                        .replace(/<script[\s\S]*?<\/script>/gi, '')
-                        .replace(/on\w+="[^"]*"/gi, '')
-                        .replace(/on\w+='[^']*'/gi, ''),
+                      __html: sanitizeHtmlClient(selectedEmailFull.body_html),
                     }}
                   />
                 ) : (
