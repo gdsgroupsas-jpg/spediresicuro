@@ -351,30 +351,30 @@ describe('Support Worker — workspace scoping', () => {
 describe('Pricing Tools — workspace scoping', () => {
   it('get_price_list_details usa workspace-scoped query per price_lists', () => {
     const code = fs.readFileSync(path.join(process.cwd(), 'lib/ai/tools.ts'), 'utf-8');
-    // Deve creare plDb con workspaceQuery
-    expect(code).toMatch(/plDb\s*=\s*workspaceId\s*\?\s*workspaceQuery/);
+    // Deve creare plDb con workspaceQuery (fail-closed, senza ternario)
+    expect(code).toMatch(/plDb\s*=\s*workspaceQuery\(workspaceId\)/);
   });
 
   it('get_supplier_cost usa workspace-scoped query per price_lists', () => {
     const code = fs.readFileSync(path.join(process.cwd(), 'lib/ai/tools.ts'), 'utf-8');
-    expect(code).toMatch(/supplierDb\s*=\s*workspaceId\s*\?\s*workspaceQuery/);
+    expect(code).toMatch(/supplierDb\s*=\s*workspaceQuery\(workspaceId\)/);
   });
 
   it('list_user_price_lists usa workspace-scoped query per price_lists e assignments', () => {
     const code = fs.readFileSync(path.join(process.cwd(), 'lib/ai/tools.ts'), 'utf-8');
-    expect(code).toMatch(/listDb\s*=\s*workspaceId\s*\?\s*workspaceQuery/);
+    expect(code).toMatch(/listDb\s*=\s*workspaceQuery\(workspaceId\)/);
     // Deve usare listDb per price_list_assignments
     expect(code).toMatch(/listDb\s*\.\s*from\(\s*['`]price_list_assignments['`]\)/);
   });
 
   it('compare_supplier_vs_selling usa workspace-scoped query per price_lists', () => {
     const code = fs.readFileSync(path.join(process.cwd(), 'lib/ai/tools.ts'), 'utf-8');
-    expect(code).toMatch(/compareDb\s*=\s*workspaceId\s*\?\s*workspaceQuery/);
+    expect(code).toMatch(/compareDb\s*=\s*workspaceQuery\(workspaceId\)/);
   });
 
   it('track_shipment usa workspace-scoped query', () => {
     const code = fs.readFileSync(path.join(process.cwd(), 'lib/ai/tools.ts'), 'utf-8');
-    expect(code).toMatch(/trackDb\s*=\s*workspaceId\s*\?\s*workspaceQuery/);
+    expect(code).toMatch(/trackDb\s*=\s*workspaceQuery\(workspaceId\)/);
   });
 });
 

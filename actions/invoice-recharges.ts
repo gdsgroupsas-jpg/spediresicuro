@@ -106,8 +106,18 @@ async function internalGenerateInvoiceFromRecharges(params: {
       };
     }
 
+    // Recupera workspace_id dell'utente PRIMA delle query multi-tenant
+    const wsId = await getUserWorkspaceId(params.userId);
+    if (!wsId) {
+      return {
+        success: false,
+        error: 'Workspace non determinato per utente — impossibile procedere',
+      };
+    }
+    const wq = workspaceQuery(wsId);
+
     // 🔒 SICUREZZA: Verifica che tutte le transazioni appartengano all'utente
-    const { data: transactions, error: txError } = await supabaseAdmin
+    const { data: transactions, error: txError } = await wq
       .from('wallet_transactions')
       .select('id, user_id, amount, type')
       .in('id', params.transactionIds)
@@ -128,7 +138,7 @@ async function internalGenerateInvoiceFromRecharges(params: {
       };
     }
 
-    // Verifica che non siano già fatturate
+    // Verifica che non siano già fatturate (invoice_recharge_links NON è workspace-scoped)
     const { data: existingLinks } = await supabaseAdmin
       .from('invoice_recharge_links')
       .select('wallet_transaction_id')
@@ -161,10 +171,6 @@ async function internalGenerateInvoiceFromRecharges(params: {
         error: invoiceError.message || 'Errore durante la generazione della fattura',
       };
     }
-
-    // Recupera workspace_id dell'utente per isolamento multi-tenant
-    const wsId = await getUserWorkspaceId(params.userId);
-    const wq = wsId ? workspaceQuery(wsId) : supabaseAdmin;
 
     // Recupera fattura creata con items
     const { data: invoice, error: fetchError } = await wq
@@ -335,6 +341,8 @@ export async function generateAutomaticInvoiceForStripeRecharge(transactionId: s
 }> {
   try {
     // Recupera transazione wallet
+    // ECCEZIONE webhook: supabaseAdmin necessario per fetch iniziale (no sessione utente).
+    // wallet_transactions è workspace-scoped, ma il webhook Stripe conosce solo il transactionId.
     const { data: transaction, error: txError } = await supabaseAdmin
       .from('wallet_transactions')
       .select('*, user:users(*)')
@@ -394,7 +402,14 @@ export async function generateAutomaticInvoiceForStripeRecharge(transactionId: s
 
     // Emetti fattura (draft → issued)
     const autoWsId = await getUserWorkspaceId(transaction.user_id);
-    const autoWq = autoWsId ? workspaceQuery(autoWsId) : supabaseAdmin;
+    if (!autoWsId) {
+      console.error(
+        'generateAutomaticInvoiceForStripeRecharge: workspace non determinato per user',
+        transaction.user_id
+      );
+      return { success: false, error: 'Workspace non determinato per utente' };
+    }
+    const autoWq = workspaceQuery(autoWsId);
     await autoWq.from('invoices').update({ status: 'issued' }).eq('id', result.invoice.id);
 
     return {
@@ -438,8 +453,15 @@ export async function generatePeriodicInvoiceAction(params: {
       };
     }
 
+    // Recupera workspace_id dell'utente target per isolamento multi-tenant
+    const periodicWsId = await getUserWorkspaceId(params.userId);
+    if (!periodicWsId) {
+      return { success: false, error: 'Workspace non determinato per utente target' };
+    }
+    const periodicWq = workspaceQuery(periodicWsId);
+
     // Recupera ricariche nel periodo non ancora fatturate
-    const { data: recharges, error: rechargesError } = await supabaseAdmin
+    const { data: recharges, error: rechargesError } = await periodicWq
       .from('wallet_transactions')
       .select('id, amount, created_at')
       .eq('user_id', params.userId)
@@ -463,7 +485,7 @@ export async function generatePeriodicInvoiceAction(params: {
       };
     }
 
-    const transactionIds = recharges.map((r) => r.id);
+    const transactionIds = recharges.map((r: any) => r.id);
 
     // 🔒 Usa funzione interna (dopo verifica auth)
     return await internalGenerateInvoiceFromRecharges({
@@ -588,8 +610,15 @@ export async function listUninvoicedRechargesAction(userId: string): Promise<{
       };
     }
 
+    // Recupera workspace_id dell'utente per isolamento multi-tenant
+    const uninvoicedWsId = await getUserWorkspaceId(userId);
+    if (!uninvoicedWsId) {
+      return { success: false, error: 'Workspace non determinato per utente' };
+    }
+    const uninvoicedWq = workspaceQuery(uninvoicedWsId);
+
     // Recupera ricariche non fatturate
-    const { data: recharges, error: rechargesError } = await supabaseAdmin
+    const { data: recharges, error: rechargesError } = await uninvoicedWq
       .from('wallet_transactions')
       .select('id, amount, type, description, created_at')
       .eq('user_id', userId)
@@ -727,7 +756,10 @@ export async function generatePostpaidMonthlyInvoice(
 
     // Recupera workspace_id per isolamento multi-tenant
     const postpaidWsId = await getUserWorkspaceId(userId);
-    const postpaidWq = postpaidWsId ? workspaceQuery(postpaidWsId) : supabaseAdmin;
+    if (!postpaidWsId) {
+      return { success: false, error: 'Workspace non determinato per utente postpagato' };
+    }
+    const postpaidWq = workspaceQuery(postpaidWsId);
 
     // Verifica che non esista gia' una fattura per questo mese
     const { data: existingInvoice } = await postpaidWq
@@ -746,8 +778,8 @@ export async function generatePostpaidMonthlyInvoice(
       };
     }
 
-    // Recupera POSTPAID_CHARGE del mese
-    const { data: charges, error: chargesError } = await supabaseAdmin
+    // Recupera POSTPAID_CHARGE del mese (workspace-scoped)
+    const { data: charges, error: chargesError } = await postpaidWq
       .from('wallet_transactions')
       .select('id, amount, description, created_at, reference_id')
       .eq('user_id', userId)
@@ -765,7 +797,7 @@ export async function generatePostpaidMonthlyInvoice(
     }
 
     // Calcola totali (amount e' negativo, usiamo ABS)
-    const subtotal = charges.reduce((sum, c) => sum + Math.abs(c.amount), 0);
+    const subtotal = charges.reduce((sum: number, c: any) => sum + Math.abs(c.amount), 0);
     const taxRate = 22; // IVA 22%
     const taxAmount = subtotal * (taxRate / 100);
     const total = subtotal + taxAmount;
@@ -808,7 +840,7 @@ export async function generatePostpaidMonthlyInvoice(
     }
 
     // Crea invoice_items per ogni spedizione
-    const items = charges.map((charge) => ({
+    const items = charges.map((charge: any) => ({
       invoice_id: newInvoice.id,
       shipment_id: charge.reference_id || null,
       description: charge.description || `Spedizione postpagata`,
@@ -831,7 +863,7 @@ export async function generatePostpaidMonthlyInvoice(
     }
 
     // Collega transazioni alla fattura (per evitare doppia fatturazione)
-    const links = charges.map((charge) => ({
+    const links = charges.map((charge: any) => ({
       invoice_id: newInvoice.id,
       wallet_transaction_id: charge.id,
       amount: Math.abs(charge.amount),
