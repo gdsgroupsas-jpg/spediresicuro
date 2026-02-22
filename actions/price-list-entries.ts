@@ -335,7 +335,8 @@ export async function upsertPriceListEntriesAction(
         fuel_surcharge_percent: e.fuel_surcharge_percent || 0,
         cash_on_delivery_surcharge: e.cash_on_delivery_surcharge || 0,
         insurance_rate_percent: e.insurance_rate_percent || 0,
-      }))
+      })),
+      workspaceId
     );
 
     // Logga evento audit

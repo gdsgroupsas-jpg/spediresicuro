@@ -1202,7 +1202,11 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
 
           try {
             if (!options?.overwriteExisting) {
-              const upsertResult = await upsertPriceListEntries(priceListId, emptyEntries);
+              const upsertResult = await upsertPriceListEntries(
+                priceListId,
+                emptyEntries,
+                workspaceId
+              );
               entriesAdded += upsertResult.inserted + upsertResult.updated;
               console.log(
                 `✅ [SYNC] ${upsertResult.inserted} entry vuote inserite, ${upsertResult.updated} aggiornate per ${carrierCode}`
@@ -1413,7 +1417,7 @@ export async function syncPriceListsFromSpedisciOnline(options?: {
           // ✨ FIX: Se overwriteExisting=false, usa UPSERT per evitare duplicati
           // Se overwriteExisting=true, usa INSERT normale (dopo DELETE)
           if (!options?.overwriteExisting) {
-            const upsertResult = await upsertPriceListEntries(priceListId, entries);
+            const upsertResult = await upsertPriceListEntries(priceListId, entries, workspaceId);
             entriesAdded += upsertResult.inserted + upsertResult.updated;
             console.log(
               `✅ [SYNC] ${upsertResult.inserted} inserite, ${upsertResult.updated} aggiornate, ${upsertResult.skipped} saltate per ${carrierCode}`

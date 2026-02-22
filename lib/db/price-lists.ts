@@ -11,7 +11,7 @@ import type {
   PriceListEntry,
   UpdatePriceListInput,
 } from '@/types/listini';
-import { supabase, supabaseAdmin } from './client';
+import { supabaseAdmin } from './client';
 import { workspaceQuery } from '@/lib/db/workspace-query';
 import { assertValidUserId } from '@/lib/validators';
 
@@ -27,21 +27,16 @@ export { calculatePriceWithRules, getApplicablePriceList } from './price-lists-a
 export async function createPriceList(
   data: CreatePriceListInput,
   userId: string,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<PriceList> {
-  // Metadata ora esiste (migration 059 applicata), possiamo includerlo direttamente
   const insertData: Record<string, any> = {
     ...data,
     created_by: userId,
+    workspace_id: workspaceId,
   };
 
-  // Setta workspace_id se fornito (obbligatorio per isolamento multi-tenant)
-  if (workspaceId) {
-    insertData.workspace_id = workspaceId;
-  }
-
-  // Usa workspaceQuery per isolamento multi-tenant se workspace disponibile
-  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+  // Isolamento multi-tenant: workspaceQuery obbligatorio
+  const db = workspaceQuery(workspaceId);
   const { data: priceList, error } = await db
     .from('price_lists')
     .insert(insertData)
@@ -61,16 +56,16 @@ export async function createPriceList(
  * @param id - ID listino
  * @param data - Dati da aggiornare
  * @param userId - ID utente che aggiorna
- * @param workspaceId - ID workspace per isolamento multi-tenant (opzionale per retrocompatibilità)
+ * @param workspaceId - ID workspace per isolamento multi-tenant
  */
 export async function updatePriceList(
   id: string,
   data: UpdatePriceListInput,
   userId: string,
-  workspaceId?: string
+  workspaceId: string
 ): Promise<PriceList> {
-  // Usa workspaceQuery per isolamento multi-tenant se workspace disponibile
-  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+  // Isolamento multi-tenant: workspaceQuery obbligatorio
+  const db = workspaceQuery(workspaceId);
   const { data: priceList, error } = await db
     .from('price_lists')
     .update({
@@ -93,14 +88,11 @@ export async function updatePriceList(
 /**
  * Ottieni listino per ID
  * @param id - ID listino
- * @param workspaceId - ID workspace per isolamento multi-tenant (opzionale per retrocompatibilità)
+ * @param workspaceId - ID workspace per isolamento multi-tenant
  */
-export async function getPriceListById(
-  id: string,
-  workspaceId?: string
-): Promise<PriceList | null> {
-  // Usa workspaceQuery per isolamento multi-tenant se workspace disponibile
-  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+export async function getPriceListById(id: string, workspaceId: string): Promise<PriceList | null> {
+  // Isolamento multi-tenant: workspaceQuery obbligatorio
+  const db = workspaceQuery(workspaceId);
   const { data, error } = await db
     .from('price_lists')
     .select('*, entries:price_list_entries(*)')
@@ -139,47 +131,18 @@ export async function getPriceListById(
 }
 
 /**
- * Lista listini per corriere
+ * Ottieni listino attivo per corriere (workspace-scoped)
+ * @param courierId - ID corriere
+ * @param workspaceId - ID workspace per isolamento multi-tenant
  */
-export async function listPriceListsByCourier(courierId: string) {
-  const { data, error } = await supabase
-    .from('price_lists')
-    .select('*, courier:couriers(*)')
-    .eq('courier_id', courierId)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error listing price lists:', error);
-    throw new Error(`Errore recupero listini: ${error.message}`);
-  }
-
-  return data || [];
-}
-
-/**
- * Lista tutti i listini
- */
-export async function listAllPriceLists() {
-  const { data, error } = await supabase
-    .from('price_lists')
-    .select('*, courier:couriers(*)')
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error('Error listing all price lists:', error);
-    throw new Error(`Errore recupero listini: ${error.message}`);
-  }
-
-  return data || [];
-}
-
-/**
- * Ottieni listino attivo per corriere
- */
-export async function getActivePriceList(courierId: string): Promise<PriceList | null> {
+export async function getActivePriceList(
+  courierId: string,
+  workspaceId: string
+): Promise<PriceList | null> {
   const now = new Date().toISOString().split('T')[0];
+  const db = workspaceQuery(workspaceId);
 
-  const { data, error } = await supabase
+  const { data, error } = await db
     .from('price_lists')
     .select('*, entries:price_list_entries(*)')
     .eq('courier_id', courierId)
@@ -209,14 +172,14 @@ export async function getActivePriceList(courierId: string): Promise<PriceList |
 export async function addPriceListEntries(
   priceListId: string,
   entries: Omit<PriceListEntry, 'id' | 'price_list_id' | 'created_at'>[],
-  workspaceId?: string
+  workspaceId: string
 ): Promise<void> {
   const entriesWithListId = entries.map((entry) => ({
     ...entry,
     price_list_id: priceListId,
   }));
 
-  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+  const db = workspaceQuery(workspaceId);
   const { error } = await db.from('price_list_entries').insert(entriesWithListId);
 
   if (error) {
@@ -237,13 +200,13 @@ export async function addPriceListEntries(
  *
  * @param priceListId - ID del listino
  * @param entries - Array di entries da aggiungere/aggiornare
- * @param workspaceId - ID workspace per isolamento multi-tenant (opzionale per retrocompatibilità)
+ * @param workspaceId - ID workspace per isolamento multi-tenant
  * @returns Statistiche: { inserted: number, updated: number, skipped: number }
  */
 export async function upsertPriceListEntries(
   priceListId: string,
   entries: Omit<PriceListEntry, 'id' | 'price_list_id' | 'created_at'>[],
-  workspaceId?: string
+  workspaceId: string
 ): Promise<{
   inserted: number;
   updated: number;
@@ -254,8 +217,8 @@ export async function upsertPriceListEntries(
     price_list_id: priceListId,
   }));
 
-  // Usa workspaceQuery per isolamento multi-tenant se workspace disponibile
-  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+  // Isolamento multi-tenant: workspaceQuery obbligatorio
+  const db = workspaceQuery(workspaceId);
 
   let inserted = 0;
   let updated = 0;
@@ -372,10 +335,13 @@ export async function upsertPriceListEntries(
 }
 
 /**
- * Calcola prezzo per spedizione
+ * Calcola prezzo per spedizione (workspace-scoped)
+ * @param courierId - ID corriere
+ * @param workspaceId - ID workspace per isolamento multi-tenant
  */
 export async function calculatePrice(
   courierId: string,
+  workspaceId: string,
   weight: number,
   destinationZip: string,
   serviceType: string = 'standard',
@@ -390,7 +356,7 @@ export async function calculatePrice(
   totalCost: number;
   details: any;
 } | null> {
-  const priceList = await getActivePriceList(courierId);
+  const priceList = await getActivePriceList(courierId, workspaceId);
 
   if (!priceList) {
     return null;
@@ -413,21 +379,6 @@ export async function calculatePrice(
 }
 
 /**
- * Aggiorna status listino
- */
-export async function updatePriceListStatus(
-  id: string,
-  status: 'draft' | 'active' | 'archived'
-): Promise<void> {
-  const { error } = await supabase.from('price_lists').update({ status }).eq('id', id);
-
-  if (error) {
-    console.error('Error updating price list status:', error);
-    throw new Error(`Errore aggiornamento status listino: ${error.message}`);
-  }
-}
-
-/**
  * Elimina listino con FK check
  * @param id - ID listino da eliminare
  * @param workspaceId - ID workspace (obbligatorio per isolamento multi-tenant)
@@ -435,11 +386,11 @@ export async function updatePriceListStatus(
  * H6 FIX: Verifica che non ci siano assegnazioni attive prima di eliminare.
  * Previene orphan records e dà un errore chiaro all'utente.
  */
-export async function deletePriceList(id: string, workspaceId?: string): Promise<void> {
-  const db = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
+export async function deletePriceList(id: string, workspaceId: string): Promise<void> {
+  const db = workspaceQuery(workspaceId);
 
-  // H6: Check FK — assegnazioni attive (non revocate)
-  const { count: activeAssignments } = await supabaseAdmin
+  // H6: Check FK — assegnazioni attive (non revocate), workspace-scoped
+  const { count: activeAssignments } = await db
     .from('price_list_assignments')
     .select('id', { count: 'exact', head: true })
     .eq('price_list_id', id)

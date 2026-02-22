@@ -158,16 +158,16 @@ describe('price-lists.ts: funzioni usano workspaceQuery', () => {
       source.indexOf('export async function updatePriceList('),
       source.indexOf('export async function getPriceListById(')
     );
-    expect(fnBody).toContain('workspaceId?: string');
+    expect(fnBody).toContain('workspaceId: string');
     expect(fnBody).toContain('workspaceQuery(workspaceId)');
   });
 
   it('getPriceListById accetta workspaceId e usa workspaceQuery', () => {
     const fnBody = source.substring(
       source.indexOf('export async function getPriceListById('),
-      source.indexOf('export async function listPriceListsByCourier(')
+      source.indexOf('export async function getActivePriceList(')
     );
-    expect(fnBody).toContain('workspaceId?: string');
+    expect(fnBody).toContain('workspaceId: string');
     expect(fnBody).toContain('workspaceQuery(workspaceId)');
   });
 
@@ -184,7 +184,7 @@ describe('price-lists.ts: funzioni usano workspaceQuery', () => {
       source.indexOf('export async function upsertPriceListEntries('),
       source.indexOf('export async function deletePriceList(') || source.length
     );
-    expect(fnBody).toContain('workspaceId?: string');
+    expect(fnBody).toContain('workspaceId: string');
     expect(fnBody).toContain('workspaceQuery(workspaceId)');
   });
 

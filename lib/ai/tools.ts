@@ -878,7 +878,7 @@ export async function executeTool(
 
         if (priceListId) {
           // Cerca per ID specifico
-          priceList = await getPriceListById(priceListId);
+          priceList = await getPriceListById(priceListId, workspaceId!);
         } else {
           // Cerca listino attivo per utente (e opzionalmente corriere)
           const plDb = workspaceId ? workspaceQuery(workspaceId) : supabaseAdmin;
@@ -910,7 +910,7 @@ export async function executeTool(
         // Se è un listino custom, recupera anche il master (fornitore)
         let masterList = null;
         if (priceList.master_list_id) {
-          masterList = await getPriceListById(priceList.master_list_id);
+          masterList = await getPriceListById(priceList.master_list_id, workspaceId!);
         }
 
         // Recupera info corriere

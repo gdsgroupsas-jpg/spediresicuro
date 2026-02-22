@@ -621,7 +621,7 @@ export async function importPriceListEntriesAction(
         };
       });
 
-    const result = await upsertPriceListEntries(priceListId, normalizedEntries);
+    const result = await upsertPriceListEntries(priceListId, normalizedEntries, workspaceId);
 
     // Logga evento audit
     try {

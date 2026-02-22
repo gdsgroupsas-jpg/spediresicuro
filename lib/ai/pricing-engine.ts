@@ -22,6 +22,7 @@ export interface PricingRequest {
   cashOnDelivery?: number; // Importo contrassegno (0 = no contrassegno)
   declaredValue?: number; // Valore dichiarato per assicurazione
   insurance?: boolean;
+  workspaceId?: string; // ID workspace per isolamento multi-tenant
 }
 
 export interface PricingResult {
@@ -102,6 +103,7 @@ export async function calculateOptimalPrice(request: PricingRequest): Promise<Pr
         for (const serviceType of serviceTypes) {
           const priceResult = await calculatePrice(
             courier.id,
+            request.workspaceId || '',
             request.weight,
             request.destinationZip,
             serviceType,
